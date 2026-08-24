@@ -484,16 +484,16 @@ document.getElementById('jujeonPrice').addEventListener('input', recalcAll);
 //   lastResult/lastParams       = "손절 기준표" 위쪽 — 이노센트(12,000) 표준가로 고정한 일반 참고표.
 //   lastArcResult/lastArcParams = "손절 기준표" 아래쪽 — 아크 이노센트(24,000) 표준가로 고정한 참고표.
 //   lastLiveResult/lastLiveParams
-//     = "전체 기댓값"(상단 요약)과 "지금 상태 확인하기"가 함께 따르는 "전략" — 초기화 방식(이노센트/
-//       아크이노센트/없음)과 그 "주흔으로 조달" 여부를 반영한 실제 비용을 기준으로 삼는다. 조달을
-//       안 했으면 어떤 모드를 골랐든 resetCost가 똑같이 0이 되어 이노센트/아크이노센트가 동일하게
-//       취급된다("안 쓸 거면 결과가 같아야" 하므로). 순백은 "저렴한 순백/비싼 순백" 같은 대안이
-//       없어 이런 모드 간 불일치가 생길 일이 없으므로, 순백은 여전히 표준가로 고정해 전략에 영향을
-//       안 준다("총 기대 시도 횟수"가 순백 조달 여부와는 무관하게 안정적).
+//     = "전체 기댓값"(상단 요약)과 "지금 상태 확인하기"가 함께 따르는 "전략" — 지금 고른 초기화
+//       방식(이노센트/아크이노센트/없음)의 표준 비용만으로 정해진다. 이노센트든 아크이노든 순백이든
+//       "조달" 여부는 전략에 전혀 관여하지 않는다 — 주흔을 안 써도 결국 그 도구를 실제로 써서 작을
+//       진행해야 하니, 언제 초기화/순백을 쓸지는 조달 수단과 무관하게 선택한 도구의 표준가로 정해지고
+//       ("총 기대 시도 횟수"도 마찬가지), 조달은 그 표준가를 내 주흔으로 냈는지만 나타내는 회계
+//       항목이라서다. 그래서 조달 OFF일 때 이노센트와 아크이노센트가 서로 다르게 나오는 건 버그가
+//       아니라 "애초에 가격이 다른 도구를 선택했다"는 사실이 그대로 반영된 것이다.
 //   lastLiveCostResult
-//     = 위 전략(lastLiveResult.ACT)을 그대로 둔 채, 순백만 "조달 안 했으면 내 주흔에서 안 나간다"는
-//       실제 지출 기준으로 "기대 주흔" 숫자를 다시 매긴 결과(이노센트/아크이노센트는 이미 전략 자체에
-//       실제 비용이 들어있어 그대로 씀).
+//     = 위 전략(lastLiveResult.ACT)을 그대로 둔 채, 조달 안 한 항목(이노센트·아크이노센트·순백 각각)만
+//       "내 주흔에서 안 나간다"는 실제 지출 기준으로 "기대 주흔" 숫자를 다시 매긴 결과.
 let lastResult = null;
 let lastParams = null;
 let lastArcResult = null;
@@ -543,28 +543,23 @@ function recalcAll() {
   lastArcResult = solve(arcParams);
   lastArcParams = arcParams;
 
-  // 전략: 초기화 방식(이노센트/아크이노센트/없음)과 그 "조달" 여부를 함께 반영한 실제 비용으로
-  // 정책을 짠다 — 조달 OFF면 어떤 모드를 골랐든 resetCost가 똑같이 0이 되어, 이노센트든 아크
-  // 이노센트든 "안 쓸 거면 결과가 같아야" 한다는 요구를 만족한다(둘 다 그냥 무료 전체 초기화라
-  // 실질적으로 같은 행동이라서). 반대로 순백은 "저렴한 순백/비싼 순백" 같은 대안이 없어서 이런
-  // 모드 간 불일치가 생길 일이 없으므로, 순백은 여전히 표준가로 고정해 전략에 영향을 안 준다
-  // (조달 여부는 아래 evaluate()에서 실제 비용에만 반영).
+  // 전략: 지금 고른 초기화 방식(이노센트/아크이노센트/없음)의 표준 비용만으로 정해진다.
+  // 조달 여부는 여기 반영하지 않는다 — 위 설명대로 주문서 자체의 가치는 조달 수단과 무관해서다.
   const liveResetItemCost = resetMode === 'arc' ? ARC_INNOCENT_COST : INNOCENT_COST;
-  const liveActualResetCost = resetMode !== 'none' && resetFunded ? halvedCost(liveResetItemCost) : 0;
   const liveParams = {
     ...base,
     protectCost: halvedCost(PROTECT_COST),
-    resetCost: liveActualResetCost,
+    resetCost: halvedCost(liveResetItemCost),
     useReset: resetMode !== 'none',
   };
   lastLiveResult = solve(liveParams);
   lastLiveParams = liveParams;
 
-  // 실제 지출: 같은 전략(lastLiveResult.ACT)을 그대로 둔 채, 순백만 조달 안 했으면 0원으로 재평가한다.
-  // 이노센트/아크이노센트는 이미 위 전략 자체에 실제(조달 반영) 비용을 넣어뒀으니 그대로 쓴다.
+  // 실제 지출: 같은 전략(lastLiveResult.ACT)을 그대로 둔 채, 조달 안 한 항목만 0원으로 재평가한다.
+  const actualResetCost = resetMode !== 'none' && resetFunded ? halvedCost(liveResetItemCost) : 0;
   const actualProtectCost = protectFunded ? halvedCost(PROTECT_COST) : 0;
   lastLiveCostResult = evaluate(
-    { ...base, protectCost: actualProtectCost, resetCost: liveActualResetCost },
+    { ...base, protectCost: actualProtectCost, resetCost: actualResetCost },
     lastLiveResult.ACT
   );
 
