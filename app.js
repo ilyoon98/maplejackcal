@@ -488,7 +488,7 @@ document.getElementById('jujeonPrice').addEventListener('input', recalcAll);
 //       방식(이노센트/아크이노센트/없음)의 표준 비용만으로 정해진다. 이노센트든 아크이노든 순백이든
 //       "조달" 여부는 전략에 전혀 관여하지 않는다 — 주흔을 안 써도 결국 그 도구를 실제로 써서 작을
 //       진행해야 하니, 언제 초기화/순백을 쓸지는 조달 수단과 무관하게 선택한 도구의 표준가로 정해지고
-//       ("총 기대 시도 횟수"도 마찬가지), 조달은 그 표준가를 내 주흔으로 냈는지만 나타내는 회계
+//       ("기대 주흔작 시도 횟수"도 마찬가지), 조달은 그 표준가를 내 주흔으로 냈는지만 나타내는 회계
 //       항목이라서다. 그래서 조달 OFF일 때 이노센트와 아크이노센트가 서로 다르게 나오는 건 버그가
 //       아니라 "애초에 가격이 다른 도구를 선택했다"는 사실이 그대로 반영된 것이다.
 //   lastLiveCostResult
@@ -591,7 +591,7 @@ function renderResult(policyResult, costResult, params, price) {
   summaryEl.innerHTML = `
     ${summaryItem('총 기대 주흔', Math.round(costResult.totalTraces).toLocaleString() + ' 개')}
     ${price ? summaryItem('총 기대 메소', Math.round(totalMeso).toLocaleString() + ' 메소') : ''}
-    ${summaryItem('총 기대 시도 횟수', Math.round(policyResult.totalAttempts * 10) / 10 + ' 회')}
+    ${summaryItem('기대 주흔작 시도 횟수', Math.round(policyResult.totalAttempts * 10) / 10 + ' 회')}
   `;
 
   if (slotStates.length !== totalJak) slotStates = new Array(totalJak).fill('none');

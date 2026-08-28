@@ -54,7 +54,9 @@ function solve(p) {
               const resetV = resetCost + V[0][n];
               if (resetV < best) { best = resetV; act = { type: 'reset' }; }
             }
-            if (R < n) {
+            // 이미 성공했거나 아직 남아 있는 슬롯(S + R)을 제외하고,
+            // 실제로 실패해 소모된 슬롯이 있을 때만 순백으로 복구할 수 있다.
+            if (S + R < n) {
               const topupV = protectCost + V[S][R + 1];
               if (topupV < best) { best = topupV; act = { type: 'topup' }; }
             }
