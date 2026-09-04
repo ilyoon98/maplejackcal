@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>어센틱 심볼 계산기</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  :root{ --surface-2:#1d212b; }
+  body{ padding-bottom:96px; }
+
+  .hero-force{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px 20px;
+    background:#1c2740;
+    border:1px solid var(--accent-strong);
+    border-radius:10px;
+    padding:16px 20px;
+    margin-top:16px;
+  }
+  .hero-force-label{
+    font-size:0.85rem;
+    font-weight:700;
+    color:var(--text-dim);
+  }
+  .hero-force-value{
+    font-size:clamp(28px,5vw,40px);
+    font-weight:800;
+    line-height:1;
+    color:var(--accent-strong);
+    font-variant-numeric:tabular-nums;
+  }
+  .hero-force-value .unit{
+    font-size:.45em;
+    font-weight:700;
+    margin-left:4px;
+  }
+
+  .note b{ color:var(--text); font-weight:700; }
+  .note.warn{ color:var(--bad); font-weight:700; }
+
+  /* level grid */
+  .level-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+  }
+  @media (max-width:640px){ .level-grid{ grid-template-columns:repeat(2,1fr); } }
+
+  .symbol-card{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+  }
+  .symbol-icon{
+    display:inline-block;
+    width:34px;
+    height:34px;
+    flex-shrink:0;
+    margin-right:9px;
+    vertical-align:middle;
+    image-rendering:pixelated;
+  }
+  td .symbol-icon, .step-name .symbol-icon{
+    width:24px;
+    height:24px;
+    margin-right:6px;
+  }
+  .symbol-name{
+    font-weight:700;
+    font-size:1.1rem;
+    display:flex;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .level-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .stepper{
+    display:flex;
+    align-items:stretch;
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    background:#11141a;
+  }
+  .stepper button{
+    width:32px;
+    border:none;
+    background:transparent;
+    color:var(--text-dim);
+    font-size:16px;
+    cursor:pointer;
+  }
+  .stepper button:hover{ background:rgba(110,168,254,.12); color:var(--accent); }
+  .stepper input.lvl{
+    width:48px;
+    min-width:0;
+    text-align:center;
+    font-weight:700;
+    font-size:16px;
+    border:none;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+    background:transparent;
+    color:var(--text);
+    padding:6px 2px;
+    -moz-appearance:textfield;
+  }
+  .stepper input.lvl::-webkit-outer-spin-button,
+  .stepper input.lvl::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  .stepper input.lvl:focus{
+    outline:2px solid var(--accent);
+    outline-offset:-2px;
+  }
+  .stepper input.ext-lvl{ width:80px; }
+  .stepper button:disabled,
+  .stepper input.lvl:disabled{
+    opacity:.4;
+    cursor:not-allowed;
+  }
+
+  .force-chip{
+    font-size:15px;
+    font-weight:800;
+    color:var(--accent);
+    background:rgba(110,168,254,.12);
+    padding:4px 11px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+
+  .symbol-card.locked{ opacity:.5; }
+  .symbol-card.locked .force-chip{ color:var(--text-dim); background:#11141a; }
+
+  .reach-toggle{
+    margin-left:auto;
+    border:1px solid var(--border);
+    background:#11141a;
+    color:var(--text-dim);
+    font-size:12.5px;
+    font-weight:700;
+    padding:6px 12px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:background .15s, border-color .15s, color .15s;
+  }
+  .reach-toggle:hover{ border-color:var(--accent); color:var(--text); }
+  .reach-toggle.active{
+    background:rgba(76,141,255,.15);
+    border-color:var(--accent-strong);
+    color:var(--accent-strong);
+  }
+
+  /* mode toggle */
+  .toggle{
+    display:inline-flex;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:3px;
+    margin:20px 0 0;
+  }
+  .toggle button{
+    border:none;
+    background:transparent;
+    color:var(--text-dim);
+    font-weight:700;
+    font-size:0.85rem;
+    padding:9px 18px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:background .15s, color .15s;
+  }
+  .toggle button.active{
+    background:var(--accent-strong);
+    color:#0b0d12;
+  }
+
+  .field-row{
+    display:flex;
+    align-items:flex-end;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .force-input-group{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .force-input-group label{
+    font-size:0.82rem;
+    font-weight:600;
+    color:var(--text-dim);
+  }
+  .force-input-group input[type="number"]{
+    font-size:1.1rem;
+    font-weight:700;
+    width:140px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:#11141a;
+    color:var(--text);
+  }
+  .force-input-group input[type="number"]:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+  }
+
+  .boss-select-group{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .boss-select-group > label{
+    font-size:0.82rem;
+    font-weight:600;
+    color:var(--text-dim);
+  }
+  .boss-selects{ display:flex; gap:8px; }
+  .boss-selects select{
+    font-weight:600;
+    font-size:0.85rem;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:#11141a;
+    color:var(--text);
+    cursor:pointer;
+  }
+  .boss-selects select:disabled{
+    color:var(--text-dim);
+    cursor:not-allowed;
+  }
+  .boss-selects select:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+  }
+  #bossSelect{ min-width:150px; }
+  #diffSelect{ min-width:140px; }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:0.85rem;
+    margin-top:16px;
+  }
+  th, td{
+    text-align:left;
+    padding:9px 8px;
+    border-bottom:1px solid var(--border);
+  }
+  th{
+    font-size:0.7rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--text-dim);
+    font-weight:600;
+  }
+  td.num, th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  tr:last-child td{ border-bottom:none; }
+  .path-cell{ display:flex; align-items:center; gap:6px; }
+  .arrow{ color:var(--text-dim); }
+  .meso{ color:var(--accent-strong); font-weight:700; }
+  .zero-row td{ color:var(--text-dim); }
+
+  .table-wrap{ overflow-x:auto; }
+
+  .order-toggle{
+    background:none;
+    border:none;
+    color:var(--accent);
+    font-size:0.8rem;
+    font-weight:700;
+    cursor:pointer;
+    padding:0;
+    margin-top:14px;
+  }
+  .order-list{
+    display:none;
+    flex-wrap:wrap;
+    gap:10px 16px;
+    margin-top:12px;
+  }
+  .order-list.show{ display:flex; }
+  .step-unit{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .step-index{
+    font-size:10.5px;
+    font-weight:700;
+    color:var(--text-dim);
+    min-width:16px;
+  }
+  .step-card{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 12px;
+    border-radius:8px;
+    border:1px solid var(--accent-strong);
+    background:rgba(76,141,255,.12);
+  }
+  .step-card .step-name{
+    font-size:12px;
+    font-weight:700;
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    gap:4px;
+    white-space:nowrap;
+  }
+  .step-card .step-lv{
+    font-size:0.85rem;
+    font-weight:700;
+    color:var(--accent-strong);
+    white-space:nowrap;
+  }
+
+  /* manual mode symbol rows */
+  .manual-row{
+    display:grid;
+    grid-template-columns: 160px 1fr auto auto;
+    align-items:center;
+    gap:14px;
+    padding:11px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .manual-row:last-of-type{ border-bottom:none; }
+  .manual-row.locked{ opacity:.5; }
+  .manual-row .symbol-name{ margin-bottom:0; font-size:0.95rem; }
+  .manual-row .symbol-name .symbol-icon{ width:26px; height:26px; margin-right:6px; }
+  input[type="range"]{
+    width:100%;
+    accent-color: var(--accent-strong);
+  }
+  .manual-row .lvl-readout{
+    font-size:0.8rem;
+    font-weight:700;
+    min-width:52px;
+    text-align:center;
+    background:#11141a;
+    border:1px solid var(--border);
+    border-radius:7px;
+    padding:4px 0;
+  }
+  .manual-row .row-meso{
+    font-size:0.8rem;
+    font-weight:700;
+    color:var(--accent-strong);
+    min-width:118px;
+    text-align:right;
+  }
+  @media (max-width:640px){
+    .manual-row{ grid-template-columns: 1fr; row-gap:6px; }
+    .manual-row .row-meso{ text-align:left; }
+  }
+
+  /* summary bar */
+  .summary-bar{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    background:var(--card);
+    border-top:1px solid var(--border);
+    padding:14px 20px;
+    display:flex;
+    justify-content:center;
+  }
+  .summary-inner{
+    width:100%;
+    max-width:1280px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .summary-stat{ display:flex; flex-direction:column; gap:2px; }
+  .summary-stat .k{
+    font-size:0.68rem; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-dim); font-weight:700;
+  }
+  .summary-stat .v{
+    font-size:1.15rem;
+    font-weight:700;
+    color:var(--text);
+  }
+  .summary-stat.meso .v, .summary-stat.force .v{ color:var(--accent-strong); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="site-nav">
+    <a class="site-nav-home" href="index.html">← 메이플 계산기</a>
+    <div class="site-nav-tabs">
+      <a href="trace_calc.html">주흔 기댓값 계산기</a>
+      <a href="authentic_symbol_calc.html" class="active">어센틱 심볼 계산기</a>
+    </div>
+  </nav>
+  <header>
+    <h1>어센틱 심볼 계산기</h1>
+    <p class="sub">지역 심볼 강화 비용 &middot; 레벨 1당 <b>어센틱 포스 +10</b></p>
+  </header>
+
+  <div class="hero-force">
+    <span class="hero-force-label">내 어센틱 포스</span>
+    <span class="hero-force-value"><span id="currentForceVal">0</span><span class="unit">F</span></span>
+  </div>
+
+  <section class="card">
+    <h2>현재 심볼 레벨</h2>
+    <div class="level-grid" id="levelGrid"></div>
+  </section>
+
+  <div class="toggle">
+    <button id="tabOpt" class="active">최적화 모드</button>
+    <button id="tabManual">수동 모드</button>
+  </div>
+
+  <!-- Optimization panel -->
+  <section class="card" id="panelOpt">
+    <div class="field-row">
+      <div class="force-input-group">
+        <label for="targetForce">목표 어센틱 포스</label>
+        <input type="number" id="targetForce" value="100" step="10" min="0">
+      </div>
+      <div class="force-input-group">
+        <label for="externalForceInput">외부 획득 포스</label>
+        <div class="stepper">
+          <button type="button" tabindex="-1" data-ext-dir="-1" aria-label="외부 포스 감소">-</button>
+          <input class="lvl ext-lvl" type="number" id="externalForceInput" min="0" step="10" value="0">
+          <button type="button" tabindex="-1" data-ext-dir="1" aria-label="외부 포스 증가">+</button>
+        </div>
+      </div>
+      <div class="boss-select-group">
+        <label for="bossSelect">보스로 설정 (최대효율 125% 기준)</label>
+        <div class="boss-selects">
+          <select id="bossSelect">
+            <option value="">보스 선택</option>
+          </select>
+          <select id="diffSelect" disabled>
+            <option value="">난이도</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <p class="note">목표 포스는 10단위로 반올림되며, 현재 포스와의 차이만큼 레벨당 비용이 가장 낮은 강화부터 자동으로 선택해 <b>합산 메소가 최소</b>가 되도록 계산합니다.</p>
+    <p class="note" id="bossPickNote"></p>
+    <p class="note" id="optNote"></p>
+
+    <div class="table-wrap">
+      <table id="optTable">
+        <thead>
+          <tr>
+            <th>심볼</th>
+            <th>레벨 변화</th>
+            <th class="num">강화 횟수</th>
+            <th class="num">획득 포스</th>
+            <th class="num">소요 메소</th>
+          </tr>
+        </thead>
+        <tbody id="optTbody"></tbody>
+      </table>
+    </div>
+    <button class="order-toggle" id="orderToggleBtn">강화 순서 보기 ▾</button>
+    <div class="order-list" id="orderList"></div>
+  </section>
+
+  <!-- Manual panel -->
+  <section class="card hidden" id="panelManual">
+    <p class="note" style="margin-top:0;">각 심볼의 목표 레벨을 직접 설정하세요. 현재 레벨보다 낮게는 설정할 수 없습니다.</p>
+    <div id="manualRows"></div>
+  </section>
+</div>
+
+<div class="summary-bar">
+  <div class="summary-inner">
+    <div class="summary-stat force">
+      <span class="k">획득 어센틱 포스</span>
+      <span class="v" id="sumForce">+0</span>
+    </div>
+    <div class="summary-stat">
+      <span class="k">총 강화 횟수</span>
+      <span class="v" id="sumCount">0회</span>
+    </div>
+    <div class="summary-stat meso">
+      <span class="k">합산 메소</span>
+      <span class="v" id="sumMeso">0</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var SYMBOLS = [
+    { name:"세르니움",  icon:"icons/cernium.png",   costs:[36500000,91200000,160700000,241900000,331500000,426200000,522900000,618200000,709000000,792000000] },
+    { name:"아르크스",  icon:"icons/arcus.png",     costs:[41700000,104800000,186100000,282200000,390000000,506100000,627400000,750700000,872600000,990000000] },
+    { name:"오디움",    icon:"icons/odium.png",     costs:[46900000,118500000,211500000,322500000,448500000,586000000,732000000,883200000,1036200000,1188000000] },
+    { name:"도원경",    icon:"icons/dowon.png",     costs:[52200000,132200000,236800000,362800000,507000000,666000000,836600000,1015600000,1199800000,1386000000] },
+    { name:"아르테리아", icon:"icons/arteria.png",   costs:[57400000,145900000,262200000,403200000,565500000,745900000,941200000,1148100000,1363500000,1584000000] },
+    { name:"카르시온",  icon:"icons/carcion.png",   costs:[62600000,159600000,287600000,443500000,624000000,825800000,1045800000,1280600000,1527100000,1782000000] },
+    { name:"탈라하트",  icon:"icons/tallahart.png", costs:[113600000,293300000,535800000,837700000,1196000000,1607200000,2068300000,2576000000,3126900000,3718000000] },
+    { name:"기어드락",  icon:"icons/gierdrak.png",  costs:[139700000,361700000,662700000,1039300000,1488500000,2006800000,2591200000,3238400000,3945000000,4708000000] }
+  ];
+
+  // levelCum[L] = meso cost from level 0 to reach level L (L=0..11).
+  // Levels 0 and 1 are both free (arriving at the area grants level 1 with no meso cost) —
+  // real meso costs (from the strengthen-cost table, "1→2" etc.) start applying from level 1 onward.
+  SYMBOLS.forEach(function(s){
+    var cum = [0, 0];
+    for (var i=0;i<s.costs.length;i++) cum.push(cum[i+1]+s.costs[i]);
+    s.levelCum = cum; // length 12, index L => level L
+  });
+
+  // target = 100% 요구량 + 50 (빨간색 125% 최대효율 수치)
+  var BOSS_FORCE = [
+    { name:"벨로나", diffs:[
+      {label:"EASY", req:400, target:450},
+      {label:"NORMAL", req:450, target:500},
+      {label:"HARD", req:550, target:600}
+    ]},
+    { name:"유피테르", diffs:[
+      {label:"NORMAL", req:810, target:860},
+      {label:"HARD", req:810, target:860}
+    ]},
+    { name:"발드릭스", diffs:[
+      {label:"NORMAL", req:700, target:750},
+      {label:"HARD", req:700, target:750}
+    ]},
+    { name:"림보", diffs:[
+      {label:"NORMAL", req:500, target:550},
+      {label:"HARD", req:500, target:550}
+    ]},
+    { name:"찬란한 흉성", diffs:[
+      {label:"NORMAL", req:400, target:450},
+      {label:"HARD", req:550, target:600}
+    ]},
+    { name:"최초의 대적자", diffs:[
+      {label:"EASY", req:220, target:270},
+      {label:"NORMAL", req:320, target:370},
+      {label:"HARD", req:340, target:390},
+      {label:"EXTREME", req:460, target:510}
+    ]},
+    { name:"카링", diffs:[
+      {label:"EASY", req:230, target:280},
+      {label:"NORMAL", req:330, target:380},
+      {label:"HARD", req:350, target:400},
+      {label:"EXTREME", req:480, target:530}
+    ]},
+    { name:"세렌", diffs:[
+      {label:"전체 (2페이즈 기준)", req:200, target:250}
+    ]},
+    { name:"칼로스", diffs:[
+      {label:"EASY", req:200, target:250},
+      {label:"NORMAL (2페이즈 기준)", req:300, target:350},
+      {label:"CHAOS", req:330, target:380},
+      {label:"EXTREME", req:440, target:490}
+    ]}
+  ];
+
+  var curLevels = SYMBOLS.map(function(){ return 1; });
+  var unlocked = SYMBOLS.map(function(){ return true; }); // false = 아직 도착하지 못한 지역
+
+  function won(n){
+    return n.toLocaleString('ko-KR');
+  }
+
+  function costBetween(sym, fromLv, toLv){
+    if (toLv <= fromLv) return 0;
+    return sym.levelCum[toLv] - sym.levelCum[fromLv];
+  }
+
+  // meso cost of a single upgrade starting at level `lv` (0→1 is always free)
+  function nextLevelCost(sym, lv){
+    if (lv <= 0) return 0;
+    return sym.costs[lv-1];
+  }
+
+  function currentTotalForce(){
+    var externalForce = Math.max(0, Math.round(+document.getElementById('externalForceInput').value || 0));
+    return curLevels.reduce(function(sum, lv){ return sum + lv*10; }, externalForce);
+  }
+  // ---------- Level grid ----------
+  var levelGrid = document.getElementById('levelGrid');
+  levelGrid.addEventListener('focusin', function(e){
+    if (e.target.matches('input.lvl')) e.target.select();
+  });
+  function afterLevelChange(){
+    updateLevelGridDisplay();
+    renderManualRows();
+    if (mode === 'opt') runOptimization(); else runManual();
+  }
+
+  function renderLevelGrid(){
+    levelGrid.innerHTML = '';
+    SYMBOLS.forEach(function(sym, idx){
+      var card = document.createElement('div');
+      card.className = 'symbol-card';
+      card.innerHTML =
+        '<div class="symbol-name"><img class="symbol-icon" src="'+sym.icon+'" alt="">'+sym.name+
+          '<button type="button" class="reach-toggle" tabindex="-1" data-idx="'+idx+'"></button>'+
+        '</div>'+
+        '<div class="level-row">'+
+          '<div class="stepper">'+
+            '<button type="button" tabindex="-1" data-idx="'+idx+'" data-dir="-1" aria-label="레벨 감소">-</button>'+
+            '<input class="lvl" type="number" min="1" max="11" step="1" inputmode="numeric" data-idx="'+idx+'" value="'+curLevels[idx]+'">'+
+            '<button type="button" tabindex="-1" data-idx="'+idx+'" data-dir="1" aria-label="레벨 증가">+</button>'+
+          '</div>'+
+          '<span class="force-chip"></span>'+
+        '</div>';
+      levelGrid.appendChild(card);
+    });
+    updateLevelGridDisplay();
+    levelGrid.querySelectorAll('.stepper button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var idx = +btn.getAttribute('data-idx');
+        if (!unlocked[idx]) return;
+        var dir = +btn.getAttribute('data-dir');
+        var next = curLevels[idx] + dir;
+        if (next < 1 || next > 11) return;
+        curLevels[idx] = next;
+        afterLevelChange();
+      });
+    });
+    levelGrid.querySelectorAll('input.lvl').forEach(function(inp){
+      inp.addEventListener('change', function(){
+        var idx = +inp.getAttribute('data-idx');
+        if (!unlocked[idx]){ inp.value = curLevels[idx]; return; }
+        var next = Math.round(+inp.value);
+        if (isNaN(next)) next = curLevels[idx];
+        next = Math.min(11, Math.max(1, next));
+        curLevels[idx] = next;
+        afterLevelChange();
+      });
+    });
+    levelGrid.querySelectorAll('.reach-toggle').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var idx = +btn.getAttribute('data-idx');
+        unlocked[idx] = !unlocked[idx];
+        if (!unlocked[idx]) curLevels[idx] = 0;
+        else if (curLevels[idx] < 1) curLevels[idx] = 1;
+        afterLevelChange();
+      });
+    });
+  }
+
+  function updateLevelGridDisplay(){
+    var cards = levelGrid.children;
+    SYMBOLS.forEach(function(sym, idx){
+      var card = cards[idx];
+      if (!card) return;
+      card.classList.toggle('locked', !unlocked[idx]);
+      var chip = card.querySelector('.force-chip');
+      if (chip) chip.textContent = unlocked[idx] ? (curLevels[idx]*10 + ' F') : '미도착';
+      var inp = card.querySelector('input.lvl');
+      if (inp){
+        inp.value = curLevels[idx];
+        inp.disabled = !unlocked[idx];
+      }
+      card.querySelectorAll('.stepper button').forEach(function(btn){
+        btn.disabled = !unlocked[idx];
+      });
+      var toggleBtn = card.querySelector('.reach-toggle');
+      if (toggleBtn){
+        toggleBtn.classList.toggle('active', unlocked[idx]);
+        toggleBtn.setAttribute('aria-pressed', unlocked[idx] ? 'true' : 'false');
+        toggleBtn.textContent = unlocked[idx] ? '도착' : '미도착';
+      }
+    });
+    var forceEl = document.getElementById('currentForceVal');
+    if (forceEl) forceEl.textContent = currentTotalForce();
+  }
+
+  // ---------- Tabs ----------
+  var tabOpt = document.getElementById('tabOpt');
+  var tabManual = document.getElementById('tabManual');
+  var panelOpt = document.getElementById('panelOpt');
+  var panelManual = document.getElementById('panelManual');
+  var mode = 'opt';
+
+  tabOpt.addEventListener('click', function(){
+    mode = 'opt';
+    tabOpt.classList.add('active'); tabManual.classList.remove('active');
+    panelOpt.classList.remove('hidden'); panelManual.classList.add('hidden');
+    runOptimization();
+  });
+  tabManual.addEventListener('click', function(){
+    mode = 'manual';
+    tabManual.classList.add('active'); tabOpt.classList.remove('active');
+    panelManual.classList.remove('hidden'); panelOpt.classList.add('hidden');
+    runManual();
+  });
+
+  // ---------- Optimization mode ----------
+  var targetForceInput = document.getElementById('targetForce');
+  var optNote = document.getElementById('optNote');
+  var optTbody = document.getElementById('optTbody');
+  var orderList = document.getElementById('orderList');
+  var orderToggleBtn = document.getElementById('orderToggleBtn');
+
+  targetForceInput.addEventListener('input', runOptimization);
+  targetForceInput.addEventListener('focus', function(){ targetForceInput.select(); });
+  orderToggleBtn.addEventListener('click', function(){
+    orderList.classList.toggle('show');
+    orderToggleBtn.textContent = orderList.classList.contains('show') ? '강화 순서 숨기기 ▴' : '강화 순서 보기 ▾';
+  });
+
+  // ---------- External bonus force ----------
+  var externalForceInput = document.getElementById('externalForceInput');
+  externalForceInput.addEventListener('focus', function(){ externalForceInput.select(); });
+  function afterExternalForceChange(){
+    document.getElementById('currentForceVal').textContent = currentTotalForce();
+    runOptimization();
+    if (mode === 'manual') runManual();
+  }
+  externalForceInput.addEventListener('input', afterExternalForceChange);
+  document.querySelectorAll('[data-ext-dir]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var dir = +btn.getAttribute('data-ext-dir');
+      var next = Math.max(0, Math.round(+externalForceInput.value || 0) + dir*10);
+      externalForceInput.value = next;
+      afterExternalForceChange();
+    });
+  });
+
+  // ---------- Boss target picker ----------
+  var bossSelect = document.getElementById('bossSelect');
+  var diffSelect = document.getElementById('diffSelect');
+  var bossPickNote = document.getElementById('bossPickNote');
+
+  BOSS_FORCE.forEach(function(b, i){
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = b.name;
+    bossSelect.appendChild(opt);
+  });
+
+  function applyDiffSelection(){
+    if (bossSelect.value === '' || diffSelect.value === ''){ bossPickNote.textContent = ''; return; }
+    var boss = BOSS_FORCE[+bossSelect.value];
+    var d = boss.diffs[+diffSelect.value];
+    targetForceInput.value = d.target;
+    bossPickNote.textContent = boss.name + ' · ' + d.label + ' — 요구 포스 ' + d.req + ' → 최대효율(125%) 목표 ' + d.target + ' 로 설정했습니다.';
+    runOptimization();
+  }
+
+  bossSelect.addEventListener('change', function(){
+    diffSelect.innerHTML = '<option value="">난이도</option>';
+    bossPickNote.textContent = '';
+    if (bossSelect.value === ''){ diffSelect.disabled = true; return; }
+    var boss = BOSS_FORCE[+bossSelect.value];
+    boss.diffs.forEach(function(d, j){
+      var opt = document.createElement('option');
+      opt.value = j;
+      opt.textContent = d.label + ' (목표 ' + d.target + ')';
+      diffSelect.appendChild(opt);
+    });
+    diffSelect.disabled = false;
+    // 제일 낮은(첫) 난이도를 자동 선택
+    diffSelect.value = '0';
+    applyDiffSelection();
+  });
+
+  diffSelect.addEventListener('change', applyDiffSelection);
+
+  function runOptimization(){
+    if (mode !== 'opt') return;
+    var curForce = currentTotalForce();
+    var rawTarget = Math.max(0, Math.round(+targetForceInput.value || 0));
+    var roundedTarget = Math.ceil(rawTarget/10)*10;
+    var delta = Math.max(0, roundedTarget - curForce);
+    var steps = delta/10;
+    var alreadyThere = roundedTarget <= curForce;
+
+    var levels = curLevels.slice();
+    var maxAvailable = SYMBOLS.reduce(function(sum, s, i){ return sum + (unlocked[i] ? (11-levels[i]) : 0); }, 0);
+    var capped = false;
+    if (steps > maxAvailable){ steps = maxAvailable; capped = true; }
+
+    var perSymbol = SYMBOLS.map(function(_, i){ return { start: levels[i], end: levels[i], count:0, meso:0 }; });
+    var orderSteps = [];
+    var totalMeso = 0;
+
+    for (var s=0; s<steps; s++){
+      var bestIdx = -1, bestCost = Infinity;
+      for (var i=0;i<SYMBOLS.length;i++){
+        if (unlocked[i] && levels[i] < 11){
+          var c = nextLevelCost(SYMBOLS[i], levels[i]);
+          if (c < bestCost){ bestCost = c; bestIdx = i; }
+        }
+      }
+      if (bestIdx === -1) break;
+      var fromLv = levels[bestIdx];
+      levels[bestIdx]++;
+      perSymbol[bestIdx].end = levels[bestIdx];
+      perSymbol[bestIdx].count++;
+      perSymbol[bestIdx].meso += bestCost;
+      totalMeso += bestCost;
+      orderSteps.push({ idx: bestIdx, from: fromLv, to: levels[bestIdx] });
+    }
+
+    // render note
+    var noteParts = [];
+    if (rawTarget % 10 !== 0){
+      noteParts.push('목표 포스는 10 단위로 올림 처리되어 ' + roundedTarget + ' 포스 기준으로 계산됩니다.');
+    }
+    if (alreadyThere){
+      noteParts.push('현재 포스(' + curForce + ')가 이미 목표 포스 이상입니다.');
+    } else if (capped){
+      noteParts.push('모든 심볼이 최대 레벨(11)에 도달하여 최대 ' + (curForce + maxAvailable*10) + ' 포스까지만 도달할 수 있습니다.');
+    }
+    optNote.textContent = noteParts.join(' ');
+    optNote.className = 'note' + (capped ? ' warn' : '');
+
+    // render table
+    optTbody.innerHTML = '';
+    perSymbol.forEach(function(row, idx){
+      var tr = document.createElement('tr');
+      if (row.count === 0) tr.className = 'zero-row';
+      tr.innerHTML =
+        '<td><img class="symbol-icon" src="'+SYMBOLS[idx].icon+'" alt="">'+SYMBOLS[idx].name+'</td>'+
+        '<td class="path-cell">Lv.'+row.start+' <span class="arrow">→</span> Lv.'+row.end+'</td>'+
+        '<td class="num">'+row.count+'회</td>'+
+        '<td class="num">+'+(row.count*10)+'</td>'+
+        '<td class="num meso">'+(row.meso>0 ? won(row.meso) : '-')+'</td>';
+      optTbody.appendChild(tr);
+    });
+
+    // order cards — 같은 심볼이 연달아 나오면 하나로 묶어서
+    // "세르니움 두 개"처럼 보이지 않고 "세르니움 Lv.1→Lv.3"으로 한 번에 보이게
+    var orderGroups = [];
+    orderSteps.forEach(function(step){
+      var last = orderGroups[orderGroups.length - 1];
+      if (last && last.idx === step.idx && last.to === step.from){
+        last.to = step.to;
+      } else {
+        orderGroups.push({ idx: step.idx, from: step.from, to: step.to });
+      }
+    });
+    orderList.innerHTML = orderGroups.map(function(g, i){
+      var name = SYMBOLS[g.idx].name;
+      var icon = '<img class="symbol-icon" src="'+SYMBOLS[g.idx].icon+'" alt="">';
+      return '<div class="step-unit">'+
+        '<span class="step-index">'+(i+1)+'</span>'+
+        '<div class="step-card">'+
+          '<span class="step-name">'+icon+name+'</span>'+
+          '<span class="step-lv">Lv.'+g.from+' → Lv.'+g.to+'</span>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+
+    updateSummary(steps*10, steps, totalMeso);
+  }
+
+  // ---------- Manual mode ----------
+  var manualRowsEl = document.getElementById('manualRows');
+  var manualTargets = SYMBOLS.map(function(){ return 1; });
+
+  function renderManualRows(){
+    manualTargets = manualTargets.map(function(t, i){ return unlocked[i] ? Math.max(t, curLevels[i]) : 0; });
+    manualRowsEl.innerHTML = '';
+    SYMBOLS.forEach(function(sym, idx){
+      var row = document.createElement('div');
+      row.className = 'manual-row' + (unlocked[idx] ? '' : ' locked');
+      var cur = curLevels[idx];
+      var tgt = manualTargets[idx];
+      var meso = costBetween(sym, cur, tgt);
+      row.innerHTML =
+        '<div class="symbol-name"><img class="symbol-icon" src="'+sym.icon+'" alt="">'+sym.name+'</div>'+
+        '<input type="range" min="'+cur+'" max="11" step="1" value="'+tgt+'" data-idx="'+idx+'"'+(unlocked[idx]?'':' disabled')+'>'+
+        '<span class="lvl-readout" id="manualLvl'+idx+'">'+(unlocked[idx]?('Lv.'+tgt):'미도착')+'</span>'+
+        '<span class="row-meso" id="manualMeso'+idx+'">'+(unlocked[idx]&&meso>0?won(meso):'-')+'</span>';
+      manualRowsEl.appendChild(row);
+    });
+    manualRowsEl.querySelectorAll('input[type="range"]').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        var idx = +inp.getAttribute('data-idx');
+        if (!unlocked[idx]) return;
+        manualTargets[idx] = +inp.value;
+        document.getElementById('manualLvl'+idx).textContent = 'Lv.'+inp.value;
+        var meso = costBetween(SYMBOLS[idx], curLevels[idx], +inp.value);
+        document.getElementById('manualMeso'+idx).textContent = meso>0? won(meso) : '-';
+        runManual();
+      });
+    });
+  }
+
+  function runManual(){
+    if (mode !== 'manual') return;
+    var totalMeso = 0, totalForce = 0, totalCount = 0;
+    SYMBOLS.forEach(function(sym, idx){
+      var cur = curLevels[idx], tgt = manualTargets[idx];
+      totalMeso += costBetween(sym, cur, tgt);
+      totalForce += (tgt-cur)*10;
+      totalCount += (tgt-cur);
+    });
+    updateSummary(totalForce, totalCount, totalMeso);
+  }
+
+  function updateSummary(force, count, meso){
+    document.getElementById('sumForce').textContent = '+'+force;
+    document.getElementById('sumCount').textContent = count+'회';
+    document.getElementById('sumMeso').textContent = won(meso);
+  }
+
+  renderLevelGrid();
+  renderManualRows();
+  runOptimization();
+})();
+</script>
+</body>
+</html>

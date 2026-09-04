@@ -3,130 +3,68 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>주흔 기댓값 계산기</title>
+<title>메이플 계산기 모음</title>
 <link rel="stylesheet" href="style.css" />
+<style>
+  .tool-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:16px;
+    margin-top:20px;
+  }
+  .tool-card{
+    display:block;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:22px 22px 20px;
+    text-decoration:none;
+    color:var(--text);
+    transition:border-color .15s, transform .15s;
+  }
+  .tool-card:hover{
+    border-color:var(--accent-strong);
+    transform:translateY(-2px);
+  }
+  .tool-card h2{
+    margin:0 0 8px;
+    font-size:1.15rem;
+  }
+  .tool-card p{
+    margin:0;
+    color:var(--text-dim);
+    font-size:0.88rem;
+    line-height:1.6;
+  }
+  .tool-card .go{
+    display:inline-block;
+    margin-top:14px;
+    font-size:0.82rem;
+    font-weight:600;
+    color:var(--accent);
+  }
+</style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>주흔(주문의 흔적) 기댓값 계산기</h1>
-    <p class="sub">아케인셰이드 / 이노센트 / 순백 주문서 — 주흔작 완성까지 기대 비용 계산</p>
+    <h1>메이플 계산기 모음</h1>
+    <p class="sub">필요할 때 꺼내 쓰는 메이플스토리 계산기들</p>
   </header>
 
-  <div class="layout">
-    <div class="layout-left">
-      <section class="card">
-        <h2>1. 아이템 &amp; 진행할 작 선택</h2>
-        <div id="tierList" class="card-list"></div>
+  <div class="tool-grid">
+    <a class="tool-card" href="trace_calc.html">
+      <h2>주흔 기댓값 계산기</h2>
+      <p>아케인셰이드 / 이노센트·아크이노센트 / 순백 주문서 — 주흔작 완성까지 기대 비용(메소·시도 횟수)을 계산합니다.</p>
+      <span class="go">계산기 열기 →</span>
+    </a>
 
-        <div id="partListWrap" class="part-list-wrap hidden">
-          <div id="partListPointer" class="part-list-pointer"></div>
-          <div id="partList" class="card-list part-list"></div>
-        </div>
-        <p id="itemNote" class="note"></p>
-        <div id="itemPreview" class="item-preview"></div>
-
-        <div class="field-label" style="margin-top:14px">진행할 작 선택</div>
-        <div id="bracketCards" class="card-list bracket-list"></div>
-        <p id="bracketNote" class="note"></p>
-      </section>
-
-      <section class="card">
-        <h2>2. 이노 &amp; 순백</h2>
-        <div class="field-label">초기화 방식 (다시 클릭하면 해제)</div>
-        <div id="resetModeCards" class="card-list"></div>
-        <div id="resetFundedCards" class="switch-list"></div>
-        <p id="resetFundedNote" class="note hidden">초기화 방식을 고르면 주흔으로 조달했는지 표시할 수 있어요.</p>
-
-        <hr class="field-divider" />
-        <div class="field-label">순백</div>
-        <div id="protectCards" class="switch-list"></div>
-      </section>
-
-      <section class="card card-secondary">
-        <h2>3. 확률 보정 &amp; 기타</h2>
-        <div class="field-label">확률 모드</div>
-        <div id="probModeCards" class="card-list"></div>
-
-        <hr class="field-divider" />
-        <div class="field-label">보너스 (최대치 기준)</div>
-        <div id="bonusCards" class="switch-list"></div>
-
-        <hr class="field-divider" />
-        <div class="field-label">이벤트</div>
-        <div id="halfPriceCards" class="switch-list"></div>
-
-        <hr class="field-divider" />
-        <div class="field-grid">
-          <div class="field">
-            <label>주흔 개당 가격 (메소, 선택 입력)</label>
-            <input type="number" id="jujeonPrice" placeholder="입력 안 하면 메소 환산 없이 주흔 개수만 표시" min="0" value="1500" />
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <div class="layout-right">
-      <section class="card" id="resultPlaceholderCard">
-        <h2>결과</h2>
-        <div id="resultPlaceholder" class="note"></div>
-      </section>
-
-      <div id="resultBody" class="hidden">
-        <section class="card card-ref">
-          <h2>전체 기댓값 <span class="note inline">— 처음부터 시작할 때 기준</span></h2>
-          <div class="summary-grid small" id="summary"></div>
-        </section>
-
-        <section class="card card-primary">
-          <h2>지금 상태 확인하기</h2>
-          <p class="note">칸을 클릭해서 성공/실패를 표시하세요. 몇 번이든, 어떤 순서로든 눌러도 돼요 — 클릭 안 한 칸은 "아직 시도 안 함"이에요.</p>
-          <div class="slot-picker-row">
-            <div id="slotPicker" class="slot-picker"></div>
-            <button type="button" id="slotResetBtn" class="slot-reset-btn">초기화</button>
-          </div>
-
-          <div class="action-hero">
-            <div class="label">지금 할 일</div>
-            <div class="value" id="actionValue">-</div>
-          </div>
-          <div class="action-grid">
-            <div class="action-card">
-              <div class="label">진행 상황</div>
-              <div class="value" id="progressValue">0작 시도 중 0작 성공</div>
-            </div>
-            <div class="action-card">
-              <div class="label">여기서부터 기대 주흔</div>
-              <div class="value" id="remainValue">-</div>
-            </div>
-          </div>
-        </section>
-
-        <details class="card card-collapsible" id="cutoffCard">
-          <summary><h2>손절 기준표</h2></summary>
-          <p class="note" id="cutoffBasisNote"></p>
-          <table class="stage-table" id="cutoffTable">
-            <thead>
-              <tr><th>지금까지 시도 횟수</th><th>이 작 수 이하면 초기화 추천</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-
-          <hr class="field-divider" />
-          <p class="note" id="cutoffArcBasisNote"></p>
-          <table class="stage-table" id="cutoffTableArc">
-            <thead>
-              <tr><th>지금까지 시도 횟수</th><th>이 작 수 이하면 초기화 추천</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </details>
-      </div>
-    </div>
+    <a class="tool-card" href="authentic_symbol_calc.html">
+      <h2>어센틱 심볼 계산기</h2>
+      <p>그랜디스 지역 심볼 강화 계산기. 목표 어센틱 포스까지 최소 메소로 도달하는 강화 순서를 자동으로 계산합니다.</p>
+      <span class="go">계산기 열기 →</span>
+    </a>
   </div>
 </div>
-
-<script src="calc.js"></script>
-<script src="app.js"></script>
 </body>
 </html>
