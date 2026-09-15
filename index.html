@@ -74,6 +74,18 @@
   .key-hero-text{ flex:1 1 auto; min-width:0; }
   .key-hero-title{ font-size:1.3rem; font-weight:800; color:var(--text); }
   .key-hero-sub{ font-size:0.85rem; color:var(--text-dim); margin-top:2px; }
+
+  /* step-by-step guide shown only while no key is registered */
+  .key-guide{
+    margin:0 0 16px;
+    padding-left:20px;
+    color:var(--text-dim);
+    font-size:0.88rem;
+    line-height:1.9;
+  }
+  .key-guide li::marker{ color:var(--accent-strong); font-weight:700; }
+  .key-guide b{ color:var(--text); }
+  .key-guide a{ color:var(--accent); font-weight:700; }
 </style>
 </head>
 <body>
@@ -97,13 +109,19 @@
     </div>
 
     <div id="apiKeyForm">
+      <ol class="key-guide">
+        <li><a href="https://openapi.nexon.com/" target="_blank" rel="noopener">openapi.nexon.com</a>에서 넥슨 ID로 로그인</li>
+        <li>우측 상단 <b>마이 페이지</b>로 이동</li>
+        <li><b>애플리케이션 등록</b>에서 게임으로 "메이플스토리"를 선택해 신청</li>
+        <li>등록 완료 후 발급된 <b>API Key</b>를 복사</li>
+        <li>아래 입력칸에 붙여넣고 <b>등록</b> 버튼 클릭</li>
+      </ol>
       <div class="api-key-row">
         <input type="password" id="apiKeyInput" placeholder="발급받은 API Key 붙여넣기" autocomplete="off" spellcheck="false">
         <button type="button" class="fetch-btn" id="apiKeySaveBtn">등록</button>
         <button type="button" class="link-btn hidden" id="apiKeyClearBtn">삭제</button>
       </div>
       <p class="note" id="apiKeyStatus"></p>
-      <p class="note"><a href="https://openapi.nexon.com/" target="_blank" rel="noopener">openapi.nexon.com</a>에 넥슨 ID로 로그인 → 마이 페이지 → 애플리케이션 등록(메이플스토리) → 발급된 API Key를 붙여넣으세요.</p>
     </div>
   </section>
 
@@ -117,6 +135,12 @@
     <a class="tool-card" href="authentic_symbol_calc.html">
       <h2>어센틱 심볼 계산기</h2>
       <p>그랜디스 지역 심볼 강화 계산기. 목표 어센틱 포스까지 최소 메소로 도달하는 강화 순서를 자동으로 계산합니다. 넥슨 오픈 API로 캐릭터 이름만 넣으면 현재 심볼 레벨이 자동 입력됩니다.</p>
+      <span class="go">계산기 열기 →</span>
+    </a>
+
+    <a class="tool-card" href="boss_income_calc.html">
+      <h2>보스 수익 정산 계산기</h2>
+      <p>캐릭터별로 보스 난이도와 격파 인원수(N빵)를 등록하면 1주일·한 달 보스 수익을 계산합니다. 여러 캐릭터를 등록해 캐릭당 수익과 총합 수익을 한눈에 볼 수 있습니다.</p>
       <span class="go">계산기 열기 →</span>
     </a>
   </div>

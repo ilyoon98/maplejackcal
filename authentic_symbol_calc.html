@@ -182,6 +182,45 @@
     white-space:nowrap;
   }
   .char-search-hero .note{ margin:10px 0 0; }
+  .char-search-hero.needs-key{
+    border-color:var(--bad);
+    background:rgba(226,102,74,.1);
+  }
+  .key-warning{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid rgba(226,102,74,.35);
+  }
+  .key-warning-text{
+    font-size:0.95rem;
+    font-weight:800;
+    color:var(--bad);
+  }
+  .key-warning-text .sub{
+    display:block;
+    font-size:0.8rem;
+    font-weight:500;
+    color:var(--text-dim);
+    margin-top:3px;
+  }
+  .go-register-btn{
+    background:var(--bad);
+    color:#fff;
+    font-size:1rem;
+    font-weight:800;
+    padding:12px 26px;
+    border-radius:10px;
+    text-decoration:none;
+    white-space:nowrap;
+    display:inline-block;
+    flex-shrink:0;
+  }
+  .go-register-btn:hover{ filter:brightness(1.1); }
 
   .reach-toggle{
     margin-left:auto;
@@ -449,6 +488,7 @@
     <div class="site-nav-tabs">
       <a href="trace_calc.html">주흔 기댓값 계산기</a>
       <a href="authentic_symbol_calc.html" class="active">어센틱 심볼 계산기</a>
+      <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
     </div>
   </nav>
   <header>
@@ -456,13 +496,13 @@
     <p class="sub">지역 심볼 강화 비용 &middot; 레벨 1당 <b>어센틱 포스 +10</b></p>
   </header>
 
-  <section class="char-search-hero">
+  <section class="char-search-hero" id="charSearchHero">
     <h2>캐릭터 검색</h2>
     <div class="char-search-row">
       <input type="text" id="charNameInput" placeholder="캐릭터 이름" autocomplete="off" spellcheck="false" maxlength="20" aria-label="캐릭터 이름">
       <button type="button" class="fetch-btn" id="fetchBtn">캐릭터 검색</button>
     </div>
-    <p class="note" id="apiKeyLine"></p>
+    <div id="apiKeyLine"></div>
     <p class="note fetch-status" id="fetchStatus" aria-live="polite"></p>
   </section>
 
@@ -998,14 +1038,20 @@
   var fetchBtn = document.getElementById('fetchBtn');
   var fetchStatus = document.getElementById('fetchStatus');
   var apiKeyLine = document.getElementById('apiKeyLine');
+  var charSearchHero = document.getElementById('charSearchHero');
 
   function lsGet(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
   function lsSet(k, v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
 
   function refreshApiKeyLine(){
-    apiKeyLine.innerHTML = NexonKey.has()
-      ? 'API 키 등록됨 ✓'
-      : 'API 키가 필요합니다. <a class="link-btn" href="index.html#apiKey">홈 화면에서 등록하세요 →</a>';
+    var has = NexonKey.has();
+    charSearchHero.classList.toggle('needs-key', !has);
+    apiKeyLine.innerHTML = has
+      ? '<p class="note">API 키 등록됨 ✓</p>'
+      : '<div class="key-warning">' +
+          '<div class="key-warning-text">API 키가 등록되지 않았습니다<span class="sub">캐릭터 검색을 쓰려면 먼저 홈 화면에서 API 키를 등록하세요.</span></div>' +
+          '<a class="go-register-btn" href="index.html#apiKey">등록하러 가기 →</a>' +
+        '</div>';
   }
   function setStatus(msg, kind){
     fetchStatus.textContent = msg || '';
@@ -1094,7 +1140,7 @@
     var name = charNameInput.value.trim();
     if (!NexonKey.has()){
       refreshApiKeyLine();
-      setStatus('먼저 홈 화면에서 넥슨 오픈 API 키를 등록하세요.', 'err');
+      setStatus('위의 "등록하러 가기"로 먼저 API 키를 등록하세요.', 'err');
       return;
     }
     refreshApiKeyLine();
