@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>보스 수익 정산 계산기</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  :root{ --surface-2:#1d212b; }
+  body{ padding-bottom:96px; }
+
+  /* character chips */
+  .char-add-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .char-add-row input[type="text"]{
+    flex:1 1 200px;
+    min-width:0;
+    font-size:0.95rem;
+    font-weight:600;
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:#11141a;
+    color:var(--text);
+  }
+  .char-add-row input[type="text"]:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  .char-chip-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .char-chip{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 8px 8px 14px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:#11141a;
+    color:var(--text-dim);
+    font-weight:700;
+    font-size:0.85rem;
+    cursor:pointer;
+  }
+  .char-chip:hover{ border-color:var(--accent); color:var(--text); }
+  .char-chip.active{ border-color:var(--accent-strong); background:#1c2740; color:var(--text); }
+  .char-chip .chip-meso{ font-size:0.72rem; color:var(--accent-strong); font-weight:700; }
+  .char-chip .chip-name{ cursor:text; }
+  .char-chip .chip-name:focus{ outline:1px solid var(--accent); border-radius:4px; }
+  .char-chip .chip-del{
+    width:20px; height:20px;
+    border-radius:50%;
+    border:none;
+    background:rgba(226,102,74,0.15);
+    color:var(--bad);
+    font-size:12px;
+    font-weight:800;
+    line-height:20px;
+    text-align:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .char-chip .chip-del:hover{ background:var(--bad); color:#fff; }
+  .empty-note{ color:var(--text-dim); font-size:0.85rem; padding:6px 0; }
+
+  /* boss list */
+  .weekly-quota{
+    font-size:0.8rem;
+    font-weight:700;
+    color:var(--text-dim);
+  }
+  .weekly-quota.warn{ color:var(--bad); }
+  .boss-panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .boss-list{
+    display:flex;
+    flex-direction:column;
+    margin-top:14px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .boss-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:9px 12px;
+    background:var(--surface-2);
+    border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+    transition:background .15s;
+  }
+  .boss-row:last-child{ border-bottom:none; }
+  .boss-row.selected{ background:#1c2740; }
+
+  .boss-icon{
+    width:28px; height:28px;
+    border-radius:7px;
+    object-fit:cover;
+    image-rendering:pixelated;
+    flex-shrink:0;
+    background:#11141a;
+    border:1px solid var(--border);
+  }
+  .boss-icon-fallback{
+    width:28px; height:28px;
+    border-radius:7px;
+    flex-shrink:0;
+    background:#11141a;
+    border:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:800;
+    font-size:11px;
+    color:var(--text-dim);
+  }
+  .boss-name-wrap{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    width:172px;
+    flex-shrink:0;
+  }
+  .boss-name{ font-weight:700; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .boss-check-badge{
+    font-size:0.62rem;
+    font-weight:700;
+    padding:2px 6px;
+    border-radius:999px;
+    background:rgba(76,175,125,0.15);
+    color:var(--good);
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .diff-chip-row{ display:flex; flex-wrap:wrap; gap:6px; flex:1 1 180px; min-width:140px; }
+  .diff-chip{
+    border:1px solid var(--border);
+    background:#11141a;
+    color:var(--text-dim);
+    font-size:0.74rem;
+    font-weight:700;
+    padding:6px 10px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .diff-chip:hover{ border-color:var(--accent); color:var(--text); }
+  .diff-chip.active{ background:var(--accent-strong); border-color:var(--accent-strong); color:#0b0d12; }
+  .diff-chip.disabled{ opacity:.4; cursor:not-allowed; }
+  .diff-chip.disabled:hover{ border-color:var(--border); color:var(--text-dim); }
+
+  .party-controls{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    flex-shrink:0;
+    visibility:hidden;
+  }
+  .boss-row.selected .party-controls{ visibility:visible; }
+  .party-controls select, .party-controls input{
+    font-weight:700;
+    font-size:0.76rem;
+    padding:5px 6px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:#11141a;
+    color:var(--text);
+  }
+  .party-controls select{ cursor:pointer; }
+  .party-controls input[type="number"]{
+    width:48px;
+    text-align:center;
+    -moz-appearance:textfield;
+  }
+  .party-controls input[type="number"]::-webkit-outer-spin-button,
+  .party-controls input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .party-controls select:focus, .party-controls input:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  .row-preview{
+    width:120px;
+    flex-shrink:0;
+    text-align:right;
+    font-weight:700;
+    color:var(--accent-strong);
+    font-size:0.85rem;
+  }
+
+  @media (max-width:720px){
+    .boss-name-wrap{ width:100%; }
+    .row-preview{ width:auto; margin-left:auto; }
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:0.85rem;
+    margin-top:14px;
+  }
+  th, td{
+    text-align:left;
+    padding:9px 8px;
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+  }
+  th{
+    font-size:0.7rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--text-dim);
+    font-weight:600;
+  }
+  td.num, th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  tr:last-child td{ border-bottom:none; }
+  .meso{ color:var(--accent-strong); font-weight:700; }
+  .name-cell{ display:flex; align-items:center; gap:8px; }
+  .name-cell img, .name-cell .boss-icon-fallback{ width:24px; height:24px; border-radius:6px; }
+  .diff-edit-select{
+    font-weight:600;
+    font-size:0.82rem;
+    padding:6px 8px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:#11141a;
+    color:var(--text);
+    cursor:pointer;
+  }
+  .diff-edit-select:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .badge{
+    display:inline-block;
+    font-size:0.68rem;
+    font-weight:700;
+    padding:2px 7px;
+    border-radius:999px;
+    background:rgba(76,141,255,.15);
+    color:var(--accent-strong);
+    margin-left:2px;
+  }
+  .badge.monthly{ background:rgba(76,175,125,0.15); color:var(--good); }
+  .row-del{
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    cursor:pointer;
+    font-size:0.78rem;
+    font-weight:700;
+  }
+  .row-del:hover{ color:var(--bad); }
+  .table-wrap{ overflow-x:auto; }
+  #bossTable .party-controls{ visibility:visible; justify-content:flex-end; }
+
+  /* per-character summary card */
+  .char-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+    gap:10px;
+    margin-top:14px;
+  }
+  .char-summary-grid .summary-item .value{ font-size:1.1rem; }
+
+  /* overall summary (top of page) */
+  #overallTbody td.name{ font-weight:700; }
+
+  /* summary bar */
+  .summary-bar{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    background:var(--card);
+    border-top:1px solid var(--border);
+    padding:14px 20px;
+    display:flex;
+    justify-content:center;
+  }
+  .summary-inner{
+    width:100%;
+    max-width:1280px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .summary-stat{ display:flex; flex-direction:column; gap:2px; }
+  .summary-stat .k{
+    font-size:0.68rem; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-dim); font-weight:700;
+  }
+  .summary-stat .v{
+    font-size:1.15rem;
+    font-weight:700;
+    color:var(--text);
+  }
+  .summary-stat.meso .v{ color:var(--accent-strong); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="site-nav">
+    <a class="site-nav-home" href="index.html">← 메이플 계산기</a>
+    <div class="site-nav-tabs">
+      <a href="trace_calc.html">주흔 기댓값 계산기</a>
+      <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
+      <a href="boss_income_calc.html" class="active">보스 수익 정산 계산기</a>
+    </div>
+  </nav>
+  <header>
+    <h1>보스 수익 정산 계산기</h1>
+    <p class="sub">캐릭터별 주간·월간 보스를 체크해 1주일 &middot; 한 달 보스 수익을 계산합니다</p>
+  </header>
+
+  <section class="card">
+    <h2>캐릭터 총합</h2>
+    <p class="note" style="margin-top:0;" id="overallEmptyNote"></p>
+    <div class="table-wrap">
+      <table id="overallTable">
+        <thead>
+          <tr>
+            <th>캐릭터</th>
+            <th class="num">등록 보스</th>
+            <th class="num">주간 수익</th>
+            <th class="num">월간 수익</th>
+          </tr>
+        </thead>
+        <tbody id="overallTbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>캐릭터 등록</h2>
+    <div class="char-add-row">
+      <input type="text" id="charNameInput" placeholder="캐릭터 이름 (비워두면 캐릭터1, 캐릭터2… 로 자동 생성)" autocomplete="off" spellcheck="false" maxlength="20" aria-label="캐릭터 이름">
+      <button type="button" class="fetch-btn" id="charAddBtn">캐릭터 추가</button>
+    </div>
+    <p class="note">이름을 몰라도 괜찮아요 — 그냥 <b>캐릭터 추가</b>만 누르면 "캐릭터1", "캐릭터2"처럼 자동으로 만들어집니다. 이름은 칩을 클릭해서 바로 고칠 수 있어요.</p>
+    <p class="note" id="charAddNote"></p>
+    <div class="char-chip-list" id="charChipList"></div>
+  </section>
+
+  <section class="card" id="bossPanel">
+    <div class="boss-panel-head">
+      <h2 id="bossPanelTitle">보스 체크</h2>
+      <span class="weekly-quota" id="weeklyQuota"></span>
+    </div>
+    <p class="note" style="margin-top:0;">난이도를 클릭해서 이번 주에 잡는 보스를 체크하세요. 이미 체크된 난이도를 다시 클릭하면 해제됩니다. 보스는 1인 클리어 최고 난이도 보상이 높은 순서로 정렬돼 있습니다. 주간 보스는 캐릭터당 최대 <b>12마리</b>까지만 정산에 포함됩니다. <b>검은 마법사</b>는 월간 보스라 12마리 한도에 포함되지 않고, 한 달에 한 번만 격파하는 것으로 계산합니다.</p>
+    <p class="note" id="bossAddNote"></p>
+
+    <div class="boss-list" id="bossList"></div>
+
+    <p class="note" style="margin-top:16px;">체크된 보스 목록 — 아래에서 난이도 · N빵 인원을 바로 수정할 수 있습니다.</p>
+    <div class="table-wrap">
+      <table id="bossTable">
+        <thead>
+          <tr>
+            <th>보스</th>
+            <th>난이도</th>
+            <th class="num">전체 보상</th>
+            <th class="num">N빵 인원</th>
+            <th class="num">1인당 수익</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="bossTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="char-summary-grid">
+      <div class="summary-item">
+        <div class="label">주간 수익 (1주일)</div>
+        <div class="value meso" id="charWeekly">0</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">월간 수익 (한 달, 주간×4 + 검은마법사)</div>
+        <div class="value meso" id="charMonthly">0</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="summary-bar">
+  <div class="summary-inner">
+    <div class="summary-stat">
+      <span class="k">등록 캐릭터</span>
+      <span class="v" id="sumCharCount">0명</span>
+    </div>
+    <div class="summary-stat meso">
+      <span class="k">총 주간 수익</span>
+      <span class="v" id="sumWeekly">0</span>
+    </div>
+    <div class="summary-stat meso">
+      <span class="k">총 월간 수익</span>
+      <span class="v" id="sumMonthly">0</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // 메소 = 원 단위 그대로. 억/만 단위 화면 표기는 toLocaleString으로 처리.
+  // 보스는 1인 클리어 최고 난이도(diffs[0]) 보상이 높은 순서로 정렬돼 있다.
+  var BOSS_DATA = [
+    { name:"검은 마법사", icon:"icons/boss/black_mage.webp", monthly:true, diffs:[
+      { label:"익스트림", price:8740000000 },
+      { label:"하드", price:665000000 }
+    ]},
+    { name:"카링", icon:"icons/boss/kaling.webp", diffs:[
+      { label:"익스트림", price:5387000000 },
+      { label:"하드", price:1739000000 },
+      { label:"노멀", price:678000000 },
+      { label:"이지", price:377000000 }
+    ]},
+    { name:"유피테르", icon:"icons/boss/jupiter.webp", diffs:[
+      { label:"하드", price:4845000000 },
+      { label:"노멀", price:1615000000 }
+    ]},
+    { name:"최초의 대적자", icon:"icons/boss/first_challenger.webp", diffs:[
+      { label:"익스트림", price:4712000000 },
+      { label:"하드", price:1435000000 },
+      { label:"노멀", price:560000000 },
+      { label:"이지", price:308000000 }
+    ]},
+    { name:"감시자 칼로스", icon:"icons/boss/watcher_kalos.webp", diffs:[
+      { label:"익스트림", price:4104000000 },
+      { label:"카오스", price:1273000000 },
+      { label:"노멀", price:505000000 },
+      { label:"이지", price:280000000 }
+    ]},
+    { name:"발드릭스", icon:"icons/boss/baldrix.webp", diffs:[
+      { label:"하드", price:3078000000 },
+      { label:"노멀", price:1368000000 }
+    ]},
+    { name:"벨로나", icon:"icons/boss/vellona.webp", diffs:[
+      { label:"하드", price:2950000000 },
+      { label:"노멀", price:850000000 },
+      { label:"이지", price:440000000 }
+    ]},
+    { name:"선택받은 세렌", icon:"icons/boss/seren.webp", diffs:[
+      { label:"익스트림", price:2835000000 },
+      { label:"하드", price:356000000 },
+      { label:"노멀", price:239000000 }
+    ]},
+    { name:"찬란한 흉성", icon:"icons/boss/radiant.webp", diffs:[
+      { label:"하드", price:2678000000 },
+      { label:"노멀", price:625000000 }
+    ]},
+    { name:"림보", icon:"icons/boss/limbo.webp", diffs:[
+      { label:"하드", price:2385000000 },
+      { label:"노멀", price:1026000000 }
+    ]},
+    { name:"스우", icon:"icons/boss/suu.webp", diffs:[
+      { label:"익스트림", price:574000000 },
+      { label:"하드", price:51500000 },
+      { label:"노멀", price:16700000 }
+    ]},
+    { name:"진 힐라", icon:"icons/boss/jin_hilla.webp", diffs:[
+      { label:"하드", price:106000000 },
+      { label:"노멀", price:71200000 }
+    ]},
+    { name:"듄켈", icon:"icons/boss/dunkel.webp", diffs:[
+      { label:"하드", price:94400000 },
+      { label:"노멀", price:47500000 }
+    ]},
+    { name:"윌", icon:"icons/boss/will.webp", diffs:[
+      { label:"하드", price:77100000 },
+      { label:"노멀", price:41100000 },
+      { label:"이지", price:32300000 }
+    ]},
+    { name:"가디언 엔젤 슬라임", icon:"icons/boss/guardian_angel_slime.webp", diffs:[
+      { label:"카오스", price:75100000 },
+      { label:"노멀", price:25500000 }
+    ]},
+    { name:"더스크", icon:"icons/boss/dusk.webp", diffs:[
+      { label:"카오스", price:69800000 },
+      { label:"노멀", price:44000000 }
+    ]},
+    { name:"루시드", icon:"icons/boss/lucid.webp", diffs:[
+      { label:"하드", price:62900000 },
+      { label:"노멀", price:35600000 },
+      { label:"이지", price:29800000 }
+    ]},
+    { name:"데미안", icon:"icons/boss/damien.webp", diffs:[
+      { label:"하드", price:48900000 },
+      { label:"노멀", price:17500000 }
+    ]},
+    { name:"파풀라투스", icon:"icons/boss/papulatus.webp", diffs:[
+      { label:"카오스", price:13100000 }
+    ]},
+    { name:"벨룸", icon:"icons/boss/vellum.webp", diffs:[
+      { label:"카오스", price:9280000 }
+    ]},
+    { name:"매그너스", icon:"icons/boss/magnus.webp", diffs:[
+      { label:"하드", price:8560000 }
+    ]},
+    { name:"피에르", icon:"icons/boss/pierre.webp", diffs:[
+      { label:"카오스", price:8170000 }
+    ]},
+    { name:"반반", icon:"icons/boss/banban.webp", diffs:[
+      { label:"카오스", price:8150000 }
+    ]},
+    { name:"블러디 퀸", icon:"icons/boss/bloody_queen.webp", diffs:[
+      { label:"카오스", price:8140000 }
+    ]},
+    { name:"자쿰", icon:"icons/boss/zakum.webp", diffs:[
+      { label:"카오스", price:8080000 }
+    ]}
+  ];
+  var WEEKLY_CAP = 12;
+  var WEEKS_PER_MONTH = 4;
+  var PARTY_OPTIONS = [1,2,3,4,5,6];
+
+  var LS_KEY = 'boss_income_state';
+  function lsGet(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
+  function lsSet(k, v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
+
+  // characters: [{ name, bosses: { [bossIdx]: { diffIdx, party } } }]
+  // bosses is a map keyed by boss index — a boss can only be cleared at one
+  // difficulty per week, so checking a new difficulty simply overwrites it.
+  function normalizeCharacter(raw){
+    var bosses = {};
+    if (raw && raw.bosses){
+      if (Array.isArray(raw.bosses)){
+        // 이전 버전(드롭다운 방식)의 배열 데이터 호환: 같은 보스가 여러 번 있으면 마지막 것만 사용
+        raw.bosses.forEach(function(e){
+          if (e && BOSS_DATA[e.bossIdx]) bosses[e.bossIdx] = { diffIdx: e.diffIdx, party: e.party || 1 };
+        });
+      } else {
+        Object.keys(raw.bosses).forEach(function(k){
+          var e = raw.bosses[k];
+          if (e && BOSS_DATA[k] && BOSS_DATA[k].diffs[e.diffIdx]) bosses[k] = { diffIdx: e.diffIdx, party: e.party || 1 };
+        });
+      }
+    }
+    return { name: (raw && raw.name) || '캐릭터', bosses: bosses };
+  }
+
+  function loadState(){
+    try {
+      var raw = lsGet(LS_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.characters)) return null;
+      return parsed.characters.map(normalizeCharacter);
+    } catch(e){ return null; }
+  }
+  function saveState(){
+    lsSet(LS_KEY, JSON.stringify({ characters: characters }));
+  }
+
+  var characters = loadState() || [];
+  var activeIdx = characters.length ? 0 : -1;
+
+  function won(n){ return Math.round(n).toLocaleString('ko-KR'); }
+
+  function iconHtml(boss, cls){
+    if (boss.icon) return '<img class="' + cls + '" src="' + boss.icon + '" alt="" loading="lazy">';
+    var initial = boss.name.slice(0, 1);
+    return '<span class="boss-icon-fallback">' + initial + '</span>';
+  }
+
+  // N빵 인원 컨트롤: 자주 쓰는 값은 드롭다운으로 바로 고르고, 7인 이상 등 특수한
+  // 상황은 옆 입력칸에 직접 숫자를 넣을 수 있게 두 가지를 함께 제공한다.
+  function partyControlsHtml(bossIdx, party){
+    var inCommon = PARTY_OPTIONS.indexOf(party) !== -1;
+    var options = '<option value="">인원</option>' + PARTY_OPTIONS.map(function(n){
+      return '<option value="' + n + '"' + (n === party ? ' selected' : '') + '>' + n + '인</option>';
+    }).join('');
+    return '<div class="party-controls">' +
+      '<select class="party-select" data-party-boss="' + bossIdx + '">' + options + '</select>' +
+      '<input type="number" class="party-input" min="1" max="99" step="1" value="' + party + '" data-party-boss="' + bossIdx + '" title="직접 입력">' +
+    '</div>';
+  }
+  function bindPartyControls(root){
+    root.querySelectorAll('.party-select[data-party-boss]').forEach(function(sel){
+      sel.addEventListener('click', function(e){ e.stopPropagation(); });
+      sel.addEventListener('change', function(){
+        if (sel.value === '') return;
+        setParty(sel.getAttribute('data-party-boss'), +sel.value);
+      });
+    });
+    root.querySelectorAll('.party-input[data-party-boss]').forEach(function(inp){
+      inp.addEventListener('click', function(e){ e.stopPropagation(); });
+      inp.addEventListener('focus', function(){ inp.select(); });
+      inp.addEventListener('change', function(){
+        var v = Math.max(1, Math.round(+inp.value || 1));
+        setParty(inp.getAttribute('data-party-boss'), v);
+      });
+    });
+  }
+  function setParty(bossIdx, party){
+    var entry = characters[activeIdx].bosses[bossIdx];
+    if (!entry) return;
+    entry.party = party;
+    saveState();
+    renderBossPanel();
+    renderOverall();
+  }
+
+  function weeklyCount(ch){
+    var n = 0;
+    Object.keys(ch.bosses).forEach(function(idx){
+      if (!BOSS_DATA[idx].monthly) n++;
+    });
+    return n;
+  }
+
+  function charTotals(ch){
+    var weeklyMeso = 0, monthlyOnlyMeso = 0, count = 0;
+    Object.keys(ch.bosses).forEach(function(idx){
+      var boss = BOSS_DATA[idx];
+      var entry = ch.bosses[idx];
+      var diff = boss.diffs[entry.diffIdx];
+      var per = diff.price / Math.max(1, entry.party);
+      count++;
+      if (boss.monthly) monthlyOnlyMeso += per;
+      else weeklyMeso += per;
+    });
+    var monthlyMeso = weeklyMeso * WEEKS_PER_MONTH + monthlyOnlyMeso;
+    return { weeklyMeso: weeklyMeso, monthlyMeso: monthlyMeso, weeklyCount: weeklyCount(ch), totalCount: count };
+  }
+
+  function nextAutoName(){
+    var n = 1;
+    while (characters.some(function(c){ return c.name === '캐릭터' + n; })) n++;
+    return '캐릭터' + n;
+  }
+
+  // ---------- Character chips ----------
+  var charNameInput = document.getElementById('charNameInput');
+  var charAddBtn = document.getElementById('charAddBtn');
+  var charAddNote = document.getElementById('charAddNote');
+  var charChipList = document.getElementById('charChipList');
+  var bossPanel = document.getElementById('bossPanel');
+  var bossPanelTitle = document.getElementById('bossPanelTitle');
+
+  charNameInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') charAddBtn.click(); });
+  charNameInput.addEventListener('focus', function(){ charNameInput.select(); });
+
+  charAddBtn.addEventListener('click', function(){
+    var name = charNameInput.value.trim() || nextAutoName();
+    if (characters.some(function(c){ return c.name === name; })){
+      charAddNote.textContent = '이미 등록된 캐릭터입니다.'; charAddNote.className='note fetch-status err'; return;
+    }
+    characters.push({ name: name, bosses: {} });
+    activeIdx = characters.length - 1;
+    charNameInput.value = '';
+    charAddNote.textContent = '';
+    saveState();
+    renderAll();
+    charNameInput.focus();
+  });
+
+  function renderCharChips(){
+    charChipList.innerHTML = '';
+    characters.forEach(function(ch, idx){
+      var t = charTotals(ch);
+      var chip = document.createElement('div');
+      chip.className = 'char-chip' + (idx === activeIdx ? ' active' : '');
+      chip.innerHTML =
+        '<span class="chip-name" contenteditable="true" spellcheck="false">' + ch.name + '</span>' +
+        '<span class="chip-meso">주 ' + won(t.weeklyMeso) + '</span>' +
+        '<button type="button" class="chip-del" aria-label="' + ch.name + ' 삭제">×</button>';
+      chip.addEventListener('click', function(e){
+        if (e.target.closest('.chip-del') || e.target.closest('.chip-name')) return;
+        activeIdx = idx;
+        renderAll();
+      });
+      var nameEl = chip.querySelector('.chip-name');
+      nameEl.addEventListener('click', function(e){
+        e.stopPropagation();
+        if (activeIdx === idx) return;
+        activeIdx = idx;
+        // 편집 중인 contenteditable 포커스가 날아가지 않도록 칩 목록 전체를
+        // 다시 그리지 않고, 활성 표시만 갱신하고 보스 패널만 다시 그린다.
+        charChipList.querySelectorAll('.char-chip').forEach(function(c, i){ c.classList.toggle('active', i === idx); });
+        renderBossPanel();
+      });
+      nameEl.addEventListener('keydown', function(e){
+        if (e.key === 'Enter'){ e.preventDefault(); nameEl.blur(); }
+      });
+      nameEl.addEventListener('blur', function(){
+        var newName = nameEl.textContent.trim();
+        if (!newName){ newName = ch.name; }
+        if (newName !== ch.name && characters.some(function(c){ return c.name === newName; })){
+          newName = ch.name; // 중복이면 원래 이름 유지
+        }
+        ch.name = newName;
+        saveState();
+        renderAll();
+      });
+      chip.querySelector('.chip-del').addEventListener('click', function(){
+        characters.splice(idx, 1);
+        if (activeIdx >= characters.length) activeIdx = characters.length - 1;
+        saveState();
+        renderAll();
+      });
+      charChipList.appendChild(chip);
+    });
+    if (!characters.length){
+      var empty = document.createElement('div');
+      empty.className = 'empty-note';
+      empty.textContent = '등록된 캐릭터가 없습니다. 캐릭터를 먼저 추가하세요.';
+      charChipList.appendChild(empty);
+    }
+  }
+
+  // ---------- Boss list ----------
+  var bossAddNote = document.getElementById('bossAddNote');
+  var weeklyQuota = document.getElementById('weeklyQuota');
+  var bossList = document.getElementById('bossList');
+  var bossTbody = document.getElementById('bossTbody');
+  var charWeeklyEl = document.getElementById('charWeekly');
+  var charMonthlyEl = document.getElementById('charMonthly');
+
+  function toggleDiff(ch, bossIdx, diffIdx){
+    var boss = BOSS_DATA[bossIdx];
+    var existing = ch.bosses[bossIdx];
+    if (existing && existing.diffIdx === diffIdx){
+      delete ch.bosses[bossIdx];
+      bossAddNote.textContent = '';
+      saveState();
+      renderAll();
+      return;
+    }
+    if (!boss.monthly && !existing && weeklyCount(ch) >= WEEKLY_CAP){
+      bossAddNote.textContent = '주간 보스는 캐릭터당 최대 ' + WEEKLY_CAP + '마리까지만 체크할 수 있습니다.';
+      bossAddNote.className = 'note fetch-status err';
+      return;
+    }
+    ch.bosses[bossIdx] = { diffIdx: diffIdx, party: existing ? existing.party : 1 };
+    bossAddNote.textContent = '';
+    saveState();
+    renderAll();
+  }
+
+  function renderBossList(){
+    var ch = characters[activeIdx];
+    var atCap = weeklyCount(ch) >= WEEKLY_CAP;
+    bossList.innerHTML = '';
+    BOSS_DATA.forEach(function(boss, bossIdx){
+      var entry = ch.bosses[bossIdx];
+      var row = document.createElement('div');
+      row.className = 'boss-row' + (entry ? ' selected' : '');
+
+      var chipsHtml = boss.diffs.map(function(d, diffIdx){
+        var isActive = entry && entry.diffIdx === diffIdx;
+        var isDisabled = !isActive && !boss.monthly && !entry && atCap;
+        return '<button type="button" class="diff-chip' + (isActive ? ' active' : '') + (isDisabled ? ' disabled' : '') +
+          '" data-boss="' + bossIdx + '" data-diff="' + diffIdx + '">' + d.label + '</button>';
+      }).join('');
+
+      var party = entry ? entry.party : 1;
+      var price = entry ? boss.diffs[entry.diffIdx].price : 0;
+      var per = entry ? price / Math.max(1, party) : 0;
+
+      row.innerHTML =
+        '<div class="boss-name-wrap">' +
+          iconHtml(boss, 'boss-icon') +
+          '<span class="boss-name">' + boss.name + '</span>' +
+          (boss.monthly ? '<span class="boss-check-badge">월간</span>' : '') +
+        '</div>' +
+        '<div class="diff-chip-row">' + chipsHtml + '</div>' +
+        partyControlsHtml(bossIdx, party) +
+        '<span class="row-preview">' + (entry ? won(per) : '') + '</span>';
+      bossList.appendChild(row);
+    });
+
+    bossList.querySelectorAll('.diff-chip').forEach(function(btn){
+      if (btn.classList.contains('disabled')){
+        btn.addEventListener('click', function(){
+          bossAddNote.textContent = '주간 보스는 캐릭터당 최대 ' + WEEKLY_CAP + '마리까지만 체크할 수 있습니다.';
+          bossAddNote.className = 'note fetch-status err';
+        });
+        return;
+      }
+      btn.addEventListener('click', function(){
+        toggleDiff(characters[activeIdx], +btn.getAttribute('data-boss'), +btn.getAttribute('data-diff'));
+      });
+    });
+    bindPartyControls(bossList);
+  }
+
+  function renderBossTable(){
+    bossTbody.innerHTML = '';
+    var ch = characters[activeIdx];
+    Object.keys(ch.bosses).sort(function(a,b){ return a - b; }).forEach(function(bossIdx){
+      var boss = BOSS_DATA[bossIdx];
+      var entry = ch.bosses[bossIdx];
+      var diff = boss.diffs[entry.diffIdx];
+      var price = diff.price;
+      var per = price / Math.max(1, entry.party);
+      var diffOptions = boss.diffs.map(function(d, i){
+        return '<option value="' + i + '"' + (i === entry.diffIdx ? ' selected' : '') + '>' + d.label + '</option>';
+      }).join('');
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td><div class="name-cell">' + iconHtml(boss, 'boss-icon') + '<span>' + boss.name + (boss.monthly ? '<span class="badge monthly">월간</span>' : '<span class="badge">주간</span>') + '</span></div></td>' +
+        '<td><select class="diff-edit-select" data-diff-boss="' + bossIdx + '">' + diffOptions + '</select></td>' +
+        '<td class="num">' + won(price) + '</td>' +
+        '<td class="num">' + partyControlsHtml(bossIdx, entry.party) + '</td>' +
+        '<td class="num meso">' + won(per) + '</td>' +
+        '<td><button type="button" class="row-del" data-boss="' + bossIdx + '">삭제</button></td>';
+      bossTbody.appendChild(tr);
+    });
+    bossTbody.querySelectorAll('.row-del').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        delete characters[activeIdx].bosses[btn.getAttribute('data-boss')];
+        saveState();
+        renderAll();
+      });
+    });
+    bossTbody.querySelectorAll('.diff-edit-select[data-diff-boss]').forEach(function(sel){
+      sel.addEventListener('change', function(){
+        var bossIdx = sel.getAttribute('data-diff-boss');
+        var entry = characters[activeIdx].bosses[bossIdx];
+        if (!entry) return;
+        entry.diffIdx = +sel.value;
+        saveState();
+        renderBossPanel();
+        renderOverall();
+      });
+    });
+    bindPartyControls(bossTbody);
+  }
+
+  function renderBossPanel(){
+    var has = activeIdx >= 0;
+    bossPanel.classList.toggle('hidden', !has);
+    if (!has) return;
+    var ch = characters[activeIdx];
+    bossPanelTitle.textContent = ch.name + ' — 보스 체크';
+    var wc = weeklyCount(ch);
+    weeklyQuota.textContent = '주간 ' + wc + ' / ' + WEEKLY_CAP + '마리';
+    weeklyQuota.className = 'weekly-quota' + (wc >= WEEKLY_CAP ? ' warn' : '');
+    renderBossList();
+    renderBossTable();
+    var t = charTotals(ch);
+    charWeeklyEl.textContent = won(t.weeklyMeso);
+    charMonthlyEl.textContent = won(t.monthlyMeso);
+  }
+
+  // ---------- Overall summary ----------
+  var overallTbody = document.getElementById('overallTbody');
+  var overallEmptyNote = document.getElementById('overallEmptyNote');
+  var sumCharCount = document.getElementById('sumCharCount');
+  var sumWeekly = document.getElementById('sumWeekly');
+  var sumMonthly = document.getElementById('sumMonthly');
+
+  function renderOverall(){
+    overallTbody.innerHTML = '';
+    overallEmptyNote.textContent = characters.length ? '' : '등록된 캐릭터가 없습니다.';
+    var totalWeekly = 0, totalMonthly = 0;
+    characters.forEach(function(ch){
+      var t = charTotals(ch);
+      totalWeekly += t.weeklyMeso;
+      totalMonthly += t.monthlyMeso;
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="name">' + ch.name + '</td>' +
+        '<td class="num">' + t.totalCount + '마리</td>' +
+        '<td class="num meso">' + won(t.weeklyMeso) + '</td>' +
+        '<td class="num meso">' + won(t.monthlyMeso) + '</td>';
+      overallTbody.appendChild(tr);
+    });
+    sumCharCount.textContent = characters.length + '명';
+    sumWeekly.textContent = won(totalWeekly);
+    sumMonthly.textContent = won(totalMonthly);
+  }
+
+  function renderAll(){
+    renderCharChips();
+    renderBossPanel();
+    renderOverall();
+  }
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
