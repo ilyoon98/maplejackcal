@@ -143,6 +143,46 @@
   .symbol-card.locked{ opacity:.5; }
   .symbol-card.locked .force-chip{ color:var(--text-dim); background:#11141a; }
 
+  /* character search (Nexon Open API) — big standalone hero card, above 내 어센틱 포스 */
+  .char-search-hero{
+    background:#1c2740;
+    border:1px solid var(--accent-strong);
+    border-radius:10px;
+    padding:18px 20px;
+    margin-top:16px;
+  }
+  .char-search-hero h2{
+    font-size:0.85rem;
+    font-weight:700;
+    color:var(--text-dim);
+    margin:0 0 12px;
+  }
+  .char-search-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .char-search-row input[type="text"]{
+    flex:1 1 220px;
+    min-width:0;
+    font-size:1.15rem;
+    font-weight:700;
+    padding:12px 16px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#11141a;
+    color:var(--text);
+  }
+  .char-search-row input[type="text"]:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .char-search-row .fetch-btn{
+    font-size:1rem;
+    font-weight:800;
+    padding:0 26px;
+    border-radius:10px;
+    white-space:nowrap;
+  }
+  .char-search-hero .note{ margin:10px 0 0; }
+
   .reach-toggle{
     margin-left:auto;
     border:1px solid var(--border);
@@ -416,6 +456,16 @@
     <p class="sub">지역 심볼 강화 비용 &middot; 레벨 1당 <b>어센틱 포스 +10</b></p>
   </header>
 
+  <section class="char-search-hero">
+    <h2>캐릭터 검색</h2>
+    <div class="char-search-row">
+      <input type="text" id="charNameInput" placeholder="캐릭터 이름" autocomplete="off" spellcheck="false" maxlength="20" aria-label="캐릭터 이름">
+      <button type="button" class="fetch-btn" id="fetchBtn">캐릭터 검색</button>
+    </div>
+    <p class="note" id="apiKeyLine"></p>
+    <p class="note fetch-status" id="fetchStatus" aria-live="polite"></p>
+  </section>
+
   <div class="hero-force">
     <span class="hero-force-label">내 어센틱 포스</span>
     <span class="hero-force-value"><span id="currentForceVal">0</span><span class="unit">F</span></span>
@@ -504,6 +554,7 @@
   </div>
 </div>
 
+<script src="nexon_key.js"></script>
 <script>
 (function(){
   var SYMBOLS = [
@@ -572,8 +623,26 @@
     ]}
   ];
 
-  var curLevels = SYMBOLS.map(function(){ return 1; });
-  var unlocked = SYMBOLS.map(function(){ return true; }); // false = 아직 도착하지 못한 지역
+  var LS_LEVELS = 'authentic_last_levels';
+  function loadSavedLevels(){
+    try {
+      var raw = lsGet(LS_LEVELS);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.levels) || !Array.isArray(parsed.unlocked)) return null;
+      if (parsed.levels.length !== SYMBOLS.length || parsed.unlocked.length !== SYMBOLS.length) return null;
+      return parsed;
+    } catch(e){ return null; }
+  }
+  function saveLevelsState(){
+    lsSet(LS_LEVELS, JSON.stringify({ levels: curLevels, unlocked: unlocked }));
+  }
+
+  // 새로고침해도 마지막으로 불러온(또는 직접 입력한) 심볼 레벨이 그대로 남아있도록
+  // localStorage에 저장해뒀다가 복원한다. 저장된 게 없거나 심볼 개수가 안 맞으면 기본값(전부 Lv.1·도착)으로.
+  var savedLevels = loadSavedLevels();
+  var curLevels = savedLevels ? savedLevels.levels.slice() : SYMBOLS.map(function(){ return 1; });
+  var unlocked = savedLevels ? savedLevels.unlocked.slice() : SYMBOLS.map(function(){ return true; }); // false = 아직 도착하지 못한 지역
 
   function won(n){
     return n.toLocaleString('ko-KR');
@@ -600,6 +669,7 @@
     if (e.target.matches('input.lvl')) e.target.select();
   });
   function afterLevelChange(){
+    saveLevelsState();
     updateLevelGridDisplay();
     renderManualRows();
     if (mode === 'opt') runOptimization(); else runManual();
@@ -916,6 +986,160 @@
     document.getElementById('sumCount').textContent = count+'회';
     document.getElementById('sumMeso').textContent = won(meso);
   }
+
+  // ---------- Character import (Nexon Open API) ----------
+  // 캐릭터 이름 → ocid → 장착 심볼 정보(symbol-equipment)를 받아서 현재 심볼 레벨에 그대로 채운다.
+  // API 키는 홈 화면(index.html)에서 등록하고, nexon_key.js를 통해 이 브라우저의
+  // localStorage에서 그대로 읽어온다(계산기별로 다시 입력할 필요 없음).
+  var API_BASE = 'https://open.api.nexon.com/maplestory/v1';
+  var LS_LAST_CHAR = 'authentic_last_char';
+
+  var charNameInput = document.getElementById('charNameInput');
+  var fetchBtn = document.getElementById('fetchBtn');
+  var fetchStatus = document.getElementById('fetchStatus');
+  var apiKeyLine = document.getElementById('apiKeyLine');
+
+  function lsGet(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
+  function lsSet(k, v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
+
+  function refreshApiKeyLine(){
+    apiKeyLine.innerHTML = NexonKey.has()
+      ? 'API 키 등록됨 ✓'
+      : 'API 키가 필요합니다. <a class="link-btn" href="index.html#apiKey">홈 화면에서 등록하세요 →</a>';
+  }
+  function setStatus(msg, kind){
+    fetchStatus.textContent = msg || '';
+    fetchStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
+  }
+
+  charNameInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') fetchBtn.click(); });
+  charNameInput.addEventListener('focus', function(){ charNameInput.select(); });
+
+  var API_ERROR_MSG = {
+    OPENAPI00001: 'API 서버 내부 오류입니다. 잠시 후 다시 시도하세요.',
+    OPENAPI00002: 'API 키에 권한이 없습니다. 메이플스토리용으로 발급한 키인지 확인하세요.',
+    OPENAPI00003: '유효하지 않은 식별자입니다.',
+    OPENAPI00004: '파라미터가 올바르지 않습니다.',
+    OPENAPI00005: 'API 키가 유효하지 않습니다. 홈 화면에서 키를 확인하세요.',
+    OPENAPI00006: 'API 경로가 올바르지 않습니다.',
+    OPENAPI00007: 'API 호출 한도를 초과했습니다. 잠시 후 다시 시도하세요.',
+    OPENAPI00009: '데이터 준비 중입니다. 잠시 후 다시 시도하세요.',
+    OPENAPI00010: '게임 점검 중입니다.',
+    OPENAPI00011: 'API 점검 중입니다.'
+  };
+
+  function apiGet(path, params){
+    var qs = Object.keys(params).map(function(k){
+      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+    }).join('&');
+    return fetch(API_BASE + path + '?' + qs, {
+      headers: { 'x-nxopen-api-key': NexonKey.get() }
+    }).then(function(res){
+      return res.json().catch(function(){ return null; }).then(function(body){
+        if (!res.ok){
+          var err = (body && body.error) ? body.error : {};
+          var e = new Error(err.message || ('HTTP ' + res.status));
+          e.code = err.name || '';
+          e.status = res.status;
+          throw e;
+        }
+        return body;
+      });
+    });
+  }
+
+  function describeError(e, stage){
+    if (e && e.code){
+      if (stage === 'id' && (e.code === 'OPENAPI00003' || e.code === 'OPENAPI00004')){
+        return '캐릭터를 찾을 수 없습니다. 이름을 확인하세요.';
+      }
+      return API_ERROR_MSG[e.code] || (e.code + ': ' + e.message);
+    }
+    if (e && e.name === 'TypeError') return '네트워크 오류로 넥슨 API에 연결하지 못했습니다.';
+    return '불러오기 실패: ' + (e && e.message ? e.message : e);
+  }
+
+  // symbol_name 은 "어센틱심볼 : 세르니움", "그랜드 어센틱심볼 : 탈라하트" 형태라
+  // 접두어 표기에 흔들리지 않게 지역 이름 부분일치로 매핑한다. 목록에 없는 지역은 미도착 처리.
+  function applySymbolData(data){
+    var list = (data && Array.isArray(data.symbol)) ? data.symbol : [];
+    var found = [], missing = [];
+    SYMBOLS.forEach(function(sym, idx){
+      var hit = null;
+      for (var i=0;i<list.length;i++){
+        var n = String(list[i].symbol_name || '');
+        if (n.indexOf('어센틱') !== -1 && n.indexOf(sym.name) !== -1){ hit = list[i]; break; }
+      }
+      if (hit){
+        var lv = Math.round(+hit.symbol_level);
+        if (!(lv >= 1)){
+          // symbol_level 이 비어 있으면 포스(레벨당 10)에서 역산
+          var force = +String(hit.symbol_force || '').replace(/[^0-9]/g, '');
+          lv = Math.round(force / 10);
+        }
+        curLevels[idx] = Math.min(11, Math.max(1, lv || 1));
+        unlocked[idx] = true;
+        found.push(sym.name);
+      } else {
+        curLevels[idx] = 0;
+        unlocked[idx] = false;
+        missing.push(sym.name);
+      }
+    });
+    afterLevelChange();
+    return { found: found, missing: missing };
+  }
+
+  fetchBtn.addEventListener('click', function(){
+    var name = charNameInput.value.trim();
+    if (!NexonKey.has()){
+      refreshApiKeyLine();
+      setStatus('먼저 홈 화면에서 넥슨 오픈 API 키를 등록하세요.', 'err');
+      return;
+    }
+    refreshApiKeyLine();
+    if (!name){ setStatus('캐릭터 이름을 입력하세요.', 'err'); charNameInput.focus(); return; }
+
+    var origText = fetchBtn.textContent;
+    fetchBtn.disabled = true;
+    fetchBtn.textContent = '불러오는 중…';
+    setStatus(name + ' 캐릭터 정보를 조회하는 중…');
+    var stage = 'id';
+
+    apiGet('/id', { character_name: name })
+      .then(function(r){
+        if (!r || !r.ocid) throw new Error('캐릭터 식별자(ocid)를 받지 못했습니다.');
+        stage = 'symbol';
+        return apiGet('/character/symbol-equipment', { ocid: r.ocid });
+      })
+      .then(function(data){
+        var result = applySymbolData(data);
+        lsSet(LS_LAST_CHAR, name);
+        var parts = ['✓ ' + name + (data.character_class ? ' (' + data.character_class + ')' : '')];
+        if (data.date) parts.push(String(data.date).slice(0, 10) + ' 기준');
+        parts.push('어센틱 심볼 ' + result.found.length + '개 불러옴');
+        var msg = parts.join(' · ');
+        if (result.found.length === 0){
+          msg += ' — 어센틱 심볼이 없는 캐릭터라 모든 지역을 미도착으로 표시했습니다.';
+        } else if (result.missing.length){
+          msg += ' · 미도착 처리: ' + result.missing.join(', ');
+        }
+        setStatus(msg, 'ok');
+      })
+      .catch(function(e){
+        setStatus(describeError(e, stage), 'err');
+      })
+      .then(function(){
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = origText;
+      });
+  });
+
+  charNameInput.value = lsGet(LS_LAST_CHAR);
+  refreshApiKeyLine();
+  window.addEventListener('storage', function(e){
+    if (e.key === NexonKey.STORAGE_KEY) refreshApiKeyLine();
+  });
 
   renderLevelGrid();
   renderManualRows();
