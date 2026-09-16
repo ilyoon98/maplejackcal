@@ -401,110 +401,116 @@
   // 보스는 1인 클리어 최고 난이도(diffs[0]) 보상이 높은 순서로 정렬돼 있다.
   var BOSS_DATA = [
     { name:"검은 마법사", icon:"icons/boss/black_mage.webp", monthly:true, diffs:[
-      { label:"익스트림", price:8740000000 },
-      { label:"하드", price:665000000 }
+      { label:"익스트림", price:5680000000 },
+      { label:"하드", price:465000000 }
     ]},
     { name:"카링", icon:"icons/boss/kaling.webp", diffs:[
       { label:"익스트림", price:5387000000 },
-      { label:"하드", price:1739000000 },
-      { label:"노멀", price:678000000 },
-      { label:"이지", price:377000000 }
+      { label:"하드", price:1560000000 },
+      { label:"노멀", price:576000000 },
+      { label:"이지", price:320000000 }
     ]},
     { name:"유피테르", icon:"icons/boss/jupiter.webp", diffs:[
       { label:"하드", price:4845000000 },
-      { label:"노멀", price:1615000000 }
+      { label:"노멀", price:1560000000 }
     ]},
     { name:"최초의 대적자", icon:"icons/boss/first_challenger.webp", diffs:[
       { label:"익스트림", price:4712000000 },
-      { label:"하드", price:1435000000 },
-      { label:"노멀", price:560000000 },
-      { label:"이지", price:308000000 }
+      { label:"하드", price:1390000000 },
+      { label:"노멀", price:532000000 },
+      { label:"이지", price:261000000 }
     ]},
     { name:"감시자 칼로스", icon:"icons/boss/watcher_kalos.webp", diffs:[
       { label:"익스트림", price:4104000000 },
-      { label:"카오스", price:1273000000 },
-      { label:"노멀", price:505000000 },
-      { label:"이지", price:280000000 }
+      { label:"카오스", price:1230000000 },
+      { label:"노멀", price:479000000 },
+      { label:"이지", price:238000000 }
     ]},
     { name:"발드릭스", icon:"icons/boss/baldrix.webp", diffs:[
       { label:"하드", price:3078000000 },
-      { label:"노멀", price:1368000000 }
+      { label:"노멀", price:1320000000 }
     ]},
     { name:"벨로나", icon:"icons/boss/vellona.webp", diffs:[
       { label:"하드", price:2950000000 },
-      { label:"노멀", price:850000000 },
-      { label:"이지", price:440000000 }
-    ]},
-    { name:"선택받은 세렌", icon:"icons/boss/seren.webp", diffs:[
-      { label:"익스트림", price:2835000000 },
-      { label:"하드", price:356000000 },
-      { label:"노멀", price:239000000 }
+      { label:"노멀", price:824000000 },
+      { label:"이지", price:396000000 }
     ]},
     { name:"찬란한 흉성", icon:"icons/boss/radiant.webp", diffs:[
       { label:"하드", price:2678000000 },
-      { label:"노멀", price:625000000 }
+      { label:"노멀", price:593000000 }
     ]},
     { name:"림보", icon:"icons/boss/limbo.webp", diffs:[
       { label:"하드", price:2385000000 },
-      { label:"노멀", price:1026000000 }
+      { label:"노멀", price:995000000 }
+    ]},
+    { name:"선택받은 세렌", icon:"icons/boss/seren.webp", diffs:[
+      { label:"익스트림", price:1840000000 },
+      { label:"하드", price:302000000 },
+      { label:"노멀", price:167000000 }
     ]},
     { name:"스우", icon:"icons/boss/suu.webp", diffs:[
-      { label:"익스트림", price:574000000 },
-      { label:"하드", price:51500000 },
-      { label:"노멀", price:16700000 }
+      { label:"익스트림", price:545000000 },
+      { label:"하드", price:48900000 },
+      { label:"노멀", price:8350000 }
     ]},
     { name:"진 힐라", icon:"icons/boss/jin_hilla.webp", diffs:[
-      { label:"하드", price:106000000 },
-      { label:"노멀", price:71200000 }
+      { label:"하드", price:100000000 },
+      { label:"노멀", price:67600000 }
     ]},
     { name:"듄켈", icon:"icons/boss/dunkel.webp", diffs:[
-      { label:"하드", price:94400000 },
-      { label:"노멀", price:47500000 }
+      { label:"하드", price:89600000 },
+      { label:"노멀", price:23700000 }
     ]},
     { name:"윌", icon:"icons/boss/will.webp", diffs:[
-      { label:"하드", price:77100000 },
-      { label:"노멀", price:41100000 },
-      { label:"이지", price:32300000 }
+      { label:"하드", price:73200000 },
+      { label:"노멀", price:20500000 },
+      { label:"이지", price:16100000 }
     ]},
     { name:"가디언 엔젤 슬라임", icon:"icons/boss/guardian_angel_slime.webp", diffs:[
-      { label:"카오스", price:75100000 },
-      { label:"노멀", price:25500000 }
+      { label:"카오스", price:71300000 },
+      { label:"노멀", price:12700000 }
     ]},
     { name:"더스크", icon:"icons/boss/dusk.webp", diffs:[
-      { label:"카오스", price:69800000 },
-      { label:"노멀", price:44000000 }
+      { label:"카오스", price:66300000 },
+      { label:"노멀", price:22000000 }
     ]},
     { name:"루시드", icon:"icons/boss/lucid.webp", diffs:[
-      { label:"하드", price:62900000 },
-      { label:"노멀", price:35600000 },
-      { label:"이지", price:29800000 }
+      { label:"하드", price:59700000 },
+      { label:"노멀", price:17800000 },
+      { label:"이지", price:14900000 }
     ]},
     { name:"데미안", icon:"icons/boss/damien.webp", diffs:[
-      { label:"하드", price:48900000 },
-      { label:"노멀", price:17500000 }
+      { label:"하드", price:46400000 },
+      { label:"노멀", price:8750000 }
     ]},
     { name:"파풀라투스", icon:"icons/boss/papulatus.webp", diffs:[
-      { label:"카오스", price:13100000 }
+      { label:"카오스", price:6550000 }
     ]},
     { name:"벨룸", icon:"icons/boss/vellum.webp", diffs:[
-      { label:"카오스", price:9280000 }
+      { label:"카오스", price:4640000 }
     ]},
     { name:"매그너스", icon:"icons/boss/magnus.webp", diffs:[
-      { label:"하드", price:8560000 }
+      { label:"하드", price:4280000 }
     ]},
     { name:"피에르", icon:"icons/boss/pierre.webp", diffs:[
-      { label:"카오스", price:8170000 }
+      { label:"카오스", price:4080000 }
     ]},
     { name:"반반", icon:"icons/boss/banban.webp", diffs:[
-      { label:"카오스", price:8150000 }
+      { label:"카오스", price:4070000 }
     ]},
     { name:"블러디 퀸", icon:"icons/boss/bloody_queen.webp", diffs:[
-      { label:"카오스", price:8140000 }
+      { label:"카오스", price:4070000 }
     ]},
     { name:"자쿰", icon:"icons/boss/zakum.webp", diffs:[
-      { label:"카오스", price:8080000 }
+      { label:"카오스", price:4040000 }
     ]}
   ];
+  // 보스 이름으로 바로 찾을 수 있는 조회용 맵. 저장 데이터는 보스 "이름"을 키로 쓰므로
+  // 정렬 순서나 가격이 바뀌어도(예: 보상 개편, 순서 재정렬) 저장된 캐릭터의 체크 상태가
+  // 깨지지 않는다. idx는 renderBossTable에서 BOSS_DATA 순서대로 정렬할 때만 쓴다.
+  var BOSS_BY_NAME = {};
+  BOSS_DATA.forEach(function(b, i){ b.idx = i; BOSS_BY_NAME[b.name] = b; });
+
   var WEEKLY_CAP = 12;
   var WEEKS_PER_MONTH = 4;
   var PARTY_OPTIONS = [1,2,3,4,5,6];
@@ -513,21 +519,25 @@
   function lsGet(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
   function lsSet(k, v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
 
-  // characters: [{ name, bosses: { [bossIdx]: { diffIdx, party } } }]
-  // bosses is a map keyed by boss index — a boss can only be cleared at one
+  // characters: [{ name, bosses: { [bossName]: { diffIdx, party } } }]
+  // bosses is a map keyed by boss name — a boss can only be cleared at one
   // difficulty per week, so checking a new difficulty simply overwrites it.
   function normalizeCharacter(raw){
     var bosses = {};
     if (raw && raw.bosses){
       if (Array.isArray(raw.bosses)){
-        // 이전 버전(드롭다운 방식)의 배열 데이터 호환: 같은 보스가 여러 번 있으면 마지막 것만 사용
+        // 아주 예전 버전(드롭다운 방식)의 배열 데이터 호환: 같은 보스가 여러 번 있으면 마지막 것만 사용
         raw.bosses.forEach(function(e){
-          if (e && BOSS_DATA[e.bossIdx]) bosses[e.bossIdx] = { diffIdx: e.diffIdx, party: e.party || 1 };
+          var boss = e && BOSS_DATA[e.bossIdx];
+          if (boss) bosses[boss.name] = { diffIdx: e.diffIdx, party: e.party || 1 };
         });
       } else {
         Object.keys(raw.bosses).forEach(function(k){
           var e = raw.bosses[k];
-          if (e && BOSS_DATA[k] && BOSS_DATA[k].diffs[e.diffIdx]) bosses[k] = { diffIdx: e.diffIdx, party: e.party || 1 };
+          // k가 숫자 인덱스였던 이전 버전 데이터는 보스 순서가 바뀌면 더 이상 신뢰할 수
+          // 없어 건너뛴다. 이름 키인 경우에만 복원한다.
+          var boss = BOSS_BY_NAME[k];
+          if (e && boss && boss.diffs[e.diffIdx]) bosses[k] = { diffIdx: e.diffIdx, party: e.party || 1 };
         });
       }
     }
@@ -599,7 +609,7 @@
   function weeklyCount(ch){
     var n = 0;
     Object.keys(ch.bosses).forEach(function(idx){
-      if (!BOSS_DATA[idx].monthly) n++;
+      if (!BOSS_BY_NAME[idx].monthly) n++;
     });
     return n;
   }
@@ -607,7 +617,7 @@
   function charTotals(ch){
     var weeklyMeso = 0, monthlyOnlyMeso = 0, count = 0;
     Object.keys(ch.bosses).forEach(function(idx){
-      var boss = BOSS_DATA[idx];
+      var boss = BOSS_BY_NAME[idx];
       var entry = ch.bosses[idx];
       var diff = boss.diffs[entry.diffIdx];
       var per = diff.price / Math.max(1, entry.party);
@@ -713,7 +723,7 @@
   var charMonthlyEl = document.getElementById('charMonthly');
 
   function toggleDiff(ch, bossIdx, diffIdx){
-    var boss = BOSS_DATA[bossIdx];
+    var boss = BOSS_BY_NAME[bossIdx];
     var existing = ch.bosses[bossIdx];
     if (existing && existing.diffIdx === diffIdx){
       delete ch.bosses[bossIdx];
@@ -737,7 +747,8 @@
     var ch = characters[activeIdx];
     var atCap = weeklyCount(ch) >= WEEKLY_CAP;
     bossList.innerHTML = '';
-    BOSS_DATA.forEach(function(boss, bossIdx){
+    BOSS_DATA.forEach(function(boss){
+      var bossIdx = boss.name;
       var entry = ch.bosses[bossIdx];
       var row = document.createElement('div');
       row.className = 'boss-row' + (entry ? ' selected' : '');
@@ -774,7 +785,7 @@
         return;
       }
       btn.addEventListener('click', function(){
-        toggleDiff(characters[activeIdx], +btn.getAttribute('data-boss'), +btn.getAttribute('data-diff'));
+        toggleDiff(characters[activeIdx], btn.getAttribute('data-boss'), +btn.getAttribute('data-diff'));
       });
     });
     bindPartyControls(bossList);
@@ -783,8 +794,8 @@
   function renderBossTable(){
     bossTbody.innerHTML = '';
     var ch = characters[activeIdx];
-    Object.keys(ch.bosses).sort(function(a,b){ return a - b; }).forEach(function(bossIdx){
-      var boss = BOSS_DATA[bossIdx];
+    Object.keys(ch.bosses).sort(function(a,b){ return BOSS_BY_NAME[a].idx - BOSS_BY_NAME[b].idx; }).forEach(function(bossIdx){
+      var boss = BOSS_BY_NAME[bossIdx];
       var entry = ch.bosses[bossIdx];
       var diff = boss.diffs[entry.diffIdx];
       var price = diff.price;
