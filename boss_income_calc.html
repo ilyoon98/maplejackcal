@@ -183,65 +183,6 @@
     .row-preview{ width:auto; margin-left:auto; }
   }
 
-  table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:0.85rem;
-    margin-top:14px;
-  }
-  th, td{
-    text-align:left;
-    padding:9px 8px;
-    border-bottom:1px solid var(--border);
-    vertical-align:middle;
-  }
-  th{
-    font-size:0.7rem;
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    color:var(--text-dim);
-    font-weight:600;
-  }
-  td.num, th.num{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-  tr:last-child td{ border-bottom:none; }
-  .meso{ color:var(--accent-strong); font-weight:700; }
-  .name-cell{ display:flex; align-items:center; gap:8px; }
-  .name-cell img, .name-cell .boss-icon-fallback{ width:24px; height:24px; border-radius:6px; }
-  .diff-edit-select{
-    font-weight:600;
-    font-size:0.82rem;
-    padding:6px 8px;
-    border-radius:7px;
-    border:1px solid var(--border);
-    background:#11141a;
-    color:var(--text);
-    cursor:pointer;
-  }
-  .diff-edit-select:focus{ outline:2px solid var(--accent); outline-offset:1px; }
-  .badge{
-    display:inline-block;
-    font-size:0.68rem;
-    font-weight:700;
-    padding:2px 7px;
-    border-radius:999px;
-    background:rgba(76,141,255,.15);
-    color:var(--accent-strong);
-    margin-left:2px;
-  }
-  .badge.monthly{ background:rgba(76,175,125,0.15); color:var(--good); }
-  .badge.complete{ background:rgba(76,175,125,.2); color:#83e2ad; }
-  .row-del{
-    background:none;
-    border:none;
-    color:var(--text-dim);
-    cursor:pointer;
-    font-size:0.78rem;
-    font-weight:700;
-  }
-  .row-del:hover{ color:var(--bad); }
-  .table-wrap{ overflow-x:auto; }
-  #bossTable .party-controls{ visibility:visible; justify-content:flex-end; }
-
   /* overall summary (top of page) */
 
   .boss-toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0; }
@@ -297,6 +238,7 @@
   .scheduler-name{ width:100%; min-width:0; padding:12px 13px; border:1px solid #52617a; border-radius:9px; background:#0d121b; color:var(--text); font:inherit; font-weight:700; }
   .scheduler-name:focus{ outline:2px solid var(--accent); outline-offset:2px; }
   .scheduler-import .fetch-btn{ min-height:46px; padding:10px 16px; white-space:nowrap; font-weight:800; }
+  .scheduler-batch-refresh{ width:100%; margin-top:8px; min-height:40px; }
   .api-key-state{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; color:var(--text-dim); font-size:.78rem; }
   .api-key-state a{ color:var(--accent); font-weight:700; }
   .fetch-status.ok{ color:var(--good); }
@@ -304,7 +246,7 @@
   .sync-meta{ grid-column:1/-1; display:flex; align-items:center; gap:6px; color:var(--text-dim); font-size:.72rem; font-weight:600; }
   .sync-meta::before{ content:'API'; padding:2px 5px; border-radius:4px; background:rgba(76,141,255,.16); color:var(--accent); font-size:.62rem; font-weight:900; }
   @media(min-width:1101px){
-    .summary-inner{ grid-template-columns:2fr 2fr 2fr 1fr 1fr; margin-bottom:0; }
+    .summary-inner{ grid-template-columns:2fr 2fr 2fr 1fr; margin-bottom:0; }
     .summary-stat.primary .v{ font-size:clamp(1.7rem,2.1vw,2.5rem); }
   }
   @media(max-width:1100px){
@@ -361,10 +303,6 @@
       <span class="k">등록 캐릭터</span>
       <span class="v" id="sumCharCount">0명</span>
     </div>
-    <div class="summary-stat meso">
-      <span class="k">주간 결정</span>
-      <span class="v" id="sumCrystals">0개</span>
-    </div>
   </div>
 </div>
   </section>
@@ -379,6 +317,7 @@
         <input class="scheduler-name" id="schedulerCharacterName" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="캐릭터 닉네임">
         <button type="button" class="fetch-btn" id="schedulerFetchBtn">스케줄러 불러오기</button>
       </div>
+      <button type="button" class="tool-btn scheduler-batch-refresh" id="schedulerRefreshAllBtn">전체 완료 상태 새로고침</button>
       <div class="api-key-state" id="schedulerApiKeyState"></div>
       <p class="note fetch-status" id="schedulerFetchStatus" role="status" aria-live="polite"></p>
     </div>
@@ -398,23 +337,6 @@
     </div>
 
     <div class="boss-list" id="bossList"></div>
-
-    <div class="table-wrap">
-      <table id="bossTable">
-        <thead>
-          <tr>
-            <th>보스</th>
-            <th>난이도</th>
-            <th class="num">전체 보상</th>
-            <th class="num">N빵 인원</th>
-            <th class="num">1인당 수익</th>
-            <th>완료</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="bossTbody"></tbody>
-      </table>
-    </div>
 
   </section>
   </div>
@@ -533,7 +455,7 @@
   ];
   // 보스 이름으로 바로 찾을 수 있는 조회용 맵. 저장 데이터는 보스 "이름"을 키로 쓰므로
   // 정렬 순서나 가격이 바뀌어도(예: 보상 개편, 순서 재정렬) 저장된 캐릭터의 체크 상태가
-  // 깨지지 않는다. idx는 renderBossTable에서 BOSS_DATA 순서대로 정렬할 때만 쓴다.
+  // 깨지지 않는다. idx는 이전 저장 데이터 호환용으로만 유지한다.
   var BOSS_BY_NAME = Object.create(null);
   BOSS_DATA.forEach(function(b, i){ b.idx = i; BOSS_BY_NAME[b.name] = b; });
   // 표시 순서만 변경한다. 저장된 bossIdx/diffIdx의 의미는 유지한다.
@@ -728,6 +650,7 @@
   var LS_LAST_SCHEDULER_CHAR = 'boss_scheduler_last_char';
   var schedulerCharacterName = document.getElementById('schedulerCharacterName');
   var schedulerFetchBtn = document.getElementById('schedulerFetchBtn');
+  var schedulerRefreshAllBtn = document.getElementById('schedulerRefreshAllBtn');
   var schedulerFetchStatus = document.getElementById('schedulerFetchStatus');
   var schedulerApiKeyState = document.getElementById('schedulerApiKeyState');
   var API_ERROR_MSG = {
@@ -802,6 +725,65 @@
     renderAll();
     return { character:character, parsed:parsed };
   }
+  // 캐릭터 카드의 새로고침은 스케줄러에서 "완료" 상태만 읽는다.
+  // 보스 종류·난이도·N빵 인원은 클라이언트에서 저장한 값을 절대 교체하지 않는다.
+  function refreshCharacterCompletion(character){
+    var ocidPromise = character.ocid
+      ? Promise.resolve(character.ocid)
+      : apiGet('/id', { character_name:character.name }).then(function(result){
+          if (!result || !result.ocid) throw new Error('캐릭터 식별자(OCID)를 찾지 못했습니다.');
+          character.ocid = result.ocid;
+          return result.ocid;
+        }, function(error){ error.stage = 'id'; throw error; });
+    return ocidPromise.then(function(ocid){
+      return apiGet('/scheduler/character-state', { ocid:ocid }).then(null, function(error){ error.stage = 'scheduler'; throw error; });
+    }).then(function(data){
+      var parsed = parseSchedulerBosses(data);
+      Object.keys(character.bosses).forEach(function(bossName){
+        var schedulerEntry = parsed.bosses[bossName];
+        character.bosses[bossName].complete = !!(schedulerEntry && schedulerEntry.complete);
+      });
+      character.lastSyncedAt = new Date().toISOString();
+      saveState();
+      renderAll();
+      return charTotals(character);
+    });
+  }
+  function refreshAllCharacterCompletions(){
+    if (!NexonKey.has()){
+      refreshSchedulerKeyState();
+      setSchedulerStatus('홈에서 API 키를 먼저 등록하세요.', 'err');
+      return;
+    }
+    var targets = characters.filter(function(character){ return Object.keys(character.bosses).length; });
+    if (!targets.length){
+      setSchedulerStatus('완료 상태를 확인할 등록 보스가 없습니다.', 'err');
+      return;
+    }
+    var originalText = schedulerRefreshAllBtn.textContent;
+    var completed = 0, failed = [];
+    schedulerRefreshAllBtn.disabled = true;
+    schedulerRefreshAllBtn.textContent = '완료 상태 갱신 중…';
+    setSchedulerStatus('등록 보스가 있는 ' + targets.length + '개 캐릭터의 완료 상태를 갱신하는 중…');
+    var sequence = Promise.resolve();
+    targets.forEach(function(character){
+      sequence = sequence.then(function(){
+        return refreshCharacterCompletion(character).then(function(){ completed++; }, function(error){
+          failed.push(character.name + ': ' + describeApiError(error, error.stage || 'scheduler'));
+        });
+      });
+    });
+    sequence.then(function(){
+      if (failed.length){
+        setSchedulerStatus('완료 상태 갱신 ' + completed + '명 성공 · ' + failed.length + '명 실패 (' + failed.map(function(item){ return item.split(':')[0]; }).join(', ') + ')', 'err');
+      } else {
+        setSchedulerStatus('✓ ' + completed + '개 캐릭터의 완료 상태를 갱신했습니다. 보스·난이도·N빵 설정은 유지했습니다.', 'ok');
+      }
+    }).then(function(){
+      schedulerRefreshAllBtn.disabled = false;
+      schedulerRefreshAllBtn.textContent = originalText;
+    });
+  }
   schedulerFetchBtn.addEventListener('click', function(){
     var name = schedulerCharacterName.value.trim();
     if (!NexonKey.has()){
@@ -835,6 +817,7 @@
       .catch(function(error){ setSchedulerStatus(describeApiError(error, stage), 'err'); })
       .then(function(){ schedulerFetchBtn.disabled = false; schedulerFetchBtn.textContent = originalText; });
   });
+  schedulerRefreshAllBtn.addEventListener('click', refreshAllCharacterCompletions);
   schedulerCharacterName.addEventListener('keydown', function(event){ if (event.key === 'Enter' && !event.isComposing) schedulerFetchBtn.click(); });
   schedulerCharacterName.value = lsGet(LS_LAST_SCHEDULER_CHAR);
   refreshSchedulerKeyState();
@@ -899,7 +882,6 @@
   var bossAddNote = document.getElementById('bossAddNote');
   var weeklyQuota = document.getElementById('weeklyQuota');
   var bossList = document.getElementById('bossList');
-  var bossTbody = document.getElementById('bossTbody');
 
   function toggleDiff(ch, bossIdx, diffIdx){
     var boss = BOSS_BY_NAME[bossIdx];
@@ -980,54 +962,6 @@
     bindPartyControls(bossList);
   }
 
-  function renderBossTable(){
-    bossTbody.innerHTML = '';
-    var ch = characters[activeIdx];
-    Object.keys(ch.bosses).sort(function(a,b){ return BOSS_DISPLAY_ORDER.indexOf(a) - BOSS_DISPLAY_ORDER.indexOf(b); }).forEach(function(bossIdx){
-      var boss = BOSS_BY_NAME[bossIdx];
-      var entry = ch.bosses[bossIdx];
-      var diff = boss.diffs[entry.diffIdx];
-      var price = diff.price;
-      var per = Math.floor(price / validParty(entry.party));
-      var diffOptions = orderedDiffs(boss).map(function(item){
-        var d = item.diff, i = item.index;
-        return '<option value="' + i + '"' + (i === entry.diffIdx ? ' selected' : '') + '>' + d.label + '</option>';
-      }).join('');
-      var tr = document.createElement('tr');
-      tr.innerHTML =
-        '<td><div class="name-cell">' + iconHtml(boss, 'boss-icon') + '<span>' + boss.name + (boss.monthly ? '<span class="badge monthly">월간</span>' : '<span class="badge">주간</span>') + '</span></div></td>' +
-        '<td><select class="diff-edit-select" aria-label="' + bossIdx + ' 난이도" data-diff-boss="' + bossIdx + '">' + diffOptions + '</select></td>' +
-        '<td class="num">' + won(price) + '</td>' +
-        '<td class="num">' + partyControlsHtml(bossIdx, entry.party) + '</td>' +
-        '<td class="num meso">' + won(per) + '</td>' +
-        '<td>' + (entry.complete ? '<span class="badge complete">완료</span>' : '<span class="badge">미완료</span>') + '</td>' +
-        '<td><button type="button" class="row-del" data-boss="' + bossIdx + '">삭제</button></td>';
-      bossTbody.appendChild(tr);
-    });
-    bossTbody.querySelectorAll('.row-del').forEach(function(btn){
-      btn.addEventListener('click', function(){
-
-        delete characters[activeIdx].bosses[btn.getAttribute('data-boss')];
-        saveState();
-        renderAll();
-      });
-    });
-    bossTbody.querySelectorAll('.diff-edit-select[data-diff-boss]').forEach(function(sel){
-      sel.addEventListener('change', function(){
-        var bossIdx = sel.getAttribute('data-diff-boss');
-        var entry = characters[activeIdx].bosses[bossIdx];
-        if (!entry) return;
-
-        entry.diffIdx = +sel.value;
-        entry.complete = false;
-        entry.source = '';
-        saveState();
-        renderAll();
-      });
-    });
-    bindPartyControls(bossTbody);
-  }
-
   function renderBossPanel(){
     var has = activeIdx >= 0;
     bossPanel.classList.toggle('hidden', !has);
@@ -1038,7 +972,6 @@
     weeklyQuota.textContent = '주간 ' + wc + ' / ' + WEEKLY_CAP + '마리';
     weeklyQuota.className = 'weekly-quota' + (wc >= WEEKLY_CAP ? ' warn' : '');
     renderBossList();
-    renderBossTable();
   }
 
   // ---------- Overall summary ----------
@@ -1048,19 +981,17 @@
   var sumMonthly = document.getElementById('sumMonthly');
 
   function renderOverall(){
-    var totalWeekly = 0, totalEarned = 0, totalMonthly = 0, totalCrystals = 0;
+    var totalWeekly = 0, totalEarned = 0, totalMonthly = 0;
     characters.forEach(function(ch){
       var t = charTotals(ch);
       totalWeekly += t.weeklyMeso;
       totalEarned += t.earnedMeso;
       totalMonthly += t.monthlyMeso;
-      totalCrystals += t.weeklyCount;
     });
     sumCharCount.textContent = characters.length + '명';
     sumWeekly.textContent = won(totalWeekly);
     sumEarned.textContent = won(totalEarned);
     sumMonthly.textContent = won(totalMonthly);
-    document.getElementById('sumCrystals').textContent = totalCrystals + '개';
   }
 
   function renderAll(){
