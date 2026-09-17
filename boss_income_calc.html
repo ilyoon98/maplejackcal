@@ -10,8 +10,6 @@
   body{ padding-bottom:24px; }
 
   /* character chips */
-  .char-add-row{ display:flex; gap:10px; flex-wrap:wrap; }
-
   .char-chip-list{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-top:20px; }
   .char-chip{
     display:grid;
@@ -31,9 +29,8 @@
   .char-chip:hover{ border-color:var(--accent); color:var(--text); }
   .char-chip.active{ border-color:var(--accent-strong); background:#1c2740; color:var(--text); }
   .char-chip .chip-meso{ grid-column:1/-1; font-size:1.5rem; color:var(--accent); font-weight:800; font-variant-numeric:tabular-nums; }
-  .char-chip .chip-name{ width:100%; min-width:0; padding:10px 12px; border:1px solid #52617a; border-radius:8px; background:#0d121b; color:var(--text); font:inherit; cursor:text; }
-  .char-chip .chip-name:hover{ border-color:var(--accent); }
-  .char-chip .chip-name:focus{ outline:2px solid var(--accent); outline-offset:2px; }
+  .char-chip .chip-earned{ color:var(--good); font-size:1rem; }
+  .char-chip .chip-name{ min-width:0; color:var(--text); font-size:1.15rem; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .char-chip .chip-del{
     width:32px; height:32px;
     border-radius:50%;
@@ -85,6 +82,8 @@
   }
   .boss-row:last-child{ border-bottom:none; }
   .boss-row.selected{ background:#1c2740; }
+  .boss-row.completed{ box-shadow:inset 4px 0 var(--good); }
+  .boss-row.completed .row-preview{ color:var(--good); }
 
   .boss-icon{
     width:28px; height:28px;
@@ -126,6 +125,7 @@
     white-space:nowrap;
     flex-shrink:0;
   }
+  .boss-check-badge.complete{ background:rgba(76,175,125,.22); color:#83e2ad; }
   .diff-chip-row{ display:flex; flex-wrap:wrap; gap:6px; flex:1 1 180px; min-width:140px; }
   .diff-chip{
     border:1px solid var(--border);
@@ -229,6 +229,7 @@
     margin-left:2px;
   }
   .badge.monthly{ background:rgba(76,175,125,0.15); color:var(--good); }
+  .badge.complete{ background:rgba(76,175,125,.2); color:#83e2ad; }
   .row-del{
     background:none;
     border:none;
@@ -254,14 +255,12 @@
   .overall-card h2{ font-size:1.5rem; }
   .summary-inner{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:24px 0; }
   .summary-stat{ display:flex; flex-direction:column; gap:10px; padding:22px; border-radius:12px; background:#111722; min-width:0; }
-  .summary-stat:nth-child(3){ grid-area:1/1; }
-  .summary-stat:nth-child(4){ grid-area:1/2; }
   .summary-stat .k{ font-size:.95rem; color:var(--text-dim); font-weight:600; }
   .summary-stat .v{ font-size:1.5rem; font-weight:800; color:var(--text); overflow-wrap:anywhere; }
-  .summary-stat:nth-child(n+3) .v{ font-size:clamp(1.8rem,3.2vw,3rem); color:var(--accent); letter-spacing:-.04em; }
+  .summary-stat.primary .v{ font-size:clamp(1.8rem,3.2vw,3rem); color:var(--accent); letter-spacing:-.04em; }
+  .summary-stat.earned .v{ color:var(--good); }
   .character-heading{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
   .character-heading h2{ margin:0; font-size:1.35rem; }
-  #charAddBtn{ min-height:54px; padding:14px 28px; font-size:1.1rem; font-weight:800; }
   .chip-bosses{ grid-column:1/-1; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; max-width:288px; width:100%; }
   .chip-boss{ position:relative; display:inline-flex; padding-bottom:8px; }
   .chip-boss img{ width:100%; max-width:36px; height:auto; aspect-ratio:1; border-radius:8px; border:1px solid var(--border); object-fit:cover; }
@@ -293,12 +292,20 @@
   .workspace-layout > .card{ min-width:0; }
   .characters-panel .char-chip-list{ grid-template-columns:minmax(0,1fr); }
   .characters-panel .character-heading{ gap:12px; }
-  .characters-panel #charAddBtn{ padding:12px 16px; }
+  .scheduler-import{ margin-top:18px; padding:16px; border:1px solid #3b5276; border-radius:12px; background:#111722; }
+  .scheduler-import-row{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+  .scheduler-name{ width:100%; min-width:0; padding:12px 13px; border:1px solid #52617a; border-radius:9px; background:#0d121b; color:var(--text); font:inherit; font-weight:700; }
+  .scheduler-name:focus{ outline:2px solid var(--accent); outline-offset:2px; }
+  .scheduler-import .fetch-btn{ min-height:46px; padding:10px 16px; white-space:nowrap; font-weight:800; }
+  .api-key-state{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; color:var(--text-dim); font-size:.78rem; }
+  .api-key-state a{ color:var(--accent); font-weight:700; }
+  .fetch-status.ok{ color:var(--good); }
+  .fetch-status.err{ color:var(--bad); }
+  .sync-meta{ grid-column:1/-1; display:flex; align-items:center; gap:6px; color:var(--text-dim); font-size:.72rem; font-weight:600; }
+  .sync-meta::before{ content:'API'; padding:2px 5px; border-radius:4px; background:rgba(76,141,255,.16); color:var(--accent); font-size:.62rem; font-weight:900; }
   @media(min-width:1101px){
-    .summary-inner{ grid-template-columns:2fr 2fr 1fr 1fr; margin-bottom:0; }
-    .summary-stat:nth-child(1){ grid-area:1/3; }
-    .summary-stat:nth-child(2){ grid-area:1/4; }
-    .summary-stat:nth-child(n+3) .v{ font-size:clamp(1.8rem,2.4vw,2.6rem); }
+    .summary-inner{ grid-template-columns:2fr 2fr 2fr 1fr 1fr; margin-bottom:0; }
+    .summary-stat.primary .v{ font-size:clamp(1.7rem,2.1vw,2.5rem); }
   }
   @media(max-width:1100px){
     .workspace-layout{ grid-template-columns:minmax(0,1fr); gap:0; }
@@ -309,11 +316,10 @@
     .overall-card{ padding:20px 16px; }
     .summary-inner{ gap:10px; }
     .summary-stat{ padding:16px 12px; }
-    .summary-stat:nth-child(n+3){ grid-area:auto; grid-column:1/-1; }
-    .summary-stat:nth-child(3){ order:-2; }
-    .summary-stat:nth-child(4){ order:-1; }
-    .summary-stat:nth-child(n+3) .v{ font-size:2rem; }
+    .summary-stat.primary{ grid-column:1/-1; }
+    .summary-stat.primary .v{ font-size:2rem; }
     .summary-stat .v{ font-size:1.3rem; }
+    .scheduler-import-row{ grid-template-columns:minmax(0,1fr); }
     .char-chip-list{ grid-template-columns:minmax(0,1fr); }
     .boss-name-wrap{ width:100%; }
     .row-preview{ width:auto; }
@@ -339,21 +345,25 @@
     <h2>캐릭터 총합</h2>
 <div class="overall-highlights">
   <div class="summary-inner">
+    <div class="summary-stat meso primary">
+      <span class="k">이번 주 받을 수익</span>
+      <span class="v" id="sumWeekly">0</span>
+    </div>
+    <div class="summary-stat meso primary earned">
+      <span class="k">이미 획득한 수익</span>
+      <span class="v" id="sumEarned">0</span>
+    </div>
+    <div class="summary-stat meso primary">
+      <span class="k">월간 예상 수익</span>
+      <span class="v" id="sumMonthly">0</span>
+    </div>
     <div class="summary-stat">
       <span class="k">등록 캐릭터</span>
       <span class="v" id="sumCharCount">0명</span>
     </div>
     <div class="summary-stat meso">
-      <span class="k">주간 결정 판매 수</span>
+      <span class="k">주간 결정</span>
       <span class="v" id="sumCrystals">0개</span>
-    </div>
-    <div class="summary-stat meso">
-      <span class="k">주간 수익</span>
-      <span class="v" id="sumWeekly">0</span>
-    </div>
-    <div class="summary-stat meso">
-      <span class="k">월간 수익 (4주 + 월간 보스)</span>
-      <span class="v" id="sumMonthly">0</span>
     </div>
   </div>
 </div>
@@ -363,14 +373,16 @@
   <section class="card characters-panel">
     <div class="character-heading">
     <h2>내 캐릭터</h2>
-    <div class="char-add-row">
-      <button type="button" class="fetch-btn" id="charAddBtn">＋ 캐릭터 추가</button>
     </div>
+    <div class="scheduler-import">
+      <div class="scheduler-import-row">
+        <input class="scheduler-name" id="schedulerCharacterName" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="캐릭터 닉네임">
+        <button type="button" class="fetch-btn" id="schedulerFetchBtn">스케줄러 불러오기</button>
+      </div>
+      <div class="api-key-state" id="schedulerApiKeyState"></div>
+      <p class="note fetch-status" id="schedulerFetchStatus" role="status" aria-live="polite"></p>
     </div>
     <div class="char-chip-list" id="charChipList"></div>
-    <div class="boss-toolbar">
-      <button type="button" class="tool-btn" id="charCopyBtn">선택 캐릭터 복제</button>
-    </div>
     <p class="note" id="actionNote" role="status" aria-live="polite"></p>
   </section>
 
@@ -396,6 +408,7 @@
             <th class="num">전체 보상</th>
             <th class="num">N빵 인원</th>
             <th class="num">1인당 수익</th>
+            <th>완료</th>
             <th></th>
           </tr>
         </thead>
@@ -407,6 +420,7 @@
   </div>
 </div>
 
+<script src="nexon_key.js"></script>
 <script>
 (function(){
   // 메소 = 원 단위 그대로. 억/만 단위 화면 표기는 toLocaleString으로 처리.
@@ -536,6 +550,26 @@
     '카오스':{key:'chaos', text:'CHAOS', mark:'C', rank:3},
     '익스트림':{key:'extreme', text:'EXTREME', mark:'EX', rank:4}
   };
+  var API_DIFFICULTY = { easy:'이지', normal:'노멀', hard:'하드', chaos:'카오스', extreme:'익스트림' };
+  var API_BOSS_NAME = { '블러디퀸':'블러디 퀸' };
+  function trueFlag(value){ return value === true || String(value).toLowerCase() === 'true'; }
+  function parseSchedulerBosses(data){
+    var bosses = Object.create(null), skipped = [];
+    var list = data && Array.isArray(data.boss_contents) ? data.boss_contents : [];
+    list.forEach(function(item){
+      if (!item || !trueFlag(item.registration_flag)) return;
+      var cycle = String(item.cycle || '').toLowerCase();
+      if (cycle !== 'bossweekly' && cycle !== 'bossmonthly') return;
+      var apiName = String(item.content_name || '').trim();
+      var name = API_BOSS_NAME[apiName] || apiName;
+      var boss = BOSS_BY_NAME[name];
+      var label = API_DIFFICULTY[String(item.difficulty || '').toLowerCase()];
+      var diffIdx = boss && boss.diffs.findIndex(function(d){ return d.label === label; });
+      if (!boss || diffIdx < 0){ skipped.push(apiName + (label ? ' ' + label : '')); return; }
+      bosses[name] = { diffIdx:diffIdx, party:1, complete:trueFlag(item.complete_flag), source:'scheduler' };
+    });
+    return { bosses:bosses, skipped:skipped };
+  }
   function orderedDiffs(boss){
     return boss.diffs.map(function(d, i){ return {diff:d, index:i}; }).sort(function(a,b){
       return DIFFICULTY[a.diff.label].rank - DIFFICULTY[b.diff.label].rank;
@@ -569,7 +603,7 @@
         // 아주 예전 버전(드롭다운 방식)의 배열 데이터 호환: 같은 보스가 여러 번 있으면 마지막 것만 사용
         raw.bosses.forEach(function(e){
           var boss = e && BOSS_DATA[e.bossIdx];
-          if (boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[boss.name] = { diffIdx: e.diffIdx, party: validParty(e.party) };
+          if (boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[boss.name] = { diffIdx: e.diffIdx, party: validParty(e.party), complete:trueFlag(e.complete), source:e.source === 'scheduler' ? 'scheduler' : '' };
         });
       } else {
         Object.keys(raw.bosses).forEach(function(k){
@@ -577,7 +611,7 @@
           // k가 숫자 인덱스였던 이전 버전 데이터는 보스 순서가 바뀌면 더 이상 신뢰할 수
           // 없어 건너뛴다. 이름 키인 경우에만 복원한다.
           var boss = BOSS_BY_NAME[k];
-          if (e && boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[k] = { diffIdx: e.diffIdx, party: validParty(e.party) };
+          if (e && boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[k] = { diffIdx: e.diffIdx, party: validParty(e.party), complete:trueFlag(e.complete), source:e.source === 'scheduler' ? 'scheduler' : '' };
         });
       }
     }
@@ -585,7 +619,15 @@
     Object.keys(bosses).filter(function(k){ return !BOSS_BY_NAME[k].monthly; }).sort(function(a,b){
       return BOSS_BY_NAME[b].diffs[bosses[b].diffIdx].price / bosses[b].party - BOSS_BY_NAME[a].diffs[bosses[a].diffIdx].price / bosses[a].party;
     }).slice(WEEKLY_CAP).forEach(function(k){ delete bosses[k]; });
-    return { name: raw && typeof raw.name === 'string' ? raw.name.trim().slice(0,20) || '캐릭터' : '캐릭터', bosses: bosses };
+    return {
+      name: raw && typeof raw.name === 'string' ? raw.name.trim().slice(0,20) || '캐릭터' : '캐릭터',
+      bosses: bosses,
+      ocid: raw && typeof raw.ocid === 'string' ? raw.ocid : '',
+      worldName: raw && typeof raw.worldName === 'string' ? raw.worldName : '',
+      characterClass: raw && typeof raw.characterClass === 'string' ? raw.characterClass : '',
+      characterLevel: raw && Number.isFinite(+raw.characterLevel) ? +raw.characterLevel : 0,
+      lastSyncedAt: raw && typeof raw.lastSyncedAt === 'string' ? raw.lastSyncedAt : ''
+    };
   }
 
   function loadState(){
@@ -666,40 +708,142 @@
   }
 
   function charTotals(ch){
-    var weeklyMeso = 0, monthlyOnlyMeso = 0, count = 0;
+    var weeklyMeso = 0, monthlyOnlyMeso = 0, earnedMeso = 0, count = 0, completedCount = 0;
     Object.keys(ch.bosses).forEach(function(idx){
       var boss = BOSS_BY_NAME[idx];
       var entry = ch.bosses[idx];
       var diff = boss.diffs[entry.diffIdx];
       var per = Math.floor(diff.price / validParty(entry.party));
       count++;
+      if (entry.complete){ earnedMeso += per; completedCount++; }
       if (boss.monthly) monthlyOnlyMeso += per;
       else weeklyMeso += per;
     });
     var monthlyMeso = weeklyMeso * WEEKS_PER_MONTH + monthlyOnlyMeso;
-    return { weeklyMeso: weeklyMeso, monthlyMeso: monthlyMeso, weeklyCount: weeklyCount(ch), totalCount: count };
+    return { weeklyMeso: weeklyMeso, earnedMeso:earnedMeso, monthlyMeso: monthlyMeso, weeklyCount: weeklyCount(ch), totalCount: count, completedCount:completedCount };
   }
 
-  function nextAutoName(){
-    var n = 1;
-    while (characters.some(function(c){ return c.name === '캐릭터' + n; })) n++;
-    return '캐릭터' + n;
+  // ---------- Nexon scheduler import ----------
+  var API_BASE = 'https://open.api.nexon.com/maplestory/v1';
+  var LS_LAST_SCHEDULER_CHAR = 'boss_scheduler_last_char';
+  var schedulerCharacterName = document.getElementById('schedulerCharacterName');
+  var schedulerFetchBtn = document.getElementById('schedulerFetchBtn');
+  var schedulerFetchStatus = document.getElementById('schedulerFetchStatus');
+  var schedulerApiKeyState = document.getElementById('schedulerApiKeyState');
+  var API_ERROR_MSG = {
+    OPENAPI00001:'API 서버 오류입니다. 잠시 후 다시 시도하세요.',
+    OPENAPI00002:'이 API 키로 조회할 수 없는 캐릭터입니다. 본인 계정의 캐릭터인지 확인하세요.',
+    OPENAPI00003:'캐릭터 정보를 찾을 수 없습니다.',
+    OPENAPI00004:'조회 조건이 올바르지 않습니다.',
+    OPENAPI00005:'API 키가 유효하지 않습니다. 홈에서 다시 등록하세요.',
+    OPENAPI00007:'API 호출 한도를 초과했습니다. 잠시 후 다시 시도하세요.',
+    OPENAPI00009:'데이터 준비 중입니다. 잠시 후 다시 시도하세요.',
+    OPENAPI00010:'게임 점검 중입니다.',
+    OPENAPI00011:'API 점검 중입니다.'
+  };
+  function setSchedulerStatus(message, kind){
+    schedulerFetchStatus.textContent = message || '';
+    schedulerFetchStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
   }
+  function refreshSchedulerKeyState(){
+    schedulerApiKeyState.innerHTML = NexonKey.has()
+      ? '<span>API 키 등록됨 ✓</span><a href="index.html#apiKey">키 변경</a>'
+      : '<span>스케줄러 조회에는 API 키가 필요합니다.</span><a href="index.html#apiKey">API 키 등록</a>';
+  }
+  function apiGet(path, params){
+    var query = Object.keys(params).map(function(key){
+      return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+    }).join('&');
+    return fetch(API_BASE + path + '?' + query, { headers:{ 'x-nxopen-api-key':NexonKey.get() } })
+      .then(function(response){
+        return response.json().catch(function(){ return null; }).then(function(body){
+          if (!response.ok){
+            var apiError = body && body.error ? body.error : {};
+            var error = new Error(apiError.message || ('HTTP ' + response.status));
+            error.code = apiError.name || '';
+            throw error;
+          }
+          return body;
+        });
+      });
+  }
+  function describeApiError(error, stage){
+    if (error && error.code){
+      if (stage === 'id' && (error.code === 'OPENAPI00003' || error.code === 'OPENAPI00004')) return '캐릭터를 찾을 수 없습니다. 닉네임을 확인하세요.';
+      if (stage === 'scheduler' && (error.code === 'OPENAPI00002' || error.code === 'OPENAPI00003' || error.code === 'OPENAPI00004')){
+        return '스케줄러를 조회할 수 없습니다. API 키를 발급한 본인 계정의 캐릭터인지, 2026년 6월 25일 이후 접속한 캐릭터인지 확인하세요.';
+      }
+      return API_ERROR_MSG[error.code] || (error.code + ': ' + error.message);
+    }
+    if (error && error.name === 'TypeError') return '네트워크 오류로 넥슨 API에 연결하지 못했습니다.';
+    return '불러오지 못했습니다: ' + (error && error.message ? error.message : error);
+  }
+  function applySchedulerCharacter(data, ocid, requestedName){
+    var parsed = parseSchedulerBosses(data);
+    var name = String(data && data.character_name || requestedName).trim().slice(0,20);
+    var existingIdx = characters.findIndex(function(ch){ return (ocid && ch.ocid === ocid) || ch.name === name; });
+    var existing = existingIdx >= 0 ? characters[existingIdx] : null;
+    Object.keys(parsed.bosses).forEach(function(bossName){
+      if (existing && existing.bosses[bossName]) parsed.bosses[bossName].party = validParty(existing.bosses[bossName].party);
+    });
+    var character = normalizeCharacter({
+      name:name,
+      bosses:parsed.bosses,
+      ocid:ocid,
+      worldName:String(data && data.world_name || ''),
+      characterClass:String(data && data.character_class || ''),
+      characterLevel:Number(data && data.character_level) || 0,
+      lastSyncedAt:new Date().toISOString()
+    });
+    if (existingIdx >= 0) characters[existingIdx] = character;
+    else { characters.push(character); existingIdx = characters.length - 1; }
+    activeIdx = existingIdx;
+    saveState();
+    renderAll();
+    return { character:character, parsed:parsed };
+  }
+  schedulerFetchBtn.addEventListener('click', function(){
+    var name = schedulerCharacterName.value.trim();
+    if (!NexonKey.has()){
+      refreshSchedulerKeyState();
+      setSchedulerStatus('홈에서 API 키를 먼저 등록하세요.', 'err');
+      return;
+    }
+    if (!name){ setSchedulerStatus('캐릭터 닉네임을 입력하세요.', 'err'); schedulerCharacterName.focus(); return; }
+    var originalText = schedulerFetchBtn.textContent;
+    var stage = 'id';
+    schedulerFetchBtn.disabled = true;
+    schedulerFetchBtn.textContent = '조회 중…';
+    setSchedulerStatus(name + '의 보스 스케줄러를 조회하는 중…');
+    apiGet('/id', { character_name:name })
+      .then(function(result){
+        if (!result || !result.ocid) throw new Error('캐릭터 식별자(OCID)를 받지 못했습니다.');
+        stage = 'scheduler';
+        setSchedulerStatus(name + ' 캐릭터 확인됨 · 본인 계정 스케줄러 조회 중…');
+        return apiGet('/scheduler/character-state', { ocid:result.ocid }).then(function(data){ return { data:data, ocid:result.ocid }; });
+      })
+      .then(function(result){
+        var applied = applySchedulerCharacter(result.data, result.ocid, name);
+        lsSet(LS_LAST_SCHEDULER_CHAR, name);
+        var totals = charTotals(applied.character);
+        var message = totals.totalCount
+          ? '✓ ' + applied.character.name + ' · 등록 보스 ' + totals.totalCount + '개 · 완료 ' + totals.completedCount + '개'
+          : '✓ ' + applied.character.name + ' 스케줄러 조회 성공 · 등록된 주간·월간 보스 없음';
+        if (applied.parsed.skipped.length) message += ' · 수익표에 없는 ' + applied.parsed.skipped.length + '개 제외';
+        setSchedulerStatus(message, 'ok');
+      })
+      .catch(function(error){ setSchedulerStatus(describeApiError(error, stage), 'err'); })
+      .then(function(){ schedulerFetchBtn.disabled = false; schedulerFetchBtn.textContent = originalText; });
+  });
+  schedulerCharacterName.addEventListener('keydown', function(event){ if (event.key === 'Enter' && !event.isComposing) schedulerFetchBtn.click(); });
+  schedulerCharacterName.value = lsGet(LS_LAST_SCHEDULER_CHAR);
+  refreshSchedulerKeyState();
+  window.addEventListener('storage', function(event){ if (event.key === NexonKey.STORAGE_KEY) refreshSchedulerKeyState(); });
 
   // ---------- Character chips ----------
-  var charAddBtn = document.getElementById('charAddBtn');
   var charChipList = document.getElementById('charChipList');
   var bossPanel = document.getElementById('bossPanel');
   var bossPanelTitle = document.getElementById('bossPanelTitle');
-
-  charAddBtn.addEventListener('click', function(){
-    var name = nextAutoName();
-
-    characters.push({ name: name, bosses: {} });
-    activeIdx = characters.length - 1;
-    saveState();
-    renderAll();
-  });
 
   function renderCharChips(){
     charChipList.innerHTML = '';
@@ -716,10 +860,12 @@
         }
       });
       chip.innerHTML =
-        '<input class="chip-name" type="text" maxlength="20" aria-label="캐릭터 이름 수정" placeholder="캐릭터 이름" autocomplete="off" spellcheck="false" value="' + escapeHtml(ch.name) + '">' +
+        '<span class="chip-name">' + escapeHtml(ch.name) + '</span>' +
         '<button type="button" class="chip-del" aria-label="' + escapeHtml(ch.name) + ' 삭제">×</button>' +
         '<span class="chip-meso">주 ' + won(t.weeklyMeso) + '</span>' +
+        '<span class="chip-meso chip-earned">완료 ' + won(t.earnedMeso) + '</span>' +
         '<span class="chip-meso chip-monthly">월 ' + won(t.monthlyMeso) + '</span>' +
+        (ch.lastSyncedAt ? '<span class="sync-meta">스케줄러 연동</span>' : '') +
         '<span class="chip-bosses">' + DISPLAY_BOSSES.filter(function(b){ return ch.bosses[b.name]; }).map(function(b){
           var difficulty = b.diffs[ch.bosses[b.name].diffIdx].label;
           var badge = DIFFICULTY[difficulty];
@@ -727,33 +873,8 @@
             iconHtml(b, 'chip-boss-icon') + '<span class="difficulty-mark" aria-hidden="true">' + badge.mark + '</span></span>';
         }).join('') + '</span>';
       chip.addEventListener('click', function(e){
-        if (e.target.closest('.chip-del') || e.target.closest('.chip-name')) return;
+        if (e.target.closest('.chip-del')) return;
         activeIdx = idx;
-        renderAll();
-      });
-      var nameEl = chip.querySelector('.chip-name');
-      nameEl.addEventListener('click', function(e){
-        e.stopPropagation();
-        if (activeIdx === idx) return;
-        activeIdx = idx;
-        // 편집 중인 입력칸의 포커스가 날아가지 않도록 칩 목록 전체를
-        // 다시 그리지 않고, 활성 표시만 갱신하고 보스 패널만 다시 그린다.
-        charChipList.querySelectorAll('.char-chip').forEach(function(c, i){ c.classList.toggle('active', i === idx); });
-        renderBossPanel();
-      });
-      nameEl.addEventListener('keydown', function(e){
-        if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); nameEl.blur(); }
-      });
-      nameEl.addEventListener('blur', function(){
-        var newName = nameEl.value.trim().slice(0,20);
-        if (!newName){ newName = ch.name; }
-        if (newName !== ch.name && characters.some(function(c){ return c.name === newName; })){
-          newName = ch.name; // 중복이면 원래 이름 유지
-        }
-        if (newName === ch.name){ nameEl.value = ch.name; return; }
-
-        ch.name = newName;
-        saveState();
         renderAll();
       });
       chip.querySelector('.chip-del').addEventListener('click', function(){
@@ -769,7 +890,7 @@
     if (!characters.length){
       var empty = document.createElement('div');
       empty.className = 'empty-note';
-      empty.textContent = '등록된 캐릭터가 없습니다. 캐릭터를 먼저 추가하세요.';
+      empty.textContent = '닉네임을 입력하고 스케줄러를 불러오세요.';
       charChipList.appendChild(empty);
     }
   }
@@ -797,7 +918,7 @@
       return;
     }
 
-    ch.bosses[bossIdx] = { diffIdx: diffIdx, party: existing ? existing.party : 1 };
+    ch.bosses[bossIdx] = { diffIdx: diffIdx, party: existing ? existing.party : 1, complete:false, source:'' };
     bossAddNote.textContent = '';
     saveState();
     renderAll();
@@ -817,7 +938,7 @@
       var bossIdx = boss.name;
       var entry = ch.bosses[bossIdx];
       var row = document.createElement('div');
-      row.className = 'boss-row' + (entry ? ' selected' : '');
+      row.className = 'boss-row' + (entry ? ' selected' : '') + (entry && entry.complete ? ' completed' : '');
 
       var chipsHtml = orderedDiffs(boss).map(function(item){
         var d = item.diff, diffIdx = item.index;
@@ -836,6 +957,7 @@
           iconHtml(boss, 'boss-icon') +
           '<span class="boss-name">' + boss.name + '</span>' +
           (boss.monthly ? '<span class="boss-check-badge">월간</span>' : '') +
+          (entry && entry.complete ? '<span class="boss-check-badge complete">완료</span>' : '') +
         '</div>' +
         '<div class="diff-chip-row">' + chipsHtml + '</div>' +
         partyControlsHtml(bossIdx, party) +
@@ -878,6 +1000,7 @@
         '<td class="num">' + won(price) + '</td>' +
         '<td class="num">' + partyControlsHtml(bossIdx, entry.party) + '</td>' +
         '<td class="num meso">' + won(per) + '</td>' +
+        '<td>' + (entry.complete ? '<span class="badge complete">완료</span>' : '<span class="badge">미완료</span>') + '</td>' +
         '<td><button type="button" class="row-del" data-boss="' + bossIdx + '">삭제</button></td>';
       bossTbody.appendChild(tr);
     });
@@ -896,6 +1019,8 @@
         if (!entry) return;
 
         entry.diffIdx = +sel.value;
+        entry.complete = false;
+        entry.source = '';
         saveState();
         renderAll();
       });
@@ -919,38 +1044,31 @@
   // ---------- Overall summary ----------
   var sumCharCount = document.getElementById('sumCharCount');
   var sumWeekly = document.getElementById('sumWeekly');
+  var sumEarned = document.getElementById('sumEarned');
   var sumMonthly = document.getElementById('sumMonthly');
 
   function renderOverall(){
-    var totalWeekly = 0, totalMonthly = 0, totalCrystals = 0;
+    var totalWeekly = 0, totalEarned = 0, totalMonthly = 0, totalCrystals = 0;
     characters.forEach(function(ch){
       var t = charTotals(ch);
       totalWeekly += t.weeklyMeso;
+      totalEarned += t.earnedMeso;
       totalMonthly += t.monthlyMeso;
       totalCrystals += t.weeklyCount;
     });
     sumCharCount.textContent = characters.length + '명';
     sumWeekly.textContent = won(totalWeekly);
+    sumEarned.textContent = won(totalEarned);
     sumMonthly.textContent = won(totalMonthly);
     document.getElementById('sumCrystals').textContent = totalCrystals + '개';
   }
 
   function renderAll(){
-    document.getElementById('charCopyBtn').disabled = activeIdx < 0;
     renderCharChips();
     renderBossPanel();
     renderOverall();
   }
 
-  document.getElementById('charCopyBtn').addEventListener('click', function(){
-    if (activeIdx < 0) return;
-
-    var copy = JSON.parse(JSON.stringify(characters[activeIdx]));
-    var base = copy.name.slice(0,12), n = 1;
-    do { copy.name = base + ' 복사' + n++; } while (characters.some(function(ch){ return ch.name === copy.name; }));
-    characters.push(copy); activeIdx = characters.length - 1;
-    saveState(); renderAll();
-  });
   document.getElementById('clearBossBtn').addEventListener('click', function(){
     if (activeIdx < 0 || !Object.keys(characters[activeIdx].bosses).length) return;
     characters[activeIdx].bosses = {};
@@ -965,7 +1083,7 @@
   function applyPreset(ch){
     Object.keys(ch.bosses).forEach(function(name){ if (!BOSS_BY_NAME[name].monthly) delete ch.bosses[name]; });
     Object.keys(BLACK_MAGE_BELOW_PRESET).forEach(function(name){
-      ch.bosses[name] = { diffIdx:BOSS_BY_NAME[name].diffs.findIndex(function(d){ return d.label === BLACK_MAGE_BELOW_PRESET[name]; }), party:1 };
+      ch.bosses[name] = { diffIdx:BOSS_BY_NAME[name].diffs.findIndex(function(d){ return d.label === BLACK_MAGE_BELOW_PRESET[name]; }), party:1, complete:false, source:'' };
     });
   }
   document.getElementById('presetBtn').addEventListener('click', function(){

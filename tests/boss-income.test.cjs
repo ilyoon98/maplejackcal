@@ -7,15 +7,23 @@ const vm = require('node:vm');
 
 const html = fs.readFileSync(path.join(__dirname, '../boss_income_calc.html'), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+function fakeElement(){
+  return {
+    addEventListener(){}, classList:{toggle(){}}, focus(){}, click(){},
+    textContent:'', innerHTML:'', className:'', value:'', disabled:false,
+  };
+}
 const context = {
-  document: {getElementById: () => ({addEventListener(){}})},
-  localStorage: {getItem: () => null},
+  document: {getElementById: () => fakeElement()},
+  localStorage: {getItem: () => null, setItem(){}, removeItem(){}},
+  NexonKey: {has:() => false, get:() => '', STORAGE_KEY:'nxopen_api_key'},
+  window: {addEventListener(){}},
 };
 vm.createContext(context);
 vm.runInContext(script.replace(/  renderAll\(\);\s*\}\)\(\);\s*$/, `
-  globalThis.engine = {normalizeCharacter, charTotals, applyPreset, BOSS_DATA, validParty, escapeHtml};
+  globalThis.engine = {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag, describeApiError, BOSS_DATA, validParty, escapeHtml};
 })();`), context);
-const {normalizeCharacter, charTotals, applyPreset, BOSS_DATA, validParty, escapeHtml} = context.engine;
+const {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag, describeApiError, BOSS_DATA, validParty, escapeHtml} = context.engine;
 
 test('검밑솔 12개 수익은 비교 사이트의 주간/월간 합계와 일치한다', () => {
   const ch = {name:'테스트', bosses:{}};
@@ -66,4 +74,36 @@ test('파티 수익은 보스마다 1메소 미만을 버려 행별 수익과 �
 
 test('사용자 이름의 HTML이 실행 가능한 태그로 삽입되지 않는다', () => {
   assert.equal(escapeHtml('<img src=x onerror="alert(1)">'), '&lt;img src=x onerror=&quot;alert(1)&quot;&gt;');
+});
+
+test('스케줄러 응답은 등록된 주간·월간 보스와 완료 상태만 가져온다', () => {
+  const result = parseSchedulerBosses({boss_contents:[
+    {content_name:'스우', difficulty:'hard', cycle:'bossWeekly', registration_flag:'true', complete_flag:'TRUE'},
+    {content_name:'검은 마법사', difficulty:'hard', cycle:'bossMonthly', registration_flag:true, complete_flag:false},
+    {content_name:'반반', difficulty:'normal', cycle:'bossDaily', registration_flag:'true', complete_flag:'true'},
+    {content_name:'데미안', difficulty:'hard', cycle:'bossWeekly', registration_flag:'false', complete_flag:'false'},
+    {content_name:'수익표에 없는 보스', difficulty:'easy', cycle:'bossWeekly', registration_flag:'true', complete_flag:'false'},
+  ]});
+  assert.deepEqual(Object.keys(result.bosses).sort(), ['검은 마법사', '스우']);
+  assert.equal(result.bosses['스우'].complete, true);
+  assert.equal(result.bosses['검은 마법사'].complete, false);
+  assert.equal(result.skipped.length, 1);
+  assert.equal(trueFlag('TRUE'), true);
+});
+
+test('완료 수익은 완료된 보스의 파티 분배액만 합산한다', () => {
+  const ch = normalizeCharacter({name:'테스트', bosses:{
+    '스우':{diffIdx:1, party:2, complete:true, source:'scheduler'},
+    '데미안':{diffIdx:0, party:1, complete:false, source:'scheduler'},
+  }});
+  const totals = charTotals(ch);
+  assert.equal(totals.earnedMeso, Math.floor(48900000 / 2));
+  assert.equal(totals.completedCount, 1);
+  assert.equal(ch.bosses['스우'].source, 'scheduler');
+});
+
+test('스케줄러 권한 오류는 본인 계정과 접속 조건을 안내한다', () => {
+  const message = describeApiError({code:'OPENAPI00003', message:'not found'}, 'scheduler');
+  assert.match(message, /본인 계정/);
+  assert.match(message, /2026년 6월 25일 이후 접속/);
 });
