@@ -7,51 +7,42 @@
 <link rel="stylesheet" href="style.css" />
 <style>
   :root{ --surface-2:#1d212b; }
-  body{ padding-bottom:96px; }
+  body{ padding-bottom:24px; }
 
   /* character chips */
   .char-add-row{ display:flex; gap:10px; flex-wrap:wrap; }
-  .char-add-row input[type="text"]{
-    flex:1 1 200px;
-    min-width:0;
-    font-size:0.95rem;
-    font-weight:600;
-    padding:10px 12px;
-    border-radius:8px;
-    border:1px solid var(--border);
-    background:#11141a;
-    color:var(--text);
-  }
-  .char-add-row input[type="text"]:focus{ outline:2px solid var(--accent); outline-offset:1px; }
 
-  .char-chip-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .char-chip-list{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-top:20px; }
   .char-chip{
-    display:flex;
+    display:grid;
+    grid-template-columns:1fr auto;
+    align-content:start;
     align-items:center;
-    gap:8px;
-    padding:8px 8px 8px 14px;
-    border-radius:999px;
+    gap:14px;
+    padding:20px;
+    border-radius:14px;
     border:1px solid var(--border);
     background:#11141a;
     color:var(--text-dim);
     font-weight:700;
-    font-size:0.85rem;
+    font-size:1.15rem;
     cursor:pointer;
   }
   .char-chip:hover{ border-color:var(--accent); color:var(--text); }
   .char-chip.active{ border-color:var(--accent-strong); background:#1c2740; color:var(--text); }
-  .char-chip .chip-meso{ font-size:0.72rem; color:var(--accent-strong); font-weight:700; }
-  .char-chip .chip-name{ cursor:text; }
-  .char-chip .chip-name:focus{ outline:1px solid var(--accent); border-radius:4px; }
+  .char-chip .chip-meso{ grid-column:1/-1; font-size:1.5rem; color:var(--accent); font-weight:800; font-variant-numeric:tabular-nums; }
+  .char-chip .chip-name{ width:100%; min-width:0; padding:10px 12px; border:1px solid #52617a; border-radius:8px; background:#0d121b; color:var(--text); font:inherit; cursor:text; }
+  .char-chip .chip-name:hover{ border-color:var(--accent); }
+  .char-chip .chip-name:focus{ outline:2px solid var(--accent); outline-offset:2px; }
   .char-chip .chip-del{
-    width:20px; height:20px;
+    width:32px; height:32px;
     border-radius:50%;
     border:none;
     background:rgba(226,102,74,0.15);
     color:var(--bad);
-    font-size:12px;
+    font-size:18px;
     font-weight:800;
-    line-height:20px;
+    line-height:30px;
     text-align:center;
     cursor:pointer;
     flex-shrink:0;
@@ -147,7 +138,7 @@
     cursor:pointer;
   }
   .diff-chip:hover{ border-color:var(--accent); color:var(--text); }
-  .diff-chip.active{ background:var(--accent-strong); border-color:var(--accent-strong); color:#0b0d12; }
+  .diff-chip.active{ background:var(--difficulty); border-color:var(--difficulty); color:#10151c; box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--difficulty); }
   .diff-chip.disabled{ opacity:.4; cursor:not-allowed; }
   .diff-chip.disabled:hover{ border-color:var(--border); color:var(--text-dim); }
 
@@ -211,7 +202,7 @@
     color:var(--text-dim);
     font-weight:600;
   }
-  td.num, th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  td.num, th.num{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
   tr:last-child td{ border-bottom:none; }
   .meso{ color:var(--accent-strong); font-weight:700; }
   .name-cell{ display:flex; align-items:center; gap:8px; }
@@ -262,36 +253,78 @@
   /* overall summary (top of page) */
   #overallTbody td.name{ font-weight:700; }
 
-  /* summary bar */
-  .summary-bar{
-    position:fixed;
-    left:0; right:0; bottom:0;
-    background:var(--card);
-    border-top:1px solid var(--border);
-    padding:14px 20px;
-    display:flex;
-    justify-content:center;
+  .boss-toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0; }
+  .tool-btn{ padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text); cursor:pointer; font:inherit; font-size:.8rem; }
+  .tool-btn:hover{ border-color:var(--accent); }
+  .tool-btn:disabled{ opacity:.45; cursor:default; }
+  button:focus-visible, input:focus-visible, .char-chip:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
+  .summary-stat .v{ font-variant-numeric:tabular-nums; }
+  .note:empty{ display:none; }
+  .overall-card{ padding:28px; border-color:#3b5276; }
+  .overall-card h2{ font-size:1.5rem; }
+  .summary-inner{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:24px 0; }
+  .summary-stat{ display:flex; flex-direction:column; gap:10px; padding:22px; border-radius:12px; background:#111722; min-width:0; }
+  .summary-stat:nth-child(3){ grid-area:1/1; }
+  .summary-stat:nth-child(4){ grid-area:1/2; }
+  .summary-stat .k{ font-size:.95rem; color:var(--text-dim); font-weight:600; }
+  .summary-stat .v{ font-size:1.5rem; font-weight:800; color:var(--text); overflow-wrap:anywhere; }
+  .summary-stat:nth-child(n+3) .v{ font-size:clamp(1.8rem,3.2vw,3rem); color:var(--accent); letter-spacing:-.04em; }
+  #overallTable{ font-size:1rem; min-width:620px; }
+  #overallTable td.name{ min-width:140px; overflow-wrap:anywhere; }
+  #overallTable th{ font-size:.85rem; }
+  #overallTable td{ padding:18px 12px; }
+  #overallTable .meso{ font-size:1.25rem; }
+  .character-heading{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .character-heading h2{ margin:0; font-size:1.35rem; }
+  #charAddBtn{ min-height:54px; padding:14px 28px; font-size:1.1rem; font-weight:800; }
+  .chip-bosses{ grid-column:1/-1; display:flex; flex-wrap:wrap; gap:8px; }
+  .chip-boss{ position:relative; display:inline-flex; padding-bottom:8px; }
+  .chip-boss img{ width:36px; height:36px; border-radius:8px; border:1px solid var(--border); object-fit:cover; }
+  .difficulty-easy{ --difficulty:#80cc8f; }
+  .difficulty-normal{ --difficulty:#77b9ef; }
+  .difficulty-hard{ --difficulty:#f5a360; }
+  .difficulty-chaos{ --difficulty:#eb88b8; }
+  .difficulty-extreme{ --difficulty:#c6a1fa; }
+  .difficulty-mark{ position:absolute; bottom:0; right:-3px; min-width:18px; padding:1px 4px; border-radius:4px; background:var(--difficulty); color:#111722; font-size:.65rem; line-height:1.3; text-align:center; font-weight:900; border:1px solid var(--card); }
+  .diff-chip{ min-height:38px; min-width:68px; color:var(--difficulty); border-color:var(--difficulty); font-size:.76rem; font-weight:900; letter-spacing:.02em; }
+  .boss-row{ padding:14px; }
+  .boss-icon{ width:38px; height:38px; }
+  .boss-name{ font-size:.95rem; }
+  .boss-name-wrap{ width:195px; }
+  .row-preview{ width:155px; font-size:1rem; }
+  .boss-section-title{ padding:16px 14px; margin:0; font-size:1rem; border-bottom:1px solid var(--border); background:#111722; }
+  .party-field{ display:flex; align-items:center; gap:5px; border:1px solid #52617a; border-radius:8px; padding:4px 9px; background:#11141a; }
+  .party-field:focus-within{ outline:2px solid var(--accent); outline-offset:2px; }
+  .party-controls .party-input{ width:38px; border:0; padding:5px 0; background:transparent; font-size:.95rem; text-align:center; }
+  .party-controls .party-input:focus{ outline:none; }
+  .party-picker-wrap{ position:relative; width:26px; height:30px; }
+  .party-picker-wrap::after{ content:'▾'; position:absolute; inset:0; display:grid; place-items:center; color:var(--text); pointer-events:none; }
+  .party-controls .party-picker{ position:absolute; inset:0; width:100%; height:100%; appearance:none; border:0; padding:0; background:transparent; color:transparent; cursor:pointer; }
+  .party-controls .party-picker option{ color:var(--text); background:#171a21; }
+  .party-controls .party-picker:focus{ outline:none; }
+  .party-unit{ font-size:.85rem; color:var(--text-dim); }
+  @media(min-width:1280px){
+    .wrap{ max-width:1600px; }
+    .dashboard-top{ display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:20px; align-items:start; }
+    .dashboard-top > .card{ min-width:0; }
+    .dashboard-top .summary-stat{ padding:18px; }
+    .dashboard-top .summary-stat:nth-child(n+3) .v{ font-size:clamp(1.7rem,2.3vw,2.3rem); }
+    .dashboard-top .char-chip-list{ grid-template-columns:repeat(auto-fit,minmax(235px,1fr)); }
   }
-  .summary-inner{
-    width:100%;
-    max-width:1280px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    flex-wrap:wrap;
+  @media(max-width:720px){
+    .overall-card{ padding:20px 16px; }
+    .summary-inner{ gap:10px; }
+    .summary-stat{ padding:16px 12px; }
+    .summary-stat:nth-child(n+3){ grid-area:auto; grid-column:1/-1; }
+    .summary-stat:nth-child(3){ order:-2; }
+    .summary-stat:nth-child(4){ order:-1; }
+    .summary-stat:nth-child(n+3) .v{ font-size:2rem; }
+    .summary-stat .v{ font-size:1.3rem; }
+    .char-chip-list{ grid-template-columns:minmax(0,1fr); }
+    .boss-name-wrap{ width:100%; }
+    .row-preview{ width:auto; }
   }
-  .summary-stat{ display:flex; flex-direction:column; gap:2px; }
-  .summary-stat .k{
-    font-size:0.68rem; letter-spacing:.06em; text-transform:uppercase;
-    color:var(--text-dim); font-weight:700;
-  }
-  .summary-stat .v{
-    font-size:1.15rem;
-    font-weight:700;
-    color:var(--text);
-  }
-  .summary-stat.meso .v{ color:var(--accent-strong); }
+  @media(prefers-reduced-motion:reduce){ .boss-row{ transition:none; } }
 </style>
 </head>
 <body>
@@ -306,11 +339,31 @@
   </nav>
   <header>
     <h1>보스 수익 정산 계산기</h1>
-    <p class="sub">캐릭터별 주간·월간 보스를 체크해 1주일 &middot; 한 달 보스 수익을 계산합니다</p>
   </header>
 
-  <section class="card">
+  <div class="dashboard-top">
+  <section class="card overall-card">
     <h2>캐릭터 총합</h2>
+<div class="overall-highlights">
+  <div class="summary-inner">
+    <div class="summary-stat">
+      <span class="k">등록 캐릭터</span>
+      <span class="v" id="sumCharCount">0명</span>
+    </div>
+    <div class="summary-stat meso">
+      <span class="k">주간 결정 판매 수</span>
+      <span class="v" id="sumCrystals">0개</span>
+    </div>
+    <div class="summary-stat meso">
+      <span class="k">주간 수익</span>
+      <span class="v" id="sumWeekly">0</span>
+    </div>
+    <div class="summary-stat meso">
+      <span class="k">월간 수익 (4주 + 월간 보스)</span>
+      <span class="v" id="sumMonthly">0</span>
+    </div>
+  </div>
+</div>
     <p class="note" style="margin-top:0;" id="overallEmptyNote"></p>
     <div class="table-wrap">
       <table id="overallTable">
@@ -328,27 +381,33 @@
   </section>
 
   <section class="card">
-    <h2>캐릭터 등록</h2>
+    <div class="character-heading">
+    <h2>내 캐릭터</h2>
     <div class="char-add-row">
-      <input type="text" id="charNameInput" placeholder="캐릭터 이름 (비워두면 캐릭터1, 캐릭터2… 로 자동 생성)" autocomplete="off" spellcheck="false" maxlength="20" aria-label="캐릭터 이름">
-      <button type="button" class="fetch-btn" id="charAddBtn">캐릭터 추가</button>
+      <button type="button" class="fetch-btn" id="charAddBtn">＋ 캐릭터 추가</button>
     </div>
-    <p class="note">이름을 몰라도 괜찮아요 — 그냥 <b>캐릭터 추가</b>만 누르면 "캐릭터1", "캐릭터2"처럼 자동으로 만들어집니다. 이름은 칩을 클릭해서 바로 고칠 수 있어요.</p>
-    <p class="note" id="charAddNote"></p>
+    </div>
     <div class="char-chip-list" id="charChipList"></div>
+    <div class="boss-toolbar">
+      <button type="button" class="tool-btn" id="charCopyBtn">선택 캐릭터 복제</button>
+    </div>
+    <p class="note" id="actionNote" role="status" aria-live="polite"></p>
   </section>
+  </div>
 
   <section class="card" id="bossPanel">
     <div class="boss-panel-head">
       <h2 id="bossPanelTitle">보스 체크</h2>
       <span class="weekly-quota" id="weeklyQuota"></span>
     </div>
-    <p class="note" style="margin-top:0;">난이도를 클릭해서 이번 주에 잡는 보스를 체크하세요. 이미 체크된 난이도를 다시 클릭하면 해제됩니다. 보스는 1인 클리어 최고 난이도 보상이 높은 순서로 정렬돼 있습니다. 주간 보스는 캐릭터당 최대 <b>12마리</b>까지만 정산에 포함됩니다. <b>검은 마법사</b>는 월간 보스라 12마리 한도에 포함되지 않고, 한 달에 한 번만 격파하는 것으로 계산합니다.</p>
     <p class="note" id="bossAddNote"></p>
+    <div class="boss-toolbar">
+      <button type="button" class="tool-btn" id="presetBtn">검밑솔 12보스 적용</button>
+      <button type="button" class="tool-btn" id="clearBossBtn">선택 캐릭터 보스 초기화</button>
+    </div>
 
     <div class="boss-list" id="bossList"></div>
 
-    <p class="note" style="margin-top:16px;">체크된 보스 목록 — 아래에서 난이도 · N빵 인원을 바로 수정할 수 있습니다.</p>
     <div class="table-wrap">
       <table id="bossTable">
         <thead>
@@ -371,28 +430,11 @@
         <div class="value meso" id="charWeekly">0</div>
       </div>
       <div class="summary-item">
-        <div class="label">월간 수익 (한 달, 주간×4 + 검은마법사)</div>
+        <div class="label">월간 수익 (주간×4 + 월간 보스)</div>
         <div class="value meso" id="charMonthly">0</div>
       </div>
     </div>
   </section>
-</div>
-
-<div class="summary-bar">
-  <div class="summary-inner">
-    <div class="summary-stat">
-      <span class="k">등록 캐릭터</span>
-      <span class="v" id="sumCharCount">0명</span>
-    </div>
-    <div class="summary-stat meso">
-      <span class="k">총 주간 수익</span>
-      <span class="v" id="sumWeekly">0</span>
-    </div>
-    <div class="summary-stat meso">
-      <span class="k">총 월간 수익</span>
-      <span class="v" id="sumMonthly">0</span>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -508,28 +550,56 @@
   // 보스 이름으로 바로 찾을 수 있는 조회용 맵. 저장 데이터는 보스 "이름"을 키로 쓰므로
   // 정렬 순서나 가격이 바뀌어도(예: 보상 개편, 순서 재정렬) 저장된 캐릭터의 체크 상태가
   // 깨지지 않는다. idx는 renderBossTable에서 BOSS_DATA 순서대로 정렬할 때만 쓴다.
-  var BOSS_BY_NAME = {};
+  var BOSS_BY_NAME = Object.create(null);
   BOSS_DATA.forEach(function(b, i){ b.idx = i; BOSS_BY_NAME[b.name] = b; });
+  // 표시 순서만 변경한다. 저장된 bossIdx/diffIdx의 의미는 유지한다.
+  var BOSS_DISPLAY_ORDER = [
+    '자쿰','매그너스','피에르','반반','블러디 퀸','벨룸','파풀라투스',
+    '스우','데미안','가디언 엔젤 슬라임','루시드','윌','더스크','진 힐라','듄켈',
+    '선택받은 세렌','감시자 칼로스','최초의 대적자','카링','찬란한 흉성','벨로나','림보','발드릭스','유피테르','검은 마법사'
+  ];
+  var DISPLAY_BOSSES = BOSS_DISPLAY_ORDER.map(function(name){ return BOSS_BY_NAME[name]; });
+  var DIFFICULTY = {
+    '이지':{key:'easy', text:'EASY', mark:'E', rank:0},
+    '노멀':{key:'normal', text:'NORMAL', mark:'N', rank:1},
+    '하드':{key:'hard', text:'HARD', mark:'H', rank:2},
+    '카오스':{key:'chaos', text:'CHAOS', mark:'C', rank:3},
+    '익스트림':{key:'extreme', text:'EXTREME', mark:'EX', rank:4}
+  };
+  function orderedDiffs(boss){
+    return boss.diffs.map(function(d, i){ return {diff:d, index:i}; }).sort(function(a,b){
+      return DIFFICULTY[a.diff.label].rank - DIFFICULTY[b.diff.label].rank;
+    });
+  }
 
   var WEEKLY_CAP = 12;
   var WEEKS_PER_MONTH = 4;
-  var PARTY_OPTIONS = [1,2,3,4,5,6];
 
   var LS_KEY = 'boss_income_state';
   function lsGet(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
-  function lsSet(k, v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
+  function lsSet(k, v){
+    try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); return true; }
+    catch(e){ return false; }
+  }
+  function validParty(value){
+    var n = Number(value);
+    return Number.isFinite(n) ? Math.min(99, Math.max(1, Math.round(n))) : 1;
+  }
+  function escapeHtml(value){
+    return String(value).replace(/[&<>"']/g, function(c){ return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]; });
+  }
 
   // characters: [{ name, bosses: { [bossName]: { diffIdx, party } } }]
   // bosses is a map keyed by boss name — a boss can only be cleared at one
   // difficulty per week, so checking a new difficulty simply overwrites it.
   function normalizeCharacter(raw){
-    var bosses = {};
+    var bosses = Object.create(null);
     if (raw && raw.bosses){
       if (Array.isArray(raw.bosses)){
         // 아주 예전 버전(드롭다운 방식)의 배열 데이터 호환: 같은 보스가 여러 번 있으면 마지막 것만 사용
         raw.bosses.forEach(function(e){
           var boss = e && BOSS_DATA[e.bossIdx];
-          if (boss) bosses[boss.name] = { diffIdx: e.diffIdx, party: e.party || 1 };
+          if (boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[boss.name] = { diffIdx: e.diffIdx, party: validParty(e.party) };
         });
       } else {
         Object.keys(raw.bosses).forEach(function(k){
@@ -537,11 +607,15 @@
           // k가 숫자 인덱스였던 이전 버전 데이터는 보스 순서가 바뀌면 더 이상 신뢰할 수
           // 없어 건너뛴다. 이름 키인 경우에만 복원한다.
           var boss = BOSS_BY_NAME[k];
-          if (e && boss && boss.diffs[e.diffIdx]) bosses[k] = { diffIdx: e.diffIdx, party: e.party || 1 };
+          if (e && boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[k] = { diffIdx: e.diffIdx, party: validParty(e.party) };
         });
       }
     }
-    return { name: (raw && raw.name) || '캐릭터', bosses: bosses };
+    // 저장 데이터도 주간 한도를 검증하고, 초과 시 1인 수익이 높은 12개를 남긴다.
+    Object.keys(bosses).filter(function(k){ return !BOSS_BY_NAME[k].monthly; }).sort(function(a,b){
+      return BOSS_BY_NAME[b].diffs[bosses[b].diffIdx].price / bosses[b].party - BOSS_BY_NAME[a].diffs[bosses[a].diffIdx].price / bosses[a].party;
+    }).slice(WEEKLY_CAP).forEach(function(k){ delete bosses[k]; });
+    return { name: raw && typeof raw.name === 'string' ? raw.name.trim().slice(0,20) || '캐릭터' : '캐릭터', bosses: bosses };
   }
 
   function loadState(){
@@ -554,13 +628,19 @@
     } catch(e){ return null; }
   }
   function saveState(){
-    lsSet(LS_KEY, JSON.stringify({ characters: characters }));
+    var saved = lsSet(LS_KEY, JSON.stringify({ characters: characters }));
+    document.getElementById('actionNote').textContent = saved ? '' : '자동 저장이 차단되었습니다. 이 화면을 닫으면 변경 내용이 사라질 수 있어요.';
   }
 
   var characters = loadState() || [];
   var activeIdx = characters.length ? 0 : -1;
 
-  function won(n){ return Math.round(n).toLocaleString('ko-KR'); }
+  function won(n){
+    n = Math.floor(n);
+    if (n < 10000) return n.toLocaleString('ko-KR');
+    var eok = Math.floor(n / 100000000), man = Math.floor(n % 100000000 / 10000), rest = n % 10000;
+    return ((eok ? eok.toLocaleString('ko-KR') + '억 ' : '') + (man ? man.toLocaleString('ko-KR') + '만 ' : '') + (rest ? rest.toLocaleString('ko-KR') : '')).trim();
+  }
 
   function iconHtml(boss, cls){
     if (boss.icon) return '<img class="' + cls + '" src="' + boss.icon + '" alt="" loading="lazy">';
@@ -568,42 +648,43 @@
     return '<span class="boss-icon-fallback">' + initial + '</span>';
   }
 
-  // N빵 인원 컨트롤: 자주 쓰는 값은 드롭다운으로 바로 고르고, 7인 이상 등 특수한
-  // 상황은 옆 입력칸에 직접 숫자를 넣을 수 있게 두 가지를 함께 제공한다.
+  // 하나의 입력칸에서 1~6인 목록 선택과 직접 입력을 함께 지원한다.
   function partyControlsHtml(bossIdx, party){
-    var inCommon = PARTY_OPTIONS.indexOf(party) !== -1;
-    var options = '<option value="">인원</option>' + PARTY_OPTIONS.map(function(n){
-      return '<option value="' + n + '"' + (n === party ? ' selected' : '') + '>' + n + '인</option>';
-    }).join('');
+    var options = '<option value="" disabled' + (party > 6 ? ' selected' : '') + '>인원 선택</option>';
+    for (var n = 1; n <= 6; n++) options += '<option value="' + n + '"' + (party === n ? ' selected' : '') + '>' + n + '인</option>';
     return '<div class="party-controls">' +
-      '<select class="party-select" data-party-boss="' + bossIdx + '">' + options + '</select>' +
-      '<input type="number" class="party-input" min="1" max="99" step="1" value="' + party + '" data-party-boss="' + bossIdx + '" title="직접 입력">' +
+      '<div class="party-field"><input type="text" inputmode="numeric" autocomplete="off" class="party-input" aria-label="' + bossIdx + ' 파티 인원" value="' + party + '" data-party-boss="' + bossIdx + '">' +
+      '<span class="party-unit" aria-hidden="true">인</span><span class="party-picker-wrap"><select class="party-picker" aria-label="' + bossIdx + ' 인원 목록">' + options + '</select></span></div>' +
     '</div>';
   }
   function bindPartyControls(root){
-    root.querySelectorAll('.party-select[data-party-boss]').forEach(function(sel){
-      sel.addEventListener('click', function(e){ e.stopPropagation(); });
-      sel.addEventListener('change', function(){
-        if (sel.value === '') return;
-        setParty(sel.getAttribute('data-party-boss'), +sel.value);
-      });
-    });
     root.querySelectorAll('.party-input[data-party-boss]').forEach(function(inp){
       inp.addEventListener('click', function(e){ e.stopPropagation(); });
       inp.addEventListener('focus', function(){ inp.select(); });
-      inp.addEventListener('change', function(){
-        var v = Math.max(1, Math.round(+inp.value || 1));
+      function commitParty(){
+        var v = validParty(inp.value);
+        inp.value = String(v);
         setParty(inp.getAttribute('data-party-boss'), v);
+      }
+      inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ commitParty(); inp.blur(); } });
+      var field = inp.closest('.party-field');
+      var picker = field.querySelector('.party-picker');
+      picker.addEventListener('change', function(){
+        inp.value = picker.value;
+        commitParty();
+      });
+      field.addEventListener('focusout', function(e){
+        if (!field.contains(e.relatedTarget)) commitParty();
       });
     });
   }
   function setParty(bossIdx, party){
     var entry = characters[activeIdx].bosses[bossIdx];
-    if (!entry) return;
-    entry.party = party;
+    if (!entry || entry.party === validParty(party)) return;
+
+    entry.party = validParty(party);
     saveState();
-    renderBossPanel();
-    renderOverall();
+    renderAll();
   }
 
   function weeklyCount(ch){
@@ -620,7 +701,7 @@
       var boss = BOSS_BY_NAME[idx];
       var entry = ch.bosses[idx];
       var diff = boss.diffs[entry.diffIdx];
-      var per = diff.price / Math.max(1, entry.party);
+      var per = Math.floor(diff.price / validParty(entry.party));
       count++;
       if (boss.monthly) monthlyOnlyMeso += per;
       else weeklyMeso += per;
@@ -636,28 +717,18 @@
   }
 
   // ---------- Character chips ----------
-  var charNameInput = document.getElementById('charNameInput');
   var charAddBtn = document.getElementById('charAddBtn');
-  var charAddNote = document.getElementById('charAddNote');
   var charChipList = document.getElementById('charChipList');
   var bossPanel = document.getElementById('bossPanel');
   var bossPanelTitle = document.getElementById('bossPanelTitle');
 
-  charNameInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') charAddBtn.click(); });
-  charNameInput.addEventListener('focus', function(){ charNameInput.select(); });
-
   charAddBtn.addEventListener('click', function(){
-    var name = charNameInput.value.trim() || nextAutoName();
-    if (characters.some(function(c){ return c.name === name; })){
-      charAddNote.textContent = '이미 등록된 캐릭터입니다.'; charAddNote.className='note fetch-status err'; return;
-    }
+    var name = nextAutoName();
+
     characters.push({ name: name, bosses: {} });
     activeIdx = characters.length - 1;
-    charNameInput.value = '';
-    charAddNote.textContent = '';
     saveState();
     renderAll();
-    charNameInput.focus();
   });
 
   function renderCharChips(){
@@ -666,10 +737,24 @@
       var t = charTotals(ch);
       var chip = document.createElement('div');
       chip.className = 'char-chip' + (idx === activeIdx ? ' active' : '');
+      chip.tabIndex = 0;
+      chip.setAttribute('role', 'group');
+      chip.setAttribute('aria-label', ch.name + ' 선택' + (idx === activeIdx ? ' (선택됨)' : ''));
+      chip.addEventListener('keydown', function(e){
+        if (e.target === chip && (e.key === 'Enter' || e.key === ' ')){
+          e.preventDefault(); activeIdx = idx; renderAll();
+        }
+      });
       chip.innerHTML =
-        '<span class="chip-name" contenteditable="true" spellcheck="false">' + ch.name + '</span>' +
+        '<input class="chip-name" type="text" maxlength="20" aria-label="캐릭터 이름 수정" placeholder="캐릭터 이름" autocomplete="off" spellcheck="false" value="' + escapeHtml(ch.name) + '">' +
+        '<button type="button" class="chip-del" aria-label="' + escapeHtml(ch.name) + ' 삭제">×</button>' +
         '<span class="chip-meso">주 ' + won(t.weeklyMeso) + '</span>' +
-        '<button type="button" class="chip-del" aria-label="' + ch.name + ' 삭제">×</button>';
+        '<span class="chip-bosses">' + DISPLAY_BOSSES.filter(function(b){ return ch.bosses[b.name]; }).map(function(b){
+          var difficulty = b.diffs[ch.bosses[b.name].diffIdx].label;
+          var badge = DIFFICULTY[difficulty];
+          return '<span class="chip-boss difficulty-' + badge.key + '" role="img" aria-label="' + b.name + ' ' + difficulty + '" title="' + b.name + ' · ' + difficulty + '">' +
+            iconHtml(b, 'chip-boss-icon') + '<span class="difficulty-mark" aria-hidden="true">' + badge.mark + '</span></span>';
+        }).join('') + '</span>';
       chip.addEventListener('click', function(e){
         if (e.target.closest('.chip-del') || e.target.closest('.chip-name')) return;
         activeIdx = idx;
@@ -680,27 +765,31 @@
         e.stopPropagation();
         if (activeIdx === idx) return;
         activeIdx = idx;
-        // 편집 중인 contenteditable 포커스가 날아가지 않도록 칩 목록 전체를
+        // 편집 중인 입력칸의 포커스가 날아가지 않도록 칩 목록 전체를
         // 다시 그리지 않고, 활성 표시만 갱신하고 보스 패널만 다시 그린다.
         charChipList.querySelectorAll('.char-chip').forEach(function(c, i){ c.classList.toggle('active', i === idx); });
         renderBossPanel();
       });
       nameEl.addEventListener('keydown', function(e){
-        if (e.key === 'Enter'){ e.preventDefault(); nameEl.blur(); }
+        if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); nameEl.blur(); }
       });
       nameEl.addEventListener('blur', function(){
-        var newName = nameEl.textContent.trim();
+        var newName = nameEl.value.trim().slice(0,20);
         if (!newName){ newName = ch.name; }
         if (newName !== ch.name && characters.some(function(c){ return c.name === newName; })){
           newName = ch.name; // 중복이면 원래 이름 유지
         }
+        if (newName === ch.name){ nameEl.value = ch.name; return; }
+
         ch.name = newName;
         saveState();
         renderAll();
       });
       chip.querySelector('.chip-del').addEventListener('click', function(){
+
         characters.splice(idx, 1);
-        if (activeIdx >= characters.length) activeIdx = characters.length - 1;
+        if (idx < activeIdx) activeIdx--;
+        else if (activeIdx >= characters.length) activeIdx = characters.length - 1;
         saveState();
         renderAll();
       });
@@ -726,6 +815,7 @@
     var boss = BOSS_BY_NAME[bossIdx];
     var existing = ch.bosses[bossIdx];
     if (existing && existing.diffIdx === diffIdx){
+
       delete ch.bosses[bossIdx];
       bossAddNote.textContent = '';
       saveState();
@@ -737,6 +827,7 @@
       bossAddNote.className = 'note fetch-status err';
       return;
     }
+
     ch.bosses[bossIdx] = { diffIdx: diffIdx, party: existing ? existing.party : 1 };
     bossAddNote.textContent = '';
     saveState();
@@ -747,22 +838,29 @@
     var ch = characters[activeIdx];
     var atCap = weeklyCount(ch) >= WEEKLY_CAP;
     bossList.innerHTML = '';
-    BOSS_DATA.forEach(function(boss){
+    DISPLAY_BOSSES.forEach(function(boss, position){
+      if (position === 0 || boss.monthly){
+        var heading = document.createElement('h3');
+        heading.className = 'boss-section-title';
+        heading.textContent = boss.monthly ? '월간 보스' : '주간 보스';
+        bossList.appendChild(heading);
+      }
       var bossIdx = boss.name;
       var entry = ch.bosses[bossIdx];
       var row = document.createElement('div');
       row.className = 'boss-row' + (entry ? ' selected' : '');
 
-      var chipsHtml = boss.diffs.map(function(d, diffIdx){
+      var chipsHtml = orderedDiffs(boss).map(function(item){
+        var d = item.diff, diffIdx = item.index;
         var isActive = entry && entry.diffIdx === diffIdx;
         var isDisabled = !isActive && !boss.monthly && !entry && atCap;
-        return '<button type="button" class="diff-chip' + (isActive ? ' active' : '') + (isDisabled ? ' disabled' : '') +
-          '" data-boss="' + bossIdx + '" data-diff="' + diffIdx + '">' + d.label + '</button>';
+        return '<button type="button" class="diff-chip difficulty-' + DIFFICULTY[d.label].key + (isActive ? ' active' : '') + (isDisabled ? ' disabled' : '') +
+          '" title="' + d.label + '" aria-label="' + boss.name + ' ' + d.label + '" aria-pressed="' + !!isActive + '" aria-disabled="' + !!isDisabled + '" data-boss="' + bossIdx + '" data-diff="' + diffIdx + '">' + DIFFICULTY[d.label].text + '</button>';
       }).join('');
 
       var party = entry ? entry.party : 1;
       var price = entry ? boss.diffs[entry.diffIdx].price : 0;
-      var per = entry ? price / Math.max(1, party) : 0;
+      var per = entry ? Math.floor(price / validParty(party)) : 0;
 
       row.innerHTML =
         '<div class="boss-name-wrap">' +
@@ -794,19 +892,20 @@
   function renderBossTable(){
     bossTbody.innerHTML = '';
     var ch = characters[activeIdx];
-    Object.keys(ch.bosses).sort(function(a,b){ return BOSS_BY_NAME[a].idx - BOSS_BY_NAME[b].idx; }).forEach(function(bossIdx){
+    Object.keys(ch.bosses).sort(function(a,b){ return BOSS_DISPLAY_ORDER.indexOf(a) - BOSS_DISPLAY_ORDER.indexOf(b); }).forEach(function(bossIdx){
       var boss = BOSS_BY_NAME[bossIdx];
       var entry = ch.bosses[bossIdx];
       var diff = boss.diffs[entry.diffIdx];
       var price = diff.price;
-      var per = price / Math.max(1, entry.party);
-      var diffOptions = boss.diffs.map(function(d, i){
+      var per = Math.floor(price / validParty(entry.party));
+      var diffOptions = orderedDiffs(boss).map(function(item){
+        var d = item.diff, i = item.index;
         return '<option value="' + i + '"' + (i === entry.diffIdx ? ' selected' : '') + '>' + d.label + '</option>';
       }).join('');
       var tr = document.createElement('tr');
       tr.innerHTML =
         '<td><div class="name-cell">' + iconHtml(boss, 'boss-icon') + '<span>' + boss.name + (boss.monthly ? '<span class="badge monthly">월간</span>' : '<span class="badge">주간</span>') + '</span></div></td>' +
-        '<td><select class="diff-edit-select" data-diff-boss="' + bossIdx + '">' + diffOptions + '</select></td>' +
+        '<td><select class="diff-edit-select" aria-label="' + bossIdx + ' 난이도" data-diff-boss="' + bossIdx + '">' + diffOptions + '</select></td>' +
         '<td class="num">' + won(price) + '</td>' +
         '<td class="num">' + partyControlsHtml(bossIdx, entry.party) + '</td>' +
         '<td class="num meso">' + won(per) + '</td>' +
@@ -815,6 +914,7 @@
     });
     bossTbody.querySelectorAll('.row-del').forEach(function(btn){
       btn.addEventListener('click', function(){
+
         delete characters[activeIdx].bosses[btn.getAttribute('data-boss')];
         saveState();
         renderAll();
@@ -825,10 +925,10 @@
         var bossIdx = sel.getAttribute('data-diff-boss');
         var entry = characters[activeIdx].bosses[bossIdx];
         if (!entry) return;
+
         entry.diffIdx = +sel.value;
         saveState();
-        renderBossPanel();
-        renderOverall();
+        renderAll();
       });
     });
     bindPartyControls(bossTbody);
@@ -860,14 +960,15 @@
   function renderOverall(){
     overallTbody.innerHTML = '';
     overallEmptyNote.textContent = characters.length ? '' : '등록된 캐릭터가 없습니다.';
-    var totalWeekly = 0, totalMonthly = 0;
+    var totalWeekly = 0, totalMonthly = 0, totalCrystals = 0;
     characters.forEach(function(ch){
       var t = charTotals(ch);
       totalWeekly += t.weeklyMeso;
       totalMonthly += t.monthlyMeso;
+      totalCrystals += t.weeklyCount;
       var tr = document.createElement('tr');
       tr.innerHTML =
-        '<td class="name">' + ch.name + '</td>' +
+        '<td class="name">' + escapeHtml(ch.name) + '</td>' +
         '<td class="num">' + t.totalCount + '마리</td>' +
         '<td class="num meso">' + won(t.weeklyMeso) + '</td>' +
         '<td class="num meso">' + won(t.monthlyMeso) + '</td>';
@@ -876,13 +977,48 @@
     sumCharCount.textContent = characters.length + '명';
     sumWeekly.textContent = won(totalWeekly);
     sumMonthly.textContent = won(totalMonthly);
+    document.getElementById('sumCrystals').textContent = totalCrystals + '개';
   }
 
   function renderAll(){
+    document.getElementById('charCopyBtn').disabled = activeIdx < 0;
     renderCharChips();
     renderBossPanel();
     renderOverall();
   }
+
+  document.getElementById('charCopyBtn').addEventListener('click', function(){
+    if (activeIdx < 0) return;
+
+    var copy = JSON.parse(JSON.stringify(characters[activeIdx]));
+    var base = copy.name.slice(0,12), n = 1;
+    do { copy.name = base + ' 복사' + n++; } while (characters.some(function(ch){ return ch.name === copy.name; }));
+    characters.push(copy); activeIdx = characters.length - 1;
+    saveState(); renderAll();
+  });
+  document.getElementById('clearBossBtn').addEventListener('click', function(){
+    if (activeIdx < 0 || !Object.keys(characters[activeIdx].bosses).length) return;
+    characters[activeIdx].bosses = {};
+    bossAddNote.textContent = '';
+    saveState(); renderAll();
+  });
+  var BLACK_MAGE_BELOW_PRESET = {
+    '매그너스':'하드', '파풀라투스':'카오스', '블러디 퀸':'카오스', '벨룸':'카오스',
+    '스우':'하드', '데미안':'하드', '가디언 엔젤 슬라임':'카오스', '루시드':'하드',
+    '윌':'하드', '더스크':'카오스', '진 힐라':'하드', '듄켈':'하드'
+  };
+  function applyPreset(ch){
+    Object.keys(ch.bosses).forEach(function(name){ if (!BOSS_BY_NAME[name].monthly) delete ch.bosses[name]; });
+    Object.keys(BLACK_MAGE_BELOW_PRESET).forEach(function(name){
+      ch.bosses[name] = { diffIdx:BOSS_BY_NAME[name].diffs.findIndex(function(d){ return d.label === BLACK_MAGE_BELOW_PRESET[name]; }), party:1 };
+    });
+  }
+  document.getElementById('presetBtn').addEventListener('click', function(){
+    if (activeIdx < 0) return;
+    applyPreset(characters[activeIdx]);
+    bossAddNote.textContent = '';
+    saveState(); renderAll();
+  });
 
   renderAll();
 })();
