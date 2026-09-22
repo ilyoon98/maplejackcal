@@ -19,15 +19,26 @@
 
   .hero-force{
     display:flex;
-    align-items:center;
+    align-items:flex-end;
     justify-content:space-between;
     flex-wrap:wrap;
-    gap:10px 20px;
+    gap:14px 24px;
     background:#1c2740;
     border:1px solid var(--accent-strong);
     border-radius:10px;
     padding:16px 20px;
     margin-top:16px;
+  }
+  .hero-force-now{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .hero-force-inputs{
+    display:flex;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:12px 16px;
   }
   .hero-force-label{
     font-size:0.85rem;
@@ -49,6 +60,58 @@
 
   .note b{ color:var(--text); font-weight:700; }
   .note.warn{ color:var(--bad); font-weight:700; }
+  .note:empty{ display:none; }
+
+  /* 상시 노출하면 시야만 잡아먹는 설명은 라벨 옆 ? 버튼 뒤로 숨긴다.
+     .help-btn[aria-controls] 와 같은 id 의 .help-pop 을 짝으로 묶으면 어디서든 재사용 가능. */
+  .label-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    position:relative;
+  }
+  .help-btn{
+    width:18px;
+    height:18px;
+    flex-shrink:0;
+    padding:0;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background:#2b313d;
+    color:var(--text-dim);
+    font-size:11px;
+    font-weight:800;
+    line-height:1;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .12s, color .12s, border-color .12s;
+  }
+  .help-btn:hover,
+  .help-btn[aria-expanded="true"]{
+    background:var(--accent-strong);
+    border-color:var(--accent-strong);
+    color:#0b0d12;
+  }
+  .help-pop{
+    position:absolute;
+    top:calc(100% + 8px);
+    left:0;
+    z-index:20;
+    width:min(340px, 76vw);
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid var(--accent-strong);
+    background:var(--card);
+    box-shadow:0 10px 26px rgba(0,0,0,.5);
+    font-size:0.82rem;
+    font-weight:400;
+    line-height:1.55;
+    color:var(--text-dim);
+  }
+  .help-pop[hidden]{ display:none; }
+  .help-pop b{ color:var(--text); font-weight:700; }
 
   /* level grid */
   .level-grid{
@@ -73,7 +136,7 @@
     vertical-align:middle;
     image-rendering:pixelated;
   }
-  td .symbol-icon, .step-name .symbol-icon{
+  td .symbol-icon{
     width:24px;
     height:24px;
     margin-right:6px;
@@ -99,15 +162,22 @@
     overflow:hidden;
     background:#11141a;
   }
+  /* -/+ 는 입력칸보다 한 단계 밝은 면색을 깔아 버튼으로 읽히게 한다.
+     hover 가 없는 모바일에서도 평상시 모습만으로 눌리는 것임을 알 수 있어야 한다. */
   .stepper button{
-    width:32px;
+    width:40px;
+    flex-shrink:0;
     border:none;
-    background:transparent;
-    color:var(--text-dim);
-    font-size:16px;
+    background:#2b313d;
+    color:var(--text);
+    font-size:18px;
+    font-weight:700;
+    line-height:1;
     cursor:pointer;
+    transition:background .12s, color .12s;
   }
-  .stepper button:hover{ background:rgba(110,168,254,.12); color:var(--accent); }
+  .stepper button:hover{ background:rgba(110,168,254,.28); color:#fff; }
+  .stepper button:active{ background:var(--accent-strong); color:#0b0d12; }
   .stepper input.lvl{
     width:48px;
     min-width:0;
@@ -132,6 +202,14 @@
     outline-offset:-2px;
   }
   .stepper input.ext-lvl{ width:80px; }
+  /* 목표 포스는 이 화면의 주력 컨트롤이라 외부 포스 스테퍼보다 한 치수 크게 */
+  .stepper.stepper-lg button{ width:46px; font-size:20px; }
+  .stepper.stepper-lg input.lvl{ width:110px; font-size:1.2rem; padding:9px 2px; }
+  .level-summary{
+    font-size:0.8rem;
+    font-weight:600;
+    color:var(--text-dim);
+  }
   .stepper button:disabled,
   .stepper input.lvl:disabled{
     opacity:.4;
@@ -274,13 +352,6 @@
     color:#0b0d12;
   }
 
-  .field-row{
-    display:flex;
-    align-items:flex-end;
-    gap:14px;
-    flex-wrap:wrap;
-    margin-bottom:6px;
-  }
   .force-input-group{
     display:flex;
     flex-direction:column;
@@ -291,7 +362,8 @@
     font-weight:600;
     color:var(--text-dim);
   }
-  .force-input-group input[type="number"]{
+  /* 스테퍼(.stepper) 안에 들어간 숫자 입력까지 덮어쓰지 않도록 직계 자식으로만 한정한다. */
+  .force-input-group > input[type="number"]{
     font-size:1.1rem;
     font-weight:700;
     width:140px;
@@ -301,7 +373,7 @@
     background:#11141a;
     color:var(--text);
   }
-  .force-input-group input[type="number"]:focus{
+  .force-input-group > input[type="number"]:focus{
     outline:2px solid var(--accent);
     outline-offset:1px;
   }
@@ -358,65 +430,134 @@
   }
   td.num, th.num{ text-align:right; font-variant-numeric:tabular-nums; }
   tr:last-child td{ border-bottom:none; }
-  .path-cell{ display:flex; align-items:center; gap:6px; }
+  .path-cell{ display:inline-flex; align-items:center; gap:6px; }
   .arrow{ color:var(--text-dim); }
   .meso{ color:var(--accent-strong); font-weight:700; }
   .zero-row td{ color:var(--text-dim); }
 
   .table-wrap{ overflow-x:auto; }
 
-  .order-toggle{
-    background:none;
-    border:none;
-    color:var(--accent);
-    font-size:0.8rem;
-    font-weight:700;
-    cursor:pointer;
-    padding:0;
-    margin-top:14px;
+  /* 강화 순서: 표 위에 놓고 기본으로 펼쳐두는 실행 목록 */
+  .order-section{
+    position:relative;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:var(--surface-2);
+    padding:14px 16px;
+    margin-bottom:18px;
   }
-  .order-list{
-    display:none;
-    flex-wrap:wrap;
-    gap:10px 16px;
-    margin-top:12px;
-  }
-  .order-list.show{ display:flex; }
-  .step-unit{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-  }
-  .step-index{
-    font-size:10.5px;
-    font-weight:700;
-    color:var(--text-dim);
-    min-width:16px;
-  }
-  .step-card{
+  .order-head{
     display:flex;
     align-items:center;
     gap:8px;
-    padding:7px 12px;
-    border-radius:8px;
-    border:1px solid var(--accent-strong);
-    background:rgba(76,141,255,.12);
   }
-  .step-card .step-name{
-    font-size:12px;
-    font-weight:700;
+  .order-head h3{
+    margin:0;
+    font-size:1rem;
+    font-weight:800;
     color:var(--text);
-    display:flex;
-    align-items:center;
-    gap:4px;
+  }
+  .order-count{
+    font-size:0.75rem;
+    font-weight:800;
+    color:var(--accent);
+    background:rgba(110,168,254,.14);
+    padding:3px 9px;
+    border-radius:999px;
     white-space:nowrap;
   }
-  .step-card .step-lv{
+  .order-hint{ margin-bottom:0; }
+  /* 인벤토리 슬롯처럼 같은 크기의 정사각 타일을 격자로 깔아 줄·열을 맞춘다.
+     가변 폭 카드를 흘려보내면 줄마다 끝이 달라져 삐뚤빼뚤해 보이기 때문. */
+  .order-list{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(76px, 1fr));
+    gap:8px;
+    margin-top:12px;
+  }
+  .order-list[hidden]{ display:none; }
+  /* 단계가 0개여도 섹션은 계속 자리를 지킨다. 목표를 올렸을 때 없던 블록이
+     갑자기 튀어나오면 화면이 흔들려서 헷갈리기 때문. */
+  .order-section.empty .order-hint{ display:none; }
+  .order-empty{
+    grid-column:1 / -1;
+    margin:0;
+    padding:18px 4px;
+    text-align:center;
     font-size:0.85rem;
+    color:var(--text-dim);
+  }
+  .step-tile{
+    position:relative;
+    aspect-ratio:1 / 1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    padding:6px 4px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--card);
+  }
+  .step-tile .symbol-icon{
+    width:36px;
+    height:36px;
+    margin:0;
+  }
+  .step-tile-name{
+    font-size:10.5px;
     font-weight:700;
+    line-height:1.1;
+    color:var(--text-dim);
+    text-align:center;
+  }
+  .step-tile-lv{
+    font-size:12px;
+    font-weight:800;
+    line-height:1;
     color:var(--accent-strong);
     white-space:nowrap;
   }
+  /* 첫 타일 = 지금 당장 누를 강화. 번호가 없어도 어디서 시작할지 바로 보이게. */
+  .step-tile.first{
+    border-color:var(--accent-strong);
+    background:rgba(76,141,255,.16);
+    box-shadow:0 0 0 1px rgba(76,141,255,.35);
+  }
+  .step-next{
+    position:absolute;
+    top:-7px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:9.5px;
+    font-weight:800;
+    color:#0b0d12;
+    background:var(--accent-strong);
+    padding:1px 7px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+
+  /* 타일 하나짜리 툴팁을 섹션 안에서 재사용한다(가장자리 타일이 잘리지 않게 JS가 위치를 잡음). */
+  .tile-tip{
+    position:absolute;
+    z-index:30;
+    max-width:240px;
+    padding:6px 10px;
+    border-radius:7px;
+    border:1px solid var(--accent-strong);
+    background:#0b0d12;
+    color:var(--text);
+    font-size:11.5px;
+    font-weight:700;
+    line-height:1.45;
+    white-space:pre-line;
+    box-shadow:0 8px 20px rgba(0,0,0,.6);
+    pointer-events:none;
+  }
+  .tile-tip[hidden]{ display:none; }
+
 
   /* manual mode symbol rows */
   .manual-row{
@@ -491,31 +632,21 @@
 </head>
 <body>
 <div class="wrap">
-  <nav class="site-nav">
-    <a class="site-nav-home" href="index.html">← 메이플 계산기</a>
-    <div class="site-nav-groups">
-      <div class="site-nav-group active">
-        <button type="button" class="site-nav-group-btn">계산기</button>
-        <div class="site-nav-dropdown">
-          <a href="trace_calc.html">주흔 기댓값 계산기</a>
-          <a href="authentic_symbol_calc.html" class="active">어센틱 심볼 계산기</a>
-          <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
-          <a href="cube_calc.html">잠재능력 큐브 연구소</a>
-        </div>
-      </div>
-      <div class="site-nav-group">
-        <button type="button" class="site-nav-group-btn">놀이터</button>
-        <div class="site-nav-dropdown">
-          <a href="boutique_gacha.html">부티크 기프트</a>
-          <a href="pet_gacha.html">펫 뽑기 놀이</a>
-          <a href="seedring_gacha.html">시드링 뽑기</a>
-        </div>
-      </div>
+  <nav class="site-tabs">
+    <div class="site-tabs-track">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html"><span class="site-tab-icon">🏠</span>홈</a>
+      <a class="site-tab" href="trace_calc.html"><span class="site-tab-icon">📜</span>주흔</a>
+      <a class="site-tab active" href="authentic_symbol_calc.html"><span class="site-tab-icon">🔮</span>어센틱 심볼</a>
+      <a class="site-tab" href="boss_income_calc.html"><span class="site-tab-icon">💰</span>보스 수익</a>
+      <a class="site-tab" href="cube_calc.html"><span class="site-tab-icon">🎲</span>큐브</a>
+      <a class="site-tab" href="boutique_gacha.html"><span class="site-tab-icon">🎁</span>부티크</a>
+      <a class="site-tab" href="pet_gacha.html"><span class="site-tab-icon">🐾</span>펫 뽑기</a>
+      <a class="site-tab" href="seedring_gacha.html"><span class="site-tab-icon">💍</span>시드링</a>
     </div>
   </nav>
   <header>
-    <h1>어센틱 심볼 계산기</h1>
-    <p class="sub">지역 심볼 강화 비용 &middot; 레벨 1당 <b>어센틱 포스 +10</b></p>
+    <h1>🔮 어센틱 심볼 계산기</h1>
   </header>
 
   <section class="char-search-hero" id="charSearchHero">
@@ -528,27 +659,27 @@
     <p class="note fetch-status" id="fetchStatus" aria-live="polite"></p>
   </section>
 
+  <!-- 포스 입력을 한 카드에 모은다: 현재 포스(결과)와 그걸 움직이는 세 입력(목표·외부·보스 프리셋)이
+       한 화면에 같이 보여야 심볼 그리드를 지나 스크롤할 일이 없다. -->
   <div class="hero-force">
-    <span class="hero-force-label">내 어센틱 포스</span>
-    <span class="hero-force-value"><span id="currentForceVal">0</span><span class="unit">F</span></span>
-  </div>
-
-  <section class="card">
-    <h2>현재 심볼 레벨</h2>
-    <div class="level-grid" id="levelGrid"></div>
-  </section>
-
-  <div class="toggle">
-    <button id="tabOpt" class="active">최적화 모드</button>
-    <button id="tabManual">수동 모드</button>
-  </div>
-
-  <!-- Optimization panel -->
-  <section class="card" id="panelOpt">
-    <div class="field-row">
+    <div class="hero-force-now">
+      <span class="hero-force-label">내 어센틱 포스</span>
+      <span class="hero-force-value"><span id="currentForceVal">0</span><span class="unit">F</span></span>
+    </div>
+    <div class="hero-force-inputs">
       <div class="force-input-group">
-        <label for="targetForce">목표 어센틱 포스</label>
-        <input type="number" id="targetForce" value="100" step="10" min="0">
+        <div class="label-row">
+          <label for="targetForce">목표 어센틱 포스</label>
+          <button type="button" class="help-btn" aria-expanded="false" aria-controls="targetHelpPop" aria-label="목표 어센틱 포스 계산 방식 설명">?</button>
+          <div class="help-pop" id="targetHelpPop" role="dialog" aria-label="목표 어센틱 포스 계산 방식" hidden>
+            목표 포스는 <b>10단위로 반올림</b>되며, 현재 포스와의 차이만큼 레벨당 비용이 가장 낮은 강화부터 자동으로 선택해 <b>합산 메소가 최소</b>가 되도록 계산합니다.
+          </div>
+        </div>
+        <div class="stepper stepper-lg">
+          <button type="button" tabindex="-1" data-target-dir="-1" aria-label="목표 포스 감소">-</button>
+          <input class="lvl target-lvl" type="number" id="targetForce" step="10" min="0" value="0">
+          <button type="button" tabindex="-1" data-target-dir="1" aria-label="목표 포스 증가">+</button>
+        </div>
       </div>
       <div class="force-input-group">
         <label for="externalForceInput">외부 획득 포스</label>
@@ -570,10 +701,33 @@
         </div>
       </div>
     </div>
-    <p class="note">목표 포스는 10단위로 반올림되며, 현재 포스와의 차이만큼 레벨당 비용이 가장 낮은 강화부터 자동으로 선택해 <b>합산 메소가 최소</b>가 되도록 계산합니다.</p>
-    <p class="note" id="bossPickNote"></p>
-    <p class="note" id="optNote"></p>
+  </div>
 
+  <div class="toggle">
+    <button id="tabOpt" class="active">최적화 모드</button>
+    <button id="tabManual">수동 모드</button>
+  </div>
+
+  <!-- Optimization panel -->
+  <section class="card" id="panelOpt">
+    <p class="note" id="bossPickNote" style="margin-top:0;"></p>
+    <p class="note" id="optNote" style="margin-top:0;"></p>
+
+    <!-- 강화 순서 = 실제로 눌러야 할 순서. 아래 표(심볼별 합계)보다 이게 먼저 보여야 한다. -->
+    <div class="order-section" id="orderSection">
+      <div class="order-head">
+        <h3>강화 순서</h3>
+        <span class="order-count" id="orderCount">0단계</span>
+      </div>
+      <p class="note order-hint" style="margin-top:0;">레벨당 메소가 싼 강화부터 순서대로 올리면 같은 포스를 가장 적은 메소로 찍습니다. 앞에서부터 그대로 따라 누르세요. 타일에 마우스를 올리거나 탭하면 그 강화의 메소가 나옵니다.</p>
+      <div class="order-list" id="orderList"></div>
+    </div>
+  </section>
+
+  <!-- 심볼별 합계는 순서를 다 따라 한 뒤 확인하는 요약이라 별도 카드로 빼서 기본은 접어둔다.
+       최적화 모드 전용이라 수동 모드에서는 패널과 함께 숨긴다. -->
+  <details class="card card-collapsible" id="sumTable">
+    <summary><h2>심볼별 합계</h2></summary>
     <div class="table-wrap">
       <table id="optTable">
         <thead>
@@ -588,15 +742,23 @@
         <tbody id="optTbody"></tbody>
       </table>
     </div>
-    <button class="order-toggle" id="orderToggleBtn">강화 순서 보기 ▾</button>
-    <div class="order-list" id="orderList"></div>
-  </section>
+  </details>
 
   <!-- Manual panel -->
   <section class="card hidden" id="panelManual">
     <p class="note" style="margin-top:0;">각 심볼의 목표 레벨을 직접 설정하세요. 현재 레벨보다 낮게는 설정할 수 없습니다.</p>
     <div id="manualRows"></div>
   </section>
+
+  <!-- 현재 심볼 레벨: 캐릭터 검색이 자동으로 채워주는 '확인/보정'용 섹션이라
+       목표 입력·결과보다 아래에 두고, 검색이 성공하면 접어서 자리를 비운다. -->
+  <details class="card card-collapsible" id="levelCard" open>
+    <summary>
+      <h2>현재 심볼 레벨</h2>
+      <span class="level-summary" id="levelSummary"></span>
+    </summary>
+    <div class="level-grid" id="levelGrid"></div>
+  </details>
 </div>
 
 <div class="summary-bar">
@@ -735,6 +897,7 @@
     saveLevelsState();
     updateLevelGridDisplay();
     renderManualRows();
+    syncTargetToCurrent();
     if (mode === 'opt') runOptimization(); else runManual();
   }
 
@@ -816,25 +979,67 @@
     });
     var forceEl = document.getElementById('currentForceVal');
     if (forceEl) forceEl.textContent = currentTotalForce();
+    updateLevelSummary();
   }
+
+  // 접힌 상태에서도 무엇이 들어있는지 한 줄로 보이게 한다.
+  var levelCard = document.getElementById('levelCard');
+  var levelSummary = document.getElementById('levelSummary');
+  function updateLevelSummary(){
+    if (!levelSummary) return;
+    var reached = unlocked.reduce(function(n, u){ return n + (u ? 1 : 0); }, 0);
+    var symbolForce = curLevels.reduce(function(sum, lv){ return sum + lv*10; }, 0);
+    levelSummary.textContent = '· 도착 ' + reached + '/' + SYMBOLS.length + '지역 · 심볼 포스 ' + symbolForce + 'F';
+  }
+
+  // ---------- Help popovers ----------
+  function closeAllHelp(){
+    document.querySelectorAll('.help-btn').forEach(function(b){
+      b.setAttribute('aria-expanded', 'false');
+      var p = document.getElementById(b.getAttribute('aria-controls'));
+      if (p) p.hidden = true;
+    });
+  }
+  document.querySelectorAll('.help-btn').forEach(function(btn){
+    var pop = document.getElementById(btn.getAttribute('aria-controls'));
+    if (!pop) return;
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var wasOpen = btn.getAttribute('aria-expanded') === 'true';
+      closeAllHelp();
+      if (!wasOpen){
+        btn.setAttribute('aria-expanded', 'true');
+        pop.hidden = false;
+      }
+    });
+    // 팝업 안을 클릭했다고 닫히면 텍스트를 드래그할 수 없다.
+    pop.addEventListener('click', function(e){ e.stopPropagation(); });
+  });
+  document.addEventListener('click', closeAllHelp);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' || e.key === 'Esc') closeAllHelp();
+  });
 
   // ---------- Tabs ----------
   var tabOpt = document.getElementById('tabOpt');
   var tabManual = document.getElementById('tabManual');
   var panelOpt = document.getElementById('panelOpt');
   var panelManual = document.getElementById('panelManual');
+  var sumTable = document.getElementById('sumTable');
   var mode = 'opt';
 
   tabOpt.addEventListener('click', function(){
     mode = 'opt';
     tabOpt.classList.add('active'); tabManual.classList.remove('active');
     panelOpt.classList.remove('hidden'); panelManual.classList.add('hidden');
+    sumTable.classList.remove('hidden');
     runOptimization();
   });
   tabManual.addEventListener('click', function(){
     mode = 'manual';
     tabManual.classList.add('active'); tabOpt.classList.remove('active');
     panelManual.classList.remove('hidden'); panelOpt.classList.add('hidden');
+    sumTable.classList.add('hidden');
     runManual();
   });
 
@@ -843,20 +1048,80 @@
   var optNote = document.getElementById('optNote');
   var optTbody = document.getElementById('optTbody');
   var orderList = document.getElementById('orderList');
-  var orderToggleBtn = document.getElementById('orderToggleBtn');
+  var orderSection = document.getElementById('orderSection');
+  var orderCount = document.getElementById('orderCount');
 
-  targetForceInput.addEventListener('input', runOptimization);
-  targetForceInput.addEventListener('focus', function(){ targetForceInput.select(); });
-  orderToggleBtn.addEventListener('click', function(){
-    orderList.classList.toggle('show');
-    orderToggleBtn.textContent = orderList.classList.contains('show') ? '강화 순서 숨기기 ▴' : '강화 순서 보기 ▾';
+  // 목표 포스는 사용자가 직접 건드리기 전까지 현재 포스를 따라간다.
+  // 기본값을 고정(100)해두면 대부분의 캐릭터에서 "이미 목표 이상"만 뜨고 아무 계산도 안 나오기 때문.
+  // 한 번이라도 직접 수정하면 dirty 로 보고, 캐릭터 재검색·레벨 수정에도 입력한 목표를 유지한다.
+  var targetDirty = false;
+
+  function syncTargetToCurrent(){
+    var cur = currentTotalForce();
+    targetForceInput.min = cur;
+    if (!targetDirty || (+targetForceInput.value || 0) < cur){
+      targetForceInput.value = cur;
+    }
+  }
+
+  targetForceInput.addEventListener('input', function(){
+    targetDirty = true;
+    runOptimization();
   });
+  targetForceInput.addEventListener('focus', function(){ targetForceInput.select(); });
+  document.querySelectorAll('[data-target-dir]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var dir = +btn.getAttribute('data-target-dir');
+      var cur = currentTotalForce();
+      var base = Math.round(+targetForceInput.value || 0);
+      targetDirty = true;
+      targetForceInput.value = Math.max(cur, Math.ceil(base/10)*10 + dir*10);
+      runOptimization();
+    });
+  });
+  // 타일 툴팁 — 그리드가 카드 끝까지 차기 때문에 순수 CSS(::after)로 띄우면
+  // 가장자리 타일의 툴팁이 밖으로 새어 나간다. 섹션 안에 툴팁 하나를 두고 위치만 잡아준다.
+  var tileTip = document.createElement('div');
+  tileTip.className = 'tile-tip';
+  tileTip.hidden = true;
+  orderSection.appendChild(tileTip);
+
+  function showTileTip(tile){
+    var tip = tile.getAttribute('data-tip');
+    if (!tip) return;
+    tileTip.textContent = tip;
+    tileTip.hidden = false;
+    var sec = orderSection.getBoundingClientRect();
+    var box = tile.getBoundingClientRect();
+    var left = (box.left - sec.left) + box.width/2 - tileTip.offsetWidth/2;
+    tileTip.style.left = Math.max(6, Math.min(left, sec.width - tileTip.offsetWidth - 6)) + 'px';
+    tileTip.style.top = (box.top - sec.top - tileTip.offsetHeight - 6) + 'px';
+  }
+  function hideTileTip(){ tileTip.hidden = true; }
+
+  orderList.addEventListener('mouseover', function(e){
+    var tile = e.target.closest('.step-tile');
+    if (tile) showTileTip(tile);
+  });
+  orderList.addEventListener('mouseout', function(e){
+    if (!e.relatedTarget || !e.relatedTarget.closest('.step-tile')) hideTileTip();
+  });
+  // 터치 기기는 hover 가 없으니 탭으로도 보이게. 바깥을 누르면 닫힌다.
+  orderList.addEventListener('click', function(e){
+    var tile = e.target.closest('.step-tile');
+    if (tile) showTileTip(tile);
+  });
+  document.addEventListener('click', function(e){
+    if (!e.target.closest('#orderList')) hideTileTip();
+  });
+  window.addEventListener('resize', hideTileTip);
 
   // ---------- External bonus force ----------
   var externalForceInput = document.getElementById('externalForceInput');
   externalForceInput.addEventListener('focus', function(){ externalForceInput.select(); });
   function afterExternalForceChange(){
     document.getElementById('currentForceVal').textContent = currentTotalForce();
+    syncTargetToCurrent();
     runOptimization();
     if (mode === 'manual') runManual();
   }
@@ -886,6 +1151,7 @@
     if (bossSelect.value === '' || diffSelect.value === ''){ bossPickNote.textContent = ''; return; }
     var boss = BOSS_FORCE[+bossSelect.value];
     var d = boss.diffs[+diffSelect.value];
+    targetDirty = true;
     targetForceInput.value = d.target;
     bossPickNote.textContent = boss.name + ' · ' + d.label + ' — 요구 포스 ' + d.req + ' → 최대효율(125%) 목표 ' + d.target + ' 로 설정했습니다.';
     runOptimization();
@@ -943,7 +1209,7 @@
       perSymbol[bestIdx].count++;
       perSymbol[bestIdx].meso += bestCost;
       totalMeso += bestCost;
-      orderSteps.push({ idx: bestIdx, from: fromLv, to: levels[bestIdx] });
+      orderSteps.push({ idx: bestIdx, from: fromLv, to: levels[bestIdx], meso: bestCost });
     }
 
     // render note
@@ -952,7 +1218,10 @@
       noteParts.push('목표 포스는 10 단위로 올림 처리되어 ' + roundedTarget + ' 포스 기준으로 계산됩니다.');
     }
     if (alreadyThere){
-      noteParts.push('현재 포스(' + curForce + ')가 이미 목표 포스 이상입니다.');
+      // 목표가 현재와 같은 건 기본 상태(아직 목표를 안 정함)라 "이미 달성"이 아니라 다음 행동을 안내한다.
+      noteParts.push(roundedTarget === curForce
+        ? '목표 포스를 현재 포스(' + curForce + ')에 맞춰 뒀습니다. 위의 +/− 버튼이나 보스 선택으로 목표를 올리면 최소 메소 강화 경로를 계산합니다.'
+        : '현재 포스(' + curForce + ')가 이미 목표 포스 이상입니다.');
     } else if (capped){
       noteParts.push('모든 심볼이 최대 레벨(11)에 도달하여 최대 ' + (curForce + maxAvailable*10) + ' 포스까지만 도달할 수 있습니다.');
     }
@@ -966,12 +1235,19 @@
       if (row.count === 0) tr.className = 'zero-row';
       tr.innerHTML =
         '<td><img class="symbol-icon" src="'+SYMBOLS[idx].icon+'" alt="">'+SYMBOLS[idx].name+'</td>'+
-        '<td class="path-cell">Lv.'+row.start+' <span class="arrow">→</span> Lv.'+row.end+'</td>'+
+        '<td><span class="path-cell">Lv.'+row.start+' <span class="arrow">→</span> Lv.'+row.end+'</span></td>'+
         '<td class="num">'+row.count+'회</td>'+
         '<td class="num">+'+(row.count*10)+'</td>'+
         '<td class="num meso">'+(row.meso>0 ? won(row.meso) : '-')+'</td>';
       optTbody.appendChild(tr);
     });
+
+    // 강화할 게 없어도 섹션을 지우지 않고 안내 문구만 끼워 넣는다.
+    function emptyOrderMessage(isCapped){
+      return '<p class="order-empty">' + (isCapped
+        ? '모든 심볼이 최대 레벨이라 더 올릴 강화가 없습니다.'
+        : '목표 포스를 올리면 여기에 강화 순서가 나옵니다.') + '</p>';
+    }
 
     // order cards — 같은 심볼이 연달아 나오면 하나로 묶어서
     // "세르니움 두 개"처럼 보이지 않고 "세르니움 Lv.1→Lv.3"으로 한 번에 보이게
@@ -980,21 +1256,25 @@
       var last = orderGroups[orderGroups.length - 1];
       if (last && last.idx === step.idx && last.to === step.from){
         last.to = step.to;
+        last.meso += step.meso;
       } else {
-        orderGroups.push({ idx: step.idx, from: step.from, to: step.to });
+        orderGroups.push({ idx: step.idx, from: step.from, to: step.to, meso: step.meso });
       }
     });
-    orderList.innerHTML = orderGroups.map(function(g, i){
+    var noSteps = orderGroups.length === 0;
+    orderList.innerHTML = noSteps ? emptyOrderMessage(capped) : orderGroups.map(function(g, i){
       var name = SYMBOLS[g.idx].name;
-      var icon = '<img class="symbol-icon" src="'+SYMBOLS[g.idx].icon+'" alt="">';
-      return '<div class="step-unit">'+
-        '<span class="step-index">'+(i+1)+'</span>'+
-        '<div class="step-card">'+
-          '<span class="step-name">'+icon+name+'</span>'+
-          '<span class="step-lv">Lv.'+g.from+' → Lv.'+g.to+'</span>'+
-        '</div>'+
+      var label = (i+1) + '번째 · ' + name + ' Lv.' + g.from + ' → Lv.' + g.to;
+      var tip = label + '\n' + (g.meso > 0 ? won(g.meso) + ' 메소' : '메소 소모 없음');
+      return '<div class="step-tile'+(i === 0 ? ' first' : '')+'" data-tip="'+tip+'" aria-label="'+tip.replace('\n', ' · ')+'">'+
+        (i === 0 ? '<span class="step-next">다음</span>' : '')+
+        '<img class="symbol-icon" src="'+SYMBOLS[g.idx].icon+'" alt="">'+
+        '<span class="step-tile-name">'+name+'</span>'+
+        '<span class="step-tile-lv">'+g.from+' → '+g.to+'</span>'+
       '</div>';
     }).join('');
+    orderCount.textContent = noSteps ? '대기 중' : (orderGroups.length + '단계');
+    orderSection.classList.toggle('empty', noSteps);
 
     updateSummary(steps*10, steps, totalMeso);
   }
@@ -1184,6 +1464,8 @@
       .then(function(data){
         var result = applySymbolData(data);
         lsSet(LS_LAST_CHAR, name);
+        // 불러오기에 성공하면 현재 레벨은 '확인용'이 되므로 접어서 목표·결과에 자리를 내준다.
+        if (levelCard && result.found.length) levelCard.open = false;
         var parts = ['✓ ' + name + (data.character_class ? ' (' + data.character_class + ')' : '')];
         if (data.date) parts.push(String(data.date).slice(0, 10) + ' 기준');
         parts.push('어센틱 심볼 ' + result.found.length + '개 불러옴');
@@ -1212,6 +1494,7 @@
 
   renderLevelGrid();
   renderManualRows();
+  syncTargetToCurrent();
   runOptimization();
 })();
 </script>
