@@ -37,7 +37,29 @@
 </head>
 <body>
 <main class="pet-wrap">
-  <nav class="site-nav"><a class="site-nav-home" href="index.html">← 계산기 모음</a><div class="site-nav-tabs"><a href="boutique_gacha.html">부티크 기프트</a><a class="active" href="pet_gacha.html">펫 뽑기 놀이</a><a href="seedring_gacha.html">시드링 뽑기</a></div><button class="reset-badge" id="resetBtn" type="button">세션 초기화</button></nav>
+  <nav class="site-nav">
+    <a class="site-nav-home" href="index.html">← 계산기 모음</a>
+    <div class="site-nav-groups">
+      <div class="site-nav-group active">
+        <button type="button" class="site-nav-group-btn">뽑기</button>
+        <div class="site-nav-dropdown">
+          <a href="boutique_gacha.html">부티크 기프트</a>
+          <a class="active" href="pet_gacha.html">펫 뽑기 놀이</a>
+          <a href="seedring_gacha.html">시드링 뽑기</a>
+        </div>
+      </div>
+      <div class="site-nav-group">
+        <button type="button" class="site-nav-group-btn">계산기</button>
+        <div class="site-nav-dropdown">
+          <a href="trace_calc.html">주흔 기댓값 계산기</a>
+          <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
+          <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
+          <a href="cube_calc.html">잠재능력 큐브 연구소</a>
+        </div>
+      </div>
+    </div>
+    <button class="reset-badge" id="resetBtn" type="button">세션 초기화</button>
+  </nav>
   <div class="pet-layout">
     <section class="pet-left">
       <section class="pet-card auto-card" id="autoCard"><h2>자동 스밍</h2><p class="pet-card-sub">루나 쁘띠 1마리가 나올 때까지 열기 → 합성을 자동으로 반복합니다.</p><button class="pet-btn quick-btn auto-action" id="autoStart" type="button"><strong>쁘띠 나올 때까지 돌리기</strong><span>블랙＋스윗 우선, 없으면 블랙 2개로 합성</span></button></section>
@@ -51,6 +73,7 @@
     </aside>
   </div>
 </main>
+<script src="site_nav.js"></script>
 <script>
 (() => {
   const WISPS = [

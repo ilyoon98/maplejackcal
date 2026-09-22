@@ -51,30 +51,72 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
 }
 .site-nav-home:hover { color: var(--accent); }
 
-/* 탭 UX: 항목 순서는 페이지가 바뀌어도 절대 바뀌지 않고,
-   지금 있는 탭만 배경색으로 표시한다 (위치가 아니라 색으로 구분) */
-.site-nav-tabs {
+/* 상단 대분류 탭(뽑기 / 계산기): 지금 있는 페이지가 속한 분류만 색으로 표시하고,
+   버튼을 누르면 그 분류에 속한 페이지 목록이 드롭다운으로 펼쳐진다.
+   다른 분류를 눌러도 항상 펼쳐볼 수 있어서, 뽑기 페이지에서도 계산기 쪽으로,
+   계산기 페이지에서도 뽑기 쪽으로 바로 이동할 수 있다. */
+.site-nav-groups {
   display: inline-flex;
-  background: #1d212b;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 3px;
-  gap: 2px;
+  gap: 6px;
+  position: relative;
 }
-.site-nav-tabs a {
-  display: inline-block;
+.site-nav-group { position: relative; }
+.site-nav-group-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 7px 14px;
+  border: none;
   border-radius: 8px;
+  background: #1d212b;
+  font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-dim);
-  text-decoration: none;
+  cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.site-nav-tabs a:hover { color: var(--text); }
-.site-nav-tabs a.active {
+.site-nav-group-btn:hover { color: var(--text); }
+.site-nav-group-btn::after {
+  content: "▾";
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+.site-nav-group.active .site-nav-group-btn {
   background: var(--accent-strong);
   color: #0b0d12;
+}
+
+.site-nav-dropdown {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 210px;
+  background: #1d212b;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  z-index: 30;
+}
+.site-nav-dropdown.open { display: flex; }
+.site-nav-dropdown a {
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.site-nav-dropdown a:hover { background: rgba(110, 168, 254, 0.12); color: var(--text); }
+.site-nav-dropdown a.active {
+  color: var(--accent-strong);
+  background: rgba(76, 141, 255, 0.14);
   cursor: default;
   pointer-events: none;
 }

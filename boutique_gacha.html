@@ -132,7 +132,25 @@
 <main class="bt-wrap">
   <nav class="site-nav">
     <a class="site-nav-home" href="index.html">← 계산기 모음</a>
-    <div class="site-nav-tabs"><a class="active" href="boutique_gacha.html">부티크 기프트</a><a href="pet_gacha.html">펫 뽑기 놀이</a><a href="seedring_gacha.html">시드링 뽑기</a></div>
+    <div class="site-nav-groups">
+      <div class="site-nav-group active">
+        <button type="button" class="site-nav-group-btn">뽑기</button>
+        <div class="site-nav-dropdown">
+          <a class="active" href="boutique_gacha.html">부티크 기프트</a>
+          <a href="pet_gacha.html">펫 뽑기 놀이</a>
+          <a href="seedring_gacha.html">시드링 뽑기</a>
+        </div>
+      </div>
+      <div class="site-nav-group">
+        <button type="button" class="site-nav-group-btn">계산기</button>
+        <div class="site-nav-dropdown">
+          <a href="trace_calc.html">주흔 기댓값 계산기</a>
+          <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
+          <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
+          <a href="cube_calc.html">잠재능력 큐브 연구소</a>
+        </div>
+      </div>
+    </div>
     <button class="reset-badge" id="resetBtn" type="button">세션 초기화</button>
   </nav>
 
@@ -214,6 +232,7 @@
   </div>
 </main>
 
+<script src="site_nav.js"></script>
 <script>
 (() => {
   // 공식 확률표. prob 은 % 단위, 합계는 두 표 모두 정확히 100.

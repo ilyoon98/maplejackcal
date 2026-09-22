@@ -86,6 +86,10 @@
   .key-guide li::marker{ color:var(--accent-strong); font-weight:700; }
   .key-guide b{ color:var(--text); }
   .key-guide a{ color:var(--accent); font-weight:700; }
+
+  .tool-section{ margin-top:32px; }
+  .tool-section h2{ font-size:1.15rem; margin:0 0 4px; }
+  .tool-section .section-sub{ margin:0; color:var(--text-dim); font-size:0.85rem; }
 </style>
 </head>
 <body>
@@ -94,6 +98,28 @@
     <h1>메이플 계산기 모음</h1>
     <p class="sub">필요할 때 꺼내 쓰는 메이플스토리 계산기들</p>
   </header>
+
+  <nav class="site-nav">
+    <div class="site-nav-groups">
+      <div class="site-nav-group">
+        <button type="button" class="site-nav-group-btn">뽑기</button>
+        <div class="site-nav-dropdown">
+          <a href="boutique_gacha.html">부티크 기프트</a>
+          <a href="pet_gacha.html">펫 뽑기 놀이</a>
+          <a href="seedring_gacha.html">시드링 뽑기</a>
+        </div>
+      </div>
+      <div class="site-nav-group">
+        <button type="button" class="site-nav-group-btn">계산기</button>
+        <div class="site-nav-dropdown">
+          <a href="trace_calc.html">주흔 기댓값 계산기</a>
+          <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
+          <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
+          <a href="cube_calc.html">잠재능력 큐브 연구소</a>
+        </div>
+      </div>
+    </div>
+  </nav>
 
   <section class="card" id="apiKey">
     <h2>넥슨 오픈 API 키</h2>
@@ -125,51 +151,62 @@
     </div>
   </section>
 
-  <div class="tool-grid">
-    <a class="tool-card" href="boutique_gacha.html">
-      <h2>부티크 기프트 뽑기</h2>
-      <p>공식 확률표 그대로 부티크 기프트를 열어봅니다. 10번째마다 피버 타임이 적용되며, 모은 티켓 수·사용 금액·티켓 1장당 단가를 볼 수 있습니다. 티켓 100개 이상이 터질 때까지 자동으로 돌리는 기능도 있습니다.</p>
-      <span class="go">뽑기 열기 →</span>
-    </a>
+  <section class="tool-section">
+    <h2>🎰 뽑기</h2>
+    <p class="section-sub">공식 확률표 그대로 돌려보는 가챠 시뮬레이터</p>
+    <div class="tool-grid">
+      <a class="tool-card" href="boutique_gacha.html">
+        <h2>부티크 기프트 뽑기</h2>
+        <p>공식 확률표 그대로 부티크 기프트를 열어봅니다. 10번째마다 피버 타임이 적용되며, 모은 티켓 수·사용 금액·티켓 1장당 단가를 볼 수 있습니다. 티켓 100개 이상이 터질 때까지 자동으로 돌리는 기능도 있습니다.</p>
+        <span class="go">뽑기 열기 →</span>
+      </a>
 
-    <a class="tool-card" href="pet_gacha.html">
-      <h2>펫 뽑기 놀이</h2>
-      <p>위습의 원더베리를 열고 블랙·상급 펫을 모아 루나 크리스탈을 합성합니다. 결과의 희귀도, 상위 퍼센트, 누적 사용 금액을 확인할 수 있습니다.</p>
-      <span class="go">뽑기 열기 →</span>
-    </a>
+      <a class="tool-card" href="pet_gacha.html">
+        <h2>펫 뽑기 놀이</h2>
+        <p>위습의 원더베리를 열고 블랙·상급 펫을 모아 루나 크리스탈을 합성합니다. 결과의 희귀도, 상위 퍼센트, 누적 사용 금액을 확인할 수 있습니다.</p>
+        <span class="go">뽑기 열기 →</span>
+      </a>
 
-    <a class="tool-card" href="seedring_gacha.html">
-      <h2>시드링 뽑기</h2>
-      <p>녹옥·홍옥·흑옥·백옥·생명의 보스 반지 상자를 열어봅니다. 반지 종류와 레벨을 따로 추첨하는 방식 그대로 굴려보고, 상자별 최종 확률표를 확인할 수 있습니다. 하루 한 번만 가능한 "오늘의 뽑기" 모드도 있습니다.</p>
-      <span class="go">뽑기 열기 →</span>
-    </a>
+      <a class="tool-card" href="seedring_gacha.html">
+        <h2>시드링 뽑기</h2>
+        <p>녹옥·홍옥·흑옥·백옥·생명의 보스 반지 상자를 열어봅니다. 반지 종류와 레벨을 따로 추첨하는 방식 그대로 굴려보고, 상자별 최종 확률표를 확인할 수 있습니다. 하루 한 번만 가능한 "오늘의 뽑기" 모드도 있습니다.</p>
+        <span class="go">뽑기 열기 →</span>
+      </a>
+    </div>
+  </section>
 
-    <a class="tool-card" href="trace_calc.html">
-      <h2>주흔 기댓값 계산기</h2>
-      <p>아케인셰이드 / 이노센트·아크이노센트 / 순백 주문서 — 주흔작 완성까지 기대 비용(메소·시도 횟수)을 계산합니다.</p>
-      <span class="go">계산기 열기 →</span>
-    </a>
+  <section class="tool-section">
+    <h2>🧮 계산기</h2>
+    <p class="section-sub">기대값·비용을 미리 뽑아보는 계산 도구</p>
+    <div class="tool-grid">
+      <a class="tool-card" href="trace_calc.html">
+        <h2>주흔 기댓값 계산기</h2>
+        <p>아케인셰이드 / 이노센트·아크이노센트 / 순백 주문서 — 주흔작 완성까지 기대 비용(메소·시도 횟수)을 계산합니다.</p>
+        <span class="go">계산기 열기 →</span>
+      </a>
 
-    <a class="tool-card" href="authentic_symbol_calc.html">
-      <h2>어센틱 심볼 계산기</h2>
-      <p>그랜디스 지역 심볼 강화 계산기. 목표 어센틱 포스까지 최소 메소로 도달하는 강화 순서를 자동으로 계산합니다. 넥슨 오픈 API로 캐릭터 이름만 넣으면 현재 심볼 레벨이 자동 입력됩니다.</p>
-      <span class="go">계산기 열기 →</span>
-    </a>
+      <a class="tool-card" href="authentic_symbol_calc.html">
+        <h2>어센틱 심볼 계산기</h2>
+        <p>그랜디스 지역 심볼 강화 계산기. 목표 어센틱 포스까지 최소 메소로 도달하는 강화 순서를 자동으로 계산합니다. 넥슨 오픈 API로 캐릭터 이름만 넣으면 현재 심볼 레벨이 자동 입력됩니다.</p>
+        <span class="go">계산기 열기 →</span>
+      </a>
 
-    <a class="tool-card" href="boss_income_calc.html">
-      <h2>보스 수익 정산 계산기</h2>
-      <p>캐릭터별로 보스 난이도와 격파 인원수(N빵)를 등록하면 1주일·한 달 보스 수익을 계산합니다. 여러 캐릭터를 등록해 캐릭당 수익과 총합 수익을 한눈에 볼 수 있습니다.</p>
-      <span class="go">계산기 열기 →</span>
-    </a>
+      <a class="tool-card" href="boss_income_calc.html">
+        <h2>보스 수익 정산 계산기</h2>
+        <p>캐릭터별로 보스 난이도와 격파 인원수(N빵)를 등록하면 1주일·한 달 보스 수익을 계산합니다. 여러 캐릭터를 등록해 캐릭당 수익과 총합 수익을 한눈에 볼 수 있습니다.</p>
+        <span class="go">계산기 열기 →</span>
+      </a>
 
-    <a class="tool-card" href="cube_calc.html">
-      <h2>잠재능력 큐브 연구소</h2>
-      <p>일반·에디셔널 큐브의 등급업 확률과 천장을 바탕으로 기대 큐브 수를 계산하고, 큐브별 전략을 비교합니다. 직접 굴려보는 천장 게임도 포함되어 있습니다.</p>
-      <span class="go">연구소 열기 →</span>
-    </a>
-  </div>
+      <a class="tool-card" href="cube_calc.html">
+        <h2>잠재능력 큐브 연구소</h2>
+        <p>일반·에디셔널 큐브의 등급업 확률과 천장을 바탕으로 기대 큐브 수를 계산하고, 큐브별 전략을 비교합니다. 직접 굴려보는 천장 게임도 포함되어 있습니다.</p>
+        <span class="go">연구소 열기 →</span>
+      </a>
+    </div>
+  </section>
 </div>
 
+<script src="site_nav.js"></script>
 <script src="nexon_key.js"></script>
 <script>
 (function(){
