@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>시드링 뽑기 | 메이플 계산기 모음</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  :root{--sr-jade:#55b787;--sr-ruby:#e2664a;--sr-onyx:#c3c8d6;--sr-pearl:#e8e9ec;--sr-gold:#ffd36a;--sr-faint:#7b8090;--sr-surface-2:#1d212b;}
+  .sr-wrap{max-width:1240px;margin:0 auto;padding:24px 16px 80px}
+  .sr-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#14251d 0%,#151d26 58%,#1b2233 100%);border:1px solid #3c6450;border-radius:22px;padding:30px 32px;margin-top:18px;box-shadow:0 18px 50px rgba(0,0,0,.24)}
+  .sr-hero:after{content:"◆  ◇  ◆  ◇";position:absolute;right:26px;top:22px;color:rgba(172,232,203,.4);font-size:22px;letter-spacing:13px;transform:rotate(7deg)}
+  .eyebrow{color:#9fe0c0;font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .sr-hero h1{font-size:clamp(1.9rem,4vw,3.1rem);line-height:1.08;margin:9px 0 10px;letter-spacing:-.06em}
+  .sr-hero p{max-width:680px;color:#bcc6bf;margin:0;line-height:1.75}
+  .sr-layout{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(340px,.88fr);gap:18px;align-items:start;margin-top:18px}
+  .sr-left,.sr-right{min-width:0}.sr-right{position:sticky;top:16px}
+  .sr-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-top:16px}
+  .sr-card:first-child{margin-top:0}
+  .sr-card h2{font-size:1.05rem;margin:0 0 5px}
+  .sr-card-sub{font-size:.8rem;color:var(--text-dim);margin:0 0 14px;line-height:1.6}
+
+  /* 뽑기 방식 탭 */
+  .mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mode-tab{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--sr-surface-2);color:var(--text-dim);cursor:pointer;font:inherit;font-size:.9rem;transition:border-color .15s,background .15s,color .15s}
+  .mode-tab:hover{border-color:var(--accent);color:var(--text)}
+  .mode-tab[aria-selected="true"]{color:var(--text);border-color:var(--sr-jade);background:#17281f;font-weight:700}
+  .mode-tab-mark{font-size:1rem;color:var(--sr-jade)}
+  .mode-description{margin:12px 0 0;font-size:.78rem;color:var(--text-dim);line-height:1.6}
+
+  /* 상자 선택 */
+  .boxrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .boxrow.daily-single{grid-template-columns:1fr}
+  .boxcard{display:block;text-align:left;background:var(--sr-surface-2);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--text);font:inherit;cursor:pointer;transition:transform .15s,border-color .15s}
+  .boxcard:hover{transform:translateY(-2px);border-color:var(--card-accent,var(--accent))}
+  .boxcard[aria-disabled="true"]{cursor:default}
+  .boxcard[aria-disabled="true"]:hover{transform:none}
+  .boxcard[aria-disabled="true"]:not([aria-pressed="true"]){opacity:.5}
+  .boxcard[aria-pressed="true"]{border-color:var(--card-accent,var(--accent-strong));background:#1b2430;box-shadow:0 0 0 1px var(--card-accent,var(--accent-strong)) inset}
+  .boxcard-main{display:flex;align-items:center;gap:12px}
+  .box-icon-stage,.vault-box-icon,.result-icon-stage,.table-icon-stage{display:grid;place-items:center;flex:0 0 auto;border:1px solid var(--border);border-radius:10px;background:#11141a}
+  .box-icon,.vault-box-icon img,.result-icon,.table-icon{image-rendering:pixelated;object-fit:contain}
+  .box-icon-stage{width:56px;height:56px}
+  .box-icon{width:44px;height:42px}
+  .boxcard-copy{min-width:0}
+  .boxcard .name{display:flex;align-items:center;gap:7px;font-size:.95rem;font-weight:700}
+  .box-grade{display:inline-grid;place-items:center;min-width:22px;height:19px;padding:0 6px;border-radius:999px;border:1px solid var(--card-accent,var(--box-accent,var(--accent)));color:var(--card-accent,var(--box-accent,var(--accent)));font-size:.66rem;font-weight:700;line-height:1}
+  .vault-grade{margin-left:4px;vertical-align:middle}
+  .boxcard .bosses{display:block;margin-top:6px;font-size:.7rem;color:var(--text-dim);line-height:1.5}
+  .daily-box-badge{display:inline-block;margin-bottom:4px;color:var(--sr-gold);font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+  .boxcard[data-box="jade"]{--card-accent:var(--sr-jade)}
+  .boxcard[data-box="red"]{--card-accent:var(--sr-ruby)}
+  .boxcard[data-box="black"]{--card-accent:var(--sr-onyx)}
+  .boxcard[data-box="white"]{--card-accent:var(--sr-pearl)}
+  .boxcard[data-box="life"]{--card-accent:var(--sr-gold)}
+
+  /* 뽑기 영역 */
+  .vault{text-align:center;position:relative;overflow:hidden;isolation:isolate}
+  .vault-label{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)}
+  .vault-boxname{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:8px;font-size:1.1rem;font-weight:700}
+  .vault-box-icon{width:58px;height:58px}
+  .vault-box-icon img{width:46px;height:44px}
+  .vault-hint{margin-top:8px;font-size:.76rem;color:var(--sr-gold)}
+  .daily-status{min-height:22px;margin-top:10px;font-size:.8rem;color:var(--text-dim)}
+  .daily-status.used{color:var(--sr-gold)}
+  .drawbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+  .btn{border:1px solid var(--border);background:var(--sr-surface-2);color:var(--text);padding:11px 22px;border-radius:999px;font:inherit;font-size:.9rem;cursor:pointer;transition:border-color .15s,filter .15s}
+  .btn:hover:not(:disabled){border-color:var(--box-accent,var(--accent))}
+  .btn.primary{border-color:var(--box-accent,var(--accent-strong));background:#1c2740;font-weight:700}
+  .btn.primary:hover:not(:disabled){filter:brightness(1.12)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  /* 결과 */
+  .result{margin-top:20px;min-height:24px}
+  .result-card{display:inline-block;text-align:left;min-width:280px;max-width:100%;background:#11141a;border:2px solid var(--box-accent,var(--border));border-radius:14px;padding:16px 18px;position:relative;animation:reveal .38s ease}
+  .result-card.jackpot{border-color:var(--sr-gold);box-shadow:0 0 40px -8px var(--sr-gold)}
+  @keyframes reveal{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+  .vault.is-drawing .result-card{transform-origin:50% 90%;animation:ringCardPop .74s cubic-bezier(.18,.9,.25,1.18) both}
+  .vault.is-drawing .result-icon-stage{animation:ringIconPop .68s .08s cubic-bezier(.2,.9,.25,1.25) both}
+  .vault.is-drawing .result-lv{animation:ringBadgePop .58s .16s cubic-bezier(.2,.9,.25,1.2) both}
+  .vault.is-drawing .result-card:after{content:"";position:absolute;inset:-2px;border-radius:14px;pointer-events:none;border:2px solid var(--box-accent,var(--accent));animation:ringCardGlow .8s ease-out both}
+  @keyframes ringCardPop{0%{opacity:.15;transform:translateY(24px) scale(.82)}48%{opacity:1;transform:translateY(-10px) scale(1.045)}70%{transform:translateY(4px) scale(.985)}86%{transform:translateY(-2px) scale(1.008)}100%{transform:none}}
+  @keyframes ringIconPop{0%{opacity:.2;transform:rotate(-16deg) scale(.55)}58%{opacity:1;transform:rotate(7deg) scale(1.16)}100%{transform:none}}
+  @keyframes ringBadgePop{0%{opacity:0;transform:translateX(10px) scale(.7)}65%{opacity:1;transform:translateX(-2px) scale(1.08)}100%{transform:none}}
+  @keyframes ringCardGlow{0%{opacity:0;box-shadow:0 0 0 var(--box-accent,var(--accent))}35%{opacity:1;box-shadow:0 0 34px var(--box-accent,var(--accent))}100%{opacity:0;box-shadow:0 0 54px transparent}}
+  @keyframes ringCardReducedPop{0%{opacity:.55;transform:scale(.94)}58%{opacity:1;transform:scale(1.025)}100%{transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .result-card{animation:none}
+    .vault.is-drawing .result-card{animation:ringCardReducedPop .55s ease-out both}
+    .vault.is-drawing .result-icon-stage,.vault.is-drawing .result-lv{animation:none}
+    .vault.is-drawing .result-card:after{display:none}
+  }
+  .jackpot-tag{display:inline-block;margin-bottom:10px;padding:4px 11px;border-radius:999px;background:var(--sr-gold);color:#241c08;font-size:.72rem;font-weight:800}
+  .result-top{display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .result-item{display:flex;align-items:center;gap:12px;min-width:0}
+  .result-icon-stage{width:58px;height:58px;border-radius:12px}
+  .result-icon{width:44px;height:44px}
+  .result-name{font-size:1.05rem;font-weight:700}
+  .result-lv{padding:4px 13px;border:2px solid var(--box-accent,var(--accent));border-radius:999px;color:var(--box-accent,var(--accent));font-size:1rem;font-weight:800;white-space:nowrap}
+  .result-lv.jackpot-lv{border-color:var(--sr-gold);color:var(--sr-gold);background:rgba(255,211,106,.12)}
+  .result-prob{margin-top:10px;font-size:.78rem;color:var(--text-dim);font-variant-numeric:tabular-nums}
+  .result-prob b{color:var(--text)}
+  .result-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+  .copy-image-btn{padding:8px 16px;font-size:.8rem;border-color:var(--box-accent,var(--accent))}
+  .share-feedback{min-height:18px;font-size:.72rem;color:var(--text-dim)}
+
+  /* 확률표 */
+  .probtoggle-btn{display:flex;align-items:center;gap:8px;padding:0;border:none;background:none;color:var(--text);font:inherit;font-size:1.05rem;font-weight:700;cursor:pointer}
+  .probtoggle-btn .car{font-size:.75rem;color:var(--text-dim);transition:transform .15s}
+  .probtoggle-btn[aria-expanded="true"] .car{transform:rotate(90deg)}
+  .probtoggle-note{margin:6px 0 0;font-size:.78rem;color:var(--text-dim);line-height:1.6}
+  .probtable-wrap{margin-top:14px}
+  .probtable-wrap[hidden]{display:none}
+  .levelrow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .levelchip{padding:5px 11px;border:1px solid var(--border);border-radius:999px;font-size:.76rem;color:var(--text-dim);font-variant-numeric:tabular-nums}
+  .levelchip b{color:var(--text);font-weight:700}
+  .levelchip.jackpot-lv{border-color:var(--sr-gold);color:var(--sr-gold)}
+  .levelchip.jackpot-lv b{color:var(--sr-gold)}
+  .tablescroll{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+  table.probtable{width:100%;border-collapse:collapse;font-size:.8rem;min-width:520px}
+  table.probtable caption{padding:10px 12px;text-align:left;font-size:.72rem;color:var(--text-dim);border-bottom:1px solid var(--border);line-height:1.5}
+  table.probtable th,table.probtable td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+  table.probtable th{color:var(--text-dim);font-weight:500;font-size:.68rem;letter-spacing:.05em;text-transform:uppercase}
+  table.probtable td.num{font-variant-numeric:tabular-nums;color:var(--text-dim)}
+  table.probtable td.final-prob{color:var(--text)}
+  table.probtable td.final-prob.lv4{color:var(--sr-gold)}
+  table.probtable td.impossible{color:var(--sr-faint)}
+  table.probtable tbody tr:hover{background:var(--sr-surface-2)}
+  table.probtable tr.jackpot-row td:first-child{color:var(--sr-gold);font-weight:700}
+  .table-item{display:flex;align-items:center;gap:10px}
+  .table-icon-stage{width:36px;height:36px;border-radius:8px}
+  .table-icon{width:28px;height:28px}
+  .jackpot-mark{color:var(--sr-gold);font-size:.72rem}
+  .sr-footer{margin-top:20px;padding-top:14px;border-top:1px solid var(--border);font-size:.72rem;color:var(--text-dim);line-height:1.6}
+  .sr-footer a{color:var(--accent)}
+
+  @media(max-width:900px){
+    .sr-layout{grid-template-columns:1fr}
+    .sr-right{position:static}
+    .sr-right>.sr-card:first-child{margin-top:16px}
+  }
+  @media(max-width:540px){
+    .sr-hero{padding:24px 20px}.sr-hero:after{display:none}
+    .boxrow{grid-template-columns:1fr}
+    .vault-boxname{flex-direction:column;gap:7px}
+    .drawbtns .btn{width:100%}
+    .result-card{min-width:0;width:100%}
+    .result-top{align-items:flex-start}
+    .result-actions .btn{flex:1 1 100%}
+    .share-feedback{flex-basis:100%;text-align:center}
+    .tablescroll{overflow:visible;border:0;border-radius:0}
+    table.probtable{display:block;min-width:0}
+    table.probtable caption{display:block;margin-bottom:10px;padding:10px 12px;border:1px solid var(--border);border-radius:11px}
+    table.probtable thead{display:none}
+    table.probtable tbody{display:grid;gap:8px}
+    table.probtable tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#11141a}
+    table.probtable th,table.probtable td{display:block;padding:8px;border-bottom:0;white-space:normal}
+    table.probtable td:first-child{grid-column:1/-1;padding:10px 11px;border-bottom:1px solid var(--border)}
+    table.probtable td.num{text-align:center;font-size:.72rem}
+    table.probtable td.num:before{content:attr(data-label);display:block;margin-bottom:2px;color:var(--text-dim);font-size:.62rem}
+  }
+</style>
+</head>
+<body>
+<main class="sr-wrap">
+  <nav class="site-nav"><a class="site-nav-home" href="index.html">← 계산기 모음</a><div class="site-nav-tabs"><a href="boutique_gacha.html">부티크 기프트</a><a href="pet_gacha.html">펫 뽑기 놀이</a><a class="active" href="seedring_gacha.html">시드링 뽑기</a></div></nav>
+
+  <header class="sr-hero">
+    <div class="eyebrow">Seed Ring</div>
+    <h1>시드링 뽑기</h1>
+    <p>보스 반지 상자를 열어보는 시뮬레이터입니다. 횟수 제한 없이 확률을 시험하거나, 한국 시간 기준 하루 한 번의 오늘의 뽑기에 도전할 수 있습니다. 결과는 이미지로 복사해 바로 공유하세요.</p>
+  </header>
+
+  <div class="sr-layout">
+    <section class="sr-left">
+      <section class="sr-card">
+        <h2>뽑기 방식</h2>
+        <p class="sr-card-sub">오늘의 뽑기는 지정된 상자로 하루 한 번만, 무한 뽑기는 원하는 상자로 제한 없이 돌립니다.</p>
+        <div class="mode-switch" role="tablist" aria-label="뽑기 방식 선택">
+          <button class="mode-tab" id="modeDaily" type="button" role="tab" aria-selected="true" aria-controls="gachaPanel" data-mode="daily"><span class="mode-tab-mark">◆</span><span>오늘의 뽑기</span></button>
+          <button class="mode-tab" id="modeUnlimited" type="button" role="tab" aria-selected="false" aria-controls="gachaPanel" data-mode="unlimited"><span class="mode-tab-mark">∞</span><span>무한 뽑기</span></button>
+        </div>
+        <p class="mode-description" id="modeDescription">오늘 지정된 상자로 한 번만 뽑을 수 있습니다.</p>
+      </section>
+
+      <div id="gachaPanel" role="tabpanel" aria-labelledby="modeDaily">
+        <section class="sr-card vault" id="vaultPanel">
+          <div class="vault-label">선택한 상자</div>
+          <div class="vault-boxname" id="vaultBoxName">—</div>
+          <div class="vault-hint">리스트레인트 링 Lv.4 · 컨티뉴어스 링 Lv.4 · 생명의 연마석이 나오면 당첨입니다</div>
+          <div class="daily-status" id="dailyStatus" aria-live="polite"></div>
+          <div class="drawbtns"><button class="btn primary" id="drawOne" type="button">무한 뽑기</button></div>
+          <div class="result" id="result"></div>
+        </section>
+
+        <section class="sr-card">
+          <h2 id="boxSelectorTitle">오늘의 지정 상자</h2>
+          <p class="sr-card-sub">상자마다 나오는 반지 종류와 레벨 확률이 다릅니다.</p>
+          <div class="boxrow" id="boxrow" role="listbox" aria-label="반지 상자 선택"></div>
+        </section>
+      </div>
+    </section>
+
+    <aside class="sr-right">
+      <section class="sr-card">
+        <button class="probtoggle-btn" id="probToggleBtn" type="button" aria-expanded="true" aria-controls="probTableWrap"><span class="car">▸</span> <span id="probToggleLabel">확률표 접기</span></button>
+        <p class="probtoggle-note">종류를 먼저 뽑은 뒤, 반지가 나온 경우에만 레벨을 뽑습니다. 생명의 연마석에는 레벨이 없습니다.</p>
+        <div class="probtable-wrap" id="probTableWrap"></div>
+        <p class="sr-footer">확률 수치는 <a href="https://matsu1207.tistory.com/144" target="_blank" rel="noopener">커뮤니티 정리 자료</a>를 바탕으로 재구성한 추정치이며, 실제 게임 내 확률과 다를 수 있습니다.</p>
+      </section>
+    </aside>
+  </div>
+</main>
+<script>
+(function(){
+  "use strict";
+
+  var ASSET_BASE = "icons/seedring/";
+  // 공유 이미지 하단에 넣을 주소. 로컬(file://)에서 열면 주소 없이 만들어집니다.
+  var SHARE_URL = location.protocol.indexOf("http") === 0 ? location.host : "";
+  // file://로 직접 열어도 공유용 캔버스가 로컬 이미지 보안 제한에 걸리지 않도록 내장합니다.
+  var CANVAS_ASSET_DATA = {"Eqp_Berserker_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGwSURBVEhLtZULkYNAEERj4SychVjAAhZiIRawgAUsYAELWMDCHm92exkIFJ9wXdUhzM724zN3eXyhkPzvCkPfhbZ+C+h9qwzEES+l+uivtQkZQmeWUt9l2R01VbkJ60OdTYU+23lSBqpehQXEsLmoNaHMrodyrF4D+veEIsFpDdaH9jBMjaF8/u7ABvsE4F31+0Bb7NrazHgLxlHrGgYNhh4tAG/qac+HLNyDeE+CYer0KRzQ9NgYjtY5Plr6Ld3JwhUqCwhEUA0KVw5Ojw0AtXdXmF9NYef0JpsyiKCf8dxbINY8TKHxjqKXMGVzBIQshEDCU01So0GXQKxwQJpGvuuu6E+9E+hdPtdgXh9AD5UB67sHoTMwNANizqnHZdPyIrJsw6s4DEMZqKHhSB1TX7kAkzUDko8CARCqO5S3QGgGq07ACAXoTT15UwYEJB95d/Qw1naR0zva1QQbN8l7QNZt39irn564sq+88ShQMECXYPr3lJ0e6RrUw8bTwyDpE5jeoabUm3X1szdGnJMFYA9amsn7FiRZgKAC8IevEb8L5DWDemuNprvlwy9CHo8/UtucFxSf5XEAAAAASUVORK5CYII=","Eqp_Clean_Defense_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAeCAYAAADU8sWcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMNSURBVEhLtZYLeeMwEIRNoRRCoRRKIRRKIRRCIRRCIRRCwRRMwTf/SCuvXF2au7T7fVPLeuzMPuR0esXWaXkTDhUar2916XetEn4InwXzsbzP72Vt/h0hxfkisvniV0Hjq+Yuwlk4VTES8oMi5LASLyZe1+O6zkVAhtYRIxHOzkFzrxlOBIivvELsaY97a/MlG5z5fwEcrk5aqsEXu1RU855XBOgQXU36tlTfH5B/JsydABryuR5go0DEEJ+ZglhJLw5xvjfNLdPSME/3LIAeeMf3X62QulOVqpkDqL6zFHXW+zjyEbmyUc+oCe1zHL02RKSQurEC549vyBWhHyLMuE3XLAC/X2vPpEBjbPd3qdB1CnKebT2ai2fUWwZhBvPeX7LYp35PDFkmps5Bbmje+6LuIm5pZi7EVEGsef+03CpPSX2t8dbNEAdJoAqANERE4zkypTzSDCFzl+lsfE5Hv5uqCNhSrwHf45MXKjGOJa1DEFtEIg8SR1yxJw/ffpp8PujN14k0tK8WBCZThwuk6cZaABF7ASDIII5uZxxRs9/P8mMEuWtdoq7Et1Mj5/vMRp1qV85C9gKyiABCYpyIt4+N/pDy9gEZkNMLEsjHxnsRU7KUBBh6rwQG4yxKcxCT5a7ejfx67Mi7zkStxnErOgHRhDy9VbCwTRCBbMTYPnKIA1UAv8/dvcSBQAZcAhOLpGUgsBH3EYcxIbSaB/F87qIvDVKtZgDR5WqKBAEZ3lbOj4mx4qjvdogDqfadA8aCRXuPrhGio8Za46aQNfeMD41sn3pIcRJIAsgAe3Ptb17XOfa2n9rc1Y9Mm3DWRZ/JQRVACRSNM0VErnuQQ5zIxz8gI9NGImq1J42ZPEqQRJAJcM/kPu/5Bz+de2OjDhHN9t9KEhA9ELcgg/XY77Ml6sf/NOxNB6KOmwAhE+/ha9YTP1frke0FgBARhHyI4koNiDn7XK1HxmGBEpA+NyEIERlt7SeIw2oP0IQ45L42ERnMC4hE7OvE2eSQj5BE+HpBgpCA3j3P+j/WeJr+AIJIx5AFeLKRAAAAAElFTkSuQmCC","Eqp_Clean_Stance_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAeCAYAAADU8sWcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAALmSURBVEhLvZcNceMwEIVNIRRCwRRMwRRKIRRCoRRMIRRCIRRCwbffrp680tltpundzrxxJEv73v5Iboe3bFpPhnPBaZgN/8WCcDJ8FMxlPBrOw/ivhAQxZJ82Wh3Tuvh4Wq+Gi4H34++K6IjXdV7XRxGQEWIQQTbONvembcSLjZyYZ/xuTfO2lmyw5w0Be6neIf28B7Cnwde9JSC6mvRtqb4fk38sG9DBOt+Lj5d7gIURMcRXmzFX8/pcghjnvTF3Mm0VUyOAHhhxfWxBypEhVWxA9d3emJtSZ3Ma49b2yMlG2UMTzsfRb5FC6o0lXKe/yamrjAgZQ9hgfGQB+N2p/U5Trc8CO04i56n3ai6eqrcLMMIM5n1PZLFLfUcMWSamziJ32DzrRAax0sycxEgQ71hv/m+Fp6Q+arx1M8QiEYoASCVCjUdkxlHT7EKI+LQ4huHqY9Y6mtRHc114IWIcm7QGInYRmbyQEKHQk8s3z408oiYN9daCADKbuxtI0803FSCiFwBE5sSWLAe/S9Ss97XxITLyqHVEXYhvl0rO0dAXS0fOhfQCsgghoo7fiThdNpHyeoHskMeHAYy+FjGRpSTAYeNCELDfjaggJpCm3pV8mRvytjOjRDoVjQA1IU/mgQvbBMUFU4mxjhxioQjg+9yeyxBABrwETmwkNQPCRtxFLAtHteYiflyb6EuDFIsMIDqOppEgIIN5xyExttPtEAup9q2DJJo1HCNE1xrHSSFr0TOH1qUeUpwISQAZYG2u/c3JbZ/XuHxqbT519VcWzproM3kSQAmIhrVE5HUXOcSJ/OADsmcRUa29rlNBJUgiyAS4Z3L2l/kvPp29Re23+70ToB7QKcjgvdaz13wQ9Td/NPS21XETYMjEPfyYtcQv1nrPOgFAIkTIRaQjtUPM3hdrvWchgBKQPm9CIBEZemfrfoFYFj1AE+KQDq8iGkRzIfKb8/wTi2MoEZAgRGDM/A/+LRqGPzYuD57kR/T1AAAAAElFTkSuQmCC","Eqp_Cleansing_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAQZSURBVFhHvZcNsaQwEISxgAUsrIW1gAUsYAELawELWMACFtZCrr/JTEg49l7du6s3VV3ZhCTdmZn8bPeVbV3qtz4NlN70c2bkXXocU5oof1REkAvTe00bpdeLiNS9e2Fw6Pd/EgiJk037I21JRkmd9r1LQfoUpoxjzPXjkb8d3xPj5MR83Ia0pgN6mUrqiDi6FMQvDUlAhCt1YRFmFyQxfyHEyft9TOOxiPzG1L5pWkhWDVHLqMYsogbfsxDz0qC2z+bErBq3B6arB/YhbXL/6929Nw1ToxYZhBcr7dkreOOzCCcf35vFeXQBT2GucmAX+ZrJlW8fiNPL4WZ9/iRCJKwesoUBlF4PEZOGQ87K5fZeveR2NWg4Q1qDfKogz1m/LIIkbXNCBIP2+ayuxVRfNL+y/f1QeEcNM/LeySUjTwrB1dSmvgVHt9ciyImHEYdJwJ0Hxrfa1Bm3WcIJu7qrR4676vceuBMgr/gYzcPuuPGCkSoHtHJtM9tiJdMDy/MLAZ6wkNbYOm2oUwReaHNB5L2IB+Ep1XQ497dcYVAsQgBl+R4JRxnxl0Fag3brn3OhDQMmYk42Vp73twhrcuIeAgxqt36RByIvLqctBLkovll/7SKB0J5hICZqIOa2ciMPooCLgDiERDLaCuX+cDmktL26xTB1o9WNKotow6AK5/fMzyBncklsEOQmpBIQRLZyx1VAzG1lLSCv3s7tcrRCYoTKfAGX2ckXQMhVBAhCyHE54Hesnv5WSgAh129GWuzz6p18m4sAth95oZGHJaeQj+GLiFpIADHxO5P3iFrliIlzhuTXV7s+l+h0I8AuE/UD9D0TtRJhUN3atXLAb2WViyjki2aNI3/QF4t/EbCOjYAmYyUgHiBnyFxEJCZlJszkiXdKnsvIRcq+UFjykc+kjQDIAy6CA6nZt6rHlrVwGLmEFE8E0FtW/p6VaUYexhUQk5UcCPJjabwAWdk27gmE520rckTUoJ27A3LuEk5YrRg0l55P1u4CyANVLtCnEnEKtz7yL8Ij5vq2Qy7iF7epyGYXMHHkq8w5kCdrwwAxcQ1UIvAEfetc2Oy7xlnMNau73R4vlzclIiDm8juf+j5h44VaQCWCcCgnzGPsDsuDEMAbAQF9N+CQlRdUXFCU8aYU8hasTROxspILzFALiHBUQvAI2IsAzWqrH+T+OelM/t14a/LmvBFgiXXeBxcRkROxO2rwPfozVu4n6Wat+M4DZ+yvJvKI6ylCqMmvsC1YkTNWAkYJIM71m7L8rxDa1dd2FQFCSJByWMV2u5L7WN4WvLQg+/jP6qMxgUA4OP8tMUEIqVG+VeSqm0EG6bf+W3pOkJhM+tvzLEC7gFC7M9TWmIn4l3/XmpSDSkJs60GEmIDq1s73bxB03S9uSms81Vq0GwAAAABJRU5ErkJggg==","Eqp_Continuous_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAH+SURBVEhLvZILccMwEERDwRSKpRRCIRRKoRRCIRRCoRRKwRRcvdWtclLs1k0z3ZkdWffRk2Qd/qgl/C9aluW4LHODZj9dgjHW716OFz9Fm6DlfK1G8/wwtAFwvsY7ATudb/74dN9uafHr2w02X+KbBUeV2Dydmj+nsrmd0AYA9v56m0cOidFpDVhOTW1tWZdOdTlWgGGMd8Dyn5rKSZgDyb5Or99CO5hPR8xAb0C1fiCM/n8FCiSbePR00sJAMNAMM1AuMdUHAFi7QmLeQGyCHPWihLQID6ItGgvbbIKYwX48tq8QCKc6Ty/y6TBpHnVNHYT5aMO8qXxq5TlZeAQqf1u3NmUY1+lkyHPVARWs1DMSNwCYXynfPp03VhzAaMZcn5MrUm2uH68XA/d3hiEFDNoBRAJ2/7zMide0NG6kSQ1+lb4u4jW9KfW1641NE8feTMw7NaCbfwM1bM3ka1kvJTPQ/4dcLdmUev0rbOLJq2pQ/5uheUvKe4P+j3z/9A4aMEO9c/K1bFWqN9Qww2vJugTVTmN0MyP58KgGE6j0YuI1va1aXJp1yoDm6x3AzdS6hzHiu3QH5RuoR58Ee3HqPKeOmFbbqQZicS/CyHx8UOQMfARmVWgxIAwon1A1AfMNEFP3g6qLDmCf1DD5CbCsDjzaeQqfrbx49i90OHwBMHEeGzoKZooAAAAASUVORK5CYII=","Eqp_Crisis_H_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGxSURBVEhLtZUBlcIwEESxcBbOAhZqoRawgAUsYAELWKgFLGChlz/dabel0FK4eW9e6GazP2kW2H2gNvzvau+3pr2ejwZmf1UCMeKpHC/+WE8hbRMORd5m6USXU/0cdkm+bwcKdDpUHYhiUxGrB9+rQtsIzPeEKD/WHKycltxuyWs5sa33v69hpa6GAsi+VbdFoCab61mmvQ1j9HzfDIy+ryIA2cRjzYNUPIO4J8MwcfL6ewPk10bMcG+gzJGv6kkq7qK2gUAMdaNo5/RBvDYAxJrqKl+qs57JDUs9iEI/5TnbIOYyzEV1gvAU5tqMgJCKUJDiEbOcKOgUqHgU10mjG/nsU5EfuQPoWO/nYFkPwAy1AftzBqF3YGgExDwT76al6SZ6acGhWg1DPdBNw0gcE5/ZgKRkQPZaIACK+oT2MxAawU5vwCgKMJt4+KkEBGSvuTtyaGttcrijRQ2wssheAjKvdSXXfz3dzLL6hWuBhgHaBPPPU+94pXPQDCuPq0HWIzDu0F2azbzzWduVeE8qgDNoajrvU5ClAoYawBffLf4tUNYImu05kr6tXHwjZLf7A76+rDqIbOobAAAAAElFTkSuQmCC","Eqp_Crisis_HM_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAG1SURBVEhLtZWBlYIwEAWthRZowRZswRZswRZswRZs4VqgBVrwMp/9YUU4FL15bx+w2eyQEO92H3CP+HfucL11Fub4KhJx9X3G+RIfsyi5l1UqgqjbjJqcLj/LsjJWo+s3C9Vvf7oOIppNIddeavTtebNQ/bgOjzMrm5ONB2gVF96b9qB+8Qx6rpQVAIIcXXtcFWqw63sFx9syrh6vh4ErEVuLIAf5mPOEmmcR38kyIE9d/W6IvG3kLCdia6lX94SaT7EQiaU+KHrzsoXeNgTkbs1BcWlaPVMbIarIjXJYxFiucVOtIGIqo47e0UuoSfomGecknQoJN9dK4zRy71VB1I6i9nCuyQWehFnqQOx7iHuhxIsyeBACz+SHYTF9iYomNPvjqzKoQh+a9AmUn3kBoWJEDnLD0J9IQNMpSyJQgUX74/zvYgY1RZiDfMQiEiJykBuGFlENx1ovOX6jVUZZmeQgPwwvMswrtf7XM6TXqRPfEGoOok0y/3mqMW7pXCPNeVdkNPlBGN8wndIajLs+cm+jBpBF0+DkwSciowamCsoP30ccviHKPEgzHqPo2+TmGyW73S+vQL2Pbnr3lAAAAABJRU5ErkJggg==","Eqp_Crisis_M_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAG2SURBVEhLtZUBlcJADESxUAtYwAIWsIAFLGABC1jAAhawgIXe/mlmmxYKpXDz3ry22SS/3Q13qy/Uhv9dLTpfbgZm/1QCcfV9luPFX2sS0l7DochbLDU5nK7TsGPyfTmwVLft9nDuQDQbi1jT+94U2kIg7XKhngd6BrvMhzmxXW92tMuFeq4qfXUpgOxbU/b2DVCLt3tJLma8DePq9ToMHozYWgDZxKPmQWqeQZyTYYg4efXcAHnbiJUvqY6tJV/dk9R8LAOBGOpB0ZszB7FtAIhdmrN8bA56JjcsVZAbZRvEWs5xU31BeAwjj97RS1KTdCZZjgk6BmI315fGNHLvr0KR24M2u2MNTugBmKE2YN+juJcUmAlDAyDimXi3LI1fokoF6+1+LgxVoIcmHYHiT15AUjIgm1i39FIC0HSsKRBSgkHb/Wk2jKYAs4mHJyUgIJtYtzQp5TDWesn+jN6qh5Uim3i3PKmuruT6X08Xfq9a+AFQNYAWwfznqbrf0meNVPMpyFLxABhnmKa0mnXnR+xjqQHKoLGZPPQNyFIDqwLKD98jjn4ByhpAs7xG0q+Vmy+ErFZ/4EjNCNpC9+sAAAAASUVORK5CYII=","Eqp_Critical_Damage_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJRSURBVEhLtZSBkaswDERpgRauhbRAC7TgFmiBFmiBFmiBFmiBFvz1Vhb4kktySe7vjEZgyVqvLbv5ALnYf0fe1yUv0xCEtf0p8ratR/FrxLjZx7hLsm5me/kxlLy3YVu35nnofiYzonk9DV7yNPNF2NYteUxORLFrMJYms7n48X1CqcL7760ykQUR3shQS65PeYxIzP3lq24KUCgcuxVFBQRp3IuyPffD/pRQwXWe8rpMau8gwx9xqhvwcV4AgmQWnvEy5wZWPFVEKU92TpDsRgYhMfKiOERSYsaYyEtnxtaSr+oVpIKzoWh4xmgMyIN0TBcVYOVWU9vX27aJGFVpyynZTqRF/+QWE5xIhbrcto1Z675p81aIiEUOc7zolmdTspgKvJOtGu/7RXnVSyOoSGcF22qwIBKlToT2VAUhFqQ6p6P1/cyIk19y/afrvvLQX6SIwTswlfOp0PJr0jDI4/uqi32AbRp628IqcAenQrvoddN4WLhexAE1Q2/KkpQ9JQOHQhbJ64JnHGN8u12AoOShu2gbscaaosQewYmMtO5ejgTlxD3tO5SIKifzbiyxRxARTQUpO1OrU8YduDojYwsGu0e/OTsWRVvHPMY89BhSxyReDCbinylkQWwdufPY/5oM5M0IgwiPcalL/AZcExY5j0Y2vEhGK8fzdBL603Tn/um+vUoUkDoe4CAcILSmoYGI+xPmnjjbeP0cvQKtdrMW1sGbnZ3q3cq/2r4sjDk+9T2oQJCmcgejvWl3Yp8o+gnfSGsfMZL+GnXxN0ma5h9I1puxxYjT1gAAAABJRU5ErkJggg==","Eqp_Critical_Defense_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAfCAYAAACGVs+MAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAASiSURBVFhHtZcLkes4EEVNIRRMIRRCwRRMIRRMwRRMwRRMwRRCQXtOS+04n9mt2XpPqR75I+vevt1qabp/a2vpeuy6lXG0xy7t1d9vC2CC0o+Psqz27yQuXGN9s0v/pwgK0sDuW4EDjX7lfoTIdQIQMEFv2Kh1pRvorxrXPfb/yDTwHqBhK/3yKLv4tP2xcq8Sd4AhIPDMJyWsdEvcl26SEBaEfkUkwbcyDHuZwvP3tvF8KtcJAguf8GSAWyNxtkrojqlSz7Ofm8B4FgmnxPYYMX8qYM/9ivfz9QRuX69fWz7nNzc1fiah19jwKKtxHrBbM3NgdcKVntgvgl8ubfIvwCjE2Lnd7f9NAhBlF3TyE3tUuKlE61kF8wb4fGvgIfv2ncAKgYX31UaU284kbvSvOQEgMSevTm0v4zRDALm1YS6D4POF3A7wpYIL8t58Nj46oDH6AaJJAgLmxDWAs6UCeBoK2AM+EF0zfcAmZaffGM6IGncmetT71zaX2wFuP5CgW8ENxvIzMYevKkjCHAB8BGIUmMGRbGkTAh6J54/e9Mymp+onqJ5nf1u7CI3jVYEvX3MBry9N8htS3wE/1nfBk7JfYqklAft8b9LZavLV+EtF0LP53PEQMBdew2BD5h6zgNQlBvPyELiCF0pMJTBigPDOceRHAEogJOc7wSSTFnnRFHN+zBVxCgM37WF4HoAx8ckaCRVJJR4tGfVQCiE5JqjPrlO1nkLtfSBVEibjMwzcWMPvXDZwvGRyKIYxMnq9ngF/SEQCFl7fNyA9VRH7dwI5t30j0MKgFNX7o7oJEuClIwAh2Rojm0VoggTrvJHQElDwWAmY1+m9c8c4CGCVAJO7q1XvGaC8K3naCAguf3ND1iZQkDEUZyUyHGeTTF4HOK66pF1l1hgSX5iQf8pBei+BkL0CRgnF3Nly+61qnZTw20xM/vqLOpEKWUEFB3jay7Kx8qw914z/kwBl4qTAij1reE1WyZxIVJBvS9Q8SlKCExLLfGwU1J07dvsgsAEugROJj/LJvQcOSUQ4VC3qRSqRxrP0HNkBpKqfmlsAn7/mQILvxO+kgnnwXDZVCYnXZYuXeq6pYKgAcIJTnmfqoKcpj3XHphcKtMleVoHgG3Yi8bGdUi2PpWu+uMQknjF373D3dBfd2U0BV/IgYcmndwdu872FQeDMbPtGIlYE5lhDkLmw+j4kZ2xs03ie4J4j9NizZSOR5w0PPXxKY5IPFYJAWhalSsJNyrEKHQRCAQmw3iXQQ4+EWzxBIY34VModEhee1dM1ZCp4NiZ6UUFJzyoc4XgSSdt8FgkIuHEfSr+tBWe/NM+anjkP749WVXCd18RqJJRVApkTx+popveSjPES4N7DC0UGBv36wHdbVaCeqgE/cum11bi+hEITOMHP5pLN9X+q8x5aR+JvnMc8U24U5JYDz9h/a0yQJJ5ngkYka8TCUnPtfwE3JJ6iegh4yMkz5df/rH5ulYThwO+qhpZEzpbvJCw4dsgrmKB7uf8CPFvNCRPTST+OZ2k+9z13X/8BqSQuqvEL8FNjUvK6EqG3LAsmIXvvBf7dv2BH67p/APdAjhzEdOubAAAAAElFTkSuQmCC","Eqp_Critical_Shift_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAInSURBVEhLtZULdcMwDEVDIRRCwRRMIRRCIRRCIRRKYRRKIRRCIdN9tly3XZr+9s7RcSzLupMtd80H2rL9uzZ0+lkcWNtXJRCjf9dyv9nH2oVYkTJXjntbSjLO512YLW3zT7LVfMRp54tSwjielICkt8IXRrMp2/A+UAkZ0/S+MqpxUGQcV1VLbNryWB64daFXwjxHmru4KqqgmmRrGvtjoBaXZd2WdVV7dzHBGH3dm+FsI+b3FPpFkE7jouPNe+60nWyncQqIe/LK0Gp+4jw50HRHqxIzd/N7JF7ZKyn5rYADpFKHeqNQAcAuH5vAVBXPWwjYSXNis0kF1OdETdtubdNqtGJ0hEBQgZHQElOBjCbh+LK/62bFVb80kpLoTix59rk8UNA4zop1IJaqMLMqSuvznatCOfYCiv1kjjtYLQFDVWENdQPs3yh/S3JwH2GY7OguCzu6qhDRUPjTsnT7RxRpQ+gHM6usPYShDLx0av0s8NPNeX4lBQOKw5iAj4/SJQBP4VZ7IKSA0CdQHKyDnqyO46MyoDL7xp9tVwlooGj3JuDBBpOeBu9Qf+Tljg4lGBA2ueFPyzuyE9A+ix3tkZnnKRgqGzEedwI+ur9WewD5/7nkP5Y2+u9hMTtW1v547CaHvQZyafMVUPc4q4FI3qp50si6x7M3pXhNSoAEESx1aijjVN7XJyCXErgE4GnEsbQ4ohNz7Fd0Ba3lawR9W3XyNyFN8wvekL9aAt8gmgAAAABJRU5ErkJggg==","Eqp_Durability_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAHnSURBVEhLtZUBkYMwEEVjoZ5qAQtYqAUsYOEsYKEWsIAFbt9Pfialx5TS3p/Z2WR3s4+E0KYPtBb7d61omWcDW/uqBMJ73MrxsI+1C1lHbMnjUKk7LTWZpmkHFqAeizH+fh6Y+41jBtFwqwAsCZvl5xS0eTkFVD98nv6xs3iADMsm2HB8dy5cr9er+pU50rxqDlsyoLUp/bwEKmkt0cQwfM37MuD1vvJ0SqMg9zDB4njLmietc3w7FqBhGNau60oki7r63gJUj42LETupN7McLfXq3kjNtzIQeYe+KHryeDYfGxBiY7qtQxrWPnWaU1tMqiAaXS4XGXE8YnfkEHByYzQcorF2KVvUnBg5YO6ND5PUhIaMc6jKMdVsgZh3wnvybQTqXaFSmycc0e12q8EdqbYF+khbA+4xKmNJgYMwpHoDLeI5LT3sXJEiFXOEB2FIawD60jSvoD5ImT9ICUB938uXy/FKT59EK/K57FFKGvTu7tgZUDxGvNiutBAQZ30QqBquNQ/avKOXqjDOe3PLduVvkFr/9eTMa2mhQUeAhgE6BfPPk2E+0p1LozXvgiwtNtAwxrwX8gUqTxzx402MBu9KDVALYtx6f1/b370zUgPLEF9xf1/fALV6gLZyjqJvq21+EpLSL9693TzfqXQgAAAAAElFTkSuQmCC","Eqp_Health_Cut_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAgCAYAAADqgqNBAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMRSURBVFhH7ZdtedtAEIRFwRRMwRRCwRRCIRRMIRRMQRRMIRRMQZ1390a3usqN26T91dUzke5zZj9OcqbPbF6mw7wcjtxb13+bDkRjmY6A5+M/i06SvgivDWcJoH0SGPtLQtLTs+7v0QLLdI32Ml2ENwExCPlGEQPxspyX5UMtizBSDCKIxlF9X7ROfKUFcfTG89bcr+u9rfmCgL1QC6Pdlksg7f51AVp4EAhfD/XtMflV48ZdPcyLtbnHkzXARNRqkcgv9EB8J5t6ZvPR6HsVlXFWPRQBb9rnxNaPLT2lUgkVRUPYboyseeaK9tb2yOflzWuQzZ4PvG+eCpBGYRkX9f5Mfg9SDA/5C2HFy9wFyAn23cn9TlEt9wZtYnLuHndxudAyFfcgrKA/1mQUh9APxJBVYvJs8oD6mWcyiB1m+vDUcCqCZZlmeIQW+iws/OnEJjGaAEgtwoWHZ9A7zBDSd9K7Dhz08qUdTIKIe+gjDHQUYjaWtA1MHCIKuUnw0BjJvTf3Tp5eE+71rQUBZLo4zWieGTMQMQoAJoPY1c6zvWY+d5EjJ8jJdXrdiGfpauRsHV8sAbUUSwgZBVQRBkL8bGJd7EGKg+KkxvoCGcnbxPhmM1d4VV9GqQgIqN0I8tLzRlQS40jPdyW/aqiQbyszUxSnQtgIcBFyj5lCCOuCcKQThw3kEBtNwEXj23OZUSACkYIgFskaAaMTbz1eLT1Zc27iD6o0F1IurUCaKQIhyEdTJAioiFm5/gExtlPtEBsl94R63YBnIUQzh2OE6DXHeVIoOaTsENuG0EPKJoYFCISauf7aIXoOcq2LHLdPreY89wllM2HjfSUvAkgB3jCXjSPvJoe4kPP5/IXHxTSxv+XYSGGs5E5BEaHewK2Ss771I1BDz1iGEm/6r5UiwDXgU1DBuOfHTun1Jz8aRssiQnEXIFTiEXHMtsS/+XOp2iAAWIQJeRH5SI3Ebe1zud61rGTUiyqLEFhEhcd0fQOxLU8Ax4oNFfQuYoMsLkQi9huIi4mcQqw/JhFi0P7Df4um6QckNNNU2A6SvwAAAABJRU5ErkJggg==","Eqp_Level_Jump_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAHqSURBVEhLtZUBkYNADEVroRbOwlmohVrAAhawUAu1UAu1gAUscHl/85mFGw5Ke38ms7tJNo8NS3t6Q2Pav2tEQz8YWNtHJRCj57XsD3tbq5Dx+VVMur8NVJnH47ECO0cw/LahPQxUvdvtVkAUW+oevltYV9nYHAKqHmNZlvVMPACABA7M47Tkli1/y4nj5XJRvVwjqstX1IbFuk1gWt9sAxW0hmGYYIxTnHeE+rwYtDGAAGrjxLnnl8a+70uREKCu68br9ZqeIvLKe7sXaLRObcPH2patJV/VK6n4UgYin9AXRU9OC2kf9iy+xzXschq776gZa3LTpAlEofP5LMPPiDgdMQScGAUprBOkCZZ+YK7NGCapCAWZF9ck+5SzBGIqHtb7gkRb/c68L3PLgha17eaHqNwa6JbWBthzlHNJjp0wpHwDLfwlLM1OLk9KybRwJwxpD0BfmuoVTA+S65kUANQ0jca8HFv69UnUIl7S5lLQoFdPx8mAMmL401aljYDo9U6gcrjWPGj1jjY1wej34patyt8guf7rKZFtaaNBe4CGAToE88+TYW7pyqXRnldBljYbaBhz3gvxhGrEj/jxxkeBV6UCqAYxr0d/X8vfvSNSAcsQX3F/X58A1ZpBazlG0qdVFz8IOZ1+ABbowlegjqZ/AAAAAElFTkSuQmCC","Eqp_Limit_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAG2SURBVEhLtZUBeYMwEEaxMC2zgAUsYKEWaqEWZgELszALWMjy/uTPDlZWoN37vitwudwjkLbdE6Qa/06CeZ4tjPFSJOLo84jzOZ5mU/KZropCW/Fp1Gaapk3ZRxpazDlDnWYeRA1vt5sa0GwNuTF1LYav7rRQDTmWy98ruyeb0mW3zIWp73s1rNeQr2blgBXwiSBGPz0WatCwvS3j6HFvBm+M8mhzbRbEIF/n/ELNDee8J8sMdW6OyI+NHCtx+NFSr+6BhchYCJZ6o3Dn6PzYEJB7v5Z4G0sNtTVEE7lRDEBkqWvclBU41jLq6F17CTUJ7yTinGrWQsLNEXk3cu5VQa39EY1jLqvJDVQbhVHqQOxzqOdCiZ0yUL2FhnwZFuubaKh4GPLO2ScDzaGhN014Be1G6vUCDSBykCtDf9JE92C8lC3RoEWXy+6fGM1DGIN8jU00EZGDXBnaRDVsa24yvKOHNBmTHOTL8CaaR63/ekr6MW3iAaHmIDol88+TIzzSe40056jIaHIU+h2GXdqCcdfX3GHUAKJoHd72z4iMGhgL+OJ7i8MrRJGFNOIxil5NbH5S0nXf1dXAe6TZoKEAAAAASUVORK5CYII=","Eqp_Mana_Cut_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJDSURBVEhLtZUNmawwDEXHAhawgAUsYAELtYAFLGABC1jAAha6ObcNdGaW+dmZve/LK6RpzqRN2csHitn+XRFN8+rA0r4qgRj9uZT7zT7WKWSNk9mc37aPgUoTxuUENtu/EBezOQ7yEKeVb0oJ2zApAQlvhW/Y6jjGWmPYKqvvb0AlZEyv95VRlUBmGtdaW0tsWvJYHhjrplPC/I7sbZMPUQH/D1ZNMIgqs7F/AajJdbUU26b2rtsEY9znLQnyxqAygP1axX4xM1CwcbFa85o7xWlZDWJJMohz8srQZn7i/NyAsXVsG42R4Mn4AcwRr+yFlPxWwAFSqUO9UYJVQTU0A88AqKybarMqtgPbWTlsB+6gLie6VFWsLhZooxWjLQSCHEbCbk5bhVEZWyiY+ZuQqiq+NJKS6Ewsefa5PFDQNoyKdSAmqBlV0IlYvxxVoRx7gNqOw7yDlRKwKSosoW6A/RnlZ0kOzqPpB9u6Y+JEVxUiGgp/mpZuf8QuLWi63swqq57CUAYenVpeC/x0c36/koIBtX1IwMdb6RKAq3CrMxBSQNMlUNuPL1fH9lEZUJk94892qgQ0UGvnJuCTBSZdDe6hfuRxRk8lGBAWueFP0yeyHdA6iw3j/DIM7QsxLncCPjo/viD8jbMPU/47l/zPpYX+PdzNtpW5Xy67yWHvgVxafAXUOY5qIJJXap40Mu/xrE0p3pMSIEEES53a7KN9y/P9+gTkUgKXAFyNNuwtjujEHPsVXUFL+RxB31aZ/I+Qy+UHeZ+5YCbvpwoAAAAASUVORK5CYII=","Eqp_Overdrive_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAeCAYAAADU8sWcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOGSURBVEhLtZYJseMwEERNwRRCIRRCQRRMwRRMIRRMwRRMIRRMQdtvNCNLSf7uv3aquiTr6p5DSoafWB5uYx7SRS2gP/rU/zUnvAmTIwlXh4nxpb9r5fAE2d0+BfVXvoVFaMX8nggdhleVOOeU86MIaKF5xMwC0blo7Gfm+YV45RNiG7Z+b3W8RIM93xfAZj+khhq82H0rwI7j5wK0SZX8FOr9Pfmxini652Nerc2PRyuAFHyuBlgoRHEtDOnEfNydeBLBs0F8mfNj1Dq1+0hNVAHUwJWzPzQnpVIhZQOqd6Yiz/o+yndvh5GLeJytNXKlwfdQhJz53ntNkFuFJ3FlrLAC91tHXlrltdr+sG8IDZekCKS8jTdFqwrAmdfcMyig7Ly/x6iwgSEvTk4b8xxqRq7VP0iFBGwSB+kq0GbVgJ1nUUx96Avx+XBQUPkQnJg8F/JJUCglytY5GSIO5Rlv86zQIyqgNczZ+ufQ0/GBQiyyShJgTAIQFBE41uK9eaaQR7ghZOw+XoRrnsbRvo2qCDhDrw7FNduEEesAHSxpWSsM9PGWvBMFI/eqX5yE0AKKDrJFY8xNg4LKfp1tbamnC8TudaqvFp4Z2XDTHUmEaWMuYHVgAs5rB5bhat5CHNVOP7zmbGvL22/kFFnx2om3uXircYjjV8uvXDIhVg9NBCIFLYhG9BvieO1GzVjI/QEp5LvI3XNfaG8663ihEFKi1ESAvXw7AbB3oI2MxhAPcZfv+nqtqXju5LqcptIWayMpQogEeJoUAQiiCKkJWyow3giKKi/EmD46zyEOuICXJ5EDBCJgKbDHhzR0N0R9jTGPUK3tiTE/qOY8iB9L5z1EdaP6RECiU7ma8g7PW9iysj9y3BNjfpAmz2qHeBcaAS8HqE/ETLQG7Rpt01l4mtsFrhR18kocpsku75BGBdO6gKh8PCZaNfQ2T6jJcfzUPhfXR6YF7n38Qyn3t8IfHOYFvGGtPEpGbp5DzpO8VfL3PyDvTAu7wiOMrfeRgkZEYC+eq8BOYsYRqKlPGAsF8uP/VnRYCBCiBuIWADw2YgkMz22vRefpl+tfpk3ksQt/FGAQB3iIaON+n++2FSdOfM7r1rQpBJy/6S4iiHmI4kr1xB/c56+YC0B9928mRJxQvcXcm+v4bdMh/pDYgZ2IFoz7/N/v83dMB7YiuD4QBfiGlPkv5ngY/gAP9BCdPh0tegAAAABJRU5ErkJggg==","Eqp_Reflective_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAQySURBVFhHvZeN0aQsEIRNgRRMgRRMwRRMwRRIwRRMwRRMYVPYFPj6GRlE17373qurm6ouhAW6mRl+tvud5bULeQ09ZWn6d3aQdzHv02TlvxRRydduyq91s/ImIndDEPoCvv+OQEgK2ZS3uGWMkvqi9kkhCRHSQZgKxlKPggkq0/3MCjkxH/Parzm/jN9K6otEjGGQAEgXhgB9r9SFJMwCghDz/4UU8pD3ccyvJPIH29OWpzFJwMqQnEdpO0S0EDGCEIJXerV9t2bVuN2hmH94QORhyX3cGAY55fF9tdp+eAVvfBdRyMf83oizXG8CBmGuObDGXeRrjnGTT78S50XdAfZ+/16ESFg9ZMkGUVIn2RYrtQsWyJcc+xVyc/v+CwHTcmJ/tSIIxzUnRNZrn89l+GH7lHKSgCmAMSfNFOMawkH+Xgs5BHdT2ztMFS8Nb0SQE9GI3STg6oFFZVIYYk+mj0JSzNcchp3uHndN9OyBJwHyShlDYhKKBy8sIn0pB2aNGvrJiDWAnx1peBCgOFfTSqlD2mLTrm1E4IVrLog85FkiJvWMcRb5ub/fBdpqLoCy/u4JR+nxlwhIW9Bu/Y9cuIYBk5s53Thcjv0twpacuLsAg9qtXyGEvLqcNhdURPGb9e8GueIWBioCGWorN3InchQRELsQT0ZbodzvLoeUtkUnNpjkYOpGdYi4hkEVjsyZTydncrZcCyc3IY0AJ7KVF9wF+NxWtgL0wepxST1aITHCbtgFXGYnnwMhdxHACSH3XcC3r57+VgblmUKub0bazXWsvpBvcxXAtvGbDtUk0HEM30S0QhyI8W/62ZxsaXYZZ0zS1a4JcX/yTg8CyA1EAvqeidqIMKhu7dqigG8XVsnHkOx9wbZfuv5DwDpeBFwyllJAyBmyIsITk9K6CibORen2zGPPIackkXHg6QD8EAC5o4jgQLrsW9URgScsHEYuouoJh9rqyod+zisZ2piuAJ+s5oCTv9LFC5DVbaNvPIHwY9uKCBEtaLe7A/I0LnbCcrGxcqxcej7ZZRdA7igi/AxvRVTh1kdbDOEec7l85/a0W5TbdNHVjgDeGee1X3fCJQwQM5GjEYEn6Nvmgr0PGGcx1zVtdb0btGodCJc3pcJgxFx+51O/THjxQiugEUE4yAn6sjssD1wA5KDH9aMeL7yg7m/Kh9e1mSZiZTUX/Oh1eDgaIXgE7K0A+x7HPW9pN9678dbkzfkgAC+wqiOxbiI8J3x3tOB3729jYyTp5O5HD5yxv5vIPa6nCKElv8O2YEvOadnrITNzGTRvSv9f8eT+1u4igAtxUg4r324f5IzlT8scggQcr+sv/6y+WhFBODj/LTGBC2lRf3NyjVXdDDIj/ZP/lprIDxsm/XieOWgXEGp3htoudojQrfQT8tY0aSsEIsQ4qNNuZ0MZ8gPruv8ANn+3N1RzXroAAAAASUVORK5CYII=","Eqp_Ring_of_Restraint.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGwSURBVEhLtZUBlYMwEAWxgIXTUgtYwEK1oAULZ6EWsMBlfvLThYO20Hbe2wdsNjuEpHfNG8wlvs4M0zRZGOOjSMTV9xHnU7zNrmQexhxwX/Fp1Gccx31ZP9zj93ZamPsNQxbRbE3KTW1f49Z2p4XqxzU/bqxsS5ZWS22e8hgXzpfLRf3KM2hfKmkFPCOIMbZp3hOhBg3H2zKuddyHgav3K9UiiEG+zPmHmhvu2SfLDHVujqh+NnKWlxdgjHp1DyxExkKw1AdFb54+oT8bAnJD+6Pom1bP1JYQVeRGMQCRpa5xU62oxFpGHb1LL6EmYU8izqlmLSTcHJFPI/deFZTau6jvt79vQLVRGKUOxL6Hci+UeFEGqrfQkM/DYv0SFRV3XfeqDDSHhj40YQvqi5TnBRpA5CCXhx5SRVswnsuWaNCi6/X6sgwQxiBfYhdNROQgl4d2UQ3HmpcMe/SUKmOSg3we3kXzqPW/npx+Tp14QKg5iE7J/OfJET7pViPNOSoymhyF3sNwSmsw7vqSO4waQBStw8f+HZFRA2MBP3wfcfiEKLKQRjxG0aeJzU9KmuYPI3rCrOnQ+aQAAAAASUVORK5CYII=","Eqp_Risk_Taker_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAG2SURBVEhLtZULlYMwEEVrYS2shVqoBSxgoRawgAUs1AIWagELbO4wLwwUyqfdd847KZPJ3IRM28sH6t3/rr57tv2jvgsY/VUZiBHPpXjyx1qF9O1zsMvzTstO1FTFOqxpR3fdaaCBqvI2gCg2F7Gyye7K+jQw3hNyQtASLJ2W3GHJeymxL66/72HpBDYkQPSzrDaBNtk+ajPtLRij5nMzMOq+kgBEE/c1L7LiEcQ9CYaJk5fvDZBeGzHBtYE0R75VD7LiKioLCERQNYrtPL1CvTYAxNoibTi5KUp7JtdtyiAK/aTnaIGYizAVtRO45zDVZgSErAgFKe4xSYkGnQMt7sXtpN6NfNapyPfcEXQvrkuwqBdghMqA9TmC0BEYmgAxz8SHadN8E1m2oLzthqEMVNMwEsfEFzZgsmRA8l4gAIrqhPIaCE1g1QEYRQFGE3evyoCA5D13Rw5tbZsc72hTIywtkreAzNu6lKu/nmFmW3nhXqBggE7B9POU7a90CRph6XE3SHoF+h2qS6OZVz5rhxLHZAVwBM1N530KkqyAoALwxVeLfwsUNYFGa46kbysWPwm5XP4Ag+6ejK8/+vYAAAAASUVORK5CYII=","Eqp_Stance_Shift_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAH7SURBVEhLtZUNkcIwEIWxEAtYOAu1gIVaqAUsYKEWsICFWqiF3H4veZ1QpgcF7pvZ2SS72Ze/wuEDcrV/J8M8zRZs7atICO92i8fDPmZT5HLLeQyDOazmvY0KXa/XTbHhknM/Fo8ueZq5k1LwclEBCq5BIPU5H0/Fpy7nKcbJV4UdqCC+dB931oeYheS7Wbslt0z5GyfmrotlBrUPuhfDkdFHADtWn47TU0EFzTzPixjecYoAj4I2O9PDCIH0Y7vlIY68znkgTxMnXUDofD7n0ynOpYE8F0coRZjdUJi+7Br3GH1i5Kt6g4qvsSB4h34orD7q6jH4jtLxFjYWS2flkFtNLEIUSinJGMcDuyMGiCumgqN24Gev44sxxQ6D8qiNDxMqQkHaZWjBY8pZC8pcHKH6IsudlV1BzS0djmgYykoY3EC5raCPtDV25jbUttDAi2KgfAsaxktY3O+8Qckc4YtioDkI+tE0V7AspPbvUAChvu/l6+N4xsMn0UK8pN2joIX27o6dIYrHGK+2iSYixFm/KKgcnjULbe7oKYsY5716ZZv4GyTXfz0l8hxNtNArghZD6C0x/zxZzEe68Wg0Z6+Q0WQLWow290K8isozDvx4M0aBvagAtEK0W+/va/279w4qYCziJ+7v6xtCLXeiLY6R9G3a4m+KHA6/ainJg3Hs0hAAAAAASUVORK5CYII=","Eqp_Swift_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAASJSURBVFhHvZcNsaQ6EIXHAhawMBawEAuxEAtYwAIWsIAFLGAh73zdaWAYdrfu1qvtqq4QSHJO+i/h9UdZa9dttadtb/6hrAb8znvNtP+WBGCbgeZ5rwtt658kkp4HkXTtrP+/yKaFfMflvdW5StQ6Cd7PAkwGOkhz0yR9N+1f778lww7d9KkX+LYDX6vanb6RGAWcDHTSjGr61jf6Qx2lJ6EfEWngaa9p3H3ndyki8Z4FkgQo4FqT2DUSV3VCRYqVer37jcSu3ceh2SzguJW2X+WGSbvMWrzr9CYfgHeJ9yIyiSzW+A0JT7O0EGybBq9ivUk9BhYWHACfBdzANesReFprnaUI3rNxkHCXPJDw3QM6MolWCjhWoM3TXleBT68SO5fZl18TKJNsIwcWKVwY10gM3zEh0yvPi093yZtILCIwmaZhMbNPYfZ9dvAsoLsA2olfn73tht3cx3gRICbehnuIp1xSe1pgUb+ILb5L6mP2JCu8Ln4f6k57F0gFgb4RwCptDoGZHq0ACTkbP2eBZwNmAhObjsmj3vqDL9qy1GRVhz6gnb7T9jwrkCYt3uZhhVssEAdu8kHgReBHftdNu96lSrVxcAK08Z3dIRF8+N6CTykDcNdaXGNzvFbc3IBkscpWQDy/BWjA6KqdTkFAtiUI9Z5xmBxACITJCUL6oZDCLYy39XHDR9nGJ54mtnMDB+SqvBMJef6wRAQjOxTOYXZAOxWRrp9dVToZw1jTLzd4/S56auDapcBEkVGmPLPrSeAAGwGNYc6rcyDMjEUsEzB/e991xcaxto3/yIZz90dpJdgA1LvN3g8KTvpNzS1Y45KSpt3igIDLaJaKPLfds7aNSyKQgwCmiN0Drh0uxXfdwOO0gzUBZGRwhZNwSxzWuKoIxTNkSWNL6VHrUWPwjhbE/KMPcgKrCDQLnCXUx8Xx69a6WIK5EZj6jlqdON3UwKc66n6xWu2h2mrgB4E5uwUagUV61nB3F2QuJDwmIjCJEd6jFitGSsrpKXClu9VPFb4iAsMXAcBDG4nv8nmSMHcAai4JS5jqGfDY+VhLWh08RCVfrr/FQIBv44cVADvTxi0BcU9bAWEBUwUwLe8D3M4SKqzfqM6Sz4n7lAWAr9ILCY8FrmEhTsCIE7CkGMTd52by1U5PnaKTyoQAMbmRuBz7bb2bGwC2yJYPaRuJyAjGYrXDDXxnHmO19Gl2gSsD7T6hluscJDj44rjXVCfwZYUAfyDBIcXYyIjFLKA5VrJX/P6uCri50yXmcqes+r/wO+UHeMjNCpjUCDQS4Y4LkdCVdxZ0bff9qExuO78Ld82E+VWfHDjEY4FdeWAFiWaBiInIDpSdG7jGxHjzf7GgKzoO5G4Xu1OeFjhj6UPcrx+uQAEO8FCKFW3kv4Obdbg9ZRGw61zEwKBW/aKdP5j/KieJ807QiAT43FLtARyXeLYs0vNO+fxn9UtxErjj41YURK4a3zTuLNshgCngyl/9W57FhkW/rmeH+q75/vwDwqns/xw/AL+Kp2gQoSwDFkof4B/+goW8Xv8Bda/WfsEemLwAAAAASUVORK5CYII=","Eqp_Totalling_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAS0SURBVFhHvZcNsaU4EIWxgAUsYAELWMACFrCABSxgAQtYiIXM+brTELjv7duZ3ZpUdeXSCTmnf8ltfhr5aNp8tB1zUf294eBNn89psvlvkijgg2TKadttfpHIvfYMTacZaXP3PxEEpIAJtN8zgzlIrAIEeBDBXrrBZJT0JhAa/5BMAVfMu1my5XwavuZkz7vAFgGPBrryCiLQTbJKt0icUC8yv0PkAj/HMadV4F+Mc97z2i86eOOVnEfpnEQtRmhoZgle6qT7fhjwOQ35HCQj82geOGVxujygMHQCl4VTs8ks6cYb8DUuvXsFb3xPwl2uTWknzgIX63NUvLtFZEoODIfAV4HvbVtZ+h5H52Jj+5mEWe+gi73D7AScCDFPq4PPslzg5vbjOwJt1jsuG+tzTWKQPHNCBynm0+xvl3FOIqFwrJbxY95HLF+7ANfBvGog7wHoKlnKPLNn8f3khBLTgGOIwKcHdj0v/ahEQyzhJAfbI+46LPnza0AK8EIgQSCt4QUSk3L9wguRA5tcPkumFpdZpoesgw4JAn2EwFPExyTRM6AQYN7RaZxXKKiMZy4IvBUw7h7kajbc9Z0kp+KqUlsKAeZrPRLuLMlncd+F18qeZ2TnWc9jZ7mgd59DwJ3cTAPx+laS5QSwgye50wlgkfJAa7bP8kBWk3y4HMvR8YycHtl8FA/ofHmBirjDICU9HaVZDqCB1IKOpJJHwhOQYv858SzrcDkiYHT76HJsqz2z185/h0EKevjMTweXlXIlzUa7TKzxyGryAGAjUKphkw4gs7yIESj6degcWGfb7B3Sq0E/3PpwvQ7GQgPsmxO9ZGctxEJjJGgRtz4AzSOsKxz8TsV6zrZ5FIHxJsCn1K0HHLfJjVhdwCetkxuWnBIjY8lZeaImEgKZ+M0+M0pt3KqMHrMrD3Qg7l9iE9YfImCbASRhnCT76GQQcm9VnuDdKzF1hvZYn4gwWQcFfFFfSdshcHqPipmD+5vAVjxQQrDrMCOg9UZua6XjHnBXizxxV8irRCEXpGhmgO8yinHIo2r1Hx4APKR44aN9SodHIGHhsAZFSMITIdJVbhegWno99An4yIEAP5VAlRcAu8rGPOE3Hy9bWYnlCGTII/T27QB8G1ZV1STruVE9PnoQ+KgCwA8y+CbhuVB9TvX7Kl1LWJUYxCMZRfKQ1ZvCsEpJzHE5BFQ612ffzyvWXGEAODKbuYQiKsLvfFUYbB2XE3N10CvhAI875dlvWoOEf+brC64O+vBCgNssKZ6ABHc+9kZF7OYBCNC+JT0EFu3lBhV3Sm5WRwsJv9gGeAwd9EhGXBrgEIlwVETo6cyH6UhAdUCzfu4Ouzt+NdKylcvOi4DnAhdIT6yahAhETkR1IFhu4NoT++1dXV6UdNyq95yS4ZonuFW7B65cegyBE9tHKBCAAzyEZsUc9V/1eW5Pkwj4n5oz/lfobuk58M//sHQAyQWJ+05QiAT4pt5uZadye4ETEm5RnQhwySn/rNYv/1l9O4onSDISzryBBJFarjW/dD5LVWAGmuZ/Dx5Dh9F2SUwOfRCpRWtRGRD+iK2T+A//rgXgXc+J8EUEbCmkeCZxWf8DgKb5BfCo26zeeaUJAAAAAElFTkSuQmCC","Eqp_Ultimatum_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAPwSURBVFhHvZcNsaQwEITXAhawsBbWAhawgAUsYAELsYAFLGAh198kExKWfXfv7uqlqiskO0l3ZiY/+/hdGR+xm7rYU+eunyuQCs91jCP1j4pwcmHc1hioc7uIWPQt9Bl8/x+BkGSycX7GEFWoadM/naQvYcwYcvspmKA83fdKJifmw9TH9dihj5GaNiIkwIkXDYlA3yttYRYmAUGI+XMhmbxbhjiEOa6Jui3qD8vTSFYNUc8Q455E1OB3ASGI7dX3uWRiVo3bHeONB4JWzyqDhhk5dfpui/fLFnu88VlEJh/2YHEesoCXMFU5sIl8nY28+0i8LwlWjiTkSxEiYfWQzYyhzm0XMW6LkS8il9s7Wcnt22cBYTxxbI0IwtHmhAh67fMpj7ei9ixCsh0M66slP9ZEDsG10Dd3R4W9FkFOPI3YiwTceWAQIWpxmyWcsMlcFinuat964E4AXsljmIc5370AKTmgFY8iZ4uVTHfMrxsBirMXVkob0hahFoEX2lwQeSfiXniJHIOyv+ORoa3mAqj9d084ao9/EhEa0I89cwttGCioElh52t8irMmJuwswqB87J4TcXU6fC3JR/Ia95g9CGwYaAjG3lRu5EzmyCIhdiCcjK8T97vIkJsSpWwzDQ1mtNrZAPG0Y1ODInPRZyJlcEhs4uQmpBDgRK3VcBfjc1I0AfbB6XFKOVkggVN8m4DI7+RwIuYoATgj5uQtSDtg42VNrvkYAsU+rz+RshSyAbeM3nSWnkI7hi4haiAMx/p3IO5uTXSYKDrrO3T+70Y0Au0wysD0TtRJhUJt+/W7g+9AHtZNr6jm/Lzjy+zcB69AIaDKWWkDIGbIswhOTOhEm8nikewN7yEWqFD2P/DcBkDuyCA6kZt+q7VvWwmHkElI84dghL26f1iGRe+EK8MlKDjj5rhGVFyAr20bfeALhaduKHBE16Idc06zcJZqS1xRoLj2frNkFkDuqXMCmFlGEY8MWQ7jHXNUGuboWblORTVnAWF37ZSc0YYDYMxtUIvAEtnUuBBOgcRbzUFaOnuXypkQExFx+51M/T9h4oRZQiSAc5AS27A7LAxfAGwEB3aOXa7R6vaDu3pRC2oJ10USsrOSCH70OD0clBI+ArQjIq1/6uIUpcje+Fd6avDnvBOCF8z64iPCc8N1Rg9/dnrEyI+mmDx44Y38tIve4niKEmvwK24IVOWOZQz8R5/pNWf5XCO3q63IVAVyIk3JY+Xa7I2cOmfHSguzjP6uPhQkEwsH5b4kJXEgN/012hVxtK5BB+lf/LTWRHzZM+vY8c9AvINTuDPU1BdJ/+netSWshECHGQZt+OxvykG+Ux+MXrSfrFKXqhqYAAAAASUVORK5CYII=","Eqp_Weapon_Jump_Ring.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAYAAACN1PRVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJUSURBVEhLtZQNmYMwDIaxgIWzMAtYwAIWsDALWMACFrBQC1jI5c0P621j22133/NkHU3at2nTNh9Iwv5dsq2LLNOYwNr+VFLKuk9+rexX+1iHECmDyKbmHx8DdetWmcfuPgxQ6cM67VjeBurWLXIeAmSTXYm+VUGLtgut2ptAy4rWP+9tY4AArgHc+pdhGSj96asuCsTsDkHbrD/6XWel/7cZ4FCPu5E513mSdZmsvBNGm/69GGi3Mba2KMAhtAJM+2PMjXTyoQINMuk5AdkUBhAfcbZtZAMsM6JPt26vzDhH4m32SpYFZ8Ok2dJHYQBP6Hk42QS2TVoENYy+MnVSzr0sWrl8ExtmcpBN1EnbNmqtt00rJUD4MoYxNukUGZGFwbwP3zo6qHppTDZJpxO2VWcoAy07A+pTlUAsoXZOVv7+P7MiPmL9o+u+ZOxPlhGdB9Is50uGGl9D04Dv/zUu/pv2Sht73cLKcaBLhnrR66Jxt+l6EbusGHrNbLDMnsLQniGL5HWhpR+jv9wuwGTBY3eybcQaLYrwPZKDFFpXL0dC5vg97KcskKwc5tUYvkcyEEUFlJ2ps7OIA3l2CmMLRr1Hr5wdi6Kscxx97nosy45BvBgMpH2WIQti64id9RJr10swJEWBCaLFuNThvxHXhEXOZ4XFBXbPc1kp5/N0AfrTdHD/7L79FpSy7HiAEzgC1KKhgPD7E+Ytfrbx+jn6jWy1RUvYDl7tUqlerXxb2cfCGOND35NNkNAh7mCWN+WO75OM7ukHtG7TR9Bfq578TUjTfAMnc5T8nkdQuwAAAABJRU5ErkJggg==","Use_Black_Jade_Boss_Ring_Box.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAiCAYAAAA3WXuFAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOUSURBVFhHvZcNsaswFISvhVqoBSxgIRawgAUsYAELWKiFWqiFvP0CSw8p/Xnvze3O7KSQcM7HSSD0p9b5fH7rr+oIoPbXVCU+rUb+vfV/RSGhQZrr9TrRLod3qF+XE60mMRApS7Tr8XeAnCQYtZfLZQZIrav0+0BOELxVR+4B0rDf8qbhOhXXMAiYbp7ny+l0ysMw5GEc8zTNOXVdHqdJv//OwzDmruvz7XbL0zznfpiKxbFBHQG5Mp08UplOAF3f57Zt5ZTFyOmdNJ1be2SA2pR2MNyoLZYCdQSEmKZB1dmSNE1TAnKX4zj9dYVcmcvlusEoR/FbIAEsJJUA/FegWJ0I0zTtIdQOSEoMoDKINikgU9f3wzKFxf3OwB45VqcGAtS/nwGd6Bi1gEmK7jCso5SbQdW65tI26VZ8Pi9VOALiPDqqDn2u0jMgzpXpodQsYIBS6jYYawdFS7+C15WjOigCGcZA9BmoqAbSVlEGMl2sGSo0s7iVfNRMAkNrGCpE0BrK66YGqmHqx79ohUElAIPRqHePp491AEANgyKQEwJEMvcD5P4Iw3nyLukfVQIYiJchAYBBANSVQQQGyDDY5+MTRtwa5i0QAbgozr8TAAaIYZysrg6KcSJQDfMREOLiaFfJYlyZRsGwNurxnPM4A0UY+j8CIglBon2OlqC2zwGVumF3jR2v6fUqMIz9Fog7IHhtRFDfFTYUraEwMaJ9PsK4ihFIxzQPKkFiYsSd8jtOS+zz1B3Z1/qY/ZEXML85T079fg7EXcfEyNXh2IvXfQaKfXEM7zEDlc1aXw+I405bEjlfAiEH5yWHYoViMvcZyC9GXMbp/EUv2+XaBYYNGrEbfAxElZg6ApMQxSrheg3dgbp8LddrPxMAWxEfegA1OqZFjOXjj5zAlL3sQGVwBCKRoSz6a5ilossXAVsQdw9ALxh0FsjpxDTxhTCUrYl8ginf6k+BSERwxNPh6TGYHWEiEGqZsrUa/pxh407qp8rkwYZ5CUSyMv+yK0G1Ilhtj71PVdrWSi2BzQLY/Yt5C4RJ8EwGjfZ1PFVUj/XB9MQKKfGkCnVyI6M17fo9dKBSDZvj/3Fi6vRNhZQcA9Srr5XvNNJTIO7Qd8mxnGSC4GH1+IHLtFEpHnGOBcO1ndzIHwGh7Q5l7gQggmCDvbLH4hiLY+I9wKBXQBYX8bayCVTbCWrH66KJ+QDzFcUnqPaxfn7+AKgqPr5GuLrBAAAAAElFTkSuQmCC","Use_Green_Jade_Boss_Ring_Box.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAbCAYAAACEP1QvAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJBSURBVEhLtZQBkcJADEWxgAUsYKEWaqEWsIAFLGABC7WABSz09qX9vU8IveFuLsyf3e4mecl2y27Dpn/SpoXT7XIKdeNlOt+vvxKx463FD93Ud4fQkr+0cBY0gtsvm9YY3/0yeD/0q+DMuG+bHvdxOi5gT/TpT2CaEPhwHkIVPDoRuDrCT+RdO5j8VQFr11WiStlPYk9dZzh7msMMMM5V1zxPt26aHkOM98us8dS9LYB1Gqm6Zk/db8JXsMwKYOyPh7KACq7ciDl7m3COLUDj0nkbBaZzElBABlfwDPZP7umWKxFrFBDdJ7CSq3sXeRyuvA5mvYRLgFkHljuu4MRLftO1dj31T9/7CvdjdwGhCKAVWImzMjyDX+BydKn7uG+cQvNjDbAnynJ4FGp/NPJZ4dFdC3BpjZEEktbisi3PWR7jYOkJjgPJsnTEqhYJGImbjyBZkTOBOc0Mx1ZHSe+bub8KnjF173vaB6BYB6MSjjObXDQ+NYwOBNclZI45XHvaz3D5aI9GYc7oNuEocdB3LkAF16lUcASAfFWsXgnMGV3ASY559wr2d67kxDgkwxULmBHmjG4TunE4zhTAukTCCuxxFZxRQL55xqAuFs5VEhUhORh5jMfhCxRdzyvwBYyFM4GVBPpEABP4ra2dcQJ+1C4du0txEjDJ3u2x6dC0b3qxuAgSz39RkWto6pso4qWAqlqcT4vOiy4/CJ8q1yYckyPqmnAmCKmILckX5Vybx+6GA44SgVlKmOVxiFxSst3uC54PovZshszzAAAAAElFTkSuQmCC","Use_Grindstone_of_Life.png":"data:image/png;base64,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","Use_Life_Boss_Ring_Box.png":"data:image/png;base64,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","Use_Red_Jade_Boss_Ring_Box.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAbCAYAAACEP1QvAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJRSURBVEhLtZQBkeMwDEVLoRRKoRRKoRSWQimEwlIIhVIIhaUQCjk92T/7a7vZm9u5P/PHSSzpSW7S04G2/+RDZdCyfKW3223b5unfHLnrum7z87k9pjld6w+VwTsUr8vWiWdHXj478HS67IZTcN8qhQWl81Hhnww4cjWEwPO5eARP7tflWqAU+I0rnKkdTP1RA9/wpshbe5w79jR1C+dEdQ0zwQQnWMctcx/LFqfJup7X9HR+9LGeExpNzZ6mP4YLLFkDrNfbveQ4WHkhh++1BY+9QzjHlqC5gmMVmMkp0DVQAS28Bfsnl8EtHOUnx2UDRi9wQeW6D1z7DuZ5D9cawQkOAWsnRhQB3kLJ9zed+xb8Atexs6qAitEEUIFVuJs65HUc3oI7OCLQrekl4ngGWC+SO3/fGie4g9nv4BQkwa1nrBSQ9YwG7h/lm27tOQ6WX+AEUKg1ooC6zSK1AVY1gKnh1nMH63QcjjLBIYgJuPaj9T0d/8jK1b3yueY5zIKOC6ZxCNLUeV9fLO0J7nse43DFsHLPoDALOi7QXsi+87+C678B1ziGGeXqPYBZ0BWeQbUIxZFPr2T/zTs4HsAdzAqzoAdwgtWARMEObDm7GzirgM9leQGjDM5CoXzTa7dqQnbwC9zyMLFAsQE7MCpT1sTWAo08iscAG/Bb7ZPlCbyRjt2tPBmYbL/tNXwJn8Od8kWQuf+NB7U+wvcwTXQNjLol+FE9VX/+YGJGtQ7hSIH4FiaYJKwmjqxY3NY6PHYXAQTKJLZWwdaeh6klNzqd/gDorkUNZ3bpogAAAABJRU5ErkJggg==","Use_White_Jade_Boss_Ring_Box.png":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAVLSURBVFhHtZcPta0sEMWtYAUrWIEKVqACFahABSpQgQpUsALf3gOD6PG+e7631pt798LDn+HnMAoub+ZL/FVqb21/qx/trfNT3/b7P7rZWwdo7dqm67d+Ku3z1o91s5+PPsOeDV3qYD/rGVn23x+OurS/SvuxlLaz1oRS/Xz4+goGOioMpem/b066Rv/HpLMfgxvLKA+q+/yEmn9A6kCdHHBSOJhlqSWg9PQ1CxC+1DPguvet6HuGphLyWWI6c2Ibysxr+OYN/hFoQMBR4iBqt4Z+6mb2um5bXda1IrB3rQva1rruW40p1g0lr9mf4+jj8Fb8sDT2qITsc74CsZIwFuJdt4EOA8tRzzPWiHtOorOm/BDrRvulfJ61QG8WU2IkGalXIJJybRH+5gCu4NQCJAvMu1v06w1gksmf8ikDzNSYe4SCx8063KyrK6KNYb4z3IG4TDLiYURR5/j/WgRklM5zQ0Lt1XnJYwAFAHkso5Xlh70DcU25RBohgjA65dylJrvlY1JVs6Vme/VpS0mgFeuySURSLvVwjFBAHnnk1yE5CGOa3IBWDA37YfAUyIPSlyqLU05mzXLPm0kKM9f52MbVgja31v2wqEsCYkNEhBzq3A1IjECskPVEePFcIZEZnSLrX+sqMB6RorE0aRGtgODECjXAMN76lgF0z0jshxcY44IAsXwF4gUrrssVThDmHhkulcKoKRRLu19QCtbukWpL3YCYyMgfwFAGS0f4Nu8fgDTUdMQ7Zcg5eZYxmAClwjBCnHxAob+MGVDojz4K9IThuDbvj0C4EKB2Z+2OYYAiwBNGmgYQ8g1JS8kN9XYFIsQTZj3uSS3GC1b0hgHEieQaMDQCPCNDK+ECohxEa0ANTIEovQHCfAGEzpKM0qkN7slJMIJcMNdyWR8FRGHYdqCO5Qz0hPkKiEaIWRqly/AbdXR+OOTFTXjHQNqPQJx4htn4lv4KSCZ+SOtQ0qlK6ziJLs+HpjEzjOoJJC/GPlqAmA90/hSNTudIKJROpn3pYxbrnjA79rOd19j1Fai/oAcQNaCYE8yBlgcw3KmAjFxJsjTaxgm5HciWgL2K4oQGexbbP2AobLAb9rPnBisGtwOIl5qg7U2t0QkCEnIWWVy3xg4UY7U4Ulich6gjEuwORJAjtXoTXC05yLkJ+2cAjBxDdOuYgGp1AnItF53KK78DeQG6oqdAvrQnlOMOQAkQfhOI7zXqAITBkSuF9vbnAY776A2oQw0gddoiNENhY8TEnFzvg2UDQgQLDnJyimnjOTGvmSsl4RiCfVJhEoBpAeN4zP0aqEVC69XuMKbD2BxrUCBEowFhp3e25sxDWgKIkSNtzu181I+yPK3egFYmluYQl0Q6A4p5wYhQjJJKYRgZSmBkydq2o0tTCs5CyJdD4K6jMaGQOwVz3w77A4ideYI7ywqgJNJIMEkdJtTJZ3FSXRqKN7H3OoqRIQzOnGjH4Q1/WNby05fHZ4Q0CjLBT6btk6boUWfPGX4gvBkSWb/fBgw1LtBHgPRp4J3y91+Jn0WINo+uMSB3ksVRuG/aiJDLIboULEpGZzBQH0BnwrJBrOLvhMcBSjHiiyvGPCuEMDTqeslvspJxZMGSMZENEptmk482eg8ZaAXUBUObgAaUKufMXgdku9xvAojDu8WfMPloxHuGiiXlXEq20dkOs+F6AaBoAD2NUBT8EW6btL/IzL+xTPtudoOnyOCzKfEp4mNNHcHtAIAI4ldoQT8RgX60HqkFQL3mO9NIQ0xSivmh0rq5n4hA/8QeEynAjyCqf2Zvk/2mT1uW/wBrG9MMGGwr4gAAAABJRU5ErkJggg=="};
+  var DAILY_STORAGE_KEY = "seedringDailyDrawV1";
+  var BOX_ICON = {
+    jade:"Use_Green_Jade_Boss_Ring_Box.png",
+    red:"Use_Red_Jade_Boss_Ring_Box.png",
+    black:"Use_Black_Jade_Boss_Ring_Box.png",
+    white:"Use_White_Jade_Boss_Ring_Box.png",
+    life:"Use_Life_Boss_Ring_Box.png"
+  };
+  var ITEM_ICON = {
+    "리스트레인트 링":"Eqp_Ring_of_Restraint.png",
+    "컨티뉴어스 링":"Eqp_Continuous_Ring.png",
+    "얼티메이덤 링":"Eqp_Ultimatum_Ring.png",
+    "리스크테이커 링":"Eqp_Risk_Taker_Ring.png",
+    "링 오브 썸":"Eqp_Totalling_Ring.png",
+    "크리데미지 링":"Eqp_Critical_Damage_Ring.png",
+    "크라이시스-HM링":"Eqp_Crisis_HM_Ring.png",
+    "버든리프트 링":"Eqp_Cleansing_Ring.png",
+    "오버패스 링":"Eqp_Overdrive_Ring.png",
+    "헬스컷 링":"Eqp_Health_Cut_Ring.png",
+    "크리디펜스 링":"Eqp_Critical_Defense_Ring.png",
+    "리밋 링":"Eqp_Limit_Ring.png",
+    "듀라빌리티 링":"Eqp_Durability_Ring.png",
+    "리커버디펜스 링":"Eqp_Clean_Defense_Ring.png",
+    "실드스와프 링":"Eqp_Berserker_Ring.png",
+    "마나컷 링":"Eqp_Mana_Cut_Ring.png",
+    "크라이시스-H링":"Eqp_Crisis_H_Ring.png",
+    "크라이시스-M링":"Eqp_Crisis_M_Ring.png",
+    "크리쉬프트 링":"Eqp_Critical_Shift_Ring.png",
+    "스탠스쉬프트 링":"Eqp_Stance_Shift_Ring.png",
+    "리커버스탠스 링":"Eqp_Clean_Stance_Ring.png",
+    "스위프트 링":"Eqp_Swift_Ring.png",
+    "리플렉티브 링":"Eqp_Reflective_Ring.png",
+    "생명의 연마석":"Use_Grindstone_of_Life.png"
+  };
+
+  function itemIcon(name){
+    if (name.indexOf("웨폰퍼프-") === 0) return "Eqp_Weapon_Jump_Ring.png";
+    if (name.indexOf("레벨퍼프-") === 0) return "Eqp_Level_Jump_Ring.png";
+    return ITEM_ICON[name] || "Eqp_Ring_of_Restraint.png";
+  }
+
+  function canvasAsset(file){
+    return CANVAS_ASSET_DATA[file] || ASSET_BASE + file;
+  }
+
+  function iconImg(file, className, alt, lazy){
+    return '<img class="' + className + '" src="' + canvasAsset(file) + '" alt="' + alt + '"' + (lazy ? ' loading="lazy"' : '') + '>';
+  }
+
+  var SDIL = ["STR","DEX","INT","LUK"];
+  function sdilItems(prefix, p){
+    return SDIL.map(function(s){ return { name: prefix + "-" + s + "링", p: p }; });
+  }
+
+  var MID_COMMON = function(p){
+    return sdilItems("웨폰퍼프", p).concat([
+      { name:"얼티메이덤 링", p:p },
+      { name:"리스크테이커 링", p:p },
+      { name:"링 오브 썸", p:p },
+      { name:"크리데미지 링", p:p },
+      { name:"크라이시스-HM링", p:p }
+    ]);
+  };
+  var LOW_COMMON = function(p){
+    return [
+      { name:"버든리프트 링", p:p },
+      { name:"오버패스 링", p:p }
+    ].concat(sdilItems("레벨퍼프", p)).concat([
+      { name:"헬스컷 링", p:p },
+      { name:"크리디펜스 링", p:p },
+      { name:"리밋 링", p:p },
+      { name:"듀라빌리티 링", p:p },
+      { name:"리커버디펜스 링", p:p },
+      { name:"실드스와프 링", p:p },
+      { name:"마나컷 링", p:p },
+      { name:"크라이시스-H링", p:p },
+      { name:"크라이시스-M링", p:p },
+      { name:"크리쉬프트 링", p:p },
+      { name:"스탠스쉬프트 링", p:p },
+      { name:"리커버스탠스 링", p:p },
+      { name:"스위프트 링", p:p },
+      { name:"리플렉티브 링", p:p }
+    ]);
+  };
+
+  var BOXES = [
+    {
+      id:"jade", name:"녹옥의 보스 반지 상자",
+      bosses:["스우(노멀)","데미안(노멀)","가엔슬(노멀)","루시드(이지/노멀)","윌(이지/노멀)","더스크(노멀)","듄켈(노멀)"],
+      levels:[ {lv:1,p:50}, {lv:2,p:41}, {lv:3,p:9} ],
+      items: [
+        { name:"리스트레인트 링", p:2.11268 },
+        { name:"컨티뉴어스 링", p:2.11268 }
+      ].concat(MID_COMMON(2.81690)).concat(LOW_COMMON(3.52113))
+    },
+    {
+      id:"red", name:"홍옥의 보스 반지 상자",
+      bosses:["스우(하드)","데미안(하드)","루시드(하드)","윌(하드)","진 힐라(노멀)"],
+      levels:[ {lv:1,p:40}, {lv:2,p:30}, {lv:3,p:20}, {lv:4,p:10} ],
+      items: [
+        { name:"리스트레인트 링", p:6.92308 },
+        { name:"컨티뉴어스 링", p:6.92308 }
+      ].concat(MID_COMMON(6.15385)).concat(LOW_COMMON(1.53846))
+    },
+    {
+      id:"black", name:"흑옥의 보스 반지 상자",
+      bosses:["더스크(카오스)","듄켈(하드)","가디언 엔젤 슬라임(카오스)","진 힐라(하드)","세렌(노멀)"],
+      levels:[ {lv:1,p:25}, {lv:2,p:25}, {lv:3,p:30}, {lv:4,p:20} ],
+      items: [
+        { name:"리스트레인트 링", p:12.5 },
+        { name:"컨티뉴어스 링", p:12.5 }
+      ].concat(MID_COMMON(8.33333))
+    },
+    {
+      id:"white", name:"백옥의 보스 반지 상자",
+      bosses:["스우(익스트림)","검은 마법사(하드/익스트림)","세렌(하드/익스트림)","칼로스(이지/노멀)","카링(이지/노멀)","최초의 대적자(이지/노멀)","찬란한 흉성(노멀)"],
+      levels:[ {lv:3,p:65}, {lv:4,p:35} ],
+      items: [
+        { name:"리스트레인트 링", p:14.28571 },
+        { name:"컨티뉴어스 링", p:14.28571 }
+      ].concat(MID_COMMON(7.93651))
+    },
+    {
+      id:"life", name:"생명의 보스 반지 상자",
+      bosses:["칼로스(카오스/익스트림)","카링(하드/익스트림)","림보(노멀/하드)","발드릭스(노멀/하드)","최초의 대적자(하드/익스트림)","찬란한 흉성(하드)","유피테르(노멀/하드)"],
+      levels:[ {lv:3,p:30}, {lv:4,p:70} ],
+      items: [
+        { name:"리스트레인트 링", p:14.51613 },
+        { name:"컨티뉴어스 링", p:14.51613 },
+        { name:"생명의 연마석", p:14.51613 }
+      ].concat(sdilItems("웨폰퍼프", 8.06452)).concat([
+        { name:"리스크테이커 링", p:8.06452 },
+        { name:"링 오브 썸", p:8.06452 },
+        { name:"크리데미지 링", p:8.06452 }
+      ])
+    }
+  ];
+
+  // normalize so each box's item list and level list each sum to exactly 100
+  BOXES.forEach(function(box){
+    var itemSum = box.items.reduce(function(a,i){ return a+i.p; }, 0);
+    box.items.forEach(function(i){ i.p = i.p * 100 / itemSum; });
+    var lvSum = box.levels.reduce(function(a,l){ return a+l.p; }, 0);
+    box.levels.forEach(function(l){ l.p = l.p * 100 / lvSum; });
+  });
+
+  function fmt(n){
+    if (n >= 10) return n.toFixed(2);
+    if (n >= 1) return n.toFixed(3);
+    return n.toFixed(4);
+  }
+
+  function weightedPick(list){
+    var total = list.reduce(function(a,i){ return a + i.p; }, 0);
+    var r = Math.random() * total;
+    for (var i=0;i<list.length;i++){
+      r -= list[i].p;
+      if (r <= 0) return list[i];
+    }
+    return list[list.length-1];
+  }
+
+  function koreaDateKey(){
+    var parts = new Intl.DateTimeFormat("en-US", {
+      timeZone:"Asia/Seoul", year:"numeric", month:"2-digit", day:"2-digit"
+    }).formatToParts(new Date());
+    var date = {};
+    parts.forEach(function(part){ date[part.type] = part.value; });
+    return date.year + "-" + date.month + "-" + date.day;
+  }
+
+  function dailyBoxIdForDate(dateKey){
+    var values = dateKey.split("-").map(Number);
+    var dayNumber = Math.floor(Date.UTC(values[0], values[1] - 1, values[2]) / 86400000);
+    return dayNumber % 2 === 0 ? "black" : "white";
+  }
+
+  function boxById(id){
+    for (var i=0;i<BOXES.length;i++) if (BOXES[i].id === id) return BOXES[i];
+    return null;
+  }
+
+  function restoreDailyDraw(){
+    try {
+      var saved = JSON.parse(localStorage.getItem(DAILY_STORAGE_KEY));
+      if (!saved || saved.date !== koreaDateKey()) return null;
+      if (saved.boxId !== dailyBoxIdForDate(saved.date)) return null;
+      var box = boxById(saved.boxId);
+      if (!box) return null;
+      var item = box.items.find(function(candidate){ return candidate.name === saved.name; });
+      if (!item) return null;
+      if (item.name === "생명의 연마석") {
+        return {
+          date:saved.date, boxId:box.id,
+          entry:{ name:item.name, lv:null, itemP:item.p, lvP:null, joint:item.p, noLevel:true }
+        };
+      }
+      var level = box.levels.find(function(candidate){ return candidate.lv === Number(saved.lv); });
+      if (!level) return null;
+      return {
+        date:saved.date, boxId:box.id,
+        entry:{ name:item.name, lv:level.lv, itemP:item.p, lvP:level.p, joint:item.p * level.p / 100 }
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveDailyDraw(box, entry){
+    try {
+      localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify({
+        date:koreaDateKey(), boxId:box.id, name:entry.name, lv:entry.lv
+      }));
+    } catch (error) {
+      // 저장이 제한된 환경에서도 현재 탭에서는 중복 뽑기를 막습니다.
+    }
+  }
+
+  var restoredDaily = restoreDailyDraw();
+  var state = {
+    mode:"daily",
+    unlimitedBoxId:"life",
+    dailyBoxId:restoredDaily ? restoredDaily.boxId : dailyBoxIdForDate(koreaDateKey()),
+    unlimitedResult:null,
+    dailyDate: restoredDaily ? restoredDaily.date : null,
+    dailyResult: restoredDaily ? restoredDaily.entry : null
+  };
+
+  var ACCENT = { jade:"#55b787", red:"#e2664a", black:"#c3c8d6", white:"#e8e9ec", life:"#ffd36a" };
+  var BOX_GRADE = { life:"S", white:"A", black:"B", red:"C", jade:"D" };
+
+  var boxrow = document.getElementById("boxrow");
+  var vaultPanel = document.getElementById("vaultPanel");
+  var vaultBoxName = document.getElementById("vaultBoxName");
+  var resultEl = document.getElementById("result");
+  var drawOneBtn = document.getElementById("drawOne");
+  var dailyStatus = document.getElementById("dailyStatus");
+  var modeDescription = document.getElementById("modeDescription");
+  var gachaPanel = document.getElementById("gachaPanel");
+  var modeTabs = Array.prototype.slice.call(document.querySelectorAll(".mode-tab"));
+  var probToggleBtn = document.getElementById("probToggleBtn");
+  var probToggleLabel = document.getElementById("probToggleLabel");
+  var probTableWrap = document.getElementById("probTableWrap");
+  var boxSelectorTitle = document.getElementById("boxSelectorTitle");
+  var drawEffectTimer = null;
+
+  function stopDrawEffect(){
+    if (drawEffectTimer) window.clearTimeout(drawEffectTimer);
+    drawEffectTimer = null;
+    vaultPanel.classList.remove("is-drawing");
+  }
+
+  function playDrawEffect(){
+    stopDrawEffect();
+    void vaultPanel.offsetWidth;
+    vaultPanel.classList.add("is-drawing");
+    drawEffectTimer = window.setTimeout(function(){
+      vaultPanel.classList.remove("is-drawing");
+      drawEffectTimer = null;
+    }, 820);
+  }
+
+  function syncDailyState(){
+    var today = koreaDateKey();
+    var assignedBoxId = dailyBoxIdForDate(today);
+    if (state.dailyBoxId === assignedBoxId && (!state.dailyDate || state.dailyDate === today)) return;
+    var saved = restoreDailyDraw();
+    state.dailyBoxId = assignedBoxId;
+    state.dailyDate = saved ? saved.date : null;
+    state.dailyResult = saved ? saved.entry : null;
+  }
+
+  function currentBox(){
+    var boxId = state.mode === "daily" ? state.dailyBoxId : state.unlimitedBoxId;
+    return boxById(boxId) || BOXES[0];
+  }
+
+  function renderModeStatus(){
+    var daily = state.mode === "daily";
+    var used = daily && !!state.dailyResult;
+    drawOneBtn.disabled = used;
+    drawOneBtn.textContent = daily ? (used ? "오늘의 뽑기 완료" : "오늘의 뽑기") : "무한 뽑기";
+    dailyStatus.classList.toggle("used", used);
+    dailyStatus.textContent = daily
+      ? (used
+          ? "오늘의 기회 0/1 · 결과가 저장되었습니다. 내일 다시 뽑을 수 있어요."
+          : "오늘의 기회 1/1 · 오늘 지정된 상자로 한 번만 뽑을 수 있어요.")
+      : "횟수 제한 없음 · 원하는 만큼 결과를 확인할 수 있어요.";
+    modeDescription.textContent = daily
+      ? "오늘의 지정 상자는 " + currentBox().name.replace("의 보스 반지 상자", "") + "입니다. 흑옥과 백옥이 한국 날짜 기준으로 하루마다 교대합니다."
+      : "원하는 상자를 골라 횟수 제한 없이 뽑을 수 있습니다.";
+  }
+
+  function renderModeTabs(){
+    modeTabs.forEach(function(tab){
+      var selected = tab.dataset.mode === state.mode;
+      tab.setAttribute("aria-selected", selected ? "true" : "false");
+      tab.tabIndex = selected ? 0 : -1;
+      if (selected) gachaPanel.setAttribute("aria-labelledby", tab.id);
+    });
+  }
+
+  function renderBoxRow(){
+    boxrow.innerHTML = "";
+    var daily = state.mode === "daily";
+    var unlimitedOrder = ["life", "white", "black", "red", "jade"];
+    var visibleBoxes = daily ? [currentBox()] : unlimitedOrder.map(boxById).filter(Boolean);
+    boxrow.classList.toggle("daily-single", daily);
+    boxSelectorTitle.textContent = daily ? "오늘의 지정 상자" : "뽑을 상자 선택";
+    boxrow.setAttribute("aria-label", daily ? "오늘의 지정 반지 상자" : "반지 상자 선택");
+    visibleBoxes.forEach(function(box){
+      var card = document.createElement("button");
+      card.className = "boxcard";
+      card.type = "button";
+      card.dataset.box = box.id;
+      card.setAttribute("role","option");
+      card.setAttribute("aria-pressed", box.id === currentBox().id ? "true" : "false");
+      card.setAttribute("aria-disabled", daily ? "true" : "false");
+      card.innerHTML =
+        '<span class="boxcard-main">' +
+          '<span class="box-icon-stage">' + iconImg(BOX_ICON[box.id], "box-icon", box.name, false) + '</span>' +
+          '<span class="boxcard-copy">' +
+            (daily ? '<span class="daily-box-badge">오늘의 지정 상자</span>' : '') +
+            '<span class="name">' + box.name.replace("의 보스 반지 상자","") + '<span class="box-grade">' + BOX_GRADE[box.id] + '</span></span>' +
+            '<span class="bosses">' + box.bosses.join(" · ") + '</span>' +
+          '</span>' +
+        '</span>';
+      card.addEventListener("click", function(){
+        if (daily) return;
+        if (state.unlimitedBoxId === box.id) return;
+        stopDrawEffect();
+        state.unlimitedBoxId = box.id;
+        state.unlimitedResult = null;
+        renderBoxRow();
+        renderVault();
+        renderProbTable();
+      });
+      boxrow.appendChild(card);
+    });
+  }
+
+  function renderVault(){
+    var box = currentBox();
+    var accent = ACCENT[box.id] || ACCENT.jade;
+    vaultPanel.style.setProperty("--box-accent", accent);
+    vaultBoxName.innerHTML =
+      '<span class="vault-box-icon">' + iconImg(BOX_ICON[box.id], "", box.name, false) + '</span>' +
+      '<span>' + box.name + ' <span class="box-grade vault-grade">' + BOX_GRADE[box.id] + '</span></span>';
+    var modeResult = state.mode === "daily" ? state.dailyResult : state.unlimitedResult;
+    if (modeResult) renderSingleResult(modeResult);
+    else resultEl.innerHTML = "";
+    renderModeStatus();
+  }
+
+  function drawOnce(box){
+    var item = weightedPick(box.items);
+    if (item.name === "생명의 연마석") {
+      return { name:item.name, lv:null, itemP:item.p, lvP:null, joint:item.p, noLevel:true };
+    }
+    var lvl = weightedPick(box.levels);
+    var joint = item.p * lvl.p / 100;
+    return { name: item.name, lv: lvl.lv, itemP: item.p, lvP: lvl.p, joint: joint };
+  }
+
+  var JACKPOT_RING_NAMES = ["리스트레인트 링", "컨티뉴어스 링"];
+  function isJackpot(entry){
+    if (entry.name === "생명의 연마석") return true;
+    return entry.lv === 4 && JACKPOT_RING_NAMES.indexOf(entry.name) !== -1;
+  }
+
+  function renderSingleResult(entry){
+    var jackpot = isJackpot(entry);
+    var levelBadge = entry.noLevel
+      ? '<span class="result-lv">재료</span>'
+      : '<span class="result-lv' + (jackpot ? ' jackpot-lv' : '') + '">Lv.' + entry.lv + '</span>';
+    var probabilityText = entry.noLevel
+      ? '아이템 종류 확률 <b>' + fmt(entry.itemP) + '%</b> · 레벨 추첨 없음 = 이번 결과 확률 <b>' + fmt(entry.joint) + '%</b>'
+      : '반지 종류 확률 <b>' + fmt(entry.itemP) + '%</b> × 레벨 확률 <b>' + fmt(entry.lvP) + '%</b> = 이번 결과 확률 <b>' + fmt(entry.joint) + '%</b>';
+    resultEl.innerHTML =
+      '<div class="result-card' + (jackpot ? ' jackpot' : '') + '">' +
+        (jackpot ? '<div class="jackpot-tag">★ 당첨</div>' : '') +
+        '<div class="result-top">' +
+          '<span class="result-item">' +
+            '<span class="result-icon-stage">' + iconImg(itemIcon(entry.name), "result-icon", entry.name, false) + '</span>' +
+            '<span class="result-name">' + entry.name + '</span>' +
+          '</span>' +
+          levelBadge +
+        '</div>' +
+        '<div class="result-prob">' + probabilityText + '</div>' +
+        '<div class="result-actions">' +
+          '<button class="btn copy-image-btn" id="copyImageBtn" type="button">주소 포함 이미지 복사</button>' +
+          '<span class="share-feedback" id="shareFeedback" aria-live="polite">이미지 하단에 사이트 주소가 포함됩니다.</span>' +
+        '</div>' +
+      '</div>';
+    document.getElementById("copyImageBtn").addEventListener("click", function(){
+      copyResultImage(entry);
+    });
+  }
+
+  function roundedRect(ctx, x, y, width, height, radius){
+    var r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + width, y, x + width, y + height, r);
+    ctx.arcTo(x + width, y + height, x, y + height, r);
+    ctx.arcTo(x, y + height, x, y, r);
+    ctx.arcTo(x, y, x + width, y, r);
+    ctx.closePath();
+  }
+
+  function loadCanvasImage(src){
+    return new Promise(function(resolve, reject){
+      var image = new Image();
+      image.onload = function(){ resolve(image); };
+      image.onerror = reject;
+      image.src = src;
+    });
+  }
+
+  async function createShareImage(entry){
+    var box = currentBox();
+    var accent = ACCENT[box.id] || ACCENT.jade;
+    var modeTitle = state.mode === "daily" ? "오늘의 시드링" : "무한 시드링 뽑기";
+    var images = await Promise.all([
+      loadCanvasImage(canvasAsset(BOX_ICON[box.id])),
+      loadCanvasImage(canvasAsset(itemIcon(entry.name)))
+    ]);
+    var canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1080;
+    var ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+
+    var background = ctx.createLinearGradient(0, 0, 1080, 1080);
+    background.addColorStop(0, "#0f1115");
+    background.addColorStop(.62, "#171a21");
+    background.addColorStop(1, "#0b0d12");
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    var glow = ctx.createRadialGradient(820, 170, 20, 820, 170, 520);
+    glow.addColorStop(0, accent + "55");
+    glow.addColorStop(1, accent + "00");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 1080, 700);
+
+    roundedRect(ctx, 54, 54, 972, 972, 42);
+    ctx.fillStyle = "rgba(23,26,33,.94)";
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = accent + "99";
+    ctx.stroke();
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#7b8090";
+    ctx.font = "24px 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+    ctx.fillText("SEED RING DRAW · " + (state.mode === "daily" ? koreaDateKey() : "SIMULATOR"), 104, 126);
+    ctx.fillStyle = "#e8e9ec";
+    ctx.font = "700 58px 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+    ctx.fillText(modeTitle, 104, 202);
+
+    roundedRect(ctx, 104, 246, 872, 148, 28);
+    ctx.fillStyle = "rgba(17,20,26,.62)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(232,233,236,.12)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.drawImage(images[0], 132, 266, 118, 108);
+    ctx.fillStyle = "#9a9fab";
+    ctx.font = "24px 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+    ctx.fillText("선택한 상자", 286, 297);
+    ctx.fillStyle = "#e8e9ec";
+    ctx.font = "700 34px 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+    ctx.fillText(box.name, 286, 350);
+
+    roundedRect(ctx, 380, 442, 320, 320, 54);
+    ctx.fillStyle = "rgba(17,20,26,.72)";
+    ctx.fill();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 34;
+    ctx.drawImage(images[1], 430, 492, 220, 220);
+    ctx.shadowBlur = 0;
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#e8e9ec";
+    ctx.font = "700 48px 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+    ctx.fillText(entry.name, 540, 838);
+    ctx.fillStyle = accent;
+    ctx.font = "700 34px 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+    ctx.fillText(entry.noLevel ? "레벨 없음 · 재료" : "Lv." + entry.lv, 540, 890);
+    ctx.fillStyle = "#9a9fab";
+    ctx.font = "25px 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+    ctx.fillText("이번 결과 확률 " + fmt(entry.joint) + "%", 540, 942);
+
+    if (isJackpot(entry)) {
+      roundedRect(ctx, 404, 952, 272, 42, 21);
+      ctx.fillStyle = "#ffd36a";
+      ctx.fill();
+      ctx.fillStyle = "#241c08";
+      ctx.font = "700 23px 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+      ctx.fillText("★ 당첨", 540, 981);
+    }
+
+    ctx.fillStyle = "#7b8090";
+    ctx.font = "19px 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+    ctx.fillText(SHARE_URL.replace(/^https?:\/\//, ""), 540, 1020);
+
+    return new Promise(function(resolve, reject){
+      canvas.toBlob(function(blob){
+        if (blob) resolve(blob);
+        else reject(new Error("image creation failed"));
+      }, "image/png");
+    });
+  }
+
+  function downloadResultImage(blob){
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = "seedring-result-" + koreaDateKey() + ".png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  async function copyResultImage(entry){
+    var feedback = document.getElementById("shareFeedback");
+    feedback.textContent = "이미지를 만드는 중…";
+    var blobPromise = createShareImage(entry);
+    var canWriteImage = window.isSecureContext && navigator.clipboard && navigator.clipboard.write && window.ClipboardItem;
+
+    if (canWriteImage) {
+      try {
+        // 이미지 생성을 기다리기 전에 쓰기를 요청해야 클릭 권한이 유지됩니다.
+        await navigator.clipboard.write([
+          new window.ClipboardItem({ "image/png":blobPromise })
+        ]);
+        feedback.textContent = "결과 이미지를 클립보드에 복사했습니다.";
+        return;
+      } catch (clipboardError) {
+        try {
+          var fallbackBlob = await blobPromise;
+          downloadResultImage(fallbackBlob);
+          feedback.textContent = "브라우저가 이미지 복사를 차단해 PNG로 저장했습니다.";
+        } catch (imageError) {
+          feedback.textContent = "결과 이미지를 만들지 못했습니다. 페이지를 새로고침해 주세요.";
+        }
+        return;
+      }
+    }
+
+    try {
+        var blob = await blobPromise;
+        downloadResultImage(blob);
+        feedback.textContent = "이미지 복사가 지원되지 않아 PNG로 저장했습니다.";
+    } catch (imageError) {
+      feedback.textContent = "결과 이미지를 만들지 못했습니다. 페이지를 새로고침해 주세요.";
+    }
+  }
+
+  function doDrawOne(){
+    if (state.mode === "daily") syncDailyState();
+    if (state.mode === "daily" && state.dailyResult) return;
+    var box = currentBox();
+    var entry = drawOnce(box);
+    if (state.mode === "daily") {
+      state.dailyDate = koreaDateKey();
+      state.dailyResult = entry;
+      saveDailyDraw(box, entry);
+      renderBoxRow();
+    } else {
+      state.unlimitedResult = entry;
+    }
+    renderSingleResult(entry);
+    playDrawEffect();
+    renderModeStatus();
+  }
+
+  function renderProbTable(){
+    var box = currentBox();
+    var levelHtml = box.levels.map(function(l){
+      return '<span class="levelchip' + (l.lv === 4 ? ' jackpot-lv' : '') + '">Lv.' + l.lv + ' <b>' + fmt(l.p) + '%</b></span>';
+    }).join("");
+
+    var rows = box.items.map(function(it){
+      var isMaterial = it.name === "생명의 연마석";
+      var jackpotRing = JACKPOT_RING_NAMES.indexOf(it.name) !== -1;
+      var win = isMaterial || jackpotRing;
+      var lv3 = box.levels.find(function(l){ return l.lv === 3; });
+      var lv4 = box.levels.find(function(l){ return l.lv === 4; });
+      var lv3Cell = !isMaterial && lv3
+        ? '<td class="num final-prob" data-label="Lv.3 최종">' + fmt(it.p * lv3.p / 100) + '%</td>'
+        : '<td class="num impossible" data-label="Lv.3 최종">—</td>';
+      var lv4Cell = !isMaterial && lv4
+        ? '<td class="num final-prob lv4" data-label="Lv.4 최종">' + fmt(it.p * lv4.p / 100) + '%</td>'
+        : '<td class="num impossible" data-label="Lv.4 최종">—</td>';
+      var winLabel = isMaterial
+        ? ' <span class="jackpot-mark">★ 당첨 · 레벨 없음</span>'
+        : (jackpotRing ? ' <span class="jackpot-mark">★ Lv.4 당첨</span>' : '');
+      return '<tr' + (win ? ' class="jackpot-row"' : '') + '><td><span class="table-item">' +
+        '<span class="table-icon-stage">' + iconImg(itemIcon(it.name), "table-icon", "", true) + '</span>' +
+        '<span>' + it.name + winLabel + '</span>' +
+        '</span></td><td class="num" data-label="종류 확률">' + fmt(it.p) + '%</td>' + lv3Cell + lv4Cell + '</tr>';
+    }).join("");
+
+    probTableWrap.innerHTML =
+      '<div class="levelrow">' + levelHtml + '</div>' +
+      '<div class="tablescroll"><table class="probtable">' +
+        '<caption>' + box.name + ' · 반지 종류 및 레벨을 함께 뽑을 최종 확률</caption>' +
+        '<thead><tr><th>반지</th><th>종류 확률</th><th>Lv.3 최종</th><th>Lv.4 최종</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table></div>';
+  }
+
+  drawOneBtn.addEventListener("click", doDrawOne);
+
+  modeTabs.forEach(function(tab, index){
+    tab.addEventListener("click", function(){
+      state.mode = tab.dataset.mode;
+      if (state.mode === "daily") syncDailyState();
+      renderModeTabs();
+      renderBoxRow();
+      renderVault();
+      renderProbTable();
+    });
+    tab.addEventListener("keydown", function(event){
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      var next = event.key === "ArrowRight" ? (index + 1) % modeTabs.length : (index - 1 + modeTabs.length) % modeTabs.length;
+      modeTabs[next].click();
+      modeTabs[next].focus();
+    });
+  });
+
+  probToggleBtn.addEventListener("click", function(){
+    var expanded = probToggleBtn.getAttribute("aria-expanded") === "true";
+    probToggleBtn.setAttribute("aria-expanded", String(!expanded));
+    probTableWrap.hidden = expanded;
+    probToggleLabel.textContent = expanded ? "확률표 펼쳐보기" : "확률표 접기";
+  });
+
+  renderModeTabs();
+  renderBoxRow();
+  renderVault();
+  renderProbTable();
+})();
+</script>
+</body>
+</html>
