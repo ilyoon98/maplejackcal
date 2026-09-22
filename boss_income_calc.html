@@ -236,7 +236,7 @@
   .party-controls .party-picker option{ color:var(--text); background:#171a21; }
   .party-controls .party-picker:focus{ outline:none; }
   .party-unit{ font-size:.85rem; color:var(--text-dim); }
-  .wrap{ max-width:1600px; }
+  .wrap{ max-width:1280px; }
   .workspace-layout{ display:grid; grid-template-columns:380px minmax(0,1fr); gap:20px; align-items:start; }
   .workspace-layout > .card{ min-width:0; }
   .characters-panel .char-chip-list{ grid-template-columns:minmax(0,1fr); }
@@ -279,30 +279,21 @@
 </head>
 <body>
 <div class="wrap">
-  <nav class="site-nav">
-    <a class="site-nav-home" href="index.html">← 메이플 계산기</a>
-    <div class="site-nav-groups">
-      <div class="site-nav-group active">
-        <button type="button" class="site-nav-group-btn">계산기</button>
-        <div class="site-nav-dropdown">
-          <a href="trace_calc.html">주흔 기댓값 계산기</a>
-          <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
-          <a href="boss_income_calc.html" class="active">보스 수익 정산 계산기</a>
-          <a href="cube_calc.html">잠재능력 큐브 연구소</a>
-        </div>
-      </div>
-      <div class="site-nav-group">
-        <button type="button" class="site-nav-group-btn">놀이터</button>
-        <div class="site-nav-dropdown">
-          <a href="boutique_gacha.html">부티크 기프트</a>
-          <a href="pet_gacha.html">펫 뽑기 놀이</a>
-          <a href="seedring_gacha.html">시드링 뽑기</a>
-        </div>
-      </div>
+  <nav class="site-tabs">
+    <div class="site-tabs-track">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html"><span class="site-tab-icon">🏠</span>홈</a>
+      <a class="site-tab" href="trace_calc.html"><span class="site-tab-icon">📜</span>주흔</a>
+      <a class="site-tab" href="authentic_symbol_calc.html"><span class="site-tab-icon">🔮</span>어센틱 심볼</a>
+      <a class="site-tab active" href="boss_income_calc.html"><span class="site-tab-icon">💰</span>보스 수익</a>
+      <a class="site-tab" href="cube_calc.html"><span class="site-tab-icon">🎲</span>큐브</a>
+      <a class="site-tab" href="boutique_gacha.html"><span class="site-tab-icon">🎁</span>부티크</a>
+      <a class="site-tab" href="pet_gacha.html"><span class="site-tab-icon">🐾</span>펫 뽑기</a>
+      <a class="site-tab" href="seedring_gacha.html"><span class="site-tab-icon">💍</span>시드링</a>
     </div>
   </nav>
   <header>
-    <h1>보스 수익 정산 계산기</h1>
+    <h1>💰 보스 수익 정산 계산기</h1>
   </header>
 
   <section class="card overall-card">

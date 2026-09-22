@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="style.css" />
 <style>
   :root{--sr-jade:#55b787;--sr-ruby:#e2664a;--sr-onyx:#c3c8d6;--sr-pearl:#e8e9ec;--sr-gold:#ffd36a;--sr-faint:#7b8090;--sr-surface-2:#1d212b;}
-  .sr-wrap{max-width:1240px;margin:0 auto;padding:24px 16px 80px}
+  .sr-wrap{max-width:1280px;margin:0 auto;padding:24px 16px 80px}
   .sr-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#14251d 0%,#151d26 58%,#1b2233 100%);border:1px solid #3c6450;border-radius:22px;padding:30px 32px;margin-top:18px;box-shadow:0 18px 50px rgba(0,0,0,.24)}
   .sr-hero:after{content:"◆  ◇  ◆  ◇";position:absolute;right:26px;top:22px;color:rgba(172,232,203,.4);font-size:22px;letter-spacing:13px;transform:rotate(7deg)}
   .eyebrow{color:#9fe0c0;font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
@@ -203,33 +203,23 @@
 </head>
 <body>
 <main class="sr-wrap">
-  <nav class="site-nav">
-    <a class="site-nav-home" href="index.html">← 계산기 모음</a>
-    <div class="site-nav-groups">
-      <div class="site-nav-group">
-        <button type="button" class="site-nav-group-btn">계산기</button>
-        <div class="site-nav-dropdown">
-          <a href="trace_calc.html">주흔 기댓값 계산기</a>
-          <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
-          <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
-          <a href="cube_calc.html">잠재능력 큐브 연구소</a>
-        </div>
-      </div>
-      <div class="site-nav-group active">
-        <button type="button" class="site-nav-group-btn">놀이터</button>
-        <div class="site-nav-dropdown">
-          <a href="boutique_gacha.html">부티크 기프트</a>
-          <a href="pet_gacha.html">펫 뽑기 놀이</a>
-          <a class="active" href="seedring_gacha.html">시드링 뽑기</a>
-        </div>
-      </div>
+  <nav class="site-tabs">
+    <div class="site-tabs-track">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html"><span class="site-tab-icon">🏠</span>홈</a>
+      <a class="site-tab" href="trace_calc.html"><span class="site-tab-icon">📜</span>주흔</a>
+      <a class="site-tab" href="authentic_symbol_calc.html"><span class="site-tab-icon">🔮</span>어센틱 심볼</a>
+      <a class="site-tab" href="boss_income_calc.html"><span class="site-tab-icon">💰</span>보스 수익</a>
+      <a class="site-tab" href="cube_calc.html"><span class="site-tab-icon">🎲</span>큐브</a>
+      <a class="site-tab" href="boutique_gacha.html"><span class="site-tab-icon">🎁</span>부티크</a>
+      <a class="site-tab" href="pet_gacha.html"><span class="site-tab-icon">🐾</span>펫 뽑기</a>
+      <a class="site-tab active" href="seedring_gacha.html"><span class="site-tab-icon">💍</span>시드링</a>
     </div>
   </nav>
 
   <header class="sr-hero">
     <div class="eyebrow">Seed Ring</div>
-    <h1>시드링 뽑기</h1>
-    <p>보스 반지 상자를 열어보는 시뮬레이터입니다. 횟수 제한 없이 확률을 시험하거나, 한국 시간 기준 하루 한 번의 오늘의 뽑기에 도전할 수 있습니다. 결과는 이미지로 복사해 바로 공유하세요.</p>
+    <h1>💍 시드링 뽑기</h1>
   </header>
 
   <div class="sr-layout">

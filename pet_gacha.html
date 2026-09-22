@@ -15,10 +15,10 @@
 <link rel="stylesheet" href="style.css" />
 <style>
   :root{--pet-pink:#ff76b7;--pet-pink-2:#ffb5dc;--pet-blue:#8ab8ff;--pet-gold:#ffd36a;--pet-purple:#c49cff;}
-  .reset-badge{margin-left:auto;background:transparent;border:1px solid #3f4554;color:var(--text-dim);border-radius:999px;padding:5px 10px;font:inherit;font-size:.7rem;cursor:pointer}.reset-badge:hover{border-color:var(--bad);color:var(--bad)}
-  .pet-wrap{max-width:1240px;margin:0 auto;padding:24px 16px 80px}
+  .reset-badge{position:absolute;top:18px;right:20px;z-index:2;background:transparent;border:1px solid #3f4554;color:var(--text-dim);border-radius:999px;padding:5px 10px;font:inherit;font-size:.7rem;cursor:pointer}.reset-badge:hover{border-color:var(--bad);color:var(--bad)}
+  .pet-wrap{max-width:1280px;margin:0 auto;padding:24px 16px 80px}
   .pet-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#24182e 0%,#151d33 58%,#182b45 100%);border:1px solid #59436e;border-radius:22px;padding:30px 32px;margin-top:18px;box-shadow:0 18px 50px rgba(0,0,0,.24)}
-  .pet-hero:after{content:"✦  ✧  ✦  ✧  ✦";position:absolute;right:28px;top:22px;color:rgba(255,213,241,.5);font-size:24px;letter-spacing:15px;transform:rotate(8deg)}
+  .pet-hero:after{content:"✦  ✧  ✦  ✧  ✦";position:absolute;right:28px;top:60px;color:rgba(255,213,241,.5);font-size:24px;letter-spacing:15px;transform:rotate(8deg)}
   .eyebrow{color:var(--pet-pink-2);font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
   .pet-hero h1{font-size:clamp(1.9rem,4vw,3.1rem);line-height:1.08;margin:9px 0 10px;letter-spacing:-.06em}
   .pet-hero p{max-width:650px;color:#c5c3d6;margin:0;line-height:1.75}
@@ -45,34 +45,24 @@
 </head>
 <body>
 <main class="pet-wrap">
-  <nav class="site-nav">
-    <a class="site-nav-home" href="index.html">← 계산기 모음</a>
-    <div class="site-nav-groups">
-      <div class="site-nav-group">
-        <button type="button" class="site-nav-group-btn">계산기</button>
-        <div class="site-nav-dropdown">
-          <a href="trace_calc.html">주흔 기댓값 계산기</a>
-          <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
-          <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
-          <a href="cube_calc.html">잠재능력 큐브 연구소</a>
-        </div>
-      </div>
-      <div class="site-nav-group active">
-        <button type="button" class="site-nav-group-btn">놀이터</button>
-        <div class="site-nav-dropdown">
-          <a href="boutique_gacha.html">부티크 기프트</a>
-          <a class="active" href="pet_gacha.html">펫 뽑기 놀이</a>
-          <a href="seedring_gacha.html">시드링 뽑기</a>
-        </div>
-      </div>
+  <nav class="site-tabs">
+    <div class="site-tabs-track">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html"><span class="site-tab-icon">🏠</span>홈</a>
+      <a class="site-tab" href="trace_calc.html"><span class="site-tab-icon">📜</span>주흔</a>
+      <a class="site-tab" href="authentic_symbol_calc.html"><span class="site-tab-icon">🔮</span>어센틱 심볼</a>
+      <a class="site-tab" href="boss_income_calc.html"><span class="site-tab-icon">💰</span>보스 수익</a>
+      <a class="site-tab" href="cube_calc.html"><span class="site-tab-icon">🎲</span>큐브</a>
+      <a class="site-tab" href="boutique_gacha.html"><span class="site-tab-icon">🎁</span>부티크</a>
+      <a class="site-tab active" href="pet_gacha.html"><span class="site-tab-icon">🐾</span>펫 뽑기</a>
+      <a class="site-tab" href="seedring_gacha.html"><span class="site-tab-icon">💍</span>시드링</a>
     </div>
-    <button class="reset-badge" id="resetBtn" type="button">세션 초기화</button>
   </nav>
 
   <header class="pet-hero">
+    <button class="reset-badge" id="resetBtn" type="button">세션 초기화</button>
     <div class="eyebrow">Wonderberry</div>
-    <h1>펫 뽑기 놀이</h1>
-    <p>위습의 원더베리를 열고 블랙·상급 펫을 모아 루나 크리스탈을 합성하는 시뮬레이터입니다. 결과의 희귀도, 상위 퍼센트, 누적 사용 금액을 바로 확인할 수 있습니다.</p>
+    <h1>🐾 펫 뽑기 놀이</h1>
   </header>
 
   <div class="pet-layout">

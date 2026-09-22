@@ -102,36 +102,26 @@
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>메이플 계산기 모음</h1>
-    <p class="sub">필요할 때 꺼내 쓰는 메이플스토리 계산기들</p>
-  </header>
-
-  <nav class="site-nav">
-    <div class="site-nav-groups">
-      <div class="site-nav-group">
-        <button type="button" class="site-nav-group-btn">계산기</button>
-        <div class="site-nav-dropdown">
-          <a href="trace_calc.html">주흔 기댓값 계산기</a>
-          <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
-          <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
-          <a href="cube_calc.html">잠재능력 큐브 연구소</a>
-        </div>
-      </div>
-      <div class="site-nav-group">
-        <button type="button" class="site-nav-group-btn">놀이터</button>
-        <div class="site-nav-dropdown">
-          <a href="boutique_gacha.html">부티크 기프트</a>
-          <a href="pet_gacha.html">펫 뽑기 놀이</a>
-          <a href="seedring_gacha.html">시드링 뽑기</a>
-        </div>
-      </div>
+  <nav class="site-tabs">
+    <div class="site-tabs-track">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab active" href="index.html"><span class="site-tab-icon">🏠</span>홈</a>
+      <a class="site-tab" href="trace_calc.html"><span class="site-tab-icon">📜</span>주흔</a>
+      <a class="site-tab" href="authentic_symbol_calc.html"><span class="site-tab-icon">🔮</span>어센틱 심볼</a>
+      <a class="site-tab" href="boss_income_calc.html"><span class="site-tab-icon">💰</span>보스 수익</a>
+      <a class="site-tab" href="cube_calc.html"><span class="site-tab-icon">🎲</span>큐브</a>
+      <a class="site-tab" href="boutique_gacha.html"><span class="site-tab-icon">🎁</span>부티크</a>
+      <a class="site-tab" href="pet_gacha.html"><span class="site-tab-icon">🐾</span>펫 뽑기</a>
+      <a class="site-tab" href="seedring_gacha.html"><span class="site-tab-icon">💍</span>시드링</a>
     </div>
   </nav>
+  <header>
+    <h1>🏠 메이플 계산기 모음</h1>
+  </header>
 
   <section class="card" id="apiKey">
     <h2>넥슨 오픈 API 키</h2>
-    <p class="note" style="margin-top:0;">여기서 한 번만 등록해두면 어센틱 심볼 계산기 등 API를 쓰는 계산기에서 캐릭터 이름만으로 자동 불러오기가 됩니다. 이 브라우저에 계속 저장되므로 다시 등록할 필요는 없습니다. 각자 자기 브라우저에만 저장되는 개인 키이며, 넥슨 API 호출 외에는 어디에도 전송되지 않습니다.</p>
+    <p class="note" style="margin-top:0;">한 번만 등록하면 캐릭터 이름만으로 자동 불러오기가 됩니다. 이 브라우저에만 저장됩니다.</p>
 
     <div id="apiKeyRegistered" class="hidden key-hero">
       <div class="key-hero-icon">✓</div>

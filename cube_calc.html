@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="style.css" />
 <style>
   .cube-page { --cube-purple:#b58cff; --cube-cyan:#55d9ff; --cube-gold:#f3c969; --cube-panel:#171827; --cube-panel-2:#20213a; }
-  .cube-page .wrap { max-width: 1320px; }
+  .cube-page .wrap { max-width: 1280px; }
   .cube-hero { margin: 22px 0 18px; padding: 26px 28px; border:1px solid #34345c; border-radius:18px; background: radial-gradient(circle at 84% 10%, rgba(181,140,255,.22), transparent 34%), linear-gradient(135deg,#171827,#13141e 70%); position:relative; overflow:hidden; }
   .cube-hero::after { content:""; position:absolute; right:-55px; bottom:-75px; width:240px; height:180px; border:1px solid rgba(85,217,255,.25); transform:rotate(-21deg); box-shadow:0 0 0 12px rgba(85,217,255,.035),0 0 0 24px rgba(85,217,255,.025); }
   .eyebrow { color:var(--cube-cyan); font-size:.72rem; letter-spacing:.16em; font-weight:800; text-transform:uppercase; }
@@ -75,29 +75,20 @@
 </head>
 <body class="cube-page">
 <div class="wrap">
-  <nav class="site-nav">
-    <a class="site-nav-home" href="index.html">← 계산기 모음</a>
-    <div class="site-nav-groups">
-      <div class="site-nav-group active">
-        <button type="button" class="site-nav-group-btn">계산기</button>
-        <div class="site-nav-dropdown">
-          <a href="trace_calc.html">주흔 기댓값 계산기</a>
-          <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
-          <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
-          <a class="active" href="cube_calc.html">잠재능력 큐브 연구소</a>
-        </div>
-      </div>
-      <div class="site-nav-group">
-        <button type="button" class="site-nav-group-btn">놀이터</button>
-        <div class="site-nav-dropdown">
-          <a href="boutique_gacha.html">부티크 기프트</a>
-          <a href="pet_gacha.html">펫 뽑기 놀이</a>
-          <a href="seedring_gacha.html">시드링 뽑기</a>
-        </div>
-      </div>
+  <nav class="site-tabs">
+    <div class="site-tabs-track">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html"><span class="site-tab-icon">🏠</span>홈</a>
+      <a class="site-tab" href="trace_calc.html"><span class="site-tab-icon">📜</span>주흔</a>
+      <a class="site-tab" href="authentic_symbol_calc.html"><span class="site-tab-icon">🔮</span>어센틱 심볼</a>
+      <a class="site-tab" href="boss_income_calc.html"><span class="site-tab-icon">💰</span>보스 수익</a>
+      <a class="site-tab active" href="cube_calc.html"><span class="site-tab-icon">🎲</span>큐브</a>
+      <a class="site-tab" href="boutique_gacha.html"><span class="site-tab-icon">🎁</span>부티크</a>
+      <a class="site-tab" href="pet_gacha.html"><span class="site-tab-icon">🐾</span>펫 뽑기</a>
+      <a class="site-tab" href="seedring_gacha.html"><span class="site-tab-icon">💍</span>시드링</a>
     </div>
   </nav>
-  <header class="cube-hero"><div class="eyebrow">CUBE LAB / PROBABILITY DECK</div><h1>잠재능력 큐브 연구소</h1><p>등급업 확률과 천장을 한 장의 전략판으로 바꿔보세요. 기대 횟수부터 실제 뽑기까지, 내 메소 기준으로 비교합니다.</p></header>
+  <header class="cube-hero"><div class="eyebrow">CUBE LAB / PROBABILITY DECK</div><h1>🎲 잠재능력 큐브 연구소</h1></header>
   <main class="cube-layout">
     <section>
       <div class="cube-panel"><h2>01 · 목표 설정</h2><p class="panel-kicker">현재 등급에서 어디까지 올릴지 선택하세요.</p><div class="rank-row" id="rankRow"></div><h3>큐브 종류</h3><div class="cube-grid" id="cubeChoices"></div></div>

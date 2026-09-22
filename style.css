@@ -32,94 +32,62 @@ body {
 header h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .sub { color: var(--text-dim); margin-top: 0; font-size: 0.9rem; }
 
-.site-nav {
+/* 상단 탭 바: 모든 페이지가 항상 같은 8개 탭을 같은 자리에 그대로 보여준다.
+   드롭다운으로 숨기지 않고 세그먼트 컨트롤처럼 한 줄로 펼쳐두고, 활성 탭 아래로
+   filled pill이 부드럽게 슬라이드해 지금 위치를 보여준다(site_nav.js가 위치 계산). */
+.site-tabs {
   display: flex;
   align-items: center;
-  gap: 14px;
-  /* .wrap의 좌우 여백(16px씩)을 제외한 공통 본문 폭 */
+  gap: 10px;
   max-width: calc(1280px - 32px);
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
+  margin: 0 auto 18px;
 }
-.site-nav-home {
+.site-tabs-track {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: #171a21;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.site-tabs-track::-webkit-scrollbar { display: none; }
+.site-tabs-pill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 0;
+  background: var(--accent-strong);
+  border-radius: 8px;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 0;
+}
+.site-tab {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 128px;
+  width: 128px;
+  padding: 8px 10px;
+  border-radius: 8px;
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-dim);
   text-decoration: none;
-}
-.site-nav-home:hover { color: var(--accent); }
-
-/* 상단 대분류 탭(뽑기 / 계산기): 지금 있는 페이지가 속한 분류만 색으로 표시하고,
-   버튼을 누르면 그 분류에 속한 페이지 목록이 드롭다운으로 펼쳐진다.
-   다른 분류를 눌러도 항상 펼쳐볼 수 있어서, 뽑기 페이지에서도 계산기 쪽으로,
-   계산기 페이지에서도 뽑기 쪽으로 바로 이동할 수 있다. */
-.site-nav-groups {
-  display: inline-flex;
-  gap: 6px;
-  position: relative;
-}
-.site-nav-group { position: relative; }
-.site-nav-group-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border: none;
-  border-radius: 8px;
-  background: #1d212b;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.site-nav-group-btn:hover { color: var(--text); }
-.site-nav-group-btn::after {
-  content: "▾";
-  font-size: 0.65rem;
-  opacity: 0.7;
-}
-.site-nav-group.active .site-nav-group-btn {
-  background: var(--accent-strong);
-  color: #0b0d12;
-}
-
-.site-nav-dropdown {
-  display: none;
-  flex-direction: column;
-  gap: 2px;
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 210px;
-  background: #1d212b;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
-  z-index: 30;
-}
-.site-nav-dropdown.open { display: flex; }
-.site-nav-dropdown a {
-  padding: 8px 10px;
-  border-radius: 7px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-dim);
-  text-decoration: none;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: color 0.2s ease;
 }
-.site-nav-dropdown a:hover { background: rgba(110, 168, 254, 0.12); color: var(--text); }
-.site-nav-dropdown a.active {
-  color: var(--accent-strong);
-  background: rgba(76, 141, 255, 0.14);
-  cursor: default;
-  pointer-events: none;
-}
+.site-tab:hover { color: var(--text); }
+.site-tab.active { color: #0b0d12; }
+.site-tab-icon { font-size: 0.95rem; line-height: 1; }
 
 .layout {
   display: grid;
