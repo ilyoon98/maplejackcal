@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>잠재능력 큐브 연구소</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .cube-page { --cube-purple:#b58cff; --cube-cyan:#55d9ff; --cube-gold:#f3c969; --cube-panel:#171827; --cube-panel-2:#20213a; }
+  .cube-page .wrap { max-width: 1320px; }
+  .cube-hero { margin: 22px 0 18px; padding: 26px 28px; border:1px solid #34345c; border-radius:18px; background: radial-gradient(circle at 84% 10%, rgba(181,140,255,.22), transparent 34%), linear-gradient(135deg,#171827,#13141e 70%); position:relative; overflow:hidden; }
+  .cube-hero::after { content:""; position:absolute; right:-55px; bottom:-75px; width:240px; height:180px; border:1px solid rgba(85,217,255,.25); transform:rotate(-21deg); box-shadow:0 0 0 12px rgba(85,217,255,.035),0 0 0 24px rgba(85,217,255,.025); }
+  .eyebrow { color:var(--cube-cyan); font-size:.72rem; letter-spacing:.16em; font-weight:800; text-transform:uppercase; }
+  .cube-hero h1 { margin:8px 0 8px; font-size:clamp(1.7rem,4vw,2.7rem); letter-spacing:-.045em; }
+  .cube-hero p { max-width:700px; margin:0; color:var(--text-dim); }
+  .cube-layout { display:grid; grid-template-columns:minmax(0,1.16fr) minmax(360px,.84fr); gap:18px; align-items:start; }
+  .cube-panel { background:var(--cube-panel); border:1px solid #2d2e48; border-radius:14px; padding:18px; margin-top:16px; }
+  .cube-panel h2 { margin:0 0 13px; font-size:1rem; }
+  .cube-panel h3 { margin:18px 0 8px; color:#c9c8e9; font-size:.85rem; }
+  .panel-kicker { color:var(--text-dim); font-size:.78rem; margin:-6px 0 13px; }
+  .cube-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:9px; }
+  .cube-choice { border:1px solid #373854; background:#1e1f32; color:var(--text); border-radius:10px; padding:11px 12px; text-align:left; cursor:pointer; font:inherit; transition:.16s ease; }
+  .cube-choice:hover { border-color:var(--cube-purple); transform:translateY(-1px); }
+  .cube-choice.active { border-color:var(--cube-purple); background:linear-gradient(135deg,#2a2446,#20213a); box-shadow:0 0 0 1px rgba(181,140,255,.2); }
+  .cube-choice strong { display:block; font-size:.9rem; }
+  .cube-choice small { display:block; color:var(--text-dim); margin-top:3px; }
+  .rank-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .rank-chip { padding:8px 12px; border:1px solid #373854; color:var(--text-dim); background:#1d1e2e; border-radius:999px; cursor:pointer; font:inherit; font-size:.82rem; }
+  .rank-chip.active { color:#15131e; border-color:transparent; background:var(--cube-gold); font-weight:800; }
+  .arrow { color:#6c6d86; }
+  .control-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .cube-panel input, .cube-panel select { width:100%; background:#10111a; border:1px solid #34354d; border-radius:8px; color:var(--text); padding:9px 10px; font:inherit; }
+  .cube-panel label { color:var(--text-dim); font-size:.78rem; display:block; margin-bottom:5px; }
+  .field-note { color:#777992; font-size:.73rem; margin-top:5px; }
+  .strategy-table { width:100%; border-collapse:collapse; font-size:.78rem; }
+  .strategy-table th,.strategy-table td { padding:9px 7px; border-bottom:1px solid #2b2c41; text-align:right; white-space:nowrap; }
+  .strategy-table th:first-child,.strategy-table td:first-child { text-align:left; }
+  .strategy-table th { color:#8e90ab; font-weight:600; }
+  .strategy-table tr.best td { color:var(--cube-gold); background:rgba(243,201,105,.055); }
+  .strategy-table .muted { color:#6e7089; }
+  .metric-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .metric { background:#20213a; border-radius:10px; padding:12px; }
+  .metric .label { color:#9496b0; font-size:.72rem; }
+  .metric .value { font-size:1.3rem; font-weight:850; margin-top:3px; color:#f0edff; }
+  .recommend { border:1px solid rgba(243,201,105,.5); background:linear-gradient(135deg,rgba(243,201,105,.12),rgba(181,140,255,.08)); border-radius:12px; padding:14px; margin-top:12px; }
+  .recommend b { color:var(--cube-gold); }
+  .sim-stage { display:flex; align-items:center; gap:10px; margin:8px 0 14px; }
+  .sim-orb { width:58px; height:58px; border-radius:50%; display:grid; place-items:center; font-weight:900; color:#17131f; background:radial-gradient(circle at 35% 28%,#fff7d2,#f3c969 34%,#a26bdb 100%); box-shadow:0 0 26px rgba(243,201,105,.18); }
+  .sim-info { flex:1; }
+  .sim-info strong { display:block; }
+  .sim-info span { display:block; color:var(--text-dim); font-size:.78rem; }
+  .sim-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .primary-btn,.ghost-btn { border-radius:9px; padding:10px 12px; cursor:pointer; font:inherit; font-weight:800; }
+  .primary-btn { background:var(--cube-purple); border:1px solid var(--cube-purple); color:#17131f; }
+  .ghost-btn { background:#20213a; color:var(--text); border:1px solid #3a3b58; }
+  .primary-btn:hover,.ghost-btn:hover { filter:brightness(1.1); }
+  .log { margin-top:12px; min-height:70px; max-height:145px; overflow:auto; color:#9a9cb7; font-size:.76rem; line-height:1.7; }
+  .log .win { color:#9de5c0; } .log .loss { color:#ffaaa1; }
+  .data-table { width:100%; border-collapse:collapse; font-size:.74rem; }
+  .data-table th,.data-table td { padding:7px 5px; text-align:right; border-bottom:1px solid #2b2c41; }
+  .data-table th:first-child,.data-table td:first-child { text-align:left; }
+  .data-table th { color:#8e90ab; }
+  .tiny { color:#777992; font-size:.7rem; line-height:1.55; }
+  @media(max-width:900px){ .cube-layout{grid-template-columns:1fr;} .cube-panel.sticky{position:static;} }
+  @media(max-width:520px){ .control-grid,.metric-grid{grid-template-columns:1fr;} .cube-hero{padding:22px 18px;} .cube-panel{padding:14px;} .strategy-table{font-size:.7rem;} }
+</style>
+</head>
+<body class="cube-page">
+<div class="wrap">
+  <nav class="site-nav"><a class="site-nav-home" href="index.html">← 계산기 모음</a><div class="site-nav-tabs"><a href="trace_calc.html">주흔</a><a href="boss_income_calc.html">보스 수익</a><a class="active" href="cube_calc.html">큐브 연구소</a></div></nav>
+  <header class="cube-hero"><div class="eyebrow">CUBE LAB / PROBABILITY DECK</div><h1>잠재능력 큐브 연구소</h1><p>등급업 확률과 천장을 한 장의 전략판으로 바꿔보세요. 기대 횟수부터 실제 뽑기까지, 내 메소 기준으로 비교합니다.</p></header>
+  <main class="cube-layout">
+    <section>
+      <div class="cube-panel"><h2>01 · 목표 설정</h2><p class="panel-kicker">현재 등급에서 어디까지 올릴지 선택하세요.</p><div class="rank-row" id="rankRow"></div><h3>큐브 종류</h3><div class="cube-grid" id="cubeChoices"></div></div>
+      <div class="cube-panel"><h2>02 · 내 기준 입력</h2><p class="panel-kicker">가격을 비워두면 횟수 중심으로만 비교합니다.</p><div class="control-grid"><div><label for="level">장비 레벨 구간</label><select id="level"><option value="1">1 ~ 159</option><option value="160">160 ~ 199</option><option value="200">200 ~ 249</option><option value="250">250 ~ 300</option></select><div class="field-note" id="levelCostNote"></div></div><div><label for="cubePrice">선택 큐브 1개 가격 (메소)</label><input id="cubePrice" type="number" min="0" step="1000" placeholder="예: 12,000,000"><div class="field-note">에디셔널 잠재 재설정은 레벨별 비용을 자동 적용합니다.</div></div></div></div>
+      <div class="cube-panel"><h2>03 · 큐브 데이터</h2><div id="dataTable"></div><p class="tiny">확률은 사용자가 제공한 값입니다. 천장이 없는 항목은 확률만으로 기대 횟수를 계산합니다. 천장 도달 시 해당 시도에서 등급업된다고 가정합니다.</p></div>
+    </section>
+    <aside class="layout-right">
+      <div class="cube-panel sticky card-primary"><h2>전략판</h2><div class="metric-grid"><div class="metric"><div class="label">기대 큐브 수</div><div class="value" id="expectedCubes">-</div></div><div class="metric"><div class="label">첫 구간 확률</div><div class="value" id="chance">-</div></div><div class="metric"><div class="label">최악의 경우</div><div class="value" id="worst">-</div></div></div><div class="recommend" id="recommend">계산 중…</div></div>
+      <div class="cube-panel"><h2>가상 큐브 게임</h2><p class="panel-kicker">천장 카운터를 직접 굴려 보세요.</p><div class="sim-stage"><div class="sim-orb" id="simRank">R</div><div class="sim-info"><strong id="simLabel">레어 → 에픽</strong><span id="simPity">현재 카운터 0회</span></div></div><div class="sim-actions"><button class="primary-btn" id="rollBtn">큐브 사용</button><button class="ghost-btn" id="resetBtn">처음부터</button></div><div class="log" id="simLog"></div></div>
+      <div class="cube-panel"><h2>등급업 천장 요약</h2><div id="ceilingTable"></div></div>
+    </aside>
+  </main>
+</div>
+<script src="cube_calc.js"></script>
+</body>
+</html>
