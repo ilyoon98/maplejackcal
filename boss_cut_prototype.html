@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<link rel="icon" type="image/png" href="favicon.png?v=2" />
+<meta name="description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="메이플 계산기 모음" />
+<meta property="og:description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
+<meta property="og:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>배율컷 보스별 난이도 선택 · 페이퍼 프로토타입</title>
+<style>
+  :root{
+    --bg:#0d1016;--panel:#151a23;--panel-2:#1b2230;--line:#30394a;
+    --text:#f3f6fb;--dim:#9ca8ba;--party:#6f91ff;--minimum:#ffad5c;
+    --comfortable:#55d597;--excluded:#f06b72;--focus:#dbe5ff;
+    /* cutType()이 50% 미만에 붙이는 이름. 이게 없으면 카드의 --tone이 무효가 돼서
+       '불가' 난이도를 고른 보스만 선택 라벨이 회색으로 빠진다. */
+    --unavailable:var(--excluded);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;line-height:1.45}
+  button{font:inherit}
+  .wrap{max-width:1380px;margin:auto;padding:30px 20px 90px}
+  header{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:24px}
+  h1{font-size:clamp(1.7rem,4vw,2.7rem);line-height:1.08;margin:0;letter-spacing:-.045em}
+  .eyebrow{margin:0 0 8px;color:#93a9d8;font-weight:800;font-size:.75rem;letter-spacing:.13em}
+  .prototype-badge{border:1px dashed #657087;border-radius:999px;padding:7px 12px;color:var(--dim);font-size:.8rem;white-space:nowrap}
+  .workspace{display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px;align-items:start}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .source{position:sticky;top:18px}
+  .panel-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .panel-head h2{font-size:1rem;margin:0}
+  .scan-ok{color:var(--comfortable);font-size:.78rem;font-weight:800}
+  .capture{padding:14px;position:relative}
+  .capture img{display:block;width:100%;border-radius:10px;border:1px solid #3c4658}
+  .scan-label{position:absolute;top:26px;right:26px;background:rgba(10,14,20,.9);border:1px solid var(--comfortable);border-radius:999px;color:var(--comfortable);padding:6px 10px;font-size:.74rem;font-weight:900}
+  .source-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px 14px}
+  .source-summary div{background:#10151d;border-radius:9px;padding:11px}
+  .source-summary span{display:block;color:var(--dim);font-size:.72rem;margin-bottom:3px}
+  .source-summary strong{font-size:1rem}
+  .result{padding:20px}
+  .question-row{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:14px}
+  .question{margin:0;font-size:1.35rem;letter-spacing:-.025em}
+  .progress{color:var(--comfortable);font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .guide{margin:5px 0 0;color:var(--dim);font-size:.8rem}
+  .modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+  .mode{position:relative;text-align:left;border:1px solid var(--line);background:#10151d;color:var(--text);padding:13px;border-radius:12px;cursor:pointer;transition:.15s ease}
+  .mode:hover{transform:translateY(-1px);border-color:#62708a}
+  .mode[aria-pressed="true"]{border-color:var(--tone);box-shadow:inset 0 0 0 1px var(--tone);background:color-mix(in srgb,var(--tone) 12%,#10151d)}
+  .mode b{display:block;color:var(--tone);font-size:.95rem;margin-bottom:4px}
+  .mode span{font-size:.73rem;color:var(--dim)}
+  .mode.party{--tone:var(--party)}.mode.minimum{--tone:var(--minimum)}.mode.comfortable{--tone:var(--comfortable)}
+  .boss-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+  .boss-choice{border:1px solid var(--line);background:var(--panel-2);border-radius:13px;padding:13px;min-width:0}
+  .boss-choice.complete{border-color:#45536a}
+  .boss-choice-head{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:10px;margin-bottom:11px}
+  .boss-thumb{width:48px;height:48px;border-radius:9px;border:1px solid #546078;object-fit:cover;background:#10151d}
+  .boss-name{min-width:0}.boss-name b{display:block;font-size:.9rem}.boss-name span{display:block;color:var(--dim);font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .picked{font-size:.72rem;font-weight:900;color:var(--tone,var(--dim));text-align:right}
+  .variants{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .variant{min-width:0;border:1px solid var(--line);border-radius:9px;background:#10151d;color:var(--text);padding:9px 7px;text-align:left;cursor:pointer}
+  .variant:hover{border-color:#65728a}
+  .variant[aria-pressed="true"]{border-color:var(--tone);box-shadow:inset 0 0 0 1px var(--tone);background:color-mix(in srgb,var(--tone) 10%,#10151d)}
+  .variant b{display:block;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .variant strong{display:block;color:var(--tone);font-size:.9rem;font-variant-numeric:tabular-nums;margin-top:2px}
+  .variant small{display:block;color:var(--dim);font-size:.62rem;margin-top:2px}
+  .variant.party{--tone:var(--party)}.variant.minimum{--tone:var(--minimum)}.variant.comfortable{--tone:var(--comfortable)}.variant.unavailable,.variant.exclude{--tone:var(--excluded)}
+  .action{position:sticky;bottom:12px;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:18px;padding:15px 16px;border:1px solid #46546b;border-radius:13px;background:rgba(16,21,29,.96);box-shadow:0 12px 30px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
+  .action p{margin:0;color:var(--dim);font-size:.76rem}.action p b{display:block;color:var(--text);font-size:.9rem}
+  .apply{border:0;background:var(--focus);color:#111723;border-radius:10px;padding:12px 17px;font-weight:900;cursor:pointer;white-space:nowrap}
+  .apply:disabled{opacity:.42;cursor:not-allowed}
+  .toast{position:fixed;bottom:24px;left:50%;translate:-50% 16px;background:#f2f6ff;color:#111723;border-radius:9px;padding:11px 16px;font-weight:800;opacity:0;pointer-events:none;transition:.18s ease;z-index:5}
+  .toast.show{opacity:1;translate:-50% 0}
+  @media(max-width:1000px){.workspace{grid-template-columns:1fr}.source{position:static}.capture img{max-height:360px;object-fit:contain;background:#0b0e13}}
+  @media(max-width:700px){.modes,.boss-choices{grid-template-columns:1fr}.question-row{align-items:start}.variants{grid-template-columns:repeat(2,minmax(0,1fr))}.source-summary{grid-template-columns:1fr 1fr}.source-summary div:last-child{grid-column:1/-1}.action{align-items:stretch;flex-direction:column}.apply{width:100%}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}.mode:hover{transform:none}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <div><p class="eyebrow">BOSS CUT SCAN</p><h1>보스마다 갈 난이도를<br>직접 고릅니다</h1></div>
+    <span class="prototype-badge">클릭 가능한 페이퍼 프로토타입</span>
+  </header>
+
+  <div class="workspace">
+    <section class="panel source">
+      <div class="panel-head"><h2>올린 이미지</h2><span class="scan-ok">● 분석 완료</span></div>
+      <div class="capture">
+        <img src="icons/prototype/boss-cut-reference.png" alt="사용자가 올린 배율컷 캡처">
+        <span class="scan-label">중복 정리 완료</span>
+      </div>
+      <div class="source-summary">
+        <div><span>인식 카드</span><strong>26개</strong></div>
+        <div><span>CHAMPION·DESTINY 제외</span><strong>7개</strong></div>
+        <div><span>고유 보스</span><strong>12개</strong></div>
+      </div>
+    </section>
+
+    <section class="panel result">
+      <div class="question-row">
+        <div><h2 class="question">보스 난이도를 골라주세요</h2><p class="guide">같은 보스의 난이도는 한 카드 안에서 선택합니다.</p></div>
+        <span class="progress" id="progress">0 / 12 선택</span>
+      </div>
+      <div class="modes" role="group" aria-label="초기 추천 기준">
+        <button class="mode party" data-mode="party" aria-pressed="false"><b>파티 기준 채우기</b><span>50% 이상 중 가장 높은 난이도</span></button>
+        <button class="mode minimum" data-mode="minimum" aria-pressed="false"><b>최소컷 기준 채우기</b><span>100% 이상에 가까운 난이도</span></button>
+        <button class="mode comfortable" data-mode="comfortable" aria-pressed="false"><b>여유컷 기준 채우기</b><span>130% 이상에 가까운 난이도</span></button>
+      </div>
+
+      <div class="boss-choices" id="bossChoices"></div>
+
+      <div class="action">
+        <p><b id="actionTitle">보스마다 난이도를 선택하세요</b><span id="actionDescription">예: 윌 노멀 98.79%와 이지 286.3%는 한 카드에서 선택</span></p>
+        <button class="apply" id="applyButton" disabled>선택 저장</button>
+      </div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast" role="status">보스 난이도 선택을 저장했습니다</div>
+
+<script>
+  const RAW_CARDS = [
+    {bossId:'dunkel',name:'듄켈',icon:'icons/boss/dunkel.webp',difficulty:'하드',ratio:55.84},
+    {bossId:'dunkel',name:'듄켈',icon:'icons/boss/dunkel.webp',difficulty:'노멀',ratio:147.1,tier:'DESTINY'},
+    {bossId:'hilla',name:'진 힐라',icon:'icons/boss/jin_hilla.webp',difficulty:'하드',ratio:86.35},
+    {bossId:'hilla',name:'진 힐라',icon:'icons/boss/jin_hilla.webp',difficulty:'노멀',ratio:327.7,tier:'DESTINY'},
+    {bossId:'will',name:'윌',icon:'icons/boss/will.webp',difficulty:'노멀',ratio:98.79},
+    {bossId:'will',name:'윌',icon:'icons/boss/will.webp',difficulty:'이지',ratio:286.3},
+    {bossId:'will',name:'윌',icon:'icons/boss/will.webp',difficulty:'노멀',ratio:98.79},
+    {bossId:'dusk',name:'더스크',icon:'icons/boss/dusk.webp',difficulty:'카오스',ratio:123.4},
+    {bossId:'dusk',name:'더스크',icon:'icons/boss/dusk.webp',difficulty:'노멀',ratio:444.8},
+    {bossId:'lucid',name:'루시드',icon:'icons/boss/lucid.webp',difficulty:'하드',ratio:99.42},
+    {bossId:'lucid',name:'루시드',icon:'icons/boss/lucid.webp',difficulty:'노멀',ratio:241.0},
+    {bossId:'lucid',name:'루시드',icon:'icons/boss/lucid.webp',difficulty:'이지',ratio:497.0,tier:'DESTINY'},
+    {bossId:'slime',name:'가디언 엔젤 슬라임',icon:'icons/boss/guardian_angel_slime.webp',difficulty:'카오스',ratio:184.9},
+    {bossId:'slime',name:'가디언 엔젤 슬라임',icon:'icons/boss/guardian_angel_slime.webp',difficulty:'노멀',ratio:603.8},
+    {bossId:'damien',name:'데미안',icon:'icons/boss/damien.webp',difficulty:'하드',ratio:211.4},
+    {bossId:'damien',name:'데미안',icon:'icons/boss/damien.webp',difficulty:'노멀',ratio:662.6},
+    {bossId:'suu',name:'스우',icon:'icons/boss/suu.webp',difficulty:'익스트림',ratio:55.84},
+    {bossId:'suu',name:'스우',icon:'icons/boss/suu.webp',difficulty:'하드',ratio:368.2},
+    {bossId:'papulatus',name:'파풀라투스',icon:'icons/boss/papulatus.webp',difficulty:'카오스',ratio:147.1},
+    {bossId:'magnus',name:'매그너스',icon:'icons/boss/magnus.webp',difficulty:'하드',ratio:184.9},
+    {bossId:'vellum',name:'벨룸',icon:'icons/boss/vellum.webp',difficulty:'카오스',ratio:211.4},
+    {bossId:'radiant',name:'찬란한 흉성',icon:'icons/boss/radiant.webp',difficulty:'노멀',ratio:32.38},
+    {bossId:'champion-a',tier:'CHAMPION'},
+    {bossId:'champion-b',tier:'CHAMPION'},
+    {bossId:'champion-c',tier:'CHAMPION'},
+    {bossId:'champion-d',tier:'CHAMPION'}
+  ];
+  function groupRecognizedBosses(cards){
+    const grouped=new Map();
+    cards.filter(card=>!['CHAMPION','DESTINY'].includes(card.tier)).forEach(card=>{
+      if(!grouped.has(card.bossId)) grouped.set(card.bossId,{id:card.bossId,name:card.name,icon:card.icon,variants:[]});
+      const boss=grouped.get(card.bossId);
+      if(!boss.variants.some(variant=>variant[0]===card.difficulty)) boss.variants.push([card.difficulty,card.ratio]);
+    });
+    return [...grouped.values()];
+  }
+  const BOSSES=groupRecognizedBosses(RAW_CARDS);
+  const STORAGE_KEY='boss_cut_selection_demo_v2';
+  const selections=Array(BOSSES.length).fill(null);
+  let setupSaved=false;
+  try{
+    const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+    if(Array.isArray(saved)&&saved.length===BOSSES.length){saved.forEach((value,index)=>selections[index]=value);setupSaved=true}
+  }catch(error){}
+  const $=selector=>document.querySelector(selector);
+  function cutType(ratio){return ratio<50?'unavailable':ratio<100?'party':ratio<130?'minimum':'comfortable'}
+  function cutLabel(ratio){return ratio<50?'불가':ratio<100?'파티':ratio<130?'최소':'여유'}
+  function choosePreset(mode){
+    setupSaved=false;
+    BOSSES.forEach((boss,index)=>{
+      const candidates=boss.variants.map((v,i)=>({ratio:v[1],index:i}));
+      let target=mode==='party'?50:mode==='minimum'?100:130;
+      let eligible=candidates.filter(v=>v.ratio>=target);
+      selections[index]=eligible.length?eligible.sort((a,b)=>a.ratio-b.ratio)[0].index:'exclude';
+    });
+    document.querySelectorAll('.mode').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.mode===mode)));
+    render();
+  }
+  function render(){
+    $('#bossChoices').innerHTML=BOSSES.map((boss,bossIndex)=>{
+      const selected=selections[bossIndex];
+      const picked=selected==='exclude'?{label:'등록 안 함',tone:'excluded'}:Number.isInteger(selected)?{label:`${boss.variants[selected][0]} · ${boss.variants[selected][1]}%`,tone:cutType(boss.variants[selected][1])}:null;
+      return `<article class="boss-choice ${picked?'complete':''}" style="--tone:var(--${picked?picked.tone:'dim'})">
+        <div class="boss-choice-head">
+          <img class="boss-thumb" src="${boss.icon}" alt="">
+          <div class="boss-name"><b>${boss.name}</b><span>인식된 난이도 ${boss.variants.length}개</span></div>
+          <span class="picked">${picked?picked.label:'선택 필요'}</span>
+        </div>
+        <div class="variants">
+          ${boss.variants.map((variant,variantIndex)=>{
+            const type=cutType(variant[1]);
+            return `<button class="variant ${type}" data-boss="${bossIndex}" data-variant="${variantIndex}" aria-pressed="${selected===variantIndex}"><b>${variant[0]}</b><strong>${variant[1]}%</strong><small>${cutLabel(variant[1])} 기준</small></button>`;
+          }).join('')}
+          <button class="variant exclude" data-boss="${bossIndex}" data-variant="exclude" aria-pressed="${selected==='exclude'}"><b>추천 대상</b><strong>등록 안 함</strong><small>보스 목록에서 제외</small></button>
+        </div>
+      </article>`;
+    }).join('');
+    document.querySelectorAll('.variant').forEach(button=>button.addEventListener('click',()=>{
+      setupSaved=false;
+      selections[Number(button.dataset.boss)]=button.dataset.variant==='exclude'?'exclude':Number(button.dataset.variant);
+      document.querySelectorAll('.mode').forEach(btn=>btn.setAttribute('aria-pressed','false'));
+      render();
+    }));
+    const count=selections.filter(value=>value!==null).length;
+    $('#progress').textContent=`${count} / ${BOSSES.length} 선택`;
+    $('#applyButton').disabled=count!==BOSSES.length||setupSaved;
+    $('#applyButton').textContent=setupSaved?'저장됨':'선택 저장';
+    $('#actionTitle').textContent=setupSaved?'보스 난이도를 저장했습니다':count===BOSSES.length?'12개 보스 선택 완료':`${BOSSES.length-count}개 보스가 남았습니다`;
+    $('#actionDescription').textContent=setupSaved?'저장된 선택을 계산기에 적용합니다.':count===BOSSES.length?'선택한 난이도를 저장합니다.':'각 보스에서 난이도 하나 또는 등록 안 함을 선택하세요.';
+  }
+  document.querySelectorAll('.mode').forEach(btn=>btn.addEventListener('click',()=>choosePreset(btn.dataset.mode)));
+  $('#applyButton').addEventListener('click',()=>{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(selections));
+    setupSaved=true;
+    render();
+    const toast=$('#toast');toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800);
+  });
+  render();
+</script>
+</body>
+</html>
