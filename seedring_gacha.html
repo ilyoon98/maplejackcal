@@ -29,8 +29,8 @@
   .mode-description{margin:12px 0 0;font-size:.78rem;color:var(--text-dim);line-height:1.6}
 
   /* 상자 선택 */
-  .boxrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .boxrow.daily-single{grid-template-columns:1fr}
+  /* 상자당 한 줄. 카드가 넓어야 보스 아이콘·난이도 배지가 읽을 만한 크기로 들어간다. */
+  .boxrow{display:grid;grid-template-columns:1fr;gap:10px}
   .boxcard{display:block;text-align:left;background:var(--sr-surface-2);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--text);font:inherit;cursor:pointer;transition:transform .15s,border-color .15s}
   .boxcard:hover{transform:translateY(-2px);border-color:var(--card-accent,var(--accent))}
   .boxcard[aria-disabled="true"]{cursor:default}
@@ -40,13 +40,26 @@
   .boxcard-main{display:flex;align-items:center;gap:12px}
   .box-icon-stage,.vault-box-icon,.result-icon-stage,.table-icon-stage{display:grid;place-items:center;flex:0 0 auto;border:1px solid var(--border);border-radius:10px;background:#11141a}
   .box-icon,.vault-box-icon img,.result-icon,.table-icon{image-rendering:pixelated;object-fit:contain}
-  .box-icon-stage{width:56px;height:56px}
-  .box-icon{width:44px;height:42px}
+  .box-icon-stage{width:64px;height:64px}
+  .box-icon{width:52px;height:48px}
   .boxcard-copy{min-width:0}
   .boxcard .name{display:flex;align-items:center;gap:7px;font-size:.95rem;font-weight:700}
   .box-grade{display:inline-grid;place-items:center;min-width:22px;height:19px;padding:0 6px;border-radius:999px;border:1px solid var(--card-accent,var(--box-accent,var(--accent)));color:var(--card-accent,var(--box-accent,var(--accent)));font-size:.66rem;font-weight:700;line-height:1}
   .vault-grade{margin-left:4px;vertical-align:middle}
-  .boxcard .bosses{display:block;margin-top:6px;font-size:.7rem;color:var(--text-dim);line-height:1.5}
+  .boxcard .bosses{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px}
+  .boss-chip{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-dim)}
+  .boss-chip-icon{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);object-fit:cover;flex:0 0 auto}
+  .boss-chip-name{white-space:nowrap}
+  .boss-diff{
+    display:inline-grid;place-items:center;min-width:20px;height:19px;padding:0 5px;
+    border-radius:5px;background:var(--difficulty);color:#10151c;
+    font-size:.68rem;font-weight:900;line-height:1;letter-spacing:.02em;
+  }
+  .difficulty-easy{--difficulty:#80cc8f}
+  .difficulty-normal{--difficulty:#77b9ef}
+  .difficulty-hard{--difficulty:#f5a360}
+  .difficulty-chaos{--difficulty:#eb88b8}
+  .difficulty-extreme{--difficulty:#c6a1fa}
   .daily-box-badge{display:inline-block;margin-bottom:4px;color:var(--sr-gold);font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
   .boxcard[data-box="jade"]{--card-accent:var(--sr-jade)}
   .boxcard[data-box="red"]{--card-accent:var(--sr-ruby)}
@@ -147,7 +160,6 @@
   }
   @media(max-width:540px){
     .sr-hero{padding:24px 20px}.sr-hero:after{display:none}
-    .boxrow{grid-template-columns:1fr}
     .vault-boxname{flex-direction:column;gap:7px}
     .drawbtns .btn{width:100%}
     .result-card{min-width:0;width:100%}
@@ -203,7 +215,6 @@
     <section class="sr-left">
       <section class="sr-card">
         <h2>뽑기 방식</h2>
-        <p class="sr-card-sub">오늘의 뽑기는 지정된 상자로 하루 한 번만, 무한 뽑기는 원하는 상자로 제한 없이 돌립니다.</p>
         <div class="mode-switch" role="tablist" aria-label="뽑기 방식 선택">
           <button class="mode-tab" id="modeDaily" type="button" role="tab" aria-selected="true" aria-controls="gachaPanel" data-mode="daily"><span class="mode-tab-mark">◆</span><span>오늘의 뽑기</span></button>
           <button class="mode-tab" id="modeUnlimited" type="button" role="tab" aria-selected="false" aria-controls="gachaPanel" data-mode="unlimited"><span class="mode-tab-mark">∞</span><span>무한 뽑기</span></button>
@@ -223,7 +234,6 @@
 
         <section class="sr-card">
           <h2 id="boxSelectorTitle">오늘의 지정 상자</h2>
-          <p class="sr-card-sub">상자마다 나오는 반지 종류와 레벨 확률이 다릅니다.</p>
           <div class="boxrow" id="boxrow" role="listbox" aria-label="반지 상자 선택"></div>
         </section>
       </div>
@@ -387,6 +397,49 @@
     }
   ];
 
+  // 보스 아이콘·난이도 배지는 보스 수익 계산기(boss_income_calc.html)와 같은 표기를 쓴다.
+  var BOSS_ICON = {
+    "스우":"suu", "데미안":"damien", "가엔슬":"guardian_angel_slime", "루시드":"lucid",
+    "윌":"will", "더스크":"dusk", "듄켈":"dunkel", "진 힐라":"jin_hilla", "세렌":"seren",
+    "검은 마법사":"black_mage", "칼로스":"watcher_kalos", "카링":"kaling",
+    "최초의 대적자":"first_challenger", "찬란한 흉성":"radiant", "림보":"limbo",
+    "발드릭스":"baldrix", "유피테르":"jupiter"
+  };
+  // 상자 카드가 좁아서 긴 이름은 통용되는 줄임말로 표시한다.
+  var BOSS_SHORT = { "가디언 엔젤 슬라임":"가엔슬", "최초의 대적자":"최초대적자" };
+  var DIFFICULTY = {
+    "이지":{ key:"easy", mark:"E" },
+    "노멀":{ key:"normal", mark:"N" },
+    "하드":{ key:"hard", mark:"H" },
+    "카오스":{ key:"chaos", mark:"C" },
+    "익스트림":{ key:"extreme", mark:"EX" }
+  };
+
+  // "루시드(이지/노멀)" → { name:"루시드", diffs:["이지","노멀"] }
+  function parseBoss(text){
+    var match = /^(.+?)\(([^)]+)\)$/.exec(text);
+    var name = match ? match[1].trim() : text.trim();
+    var diffs = match ? match[2].split("/").map(function(d){ return d.trim(); }) : [];
+    return { name: BOSS_SHORT[name] || name, iconKey: BOSS_ICON[BOSS_SHORT[name] || name] || BOSS_ICON[name], diffs: diffs };
+  }
+
+  function bossChipHtml(boss){
+    var icon = boss.iconKey
+      ? '<img class="boss-chip-icon" src="icons/boss/' + boss.iconKey + '.webp" alt="" loading="lazy">'
+      : '';
+    var marks = boss.diffs.map(function(d){
+      var badge = DIFFICULTY[d];
+      if (!badge) return '';
+      return '<span class="boss-diff difficulty-' + badge.key + '" title="' + d + '">' + badge.mark + '</span>';
+    }).join("");
+    return '<span class="boss-chip">' + icon +
+      '<span class="boss-chip-name">' + boss.name + '</span>' + marks + '</span>';
+  }
+
+  BOXES.forEach(function(box){
+    box.bossList = box.bosses.map(parseBoss);
+  });
+
   // normalize so each box's item list and level list each sum to exactly 100
   BOXES.forEach(function(box){
     var itemSum = box.items.reduce(function(a,i){ return a+i.p; }, 0);
@@ -533,13 +586,11 @@
     drawOneBtn.textContent = daily ? (used ? "오늘의 뽑기 완료" : "오늘의 뽑기") : "무한 뽑기";
     dailyStatus.classList.toggle("used", used);
     dailyStatus.textContent = daily
-      ? (used
-          ? "오늘의 기회 0/1 · 결과가 저장되었습니다. 내일 다시 뽑을 수 있어요."
-          : "오늘의 기회 1/1 · 오늘 지정된 상자로 한 번만 뽑을 수 있어요.")
-      : "횟수 제한 없음 · 원하는 만큼 결과를 확인할 수 있어요.";
+      ? (used ? "오늘의 기회 0/1 · 내일 다시 뽑을 수 있어요." : "오늘의 기회 1/1")
+      : "횟수 제한 없음";
     modeDescription.textContent = daily
-      ? "오늘의 지정 상자는 " + currentBox().name.replace("의 보스 반지 상자", "") + "입니다. 생명과 백옥이 한국 날짜 기준으로 하루마다 교대합니다."
-      : "원하는 상자를 골라 횟수 제한 없이 뽑을 수 있습니다.";
+      ? "오늘의 지정 상자는 " + currentBox().name.replace("의 보스 반지 상자", "") + "입니다."
+      : "원하는 상자를 골라 제한 없이 뽑습니다.";
   }
 
   function renderModeTabs(){
@@ -556,7 +607,6 @@
     var daily = state.mode === "daily";
     var unlimitedOrder = ["life", "white", "black", "red", "jade"];
     var visibleBoxes = daily ? [currentBox()] : unlimitedOrder.map(boxById).filter(Boolean);
-    boxrow.classList.toggle("daily-single", daily);
     boxSelectorTitle.textContent = daily ? "오늘의 지정 상자" : "뽑을 상자 선택";
     boxrow.setAttribute("aria-label", daily ? "오늘의 지정 반지 상자" : "반지 상자 선택");
     visibleBoxes.forEach(function(box){
@@ -573,7 +623,7 @@
           '<span class="boxcard-copy">' +
             (daily ? '<span class="daily-box-badge">오늘의 지정 상자</span>' : '') +
             '<span class="name">' + box.name.replace("의 보스 반지 상자","") + '<span class="box-grade">' + BOX_GRADE[box.id] + '</span></span>' +
-            '<span class="bosses">' + box.bosses.join(" · ") + '</span>' +
+            '<span class="bosses">' + box.bossList.map(bossChipHtml).join("") + '</span>' +
           '</span>' +
         '</span>';
       card.addEventListener("click", function(){
