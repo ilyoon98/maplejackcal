@@ -117,9 +117,13 @@
   .levelchip.jackpot-lv{border-color:var(--sr-gold);color:var(--sr-gold)}
   .levelchip.jackpot-lv b{color:var(--sr-gold)}
   .tablescroll{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
-  table.probtable{width:100%;border-collapse:collapse;font-size:.8rem;min-width:520px}
+  table.probtable{width:100%;border-collapse:collapse;font-size:.8rem;table-layout:fixed}
   table.probtable caption{padding:10px 12px;text-align:left;font-size:.72rem;color:var(--text-dim);border-bottom:1px solid var(--border);line-height:1.5}
-  table.probtable th,table.probtable td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+  table.probtable th,table.probtable td{padding:8px 9px;text-align:left;border-bottom:1px solid var(--border)}
+  /* 숫자 3칸은 폭을 고정하고 남는 폭을 전부 반지 이름 칸에 준다. 이름이 길면
+     줄바꿈시켜서 표에 가로 스크롤이 생기지 않게 한다. */
+  table.probtable th:first-child,table.probtable td:first-child{width:auto;min-width:0}
+  table.probtable th:not(:first-child),table.probtable td:not(:first-child){width:74px;white-space:nowrap}
   table.probtable th{color:var(--text-dim);font-weight:500;font-size:.68rem;letter-spacing:.05em;text-transform:uppercase}
   table.probtable td.num{font-variant-numeric:tabular-nums;color:var(--text-dim)}
   table.probtable td.final-prob{color:var(--text)}
@@ -127,10 +131,12 @@
   table.probtable td.impossible{color:var(--sr-faint)}
   table.probtable tbody tr:hover{background:var(--sr-surface-2)}
   table.probtable tr.jackpot-row td:first-child{color:var(--sr-gold);font-weight:700}
-  .table-item{display:flex;align-items:center;gap:10px}
-  .table-icon-stage{width:36px;height:36px;border-radius:8px}
-  .table-icon{width:28px;height:28px}
-  .jackpot-mark{color:var(--sr-gold);font-size:.72rem}
+  .table-item{display:flex;align-items:center;gap:9px;min-width:0}
+  .table-item>span:last-child{min-width:0;word-break:keep-all}
+  .table-icon-stage{width:34px;height:34px;border-radius:8px}
+  .table-icon{width:26px;height:26px}
+  /* "★ Lv.4 당첨"을 이름 아래로 내려서 이름 칸이 좁아도 한 줄이 길어지지 않게 */
+  .jackpot-mark{display:block;color:var(--sr-gold);font-size:.7rem;font-weight:500}
   .sr-footer{margin-top:20px;padding-top:14px;border-top:1px solid var(--border);font-size:.72rem;color:var(--text-dim);line-height:1.6}
   .sr-footer a{color:var(--accent)}
 
@@ -155,6 +161,7 @@
     table.probtable tbody{display:grid;gap:8px}
     table.probtable tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#11141a}
     table.probtable th,table.probtable td{display:block;padding:8px;border-bottom:0;white-space:normal}
+    table.probtable th:not(:first-child),table.probtable td:not(:first-child){width:auto;white-space:normal}
     table.probtable td:first-child{grid-column:1/-1;padding:10px 11px;border-bottom:1px solid var(--border)}
     table.probtable td.num{text-align:center;font-size:.72rem}
     table.probtable td.num:before{content:attr(data-label);display:block;margin-bottom:2px;color:var(--text-dim);font-size:.62rem}
@@ -166,14 +173,6 @@
   <nav class="site-nav">
     <a class="site-nav-home" href="index.html">← 계산기 모음</a>
     <div class="site-nav-groups">
-      <div class="site-nav-group active">
-        <button type="button" class="site-nav-group-btn">뽑기</button>
-        <div class="site-nav-dropdown">
-          <a href="boutique_gacha.html">부티크 기프트</a>
-          <a href="pet_gacha.html">펫 뽑기 놀이</a>
-          <a class="active" href="seedring_gacha.html">시드링 뽑기</a>
-        </div>
-      </div>
       <div class="site-nav-group">
         <button type="button" class="site-nav-group-btn">계산기</button>
         <div class="site-nav-dropdown">
@@ -181,6 +180,14 @@
           <a href="authentic_symbol_calc.html">어센틱 심볼 계산기</a>
           <a href="boss_income_calc.html">보스 수익 정산 계산기</a>
           <a href="cube_calc.html">잠재능력 큐브 연구소</a>
+        </div>
+      </div>
+      <div class="site-nav-group active">
+        <button type="button" class="site-nav-group-btn">놀이터</button>
+        <div class="site-nav-dropdown">
+          <a href="boutique_gacha.html">부티크 기프트</a>
+          <a href="pet_gacha.html">펫 뽑기 놀이</a>
+          <a class="active" href="seedring_gacha.html">시드링 뽑기</a>
         </div>
       </div>
     </div>
@@ -416,7 +423,7 @@
   function dailyBoxIdForDate(dateKey){
     var values = dateKey.split("-").map(Number);
     var dayNumber = Math.floor(Date.UTC(values[0], values[1] - 1, values[2]) / 86400000);
-    return dayNumber % 2 === 0 ? "black" : "white";
+    return dayNumber % 2 === 0 ? "life" : "white";
   }
 
   function boxById(id){
@@ -531,7 +538,7 @@
           : "오늘의 기회 1/1 · 오늘 지정된 상자로 한 번만 뽑을 수 있어요.")
       : "횟수 제한 없음 · 원하는 만큼 결과를 확인할 수 있어요.";
     modeDescription.textContent = daily
-      ? "오늘의 지정 상자는 " + currentBox().name.replace("의 보스 반지 상자", "") + "입니다. 흑옥과 백옥이 한국 날짜 기준으로 하루마다 교대합니다."
+      ? "오늘의 지정 상자는 " + currentBox().name.replace("의 보스 반지 상자", "") + "입니다. 생명과 백옥이 한국 날짜 기준으로 하루마다 교대합니다."
       : "원하는 상자를 골라 횟수 제한 없이 뽑을 수 있습니다.";
   }
 
