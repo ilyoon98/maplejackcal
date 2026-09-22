@@ -42,11 +42,16 @@
   .box-icon,.vault-box-icon img,.result-icon,.table-icon{image-rendering:pixelated;object-fit:contain}
   .box-icon-stage{width:64px;height:64px}
   .box-icon{width:52px;height:48px}
-  .boxcard-copy{min-width:0}
+  .boxcard-copy{flex:1 1 auto;min-width:0}
   .boxcard .name{display:flex;align-items:center;gap:7px;font-size:.95rem;font-weight:700}
   .box-grade{display:inline-grid;place-items:center;min-width:22px;height:19px;padding:0 6px;border-radius:999px;border:1px solid var(--card-accent,var(--box-accent,var(--accent)));color:var(--card-accent,var(--box-accent,var(--accent)));font-size:.66rem;font-weight:700;line-height:1}
   .vault-grade{margin-left:4px;vertical-align:middle}
-  .boxcard .bosses{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px}
+  /* 흘려보내지 말고 격자로 세워서 열을 맞춘다. 상자 아이콘 옆이 아니라 카드 폭을 통째로
+     쓰기 때문에 보통 화면에서 한 줄에 3개가 들어가고, 좁아지면 2개·1개로 줄되 열 정렬은 유지된다. */
+  .boxcard .bosses{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:9px 14px;margin-top:12px;justify-items:start;
+  }
   .boss-chip{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-dim)}
   .boss-chip-icon{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);object-fit:cover;flex:0 0 auto}
   .boss-chip-name{white-space:nowrap}
@@ -79,9 +84,17 @@
   .drawbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
   .btn{border:1px solid var(--border);background:var(--sr-surface-2);color:var(--text);padding:11px 22px;border-radius:999px;font:inherit;font-size:.9rem;cursor:pointer;transition:border-color .15s,filter .15s}
   .btn:hover:not(:disabled){border-color:var(--box-accent,var(--accent))}
-  .btn.primary{border-color:var(--box-accent,var(--accent-strong));background:#1c2740;font-weight:700}
-  .btn.primary:hover:not(:disabled){filter:brightness(1.12)}
-  .btn:disabled{opacity:.4;cursor:not-allowed}
+  /* 뽑기 버튼은 style.css의 button.primary처럼 강조색을 꽉 채워서, 카드 배경에 묻히지 않게 한다. */
+  .btn.primary{
+    border-color:var(--box-accent,var(--accent-strong));
+    background:var(--box-accent,var(--accent-strong));
+    color:#0b0d12;font-weight:800;
+  }
+  .btn.primary:hover:not(:disabled){filter:brightness(1.08)}
+  .btn:disabled{cursor:not-allowed}
+  .btn:not(.primary):disabled{opacity:.4}
+  /* 뽑기를 끝낸 상태: 꽉 찬 강조색을 빼되 글자는 읽히게 남긴다. */
+  .btn.primary:disabled{background:transparent;color:var(--text-dim);border-color:var(--border)}
 
   /* 결과 */
   .result{margin-top:20px;min-height:24px}
@@ -623,9 +636,9 @@
           '<span class="boxcard-copy">' +
             (daily ? '<span class="daily-box-badge">오늘의 지정 상자</span>' : '') +
             '<span class="name">' + box.name.replace("의 보스 반지 상자","") + '<span class="box-grade">' + BOX_GRADE[box.id] + '</span></span>' +
-            '<span class="bosses">' + box.bossList.map(bossChipHtml).join("") + '</span>' +
           '</span>' +
-        '</span>';
+        '</span>' +
+        '<span class="bosses">' + box.bossList.map(bossChipHtml).join("") + '</span>';
       card.addEventListener("click", function(){
         if (daily) return;
         if (state.unlimitedBoxId === box.id) return;
