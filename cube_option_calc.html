@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<link rel="icon" type="image/png" href="favicon.png?v=2" />
+<meta name="description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="메이플 계산기 모음" />
+<meta property="og:description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
+<meta property="og:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>큐브 옵션 확률</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .cube-page { --cube-purple:#b58cff; --cube-cyan:#55d9ff; --cube-gold:#f3c969; --cube-panel:#171827; }
+  .cube-hero { margin: 22px 0 14px; padding: 26px 28px; border:1px solid #34345c; border-radius:18px; background: radial-gradient(circle at 84% 10%, rgba(181,140,255,.22), transparent 34%), linear-gradient(135deg,#171827,#13141e 70%); }
+  .eyebrow { color:var(--cube-cyan); font-size:.72rem; letter-spacing:.16em; font-weight:800; text-transform:uppercase; }
+  .cube-hero h1 { margin:8px 0 8px; font-size:clamp(1.7rem,4vw,2.7rem); letter-spacing:-.045em; }
+  .cube-hero p { max-width:760px; margin:0; color:var(--text-dim); font-size:.9rem; }
+  .kind-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+  .rank-chip { padding:8px 12px; border:1px solid #373854; color:var(--text-dim); background:#1d1e2e; border-radius:999px; cursor:pointer; font:inherit; font-size:.82rem; }
+  .rank-chip.active { color:#15131e; border-color:transparent; background:var(--cube-gold); font-weight:800; }
+  .tab-chip { display:inline-flex; align-items:center; gap:8px; padding:10px 20px 10px 12px; font-size:.95rem; }
+  .tab-chip img { width:22px; height:22px; object-fit:contain; }
+  .cube-layout { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr); gap:18px; align-items:start; }
+  .cube-panel { background:var(--cube-panel); border:1px solid #2d2e48; border-radius:14px; padding:18px; margin-top:16px; }
+  .cube-panel h2 { margin:0 0 13px; font-size:1rem; }
+  .cube-panel h3 { margin:16px 0 8px; color:#c9c8e9; font-size:.85rem; }
+  .sub-label { color:var(--text-dim); font-size:.78rem; margin:16px 0 7px; }
+  .cube-panel h2 + .sub-label { margin-top:0; }
+  .part-groups { display:grid; grid-template-columns:1fr 1.3fr 1.6fr; gap:10px; }
+  .part-group { background:#1b1c2d; border:1px solid #2c2d46; border-radius:10px; padding:10px; }
+  .part-group-title { font-size:.74rem; font-weight:800; color:var(--cube-cyan); margin-bottom:7px; }
+  .part-chips { display:flex; flex-wrap:wrap; gap:5px; }
+  .part-chip, .pick-chip { padding:6px 10px; border:1px solid #373854; background:#20213a; color:var(--text); border-radius:8px; cursor:pointer; font:inherit; font-size:.8rem; }
+  .part-chip:hover, .pick-chip:not(:disabled):hover { border-color:var(--cube-purple); }
+  .part-chip.active { background:var(--cube-purple); border-color:transparent; color:#15131e; font-weight:800; }
+  .level-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .level-row + .more-toggle + .level-row { margin-top:8px; }
+  .level-card { min-width:120px; padding:12px 16px; border:1px solid #373854; background:#1e1f32; color:var(--text); border-radius:10px; cursor:pointer; font:inherit; font-size:1.05rem; font-weight:800; text-align:left; }
+  .level-card small { margin-left:3px; font-size:.72rem; font-weight:400; color:var(--text-dim); }
+  .level-card:hover { border-color:var(--cube-purple); }
+  .level-card.active { border-color:var(--cube-purple); background:linear-gradient(135deg,#2a2446,#20213a); box-shadow:0 0 0 1px rgba(181,140,255,.25); color:var(--cube-gold); }
+  .more-toggle { display:block; margin-top:10px; background:none; border:none; color:var(--cube-purple); cursor:pointer; font:inherit; font-size:.8rem; padding:0; }
+  .warn { display:block; margin-top:8px; color:var(--bad); font-size:.8rem; }
+  .cube-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:9px; }
+  .cube-choice { border:1px solid #373854; background:#1e1f32; color:var(--text); border-radius:10px; padding:11px 12px; text-align:left; cursor:pointer; font:inherit; transition:.16s ease; }
+  .cube-choice:hover { border-color:var(--cube-purple); }
+  .cube-choice.active { border-color:var(--cube-purple); background:linear-gradient(135deg,#2a2446,#20213a); box-shadow:0 0 0 1px rgba(181,140,255,.2); }
+  .cube-choice-head { display:flex; align-items:center; gap:8px; }
+  .cube-choice-head img { width:26px; height:26px; object-fit:contain; flex:none; }
+  .cube-choice.pair-icon .cube-choice-head img { width:20px; height:20px; }
+  .cube-choice strong { display:block; font-size:.86rem; }
+  .opt-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 12px; background:#232440; border:1px solid #3c3d64; border-radius:10px; margin-bottom:8px; }
+  .opt-name { flex:1 1 150px; font-weight:800; font-size:.92rem; }
+  .opt-name small { margin-left:6px; font-weight:400; color:var(--cube-cyan); font-size:.7rem; }
+  .opt-row.missing { opacity:.5; border-style:dashed; }
+  .opt-name .missing-note { color:var(--bad); }
+  .opt-min { display:inline-flex; align-items:center; gap:6px; }
+  .opt-min input { width:80px; background:#11141a; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 9px; font:inherit; font-size:.9rem; }
+  .opt-unit { color:var(--text-dim); font-size:.8rem; white-space:nowrap; }
+  .opt-remove { background:none; border:1px solid #3a3b58; color:var(--text-dim); border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:1.1rem; line-height:1; }
+  .opt-remove:hover { color:var(--bad); border-color:var(--bad); }
+  .opt-chips { display:flex; flex-wrap:wrap; gap:5px; width:100%; }
+  .val-chip { padding:3px 10px; border:1px solid #373854; background:#191a2a; color:var(--text-dim); border-radius:999px; cursor:pointer; font:inherit; font-size:.76rem; }
+  .val-chip.active { background:var(--cube-gold); border-color:transparent; color:#15131e; font-weight:800; }
+  .opt-empty { padding:14px; border:1px dashed #3a3b58; border-radius:10px; color:var(--text-dim); font-size:.84rem; text-align:center; }
+  .hidden { display:none !important; }
+  .goal-summary { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px; }
+  .set-card.multi { padding:10px; border:1px solid #2f3050; border-radius:12px; background:#1a1b2b; cursor:pointer; }
+  .set-card.multi.active { border-color:var(--cube-purple); box-shadow:0 0 0 1px rgba(181,140,255,.25); cursor:default; }
+  .set-card.multi .opt-row { cursor:default; }
+  .set-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .set-name { font-weight:900; font-size:.9rem; color:var(--cube-gold); }
+  .set-state { font-size:.72rem; color:var(--cube-purple); }
+  .set-pick { background:none; border:1px solid #3a3b58; color:var(--text-dim); border-radius:999px; padding:3px 10px; cursor:pointer; font:inherit; font-size:.72rem; }
+  .set-pick:hover { color:var(--cube-purple); border-color:var(--cube-purple); }
+  .set-head .opt-remove { margin-left:auto; width:28px; height:28px; font-size:1rem; }
+  .or-divider { display:flex; align-items:center; gap:10px; margin:10px 0; color:var(--cube-cyan); font-size:.74rem; font-weight:800; }
+  .or-divider::before, .or-divider::after { content:""; flex:1; border-top:1px dashed #3a3b58; }
+  .panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:13px; }
+  .panel-head h2 { margin:0; }
+  .reset-btn { flex:none; background:none; border:1px solid #3a3b58; color:var(--text-dim); border-radius:8px; padding:5px 11px; cursor:pointer; font:inherit; font-size:.78rem; }
+  .reset-btn:hover { color:var(--bad); border-color:var(--bad); }
+  .add-set { width:100%; margin-top:10px; padding:9px; border:1px dashed #44466a; background:none; color:var(--cube-cyan); border-radius:10px; cursor:pointer; font:inherit; font-size:.84rem; }
+  .add-set:hover:not(:disabled) { border-color:var(--cube-cyan); }
+  .add-set:disabled { opacity:.35; cursor:not-allowed; }
+  .goal-chip { padding:5px 10px; background:#262744; border:1px solid #3c3d64; border-radius:8px; font-size:.8rem; }
+  .goal-and { color:var(--cube-cyan); font-size:.7rem; font-weight:800; }
+  .pick-box { margin-top:14px; padding:12px; border:1px solid #4a3f78; border-radius:12px; background:linear-gradient(135deg,#261f40,#1b1c2d); }
+  .pick-title { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:.84rem; font-weight:800; color:var(--cube-gold); margin-bottom:9px; }
+  .pick-title span { color:var(--text-dim); font-weight:400; font-size:.76rem; }
+  .pick-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .pick-box .pick-chip { font-size:.86rem; padding:8px 12px; background:#2a2b48; border-color:#45466e; }
+  .pick-chip:disabled { opacity:.35; cursor:not-allowed; }
+  .other-panel { margin-top:10px; border:1px solid #2c2d46; border-radius:12px; padding:10px 12px; background:#1a1b2b; }
+  .other-panel summary { cursor:pointer; color:var(--text-dim); font-size:.8rem; }
+  .other-panel .pick-chips { margin-top:10px; }
+  .other-panel .pick-chip { font-size:.76rem; color:var(--text-dim); background:#1d1e2e; }
+  .primary-metrics { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .primary-metric { background:linear-gradient(135deg,#292a48,#20213a); border:1px solid #3c3d64; border-radius:12px; padding:14px; }
+  .primary-metric.wide { grid-column:1 / -1; }
+  .primary-metric .label { color:#a9abc7; font-size:.76rem; }
+  .primary-metric .value { font-size:1.45rem; font-weight:900; margin-top:5px; color:var(--cube-gold); line-height:1.15; word-break:break-word; }
+  .primary-metric .sub { color:var(--text-dim); font-size:.74rem; margin-top:4px; }
+  .cost-row { display:flex; flex-wrap:wrap; gap:6px; }
+  .cost-info { margin-top:8px; color:var(--text-dim); font-size:.8rem; }
+  .cost-info strong { color:var(--text); }
+  .data-table { width:100%; border-collapse:collapse; font-size:.78rem; }
+  .data-table th,.data-table td { padding:7px 6px; text-align:right; border-bottom:1px solid #2b2c41; }
+  .data-table th:first-child,.data-table td:first-child { text-align:left; }
+  .data-table th { color:#8e90ab; }
+  .data-table tr.current td { color:var(--cube-gold); font-weight:700; }
+  .data-table tr.hit td { color:var(--cube-cyan); }
+  .line-tables { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:12px; }
+  .tiny { color:#777992; font-size:.72rem; line-height:1.6; }
+  #tablePanel summary { cursor:pointer; font-weight:700; list-style:none; }
+  #tablePanel summary::-webkit-details-marker { display:none; }
+  #tablePanel summary::before { content:'▸'; display:inline-block; margin-right:8px; color:var(--cube-purple); transition:.15s ease; }
+  #tablePanel[open] summary::before { transform:rotate(90deg); }
+  @media(max-width:900px){ .cube-layout{grid-template-columns:1fr;} .line-tables{grid-template-columns:1fr;} }
+  @media(max-width:640px){ .part-groups{grid-template-columns:1fr;} }
+  @media(max-width:520px){ .cube-hero{padding:22px 18px;} .cube-panel{padding:14px;} .tab-chip{padding:9px 14px 9px 10px; font-size:.86rem;} .level-card{min-width:0; flex:1 1 40%;} }
+</style>
+</head>
+<body class="cube-page">
+<div class="wrap">
+  <nav class="site-nav">
+    <div class="site-tabs-track site-groups">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab active" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>놀이</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item active" href="cube_option_calc.html">
+        <span class="site-menu-icon">🎯</span>
+        <span><span class="site-menu-name">큐브 옵션 확률</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 놀이</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 뽑기 놀이</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+      </a>
+      <a class="site-menu-item" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 뽑기</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+      </a>
+    </div>
+  </nav>
+  <header class="cube-hero">
+    <div class="eyebrow">CUBE LAB / OPTION ODDS</div>
+    <h1>🎯 큐브 옵션 확률</h1>
+    <p>레전드리 장비에서 원하는 잠재옵션이 한 번에 뜰 확률과 기대 큐브 수·메소를 계산합니다. <span id="dataSource"></span></p>
+  </header>
+  <div class="kind-tabs" id="kindTabs"></div>
+  <main class="cube-layout">
+    <section>
+      <div class="cube-panel">
+        <h2>01 · 장비</h2>
+        <div class="sub-label">장비 부위</div>
+        <div class="part-groups" id="partGroups"></div>
+        <div class="sub-label">장비 레벨</div>
+        <div id="levelCards"></div>
+        <div id="bracketInfo"></div>
+      </div>
+      <div class="cube-panel">
+        <h2>02 · 큐브 종류</h2>
+        <div class="cube-grid" id="cubeChoices"></div>
+      </div>
+      <div class="cube-panel">
+        <div class="panel-head">
+          <h2>03 · 목표 옵션 <span class="tiny">(조건 안은 모두 만족 · 조건끼리는 하나만 만족)</span></h2>
+          <button type="button" class="reset-btn" id="resetGoals">↺ 초기화</button>
+        </div>
+        <div id="optionRows"></div>
+        <button type="button" class="add-set" id="addSet">+ 또는(OR) 조건 추가</button>
+        <div class="pick-box">
+          <div class="pick-title">주요 옵션 <span>눌러서 <b id="pickTarget">목표에 추가</b> · <b id="pickCount">0/3</b></span></div>
+          <div class="pick-chips" id="primaryPicks"></div>
+        </div>
+        <details class="other-panel" id="otherPanel">
+          <summary>기타 옵션</summary>
+          <div class="pick-chips" id="otherPicks"></div>
+        </details>
+        <p class="tiny">
+          · 수치는 <b>최소값</b>이에요. 보스 데미지 30%를 고르면 35%·40%가 떠도 성공으로 칩니다.<br>
+          · 세 줄의 수치를 <b>합산</b>해요. STR 18%면 9%+9%, 12%+9%, 12%+9%+9% 모두 성공이고, 같은 옵션을 두 번 추가하면 그 합이 목표가 됩니다.<br>
+          · STR·DEX·INT·LUK %에는 <b>올스탯 %가 같은 양으로 더해져요</b>. STR 12% + STR 9% + 올스탯 6% = STR 27%.<br>
+          · <b>또는(OR) 조건 추가</b>로 조건을 늘리면 그중 하나만 만족해도 성공이에요. 예: 조건 A 보스 데미지 30% + 공격력 9% 또는 조건 B 공격력 21%.
+        </p>
+      </div>
+    </section>
+    <aside>
+      <div class="cube-panel">
+        <h2>결과</h2>
+        <div class="primary-metrics">
+          <div class="primary-metric wide"><div class="label">큐브 1회 성공 확률</div><div class="value" id="resProb">-</div><div class="sub" id="resProbSub"></div></div>
+          <div class="primary-metric"><div class="label">기대 횟수 (평균 큐브 사용량)</div><div class="value" id="resTries">-</div></div>
+          <div class="primary-metric"><div class="label">중앙값 (50%)</div><div class="value" id="resMedian">-</div></div>
+          <div class="primary-metric wide"><div class="label">기대 메소</div><div class="value" id="resMeso">-</div></div>
+        </div>
+        <h3>비용 기준 (장비 레벨)</h3>
+        <div class="cost-row" id="costLevelRow"></div>
+        <div class="cost-info" id="costInfo"></div>
+        <h3>큐브 사용량</h3>
+        <div id="quantileTable"></div>
+        <div id="comparePanel">
+          <h3>같은 조건, 다른 큐브</h3>
+          <div id="compareTable"></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+  <details class="cube-panel" id="tablePanel">
+    <summary>이 구간 옵션 등장 확률표 (공식)</summary>
+    <div id="optionTable"></div>
+    <p class="tiny">목표에 들어가는 옵션은 파란색. 쓸만한 스킬·피격 후 무적시간은 세 줄 중 1개, 피격 시 데미지 무시·피격 시 무적은 2개까지만 붙는 공식 규칙을 계산에 반영했습니다.</p>
+  </details>
+</div>
+<script src="site_nav.js"></script>
+<script src="cube_option_data.js"></script>
+<script src="cube_option_calc.js"></script>
+</body>
+</html>
