@@ -16,8 +16,34 @@
 <style>
   :root{ --surface-2:#1d212b; }
 
-  /* 강화 / 성장 상점 탭 */
-  .shop-tabs{ display:inline-flex; background:#1d212b; border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px; margin-bottom:14px; }
+  /* 오른쪽 요약 컬럼: 장바구니가 길어져 화면보다 커져도 아래쪽이 잘리지 않게 컬럼 안에서 스크롤 */
+  @media (min-width: 961px){
+    .layout-right{ max-height: calc(100vh - 32px); overflow-y:auto; scrollbar-width:thin; padding-right:2px; }
+  }
+
+  /* 코인 획득량 — 3칸 + 주차 선택 */
+  .coin-fields{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+  .coin-fields .field input{ width:100%; min-width:0; }
+  .field .help{ font-size:0.72rem; color:var(--text-dim); margin-top:2px; }
+  .week-row{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; margin-top:4px; }
+  .week-row .week-label{ font-size:0.82rem; color:var(--text-dim); }
+  .week-pills{ display:flex; flex-wrap:wrap; gap:4px; }
+  .week-pill{
+    min-width:34px; height:30px; padding:0 8px; border-radius:8px;
+    border:1px solid var(--border); background:#11141a; color:var(--text-dim);
+    font:inherit; font-size:0.82rem; font-weight:700; cursor:pointer;
+    font-variant-numeric:tabular-nums;
+  }
+  .week-pill:hover{ border-color:var(--accent); color:var(--text); }
+  .week-pill.active{ background:var(--accent-strong); border-color:var(--accent-strong); color:#0b0d12; }
+  @media (max-width: 600px){
+    .coin-fields{ grid-template-columns:1fr 1fr; }
+    .coin-fields .field:last-child{ grid-column:1/-1; }
+  }
+
+  /* 상점 헤더: 탭 + 보기 옵션 */
+  .shop-head{ display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+  .shop-tabs{ display:inline-flex; background:#1d212b; border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px; }
   .shop-tabs button{
     border:none; background:none; color:var(--text-dim);
     font:inherit; font-size:0.85rem; font-weight:700;
@@ -26,82 +52,90 @@
   .shop-tabs button:hover{ color:var(--text); }
   .shop-tabs button.active{ background:var(--accent-strong); color:#0b0d12; }
   .shop-tabs .tab-count{ font-weight:800; margin-left:6px; opacity:.85; }
+  .shop-opts{ display:flex; gap:6px; margin-left:auto; }
+  .opt-btn{
+    height:30px; padding:0 11px; border-radius:999px;
+    border:1px solid var(--border); background:none; color:var(--text-dim);
+    font:inherit; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+  .opt-btn:hover{ border-color:var(--accent); color:var(--text); }
+  .opt-btn.active{ border-color:var(--accent-strong); background:rgba(76,141,255,.14); color:var(--accent); }
+  .shop-hint{ font-size:0.76rem; color:var(--text-dim); margin:0 0 12px; }
+  .shop-empty{ color:var(--text-dim); font-size:0.84rem; padding:14px 4px; }
 
-  /* 아이템 행 — 아이콘(줄 전체) · 제목+수량 · 구매 컨트롤 */
-  .item-list{ display:flex; flex-direction:column; gap:10px; }
+  /* 아이템 행: 아이콘 · 이름/제한 · 가격+수량 */
+  .item-list{ display:flex; flex-direction:column; gap:8px; }
   .item-row{
     display:grid;
     grid-template-columns:auto minmax(0,1fr) auto;
-    align-items:stretch;
-    gap:14px;
+    align-items:center;
+    gap:12px;
     background:#11141a;
     border:1px solid var(--border);
     border-radius:12px;
-    padding:12px;
+    padding:10px 12px;
+    transition:border-color .12s, background .12s;
   }
-  .item-row.picked{ border-color:var(--accent-strong); background:#1c2740; }
-  .item-row.maxed{ border-color:var(--good); }
-  .item-row.done{ border-color:var(--good); background:rgba(76,175,125,.06); }
+  .item-row.picked{ border-color:var(--accent-strong); background:#18213a; }
+  .item-row.done{ border-color:rgba(76,175,125,.55); background:rgba(76,175,125,.05); }
+  .item-row.done .item-name{ color:var(--text-dim); }
 
-  /* 아이콘 — 줄 높이를 다 쓰고, 누르면 1개 담긴다 */
+  /* 아이콘 — 누르면 1개 담긴다. hover 시 +1 배지로 알려준다 */
   .item-icon{
-    display:flex; align-items:center; justify-content:center; gap:4px;
-    width:78px; padding:6px;
+    position:relative;
+    display:flex; align-items:center; justify-content:center; gap:3px;
+    width:60px; height:60px; padding:4px;
     background:#1d212b; border:1px solid var(--border); border-radius:10px;
-    color:var(--text); font:inherit; font-size:32px; line-height:1; cursor:pointer;
+    color:var(--text); font:inherit; font-size:28px; line-height:1; cursor:pointer;
   }
-  .item-icon:hover{ border-color:var(--accent); }
+  .item-icon::after{
+    content:'+1'; position:absolute; right:-6px; top:-6px;
+    padding:1px 5px; border-radius:999px;
+    background:var(--accent-strong); color:#0b0d12;
+    font-size:0.66rem; font-weight:800; line-height:1.4;
+    opacity:0; transform:scale(.8); transition:opacity .12s, transform .12s;
+  }
+  .item-icon:hover:not(:disabled){ border-color:var(--accent); }
+  .item-icon:hover:not(:disabled)::after{ opacity:1; transform:scale(1); }
+  .item-icon:disabled{ cursor:default; opacity:.6; }
   .item-row.picked .item-icon{ border-color:var(--accent-strong); background:#1a2135; }
-  .item-icon img{ width:48px; height:48px; object-fit:contain; image-rendering:pixelated; }
-  /* 선택권처럼 고를 수 있는 아이템이 둘이면 아이콘 두 개를 나란히 */
-  .item-icon.pair img{ width:34px; height:34px; }
+  .item-icon img{ width:44px; height:44px; object-fit:contain; image-rendering:pixelated; }
+  .item-icon.pair img{ width:28px; height:28px; }
 
-  /* 가운데: 제목 + 수량 칸 */
-  .item-body{ display:flex; flex-direction:column; justify-content:center; gap:8px; min-width:0; }
-  .item-name{ font-size:1rem; font-weight:700; line-height:1.3; word-break:keep-all; }
-  .limit-tag{
-    display:inline-block; min-width:15px; margin-left:6px;
-    text-align:center; border-radius:4px; padding:0 4px;
-    font-size:0.66rem; font-weight:800;
-    background:rgba(110,168,254,.15); color:var(--accent);
-  }
-  .limit-tag.w{ background:rgba(76,175,125,.15); color:var(--good); }
-  .item-meta{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
-  .meta-cell{
-    display:flex; align-items:center; gap:7px;
-    background:#171b23; border:1px solid var(--border); border-radius:8px;
-    padding:4px 9px;
-    font-size:0.72rem; font-weight:700; color:var(--text-dim);
-  }
-  .meta-cell b{ font-size:0.95rem; color:var(--text); font-variant-numeric:tabular-nums; }
-  /* 남은 수량은 "98 / 100"처럼 최대 수량과 붙여서 보여준다 */
-  .meta-cell .of-max{ margin-left:-4px; font-size:0.86rem; color:var(--text-dim); font-variant-numeric:tabular-nums; }
-  .meta-cell.rest-cell.empty b{ color:var(--bad); }
-  .meta-cell.own-cell b{ color:var(--good); }
+  .item-body{ display:flex; flex-direction:column; justify-content:center; gap:3px; min-width:0; }
+  .item-name{ font-size:0.98rem; font-weight:700; line-height:1.3; word-break:keep-all; }
+  .item-sub{ display:flex; flex-wrap:wrap; gap:4px 10px; font-size:0.74rem; color:var(--text-dim); font-variant-numeric:tabular-nums; }
+  .item-sub .sub-owned{ color:var(--good); font-weight:700; }
+  .item-sub .sub-done{ color:var(--good); font-weight:700; }
 
-  /* 오른쪽: [개당 가격 · 구매 시 가격] 한 줄 + 수량 조절 */
-  .item-buy{ display:flex; flex-direction:column; align-items:flex-end; justify-content:center; gap:7px; }
-  .price-line{ display:flex; align-items:baseline; gap:8px; }
-  .unit-price{ font-size:1.1rem; font-weight:800; color:var(--accent); font-variant-numeric:tabular-nums; }
-  .unit-price i{ font-style:normal; font-size:0.72rem; font-weight:700; color:var(--text-dim); margin-left:3px; }
-  .buy-row{ display:flex; align-items:center; gap:6px; }
-  .buy-total{
-    font-size:0.74rem; font-weight:700; color:var(--text-dim);
-    padding-left:9px; border-left:1px solid var(--border);
+  /* 구매 기록 편집 모드: 각 행 아래 작은 스테퍼가 나온다 */
+  .own-edit{ display:none; align-items:center; gap:6px; margin-top:4px; font-size:0.74rem; color:var(--text-dim); }
+  body.own-edit-on .own-edit{ display:flex; }
+  body.own-edit-on .item-sub .sub-owned, body.own-edit-on .item-sub .sub-done{ display:none; }
+  .own-btn{
+    width:24px; height:24px; border-radius:6px;
+    border:1px solid var(--border); background:#1d212b; color:var(--text-dim);
+    font-size:14px; font-weight:800; line-height:1; cursor:pointer;
   }
-  .buy-total b{ font-size:0.98rem; color:var(--accent-strong); font-variant-numeric:tabular-nums; margin-left:5px; }
-  .buy-total.zero b{ color:var(--text-dim); }
+  .own-btn:hover:not(:disabled){ border-color:var(--good); color:var(--good); }
+  .own-btn:disabled{ opacity:.3; cursor:default; }
+  .own-count{ min-width:26px; text-align:center; font-size:0.9rem; font-weight:800; color:var(--good); }
+  .own-all{ height:24px; padding:0 8px; border-radius:6px; border:1px solid var(--border); background:#1d212b; color:var(--text-dim); font:inherit; font-size:0.7rem; font-weight:700; cursor:pointer; }
+  .own-all:hover{ border-color:var(--good); color:var(--good); }
 
-  /* 좁은 화면에서는 구매 컨트롤을 아래로 */
-  @media (max-width: 780px){
-    .item-row{ grid-template-columns:auto minmax(0,1fr); }
-    .item-buy{ grid-column:1/-1; align-items:stretch; }
-    .buy-row{ justify-content:space-between; }
-    .price-line{ justify-content:flex-end; }
-  }
+  /* 오른쪽: 가격 줄 + 수량 조절 */
+  .item-buy{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+  .price-line{ display:flex; align-items:baseline; gap:6px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .unit-price{ font-size:0.92rem; font-weight:700; color:var(--text-dim); }
+  .unit-price i{ font-style:normal; font-size:0.7rem; margin-left:2px; }
+  .item-row.picked .unit-price{ font-size:0.8rem; }
+  .row-total{ display:none; font-size:1.05rem; font-weight:800; color:var(--accent); }
+  .row-total i{ font-style:normal; font-size:0.7rem; font-weight:700; color:var(--text-dim); margin-left:3px; }
+  .item-row.picked .row-total{ display:inline; }
+  .price-line .arrow{ display:none; color:var(--text-dim); font-size:0.8rem; }
+  .item-row.picked .price-line .arrow{ display:inline; }
 
-  /* 수량 조절 */
-  .stepper{ display:flex; align-items:center; gap:5px; }
+  .buy-row{ display:flex; align-items:center; gap:5px; }
   .qty-btn{
     width:32px; height:32px; border-radius:8px;
     border:1px solid var(--border); background:#1d212b; color:var(--text);
@@ -110,39 +144,48 @@
   .qty-btn:hover:not(:disabled){ border-color:var(--accent); color:var(--accent); }
   .qty-btn:disabled{ opacity:.3; cursor:default; }
   .qty-input{
-    width:62px; height:32px; text-align:center;
-    background:#11141a; border:1px solid var(--accent-strong); border-radius:8px;
-    color:var(--text); font-size:1.05rem; font-weight:800;
+    width:56px; height:32px; text-align:center;
+    background:#11141a; border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font-size:1.02rem; font-weight:800;
     font-variant-numeric:tabular-nums;
     -moz-appearance:textfield;
   }
-  .qty-input:disabled{ border-color:var(--border); opacity:.5; }
+  .item-row.picked .qty-input{ border-color:var(--accent-strong); }
+  .qty-input:disabled{ opacity:.4; }
   .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
-  .own-btn{
-    width:22px; height:22px; border-radius:6px;
-    border:1px solid var(--border); background:#1d212b; color:var(--text-dim);
-    font-size:14px; font-weight:800; line-height:1; cursor:pointer;
-  }
-  .own-btn:hover:not(:disabled){ border-color:var(--good); color:var(--good); }
-  .own-btn:disabled{ opacity:.3; cursor:default; }
-  .own-count{ min-width:22px; text-align:center; }
+  /* 담을 수 있는 최대치를 입력칸 바로 옆에 붙인다. 다 담으면 MAX 배지로 바뀐다 */
+  .qty-cap{ min-width:38px; font-size:0.74rem; color:var(--text-dim); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .qty-cap.maxed{ color:var(--good); font-weight:800; }
   .max-btn{
     height:28px; padding:0 9px; border-radius:8px;
     border:1px solid var(--border); background:#1d212b; color:var(--text-dim);
-    font-size:0.74rem; font-weight:700; cursor:pointer; white-space:nowrap;
+    font:inherit; font-size:0.74rem; font-weight:700; cursor:pointer; white-space:nowrap;
   }
-  .max-btn:hover:not(:disabled){ border-color:var(--good); color:var(--good); }
-  .max-btn.min-btn:hover:not(:disabled){ border-color:var(--bad); color:var(--bad); }
+  .max-btn:hover:not(:disabled){ border-color:var(--accent); color:var(--accent); }
   .max-btn:disabled{ opacity:.3; cursor:default; }
-  .own-all{ height:24px; font-size:0.7rem; padding:0 7px; }
+  .clear-btn{
+    width:28px; height:28px; border-radius:8px;
+    border:1px solid var(--border); background:#1d212b; color:var(--text-dim);
+    font-size:14px; font-weight:800; line-height:1; cursor:pointer;
+    visibility:hidden;
+  }
+  .item-row.picked .clear-btn{ visibility:visible; }
+  .clear-btn:hover{ border-color:var(--bad); color:var(--bad); }
 
-  /* 요약 */
-  .coin-big{ font-size:2rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.15; }
+  @media (max-width: 780px){
+    .item-row{ grid-template-columns:auto minmax(0,1fr); gap:10px 12px; }
+    .item-buy{ grid-column:1/-1; flex-direction:row; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .item-icon{ width:52px; height:52px; }
+    .item-icon img{ width:38px; height:38px; }
+    .item-icon.pair img{ width:24px; height:24px; }
+  }
+
+  /* 요약 카드 */
+  .coin-big{ font-size:2.1rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.15; }
   .coin-big.ok{ color:var(--good); }
   .coin-big.over{ color:var(--bad); }
   .bar{ position:relative; display:flex; height:10px; border-radius:999px; background:#11141a; border:1px solid var(--border); overflow:hidden; margin:12px 0 6px; }
   .bar span{ display:block; height:100%; transition:width .2s; }
-  /* 현재 주차까지 받은 코인 위치 — 이 선을 넘으면 아직 코인이 안 모인 계획 */
   .bar .bar-now{ position:absolute; top:0; bottom:0; width:2px; background:var(--text); transition:left .2s; }
   .bar .fill-owned{ background:var(--good); }
   .bar .fill-cart{ background:var(--accent-strong); }
@@ -156,30 +199,72 @@
   .mini{ background:#11141a; border:1px solid var(--border); border-radius:10px; padding:8px 10px; }
   .mini .label{ font-size:0.72rem; color:var(--text-dim); }
   .mini .value{ font-size:1rem; font-weight:700; margin-top:2px; font-variant-numeric:tabular-nums; }
-  .mini-wide{ grid-column:1/-1; }
+  .mini .sub{ font-size:0.7rem; color:var(--bad); font-weight:700; margin-top:2px; }
   .mini.now .value{ color:var(--accent); }
-  .mini.now.short .value{ color:var(--bad); }
+  .callout.warn{ background:rgba(226,102,74,0.1); border-color:var(--bad); }
+  .callout.good{ background:rgba(76,175,125,0.1); border-color:var(--good); }
 
-  /* 장바구니 */
+  /* 장바구니 / 구매 완료 */
+  .list-head{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px; }
+  .list-head h2{ margin:0; }
+  .list-sum{ margin-left:auto; font-size:0.8rem; color:var(--text-dim); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .list-sum b{ color:var(--accent); font-size:0.9rem; margin-left:4px; }
+  #ownedCard .list-sum b{ color:var(--good); }
+  .plan-note{ font-size:0.72rem; color:var(--text-dim); margin:0 0 6px; }
   .cart-list{ display:flex; flex-direction:column; }
-  .cart-row{ display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:8px 0; font-size:0.84rem; }
+  .cart-row{ display:grid; grid-template-columns:minmax(0,1fr) auto auto auto; align-items:center; gap:8px; padding:8px 0; font-size:0.84rem; }
   .cart-row + .cart-row{ border-top:1px solid var(--border); }
   .cart-name{ min-width:0; word-break:keep-all; }
   .cart-name em{ font-style:normal; color:var(--text-dim); font-size:0.78rem; margin-left:4px; }
-  .cart-cost{ color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .cart-del{
-    width:24px; height:24px; border-radius:50%; border:none;
-    background:rgba(226,102,74,.15); color:var(--bad);
-    font-size:14px; line-height:1; cursor:pointer;
+  .cart-week{
+    font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:5px;
+    background:rgba(110,168,254,.15); color:var(--accent); white-space:nowrap;
   }
+  .cart-week.now{ background:rgba(76,175,125,.15); color:var(--good); }
+  .cart-week.late{ background:rgba(226,102,74,.15); color:var(--bad); }
+  .cart-cost{ color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .cart-row.is-owned .cart-cost{ color:var(--good); }
-  .cart-empty{ color:var(--text-dim); font-size:0.84rem; }
-  .cart-group{ font-size:0.74rem; color:var(--text-dim); font-weight:700; margin:10px 0 0; }
-  .callout.warn{ background:rgba(226,102,74,0.1); border-color:var(--bad); }
-  .btn-row{ display:flex; gap:8px; margin-top:8px; }
-  .btn-row:first-of-type{ margin-top:14px; }
+  .cart-actions{ display:flex; gap:4px; }
+  .cart-btn{
+    width:24px; height:24px; border-radius:50%; border:none;
+    font-size:13px; line-height:1; cursor:pointer;
+  }
+  .cart-btn.buy{ background:rgba(76,175,125,.15); color:var(--good); }
+  .cart-btn.buy:hover{ background:rgba(76,175,125,.3); }
+  .cart-btn.del{ background:rgba(226,102,74,.15); color:var(--bad); }
+  .cart-btn.del:hover{ background:rgba(226,102,74,.3); }
+  .cart-empty{ color:var(--text-dim); font-size:0.84rem; margin:6px 0 0; }
+  .btn-row{ display:flex; gap:8px; margin-top:12px; }
   .btn-row .link-btn{ flex:1; text-align:center; padding:7px 8px; }
   .btn-row .link-btn:disabled{ opacity:.35; cursor:default; border-color:var(--border); color:var(--text-dim); }
+  /* 되돌릴 수 없는 버튼은 한 번 더 눌러야 실행된다 */
+  .link-btn.armed{ border-color:var(--bad); color:var(--bad); }
+
+  /* 모바일: 요약이 맨 아래로 내려가니 하단 고정 바로 남은 코인을 항상 보여준다 */
+  .mobile-bar{ display:none; }
+  @media (max-width: 960px){
+    .wrap{ padding-bottom:96px; }
+    .mobile-bar{
+      position:fixed; left:0; right:0; bottom:0; z-index:20;
+      display:flex; align-items:center; gap:12px;
+      padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+      background:rgba(23,26,33,.96); border-top:1px solid var(--border);
+      backdrop-filter:blur(8px);
+      cursor:pointer; user-select:none;
+    }
+    .mobile-bar .mb-main{ display:flex; flex-direction:column; line-height:1.2; }
+    .mobile-bar .mb-label{ font-size:0.7rem; color:var(--text-dim); }
+    .mobile-bar .mb-remain{ font-size:1.3rem; font-weight:800; font-variant-numeric:tabular-nums; }
+    .mobile-bar .mb-remain.ok{ color:var(--good); }
+    .mobile-bar .mb-remain.over{ color:var(--bad); }
+    .mobile-bar .mb-side{ display:flex; flex-direction:column; align-items:flex-end; margin-left:auto; line-height:1.25; text-align:right; }
+    .mobile-bar .mb-cart{ font-size:0.78rem; color:var(--text-dim); font-variant-numeric:tabular-nums; }
+    .mobile-bar .mb-cart b{ color:var(--accent); }
+    .mobile-bar .mb-week{ font-size:0.74rem; font-weight:700; color:var(--text-dim); }
+    .mobile-bar .mb-week.warn{ color:var(--bad); }
+    .mobile-bar .mb-week.good{ color:var(--good); }
+    .mobile-bar .mb-arrow{ color:var(--text-dim); font-size:0.9rem; }
+  }
 </style>
 </head>
 <body>
@@ -200,14 +285,14 @@
   </nav>
   <header>
     <h1>🪙 이벤트 코인샵 계산</h1>
-    <p class="sub">이벤트 코인으로 뭘 살지 미리 담아보는 계산기</p>
+    <p class="sub">아르고 주화 상점(강화·성장 탭) 기준. 담으면 예산에 들어오는지, 몇 주차에 살 수 있는지 바로 보여줍니다.</p>
   </header>
 
   <div class="layout">
     <div class="layout-left">
       <section class="card">
         <h2>코인 획득량</h2>
-        <div class="field-grid">
+        <div class="field-grid coin-fields">
           <div class="field">
             <label for="perWeek">주당 획득 코인</label>
             <input type="number" id="perWeek" min="0" step="100" value="5000">
@@ -217,30 +302,37 @@
             <input type="number" id="weeks" min="1" step="1" value="8">
           </div>
           <div class="field">
-            <label for="currentWeek">현재 주차</label>
-            <input type="number" id="currentWeek" min="1" step="1" value="1">
-          </div>
-          <div class="field">
-            <label for="extraSpent">기타 사용한 코인</label>
+            <label for="extraSpent">목록 밖에서 쓴 코인</label>
             <input type="number" id="extraSpent" min="0" step="10" value="0">
+            <div class="help">소비·코디 탭처럼 이 목록에 없는 곳에 쓴 코인</div>
           </div>
+        </div>
+        <div class="week-row">
+          <span class="week-label">현재 주차</span>
+          <div class="week-pills" id="weekPills" role="radiogroup" aria-label="현재 주차"></div>
         </div>
         <p class="note" id="budgetNote"></p>
       </section>
 
       <section class="card">
-        <h2>상점</h2>
-        <div class="shop-tabs" id="shopTabs">
-          <button type="button" data-tab="enhance" class="active">강화<span class="tab-count" id="cntEnhance"></span></button>
-          <button type="button" data-tab="growth">성장<span class="tab-count" id="cntGrowth"></span></button>
+        <div class="shop-head">
+          <div class="shop-tabs" id="shopTabs">
+            <button type="button" data-tab="enhance" class="active">강화<span class="tab-count" id="cntEnhance"></span></button>
+            <button type="button" data-tab="growth">성장<span class="tab-count" id="cntGrowth"></span></button>
+          </div>
+          <div class="shop-opts">
+            <button type="button" class="opt-btn" id="onlyPickedBtn" aria-pressed="false">담은 것만</button>
+            <button type="button" class="opt-btn" id="ownedEditBtn" aria-pressed="false">구매 기록 편집</button>
+          </div>
         </div>
+        <p class="shop-hint" id="shopHint">아이콘을 누르면 1개씩 담깁니다. 수량은 상점 구매 제한(ID당·월드당)까지만 담을 수 있습니다.</p>
         <div class="item-list" id="listEnhance"></div>
         <div class="item-list hidden" id="listGrowth"></div>
       </section>
     </div>
 
     <aside class="layout-right">
-      <section class="card card-primary" style="margin-top:0;">
+      <section class="card card-primary" id="summaryCard" style="margin-top:0;">
         <h2>남은 코인</h2>
         <div class="coin-big ok" id="remainBig">40,000</div>
         <div class="bar" id="bar">
@@ -255,33 +347,51 @@
         </div>
         <p class="note" id="progressNote"></p>
         <div class="mini-grid">
-          <div class="mini"><div class="label" id="nowLabel">지금 보유</div><div class="value" id="nowCoin">5,000</div></div>
+          <div class="mini now"><div class="label" id="nowLabel">지금 보유</div><div class="value" id="nowCoin">5,000</div><div class="sub hidden" id="nowShort"></div></div>
           <div class="mini"><div class="label" id="totalLabel">총 획득</div><div class="value" id="totalCoin">40,000</div></div>
           <div class="mini"><div class="label">이미 사용</div><div class="value" id="spentCoin">0</div></div>
-          <div class="mini"><div class="label">장바구니 사용</div><div class="value" id="usedCoin">0</div></div>
-          <div class="mini mini-wide"><div class="label">담은 아이템</div><div class="value" id="pieceCount">0종 0개</div></div>
+          <div class="mini"><div class="label">장바구니</div><div class="value" id="usedCoin">0</div></div>
         </div>
         <div class="callout hidden" id="weekNote"></div>
-        <div class="btn-row">
-          <button type="button" class="link-btn" id="buyAllBtn">장바구니 전부 구매 처리</button>
-        </div>
-        <div class="btn-row">
-          <button type="button" class="link-btn" id="clearBtn">장바구니 비우기</button>
-          <button type="button" class="link-btn" id="resetOwnedBtn">구매 기록 초기화</button>
-        </div>
       </section>
 
       <section class="card">
-        <h2>장바구니</h2>
+        <div class="list-head">
+          <h2>장바구니</h2>
+          <span class="list-sum" id="cartSum"></span>
+        </div>
+        <p class="plan-note hidden" id="planNote">담은 순서대로 산다고 보고, 각 품목을 살 수 있는 주차를 표시합니다.</p>
         <div class="cart-list" id="cartList"></div>
+        <div class="btn-row">
+          <button type="button" class="link-btn" id="buyAllBtn">전부 구매 처리</button>
+          <button type="button" class="link-btn" id="clearBtn">비우기</button>
+        </div>
       </section>
 
       <section class="card hidden" id="ownedCard">
-        <h2>구매 완료</h2>
+        <div class="list-head">
+          <h2>구매 완료</h2>
+          <span class="list-sum" id="ownedSum"></span>
+        </div>
         <div class="cart-list" id="ownedList"></div>
+        <div class="btn-row">
+          <button type="button" class="link-btn" id="resetOwnedBtn">구매 기록 초기화</button>
+        </div>
       </section>
     </aside>
   </div>
+</div>
+
+<div class="mobile-bar" id="mobileBar" role="button" tabindex="0" aria-label="요약으로 이동">
+  <div class="mb-main">
+    <span class="mb-label">남은 코인</span>
+    <span class="mb-remain ok" id="mbRemain">40,000</span>
+  </div>
+  <div class="mb-side">
+    <span class="mb-cart" id="mbCart">장바구니 <b>0</b></span>
+    <span class="mb-week" id="mbWeek"></span>
+  </div>
+  <span class="mb-arrow">▾</span>
 </div>
 
 <script src="site_nav.js"></script>
@@ -326,50 +436,28 @@
     ]
   };
   var TAB_LABEL = { enhance:'강화', growth:'성장' };
+  var LIMIT_LABEL = { M:'ID당', W:'월드당' };
   var ALL = SHOP.enhance.concat(SHOP.growth);
   var BY_ID = {};
   ALL.forEach(function(it){ BY_ID[it.id] = it; });
 
   var STORE_KEY = 'coinShopPlan.v1';
-  var cart = {};                 // id -> 담아둔 수량 (앞으로 살 것)
+  var cart = {};                 // id -> 담아둔 수량. 키 순서 = 담은 순서 = 구매 우선순위
   var owned = {};                // id -> 이미 구매한 수량
   var settings = { perWeek:5000, weeks:8, currentWeek:1, extraSpent:0 };
   var activeTab = 'enhance';
+  var view = { onlyPicked:false, ownedEdit:false };
 
-  var el = {
-    perWeek: document.getElementById('perWeek'),
-    weeks: document.getElementById('weeks'),
-    currentWeek: document.getElementById('currentWeek'),
-    extraSpent: document.getElementById('extraSpent'),
-    budgetNote: document.getElementById('budgetNote'),
-    listEnhance: document.getElementById('listEnhance'),
-    listGrowth: document.getElementById('listGrowth'),
-    tabs: document.getElementById('shopTabs'),
-    cntEnhance: document.getElementById('cntEnhance'),
-    cntGrowth: document.getElementById('cntGrowth'),
-    remainBig: document.getElementById('remainBig'),
-    bar: document.getElementById('bar'),
-    barOwned: document.getElementById('barOwned'),
-    barCart: document.getElementById('barCart'),
-    barNow: document.getElementById('barNow'),
-    nowCoin: document.getElementById('nowCoin'),
-    nowLabel: document.getElementById('nowLabel'),
-    totalLabel: document.getElementById('totalLabel'),
-    progressNote: document.getElementById('progressNote'),
-    totalCoin: document.getElementById('totalCoin'),
-    spentCoin: document.getElementById('spentCoin'),
-    usedCoin: document.getElementById('usedCoin'),
-    pieceCount: document.getElementById('pieceCount'),
-    weekNote: document.getElementById('weekNote'),
-    cartList: document.getElementById('cartList'),
-    ownedCard: document.getElementById('ownedCard'),
-    ownedList: document.getElementById('ownedList'),
-    clearBtn: document.getElementById('clearBtn'),
-    buyAllBtn: document.getElementById('buyAllBtn'),
-    resetOwnedBtn: document.getElementById('resetOwnedBtn')
-  };
+  var el = {};
+  ['perWeek','weeks','extraSpent','weekPills','budgetNote','listEnhance','listGrowth','shopTabs','cntEnhance','cntGrowth',
+   'onlyPickedBtn','ownedEditBtn','shopHint',
+   'remainBig','bar','barOwned','barCart','barNow','nowLabel','nowCoin','nowShort','totalLabel','totalCoin','spentCoin','usedCoin',
+   'progressNote','weekNote','cartSum','planNote','cartList','buyAllBtn','clearBtn','ownedCard','ownedSum','ownedList','resetOwnedBtn',
+   'mobileBar','mbRemain','mbCart','mbWeek','summaryCard'
+  ].forEach(function(id){ el[id] = document.getElementById(id); });
 
   function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
+  function signed(n){ return (n < 0 ? '−' : '') + fmt(Math.abs(n)); }
   function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
 
   function load(){
@@ -406,11 +494,20 @@
   function coinsOf(map){
     return Object.keys(map).reduce(function(sum, id){ return sum + BY_ID[id].price * map[id]; }, 0);
   }
+  function countOf(map){
+    return Object.keys(map).reduce(function(sum, id){ return sum + map[id]; }, 0);
+  }
   function totalCoins(){ return settings.perWeek * settings.weeks; }   // 기간 동안 받는 코인 전체
   function nowCoins(){ return settings.perWeek * settings.currentWeek; } // 현재 주차까지 받은 코인
   function spentCoins(){ return coinsOf(owned) + settings.extraSpent; } // 이미 쓴 코인
   function usedCoins(){ return coinsOf(cart); }                        // 장바구니에 담은 코인
   function leftToBuy(id){ return BY_ID[id].stock - (owned[id] || 0); } // 아직 살 수 있는 수량
+  // 누적 코인 c를 손에 넣는 주차 (0이면 지금, Infinity면 주당 코인이 없어 계산 불가)
+  function weekFor(c){
+    if (c <= 0) return 0;
+    if (settings.perWeek <= 0) return Infinity;
+    return Math.ceil(c / settings.perWeek);
+  }
 
   function setQty(id, qty){
     var q = clamp(Math.floor(qty) || 0, 0, leftToBuy(id));
@@ -432,41 +529,56 @@
     render();
   }
 
+  // 장바구니 한 줄을 그대로 "구매 완료"로 옮긴다
+  function buyFromCart(id){
+    if (!cart[id]) return;
+    owned[id] = Math.min(BY_ID[id].stock, (owned[id] || 0) + cart[id]);
+    delete cart[id];
+    save();
+    render();
+  }
+
   // ---- 아이템 목록 ----
   function buildRow(item){
     var row = document.createElement('div');
     row.className = 'item-row';
     row.dataset.id = item.id;
     row.innerHTML =
-      '<button type="button" class="item-icon" title="1개 담기"></button>' +
+      '<button type="button" class="item-icon"></button>' +
       '<div class="item-body">' +
         '<div class="item-name"></div>' +
-        '<div class="item-meta">' +
-          '<span class="meta-cell rest-cell">남은 수량<b class="rest">0</b><span class="of-max">/<span class="max">0</span></span></span>' +
-          '<span class="meta-cell own-cell">이미 구매' +
-            '<button type="button" class="own-btn own-minus">−</button>' +
-            '<b class="own-count">0</b>' +
-            '<button type="button" class="own-btn own-plus">+</button>' +
-            '<button type="button" class="max-btn own-all">전량</button>' +
-          '</span>' +
+        '<div class="item-sub">' +
+          '<span class="sub-limit"></span>' +
+          '<span class="sub-owned hidden"></span>' +
+          '<span class="sub-done hidden">전량 구매 완료</span>' +
+        '</div>' +
+        '<div class="own-edit">이미 구매' +
+          '<button type="button" class="own-btn own-minus">−</button>' +
+          '<b class="own-count">0</b>' +
+          '<button type="button" class="own-btn own-plus">+</button>' +
+          '<button type="button" class="own-all">전량</button>' +
         '</div>' +
       '</div>' +
       '<div class="item-buy">' +
         '<div class="price-line">' +
           '<span class="unit-price"></span>' +
-          '<span class="buy-total zero">구매 시<b>0 코인</b></span>' +
+          '<span class="arrow">→</span>' +
+          '<span class="row-total"></span>' +
         '</div>' +
         '<div class="buy-row">' +
-          '<button type="button" class="max-btn min-btn">최소</button>' +
           '<button type="button" class="qty-btn minus">−</button>' +
-          '<input type="number" class="qty-input" min="0" value="0">' +
+          '<input type="number" class="qty-input" min="0" value="0" inputmode="numeric">' +
           '<button type="button" class="qty-btn plus">+</button>' +
+          '<span class="qty-cap"></span>' +
           '<button type="button" class="max-btn max-all">최대</button>' +
+          '<button type="button" class="clear-btn">×</button>' +
         '</div>' +
       '</div>';
 
     // 실제 아이템 아이콘이 있으면 쓰고, 없는 항목만 이모지로 대신한다
     var iconBox = row.querySelector('.item-icon');
+    iconBox.setAttribute('aria-label', item.name + ' 1개 담기');
+    iconBox.title = '1개 담기';
     if (item.img) {
       var files = [].concat(item.img);
       iconBox.classList.toggle('pair', files.length > 1);
@@ -484,43 +596,34 @@
     } else {
       iconBox.textContent = item.icon;
     }
-    var name = row.querySelector('.item-name');
-    name.textContent = item.name;
-    var tag = document.createElement('span');
-    tag.className = 'limit-tag' + (item.limit === 'W' ? ' w' : '');
-    tag.textContent = item.limit;
-    tag.title = item.limit === 'W' ? '월드 기준 구매 제한' : '메이플ID 기준 구매 제한';
-    name.appendChild(tag);
+    row.querySelector('.item-name').textContent = item.name;
+    row.querySelector('.sub-limit').textContent = LIMIT_LABEL[item.limit] + ' ' + fmt(item.stock) + '개';
     row.querySelector('.unit-price').innerHTML = fmt(item.price) + '<i>코인</i>';
-    row.querySelector('.max').textContent = fmt(item.stock);
 
-    row.querySelector('.item-icon').addEventListener('click', function(){
-      setQty(item.id, (cart[item.id] || 0) + 1);
-    });
-    row.querySelector('.plus').addEventListener('click', function(){
-      setQty(item.id, (cart[item.id] || 0) + 1);
-    });
-    row.querySelector('.minus').addEventListener('click', function(){
-      setQty(item.id, (cart[item.id] || 0) - 1);
-    });
-    row.querySelector('.min-btn').addEventListener('click', function(){
-      setQty(item.id, 0);
-    });
-    row.querySelector('.max-all').addEventListener('click', function(){
-      setQty(item.id, leftToBuy(item.id));
-    });
-    row.querySelector('.own-plus').addEventListener('click', function(){
-      setOwned(item.id, (owned[item.id] || 0) + 1);
-    });
-    row.querySelector('.own-minus').addEventListener('click', function(){
-      setOwned(item.id, (owned[item.id] || 0) - 1);
-    });
+    var label = function(sel, text){ row.querySelector(sel).setAttribute('aria-label', item.name + ' ' + text); };
+    label('.plus', '1개 더 담기');
+    label('.minus', '1개 빼기');
+    label('.max-all', '최대로 담기');
+    label('.clear-btn', '장바구니에서 빼기');
+    label('.qty-input', '담을 수량');
+    label('.own-plus', '구매 기록 1개 추가');
+    label('.own-minus', '구매 기록 1개 빼기');
+
+    iconBox.addEventListener('click', function(){ setQty(item.id, (cart[item.id] || 0) + 1); });
+    row.querySelector('.plus').addEventListener('click', function(){ setQty(item.id, (cart[item.id] || 0) + 1); });
+    row.querySelector('.minus').addEventListener('click', function(){ setQty(item.id, (cart[item.id] || 0) - 1); });
+    row.querySelector('.clear-btn').addEventListener('click', function(){ setQty(item.id, 0); });
+    row.querySelector('.max-all').addEventListener('click', function(){ setQty(item.id, leftToBuy(item.id)); });
+    row.querySelector('.own-plus').addEventListener('click', function(){ setOwned(item.id, (owned[item.id] || 0) + 1); });
+    row.querySelector('.own-minus').addEventListener('click', function(){ setOwned(item.id, (owned[item.id] || 0) - 1); });
     row.querySelector('.own-all').addEventListener('click', function(){
       // 이미 전량 구매 상태면 한 번 더 누를 때 취소되게
       setOwned(item.id, (owned[item.id] || 0) === item.stock ? 0 : item.stock);
     });
     var input = row.querySelector('.qty-input');
     input.addEventListener('input', function(){ setQty(item.id, parseInt(input.value, 10)); });
+    // 입력 중엔 커서가 튀지 않게 값을 안 건드리므로, 입력이 끝나면 실제 저장된 수량으로 되돌려 적는다
+    input.addEventListener('change', function(){ input.value = String(cart[item.id] || 0); });
     input.addEventListener('focus', function(){ input.select(); });
     return row;
   }
@@ -535,27 +638,32 @@
     var own = owned[item.id] || 0;
     var buyable = item.stock - own;          // 아직 살 수 있는 수량
     var done = own >= item.stock;            // 전량 구매 완료
+    var maxed = qty > 0 && qty >= buyable;
 
     row.classList.toggle('picked', qty > 0);
-    row.classList.toggle('maxed', qty > 0 && qty === buyable);
-    row.classList.toggle('owned', own > 0);
     row.classList.toggle('done', done);
-    row.querySelector('.rest').textContent = fmt(buyable - qty);
-    row.querySelector('.rest-cell').classList.toggle('empty', buyable - qty === 0);
+    row.classList.toggle('hidden', view.onlyPicked && qty === 0);
 
-    var total = row.querySelector('.buy-total');
-    total.innerHTML = '구매 시<b>' + fmt(item.price * qty) + ' 코인</b>';
-    total.classList.toggle('zero', qty === 0);
+    var subOwned = row.querySelector('.sub-owned');
+    subOwned.textContent = '이미 구매 ' + fmt(own);
+    subOwned.classList.toggle('hidden', own === 0 || done);
+    row.querySelector('.sub-done').classList.toggle('hidden', !done);
+
+    row.querySelector('.row-total').innerHTML = fmt(item.price * qty) + '<i>코인</i>';
 
     var input = row.querySelector('.qty-input');
     input.max = buyable;
     // 입력 중인 칸은 건드리지 않는다 (커서가 튀지 않게)
     if (document.activeElement !== input) input.value = String(qty);
     input.disabled = done;
+    row.querySelector('.item-icon').disabled = done || maxed;
     row.querySelector('.minus').disabled = qty <= 0;
     row.querySelector('.plus').disabled = qty >= buyable;
-    row.querySelector('.min-btn').disabled = qty <= 0;
-    row.querySelector('.max-all').disabled = done || qty >= buyable;
+    row.querySelector('.max-all').disabled = done || maxed;
+
+    var cap = row.querySelector('.qty-cap');
+    cap.classList.toggle('maxed', maxed);
+    cap.textContent = done ? '' : (maxed ? 'MAX' : '/ ' + fmt(buyable));
 
     row.querySelector('.own-count').textContent = fmt(own);
     row.querySelector('.own-minus').disabled = own <= 0;
@@ -563,72 +671,131 @@
     row.querySelector('.own-all').textContent = done ? '취소' : '전량';
   }
 
-  // ---- 장바구니 / 요약 ----
-  function appendCartRows(container, map, onDelete, extraClass){
-    var any = false;
-    ['enhance','growth'].forEach(function(tab){
-      var picked = SHOP[tab].filter(function(it){ return map[it.id]; });
-      if (!picked.length) return;
-      any = true;
-      var head = document.createElement('p');
-      head.className = 'cart-group';
-      head.textContent = TAB_LABEL[tab];
-      container.appendChild(head);
-      picked.forEach(function(item){
-        var qty = map[item.id];
-        var row = document.createElement('div');
-        row.className = 'cart-row' + (extraClass ? ' ' + extraClass : '');
-        row.innerHTML = '<span class="cart-name"></span>' +
-                        '<span class="cart-cost"></span>' +
-                        '<button type="button" class="cart-del" title="빼기">×</button>';
-        var name = row.querySelector('.cart-name');
-        name.textContent = item.name;
-        var em = document.createElement('em');
-        em.textContent = '×' + fmt(qty);
-        name.appendChild(em);
-        row.querySelector('.cart-cost').textContent = fmt(item.price * qty);
-        row.querySelector('.cart-del').addEventListener('click', function(){ onDelete(item.id); });
-        container.appendChild(row);
-      });
+  // ---- 장바구니 / 구매 완료 ----
+  function cartRow(item, qty, extra){
+    var row = document.createElement('div');
+    row.className = 'cart-row' + (extra.cls ? ' ' + extra.cls : '');
+    var name = document.createElement('span');
+    name.className = 'cart-name';
+    name.textContent = item.name;
+    var em = document.createElement('em');
+    em.textContent = '×' + fmt(qty);
+    name.appendChild(em);
+    row.appendChild(name);
+
+    if (extra.week) row.appendChild(extra.week);
+
+    var cost = document.createElement('span');
+    cost.className = 'cart-cost';
+    cost.textContent = fmt(item.price * qty);
+    row.appendChild(cost);
+
+    var actions = document.createElement('span');
+    actions.className = 'cart-actions';
+    (extra.buttons || []).forEach(function(b){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cart-btn ' + b.cls;
+      btn.textContent = b.text;
+      btn.title = b.title;
+      btn.setAttribute('aria-label', item.name + ' ' + b.title);
+      btn.addEventListener('click', b.onClick);
+      actions.appendChild(btn);
     });
-    return any;
+    row.appendChild(actions);
+    return row;
   }
 
   function renderCart(){
+    var spent = spentCoins();
+    var ids = Object.keys(cart);
     el.cartList.innerHTML = '';
-    var any = appendCartRows(el.cartList, cart, function(id){ setQty(id, 0); });
-    if (!any) {
-      el.cartList.innerHTML = '<p class="cart-empty">아직 담은 아이템이 없습니다. 왼쪽 상점에서 아이템을 클릭해보세요.</p>';
+    el.planNote.classList.toggle('hidden', ids.length < 2 || settings.perWeek <= 0);
+    if (!ids.length) {
+      el.cartList.innerHTML = '<p class="cart-empty">아직 담은 아이템이 없습니다. 상점에서 아이콘을 누르거나 +로 담아보세요.</p>';
+      el.cartSum.textContent = '';
+    } else {
+      // 담은 순서대로 산다고 보고, 누적 코인이 몇 주차에 모이는지 표시한다
+      var cum = spent;
+      ids.forEach(function(id){
+        var item = BY_ID[id];
+        cum += item.price * cart[id];
+        var week = weekFor(cum);
+        var tag = null;
+        if (isFinite(week)) {
+          tag = document.createElement('span');
+          tag.className = 'cart-week';
+          if (week <= settings.currentWeek) { tag.classList.add('now'); tag.textContent = '지금'; }
+          else if (week <= settings.weeks) { tag.textContent = week + '주차'; }
+          else { tag.classList.add('late'); tag.textContent = week + '주차'; tag.title = '기간(' + settings.weeks + '주) 안에는 못 삽니다'; }
+        }
+        el.cartList.appendChild(cartRow(item, cart[id], {
+          week: tag,
+          buttons: [
+            { cls:'buy', text:'✓', title:'구매 완료로 옮기기', onClick:function(){ buyFromCart(id); } },
+            { cls:'del', text:'×', title:'빼기', onClick:function(){ setQty(id, 0); } }
+          ]
+        }));
+      });
+      el.cartSum.innerHTML = fmt(ids.length) + '종 ' + fmt(countOf(cart)) + '개<b>' + fmt(usedCoins()) + '</b>';
     }
 
+    var ownedIds = Object.keys(owned);
     el.ownedList.innerHTML = '';
-    var hasOwned = appendCartRows(el.ownedList, owned, function(id){ setOwned(id, 0); }, 'is-owned');
-    el.ownedCard.classList.toggle('hidden', !hasOwned);
+    ownedIds.forEach(function(id){
+      el.ownedList.appendChild(cartRow(BY_ID[id], owned[id], {
+        cls:'is-owned',
+        buttons: [{ cls:'del', text:'×', title:'구매 기록 지우기', onClick:function(){ setOwned(id, 0); } }]
+      }));
+    });
+    el.ownedSum.innerHTML = ownedIds.length ? fmt(ownedIds.length) + '종 ' + fmt(countOf(owned)) + '개<b>' + fmt(coinsOf(owned)) + '</b>' : '';
+    el.ownedCard.classList.toggle('hidden', !ownedIds.length);
   }
 
   function render(){
+    document.body.classList.toggle('own-edit-on', view.ownedEdit);
+    el.ownedEditBtn.classList.toggle('active', view.ownedEdit);
+    el.ownedEditBtn.setAttribute('aria-pressed', String(view.ownedEdit));
+    el.onlyPickedBtn.classList.toggle('active', view.onlyPicked);
+    el.onlyPickedBtn.setAttribute('aria-pressed', String(view.onlyPicked));
+    el.shopHint.textContent = view.ownedEdit
+      ? '이미 산 수량을 기록해 두면 그만큼 구매 한도가 줄고 "이미 사용" 코인에 잡힙니다.'
+      : '아이콘을 누르면 1개씩 담깁니다. 수량은 상점 구매 제한(ID당·월드당)까지만 담을 수 있습니다.';
+
     Array.prototype.forEach.call(document.querySelectorAll('.item-row'), refreshRow);
+    ['enhance','growth'].forEach(function(tab){
+      var list = tab === 'enhance' ? el.listEnhance : el.listGrowth;
+      var empty = list.querySelector('.shop-empty');
+      var anyVisible = SHOP[tab].some(function(it){ return !view.onlyPicked || cart[it.id]; });
+      if (!anyVisible && !empty) {
+        empty = document.createElement('p');
+        empty.className = 'shop-empty';
+        empty.textContent = '이 탭에는 담은 아이템이 없습니다.';
+        list.appendChild(empty);
+      } else if (anyVisible && empty) {
+        empty.remove();
+      }
+    });
 
     var total = totalCoins();
     var spent = spentCoins();
     var used = usedCoins();
     var remain = total - spent - used;
-    var pieces = Object.keys(cart).reduce(function(s, id){ return s + cart[id]; }, 0);
 
     // 현재 주차까지 받은 코인에서 이미 쓴 걸 빼면 "지금 실제로 쓸 수 있는 코인"
     var nowAvailable = nowCoins() - spent;
+    var shortNow = used - nowAvailable;           // 지금 기준 모자란 코인
     el.nowLabel.textContent = '지금 보유 (' + settings.currentWeek + '주차)';
     el.totalLabel.textContent = '총 획득 (' + settings.weeks + '주)';
-    el.nowCoin.textContent = (nowAvailable < 0 ? '−' : '') + fmt(Math.abs(nowAvailable));
-    el.nowCoin.parentNode.classList.add('now');
-    el.nowCoin.parentNode.classList.toggle('short', nowAvailable - used < 0);
+    el.nowCoin.textContent = signed(nowAvailable);
+    el.nowShort.classList.toggle('hidden', !(used > 0 && shortNow > 0));
+    el.nowShort.textContent = '장바구니보다 ' + fmt(Math.max(0, shortNow)) + ' 부족';
 
     el.totalCoin.textContent = fmt(total);
     el.spentCoin.textContent = fmt(spent);
     el.usedCoin.textContent = fmt(used);
-    el.pieceCount.textContent = fmt(Object.keys(cart).length) + '종 ' + fmt(pieces) + '개';
 
-    el.remainBig.textContent = (remain < 0 ? '−' : '') + fmt(Math.abs(remain));
+    el.remainBig.textContent = signed(remain);
     el.remainBig.classList.toggle('over', remain < 0);
     el.remainBig.classList.toggle('ok', remain >= 0);
 
@@ -639,29 +806,43 @@
     el.barNow.style.left = pctOf(nowCoins()) + '%';
     el.bar.classList.toggle('over', remain < 0);
     el.progressNote.textContent = remain < 0
-      ? '코인이 ' + fmt(-remain) + '개 부족합니다.'
+      ? '코인이 ' + fmt(-remain) + '개 부족합니다. 장바구니에서 ' + fmt(-remain) + '개어치를 빼야 예산에 맞습니다.'
       : '총 ' + fmt(total) + '개 중 ' + fmt(spent + used) + '개 사용 (' +
         (total > 0 ? ((spent + used) / total * 100).toFixed(1) : '0.0') + '%)';
 
     // 코인은 매주 들어오므로, 현재 주차 보유분으로 살 수 있는지 / 몇 주차까지 모아야 하는지
+    var mbWeekText = '', mbWeekCls = '';
     if (used > 0 && settings.perWeek > 0) {
-      var short = used - nowAvailable;             // 지금 기준 모자란 코인
-      var needWeek = Math.ceil((spent + used) / settings.perWeek);
+      var needWeek = weekFor(spent + used);
       el.weekNote.classList.remove('hidden');
-      el.weekNote.classList.toggle('warn', short > 0);
-      if (short <= 0) {
+      el.weekNote.classList.toggle('warn', needWeek > settings.weeks);
+      el.weekNote.classList.toggle('good', shortNow <= 0);
+      if (shortNow <= 0) {
         el.weekNote.textContent = settings.currentWeek + '주차 코인으로 지금 바로 전부 살 수 있습니다.';
+        mbWeekText = '지금 전부 구매 가능'; mbWeekCls = 'good';
       } else if (needWeek <= settings.weeks) {
-        el.weekNote.textContent = '지금은 ' + fmt(short) + '개 부족 — ' + needWeek + '주차 코인까지 모으면 전부 살 수 있습니다.';
+        el.weekNote.textContent = '지금은 ' + fmt(shortNow) + '개 부족합니다. ' + needWeek + '주차 코인까지 모으면 전부 살 수 있습니다.';
+        mbWeekText = needWeek + '주차까지 모으면 가능';
       } else {
         el.weekNote.textContent = '기간(' + settings.weeks + '주) 안에는 다 못 삽니다. ' + needWeek + '주차 분량의 코인이 필요합니다.';
+        mbWeekText = '기간 내 불가 (' + needWeek + '주차 필요)'; mbWeekCls = 'warn';
       }
     } else {
       el.weekNote.classList.add('hidden');
     }
 
+    // 모바일 하단 바
+    el.mbRemain.textContent = signed(remain);
+    el.mbRemain.classList.toggle('over', remain < 0);
+    el.mbRemain.classList.toggle('ok', remain >= 0);
+    el.mbCart.innerHTML = '장바구니 <b>' + fmt(used) + '</b>';
+    el.mbWeek.textContent = mbWeekText;
+    el.mbWeek.className = 'mb-week' + (mbWeekCls ? ' ' + mbWeekCls : '');
+
     el.buyAllBtn.disabled = used === 0;
+    el.clearBtn.disabled = used === 0;
     el.resetOwnedBtn.disabled = Object.keys(owned).length === 0;
+    disarm(el.clearBtn); disarm(el.resetOwnedBtn); disarm(el.buyAllBtn);
 
     var pickedEnhance = SHOP.enhance.filter(function(it){ return cart[it.id]; }).length;
     var pickedGrowth = SHOP.growth.filter(function(it){ return cart[it.id]; }).length;
@@ -677,15 +858,36 @@
       ' · ' + settings.currentWeek + '주차까지 ' + fmt(nowCoins()) + ' 코인';
   }
 
+  function renderWeekPills(){
+    el.weekPills.innerHTML = '';
+    for (var w = 1; w <= settings.weeks; w++) {
+      (function(week){
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'week-pill' + (week === settings.currentWeek ? ' active' : '');
+        b.textContent = week;
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String(week === settings.currentWeek));
+        b.setAttribute('aria-label', week + '주차');
+        b.addEventListener('click', function(){
+          settings.currentWeek = week;
+          save();
+          renderWeekPills();
+          renderBudgetNote();
+          render();
+        });
+        el.weekPills.appendChild(b);
+      })(w);
+    }
+  }
+
   function readSettings(){
     settings.perWeek = Math.max(0, parseInt(el.perWeek.value, 10) || 0);
     settings.weeks = Math.max(1, parseInt(el.weeks.value, 10) || 1);
-    settings.currentWeek = clamp(parseInt(el.currentWeek.value, 10) || 1, 1, settings.weeks);
+    settings.currentWeek = clamp(settings.currentWeek, 1, settings.weeks);
     settings.extraSpent = Math.max(0, parseInt(el.extraSpent.value, 10) || 0);
-    // 기간을 줄이면 현재 주차도 따라 줄어드니 입력칸에 되돌려 적어준다
-    el.currentWeek.max = settings.weeks;
-    if (document.activeElement !== el.currentWeek) el.currentWeek.value = settings.currentWeek;
     save();
+    renderWeekPills();
     renderBudgetNote();
     render();
   }
@@ -694,10 +896,27 @@
     activeTab = tab;
     el.listEnhance.classList.toggle('hidden', tab !== 'enhance');
     el.listGrowth.classList.toggle('hidden', tab !== 'growth');
-    Array.prototype.forEach.call(el.tabs.querySelectorAll('button'), function(b){
+    Array.prototype.forEach.call(el.shopTabs.querySelectorAll('button'), function(b){
       b.classList.toggle('active', b.dataset.tab === tab);
     });
     save();
+  }
+
+  // 되돌릴 수 없는 버튼: 첫 클릭은 "정말?"로 바꾸고, 3초 안에 한 번 더 눌러야 실행
+  function disarm(btn){
+    if (!btn.dataset.label) return;
+    btn.classList.remove('armed');
+    btn.textContent = btn.dataset.label;
+    clearTimeout(btn._armTimer);
+  }
+  function confirmClick(btn, armedLabel, fn){
+    btn.dataset.label = btn.textContent;
+    btn.addEventListener('click', function(){
+      if (btn.classList.contains('armed')) { disarm(btn); fn(); return; }
+      btn.classList.add('armed');
+      btn.textContent = armedLabel;
+      btn._armTimer = setTimeout(function(){ disarm(btn); }, 3000);
+    });
   }
 
   // ---- 초기화 ----
@@ -706,24 +925,25 @@
   buildList(el.listGrowth, SHOP.growth);
   el.perWeek.value = settings.perWeek;
   el.weeks.value = settings.weeks;
-  el.currentWeek.value = settings.currentWeek;
-  el.currentWeek.max = settings.weeks;
   el.extraSpent.value = settings.extraSpent;
 
-  ['perWeek','weeks','currentWeek','extraSpent'].forEach(function(k){
+  ['perWeek','weeks','extraSpent'].forEach(function(k){
     el[k].addEventListener('input', readSettings);
   });
-  el.tabs.addEventListener('click', function(e){
+  el.shopTabs.addEventListener('click', function(e){
     var btn = e.target.closest('button[data-tab]');
     if (btn) switchTab(btn.dataset.tab);
   });
-  el.clearBtn.addEventListener('click', function(){
+  el.onlyPickedBtn.addEventListener('click', function(){ view.onlyPicked = !view.onlyPicked; render(); });
+  el.ownedEditBtn.addEventListener('click', function(){ view.ownedEdit = !view.ownedEdit; render(); });
+
+  confirmClick(el.clearBtn, '정말 비울까요?', function(){
     cart = {};
     save();
     render();
   });
   // 실제로 사고 나면 장바구니를 그대로 "구매 완료"로 옮긴다
-  el.buyAllBtn.addEventListener('click', function(){
+  confirmClick(el.buyAllBtn, '전부 구매 완료로 옮길까요?', function(){
     Object.keys(cart).forEach(function(id){
       owned[id] = Math.min(BY_ID[id].stock, (owned[id] || 0) + cart[id]);
     });
@@ -731,13 +951,18 @@
     save();
     render();
   });
-  el.resetOwnedBtn.addEventListener('click', function(){
+  confirmClick(el.resetOwnedBtn, '정말 지울까요?', function(){
     owned = {};
     save();
     render();
   });
 
+  function jumpToSummary(){ el.summaryCard.scrollIntoView({ behavior:'smooth', block:'start' }); }
+  el.mobileBar.addEventListener('click', jumpToSummary);
+  el.mobileBar.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); jumpToSummary(); } });
+
   switchTab(activeTab);
+  renderWeekPills();
   renderBudgetNote();
   render();
 })();
