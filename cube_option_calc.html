@@ -30,10 +30,12 @@
   .cube-panel h3 { margin:16px 0 8px; color:#c9c8e9; font-size:.85rem; }
   .sub-label { color:var(--text-dim); font-size:.78rem; margin:16px 0 7px; }
   .cube-panel h2 + .sub-label { margin-top:0; }
-  .part-groups { display:grid; grid-template-columns:1fr 1.3fr 1.6fr; gap:10px; }
-  .part-group { background:#1b1c2d; border:1px solid #2c2d46; border-radius:10px; padding:10px; }
-  .part-group-title { font-size:.74rem; font-weight:800; color:var(--cube-cyan); margin-bottom:7px; }
+  .part-groups { background:#1b1c2d; border:1px solid #2c2d46; border-radius:10px; padding:2px 10px; }
+  .part-group { display:flex; align-items:baseline; gap:10px; padding:7px 0; }
+  .part-group + .part-group { border-top:1px solid #26273e; }
+  .part-group-title { flex:none; width:48px; font-size:.74rem; font-weight:800; color:var(--cube-cyan); }
   .part-chips { display:flex; flex-wrap:wrap; gap:5px; }
+  .part-chip { white-space:nowrap; }
   .part-chip, .pick-chip { padding:6px 10px; border:1px solid #373854; background:#20213a; color:var(--text); border-radius:8px; cursor:pointer; font:inherit; font-size:.8rem; }
   .part-chip:hover, .pick-chip:not(:disabled):hover { border-color:var(--cube-purple); }
   .part-chip.active { background:var(--cube-purple); border-color:transparent; color:#15131e; font-weight:800; }
@@ -89,6 +91,9 @@
   .add-set:disabled { opacity:.35; cursor:not-allowed; }
   .goal-chip { padding:5px 10px; background:#262744; border:1px solid #3c3d64; border-radius:8px; font-size:.8rem; }
   .goal-and { color:var(--cube-cyan); font-size:.7rem; font-weight:800; }
+  .panel-head + .pick-box { margin-top:0; }
+  #optionRows { margin-top:14px; }
+  #optionRows:empty { margin-top:0; }
   .pick-box { margin-top:14px; padding:12px; border:1px solid #4a3f78; border-radius:12px; background:linear-gradient(135deg,#261f40,#1b1c2d); }
   .pick-title { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:.84rem; font-weight:800; color:var(--cube-gold); margin-bottom:9px; }
   .pick-title span { color:var(--text-dim); font-weight:400; font-size:.76rem; }
@@ -121,7 +126,7 @@
   #tablePanel summary::before { content:'▸'; display:inline-block; margin-right:8px; color:var(--cube-purple); transition:.15s ease; }
   #tablePanel[open] summary::before { transform:rotate(90deg); }
   @media(max-width:900px){ .cube-layout{grid-template-columns:1fr;} .line-tables{grid-template-columns:1fr;} }
-  @media(max-width:640px){ .part-groups{grid-template-columns:1fr;} }
+  @media(max-width:640px){ .part-group{flex-direction:column; align-items:flex-start; gap:5px;} .part-group-title{width:auto;} .part-chips{flex-wrap:wrap; overflow:visible;} }
   @media(max-width:520px){ .cube-hero{padding:22px 18px;} .cube-panel{padding:14px;} .tab-chip{padding:9px 14px 9px 10px; font-size:.86rem;} .level-card{min-width:0; flex:1 1 40%;} }
 </style>
 </head>
@@ -204,8 +209,6 @@
           <h2>03 · 목표 옵션 <span class="tiny">(조건 안은 모두 만족 · 조건끼리는 하나만 만족)</span></h2>
           <button type="button" class="reset-btn" id="resetGoals">↺ 초기화</button>
         </div>
-        <div id="optionRows"></div>
-        <button type="button" class="add-set" id="addSet">+ 또는(OR) 조건 추가</button>
         <div class="pick-box">
           <div class="pick-title">주요 옵션 <span>눌러서 <b id="pickTarget">목표에 추가</b> · <b id="pickCount">0/3</b></span></div>
           <div class="pick-chips" id="primaryPicks"></div>
@@ -214,6 +217,8 @@
           <summary>기타 옵션</summary>
           <div class="pick-chips" id="otherPicks"></div>
         </details>
+        <div id="optionRows"></div>
+        <button type="button" class="add-set" id="addSet">+ 또는(OR) 조건 추가</button>
         <p class="tiny">
           · 수치는 <b>최소값</b>이에요. 보스 데미지 30%를 고르면 35%·40%가 떠도 성공으로 칩니다.<br>
           · 세 줄의 수치를 <b>합산</b>해요. STR 18%면 9%+9%, 12%+9%, 12%+9%+9% 모두 성공이고, 같은 옵션을 두 번 추가하면 그 합이 목표가 됩니다.<br>

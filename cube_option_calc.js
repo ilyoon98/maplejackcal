@@ -26,6 +26,8 @@ const PART_GROUPS = [
 const PART_SHORT = { '보조무기(포스실드, 소울링 제외)':'보조무기', '포스실드, 소울링':'포스실드·소울링' };
 // 이 레벨 이상이 걸친 구간만 기본으로 보여주고, 나머지는 펼쳐서 고른다
 const COMMON_LEVEL = 120;
+// 해당하는 장비가 없는 레벨대. 계산은 그대로 되지만 기본 목록에서는 빼서 펼치기 안으로 넣는다
+const NO_GEAR_RANGES = [[201, 249]];
 // 공식 확률 페이지의 "세 개의 옵션 중 최대 N개" 규칙. 앞 줄에서 한도를 채운 계열은 다음 줄 후보에서 빠지고,
 // 남은 옵션 확률은 표기확률 / (100% - 빠진 옵션 표기확률 합)이 된다.
 const GROUP_MAX = { useful:1, invAfter:1, ignore:2, invChance:2 };
@@ -169,6 +171,22 @@ function cubePrice(cube){
   return d.official ? (PRICE_TABLES[d.official][state.costLevel] || [])[LEGENDARY] || 0 : 0;
 }
 function brackets(){ return DATA.cubes[state.cube].parts[state.part] || []; }
+// 확률 구간(201~250)과 재설정 비용 구간(200~249, 250~300)이 서로 다르게 끊긴다.
+// 둘을 겹쳐서 잘라야 고른 레벨의 확률과 비용이 같이 맞는다.
+function costRanges(){
+  return LEVEL_BRACKETS.map(([min], i) => ({ min, max: i + 1 < LEVEL_BRACKETS.length ? LEVEL_BRACKETS[i + 1][0] - 1 : Infinity }));
+}
+function levelSegments(){
+  const costs = costRanges();
+  const segs = [];
+  for(const b of brackets()){
+    for(const c of costs){
+      const min = Math.max(b.min, c.min), max = Math.min(b.max, c.max);
+      if(min <= max) segs.push({ min, max });
+    }
+  }
+  return segs;
+}
 function currentBracket(){ return findBracket(state.cube, state.part, state.level); }
 // 고른 레벨이 이 부위·큐브 표에 없으면 가장 높은 구간으로 옮긴다
 function ensureBracket(){
@@ -216,13 +234,14 @@ function renderParts(){
 }
 
 function renderLevels(){
-  const list = brackets();
-  const cur = currentBracket();
-  const common = list.filter(b => b.max >= COMMON_LEVEL);
-  const rest = list.filter(b => b.max < COMMON_LEVEL);
+  const list = levelSegments();
+  const cur = list.find(s => s.min <= state.level && state.level <= s.max);
+  const hidden = s => s.max < COMMON_LEVEL || NO_GEAR_RANGES.some(([min, max]) => s.min >= min && s.max <= max);
+  const common = list.filter(s => !hidden(s));
+  const rest = list.filter(hidden);
   // 펼치지 않았어도 지금 고른 구간이 숨은 쪽이면 보여준다
-  const open = showAllLevels || (cur && cur.max < COMMON_LEVEL);
-  const card = b => `<button type="button" class="level-card ${b === cur ? 'active' : ''}" data-level="${b.max}">${b.min}~${b.max}<small>레벨</small></button>`;
+  const open = showAllLevels || (cur && hidden(cur));
+  const card = b => `<button type="button" class="level-card ${b === cur ? 'active' : ''}" data-level="${b.min}">${b.min === b.max ? b.min : `${b.min}~${b.max}`}<small>레벨</small></button>`;
   $('levelCards').innerHTML = `
     <div class="level-row">${common.map(card).join('') || '<span class="tiny">120레벨 이상 구간이 없는 부위예요. 아래에서 골라주세요.</span>'}</div>
     ${rest.length ? `<button type="button" class="more-toggle" id="levelMore">${open ? '다른 레벨 구간 접기 ▴' : `다른 레벨 구간 펼치기 (${rest.length}) ▾`}</button>
@@ -283,7 +302,7 @@ function renderSets(bracket){
         ${active ? '<span class="set-state">옵션 추가 중</span>' : `<button type="button" class="set-pick" data-activate="${si}">여기에 추가</button>`}
         <button type="button" class="opt-remove" data-remove-set="${si}" aria-label="조건 ${SET_NAMES[si]} 지우기">×</button>
       </div>` : ''}
-      ${set.rows.length ? set.rows.map((r, i) => rowHtml(r, si, i)).join('') : '<div class="opt-empty">아래에서 옵션을 눌러 목표에 추가하세요.</div>'}
+      ${set.rows.length ? set.rows.map((r, i) => rowHtml(r, si, i)).join('') : '<div class="opt-empty">위에서 옵션을 눌러 목표에 추가하세요.</div>'}
       ${need.length ? `<div class="goal-summary">${goalChips(need)}</div>` : ''}
     </div>`;
   }).join('');
