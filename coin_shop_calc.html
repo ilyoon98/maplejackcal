@@ -61,6 +61,13 @@
   .opt-btn:hover{ border-color:var(--accent); color:var(--text); }
   .opt-btn.active{ border-color:var(--accent-strong); background:rgba(76,141,255,.14); color:var(--accent); }
   .shop-hint{ font-size:0.76rem; color:var(--text-dim); margin:0 0 12px; }
+  /* "이미 산 것 입력" 모드: 안내를 배너로 키우고 상점 전체가 초록 톤으로 바뀌어 모드에 들어왔음을 알린다 */
+  body.own-edit-on .shop-hint{
+    background:rgba(76,175,125,.1); border:1px solid var(--good); border-radius:10px;
+    padding:10px 12px; color:var(--text); font-size:0.8rem; line-height:1.5;
+  }
+  body.own-edit-on .shop-hint b{ color:var(--good); }
+  .opt-btn.mode-on{ border-color:var(--good); background:var(--good); color:#0b0d12; }
   .shop-empty{ color:var(--text-dim); font-size:0.84rem; padding:14px 4px; }
 
   /* 아이템 행: 아이콘 · 이름/제한 · 가격+수량 */
@@ -108,20 +115,21 @@
   .item-sub .sub-owned{ color:var(--good); font-weight:700; }
   .item-sub .sub-done{ color:var(--good); font-weight:700; }
 
-  /* 구매 기록 편집 모드: 각 행 아래 작은 스테퍼가 나온다 */
-  .own-edit{ display:none; align-items:center; gap:6px; margin-top:4px; font-size:0.74rem; color:var(--text-dim); }
-  body.own-edit-on .own-edit{ display:flex; }
+  /* "이미 산 것 입력" 모드: 장바구니 스테퍼 자리에 초록 스테퍼가 대신 들어간다. 한 번에 하나만 만지게 */
+  .own-row{ display:none; align-items:center; gap:5px; }
+  body.own-edit-on .buy-row{ display:none; }
+  body.own-edit-on .own-row{ display:flex; }
   body.own-edit-on .item-sub .sub-owned, body.own-edit-on .item-sub .sub-done{ display:none; }
-  .own-btn{
-    width:24px; height:24px; border-radius:6px;
-    border:1px solid var(--border); background:#1d212b; color:var(--text-dim);
-    font-size:14px; font-weight:800; line-height:1; cursor:pointer;
-  }
-  .own-btn:hover:not(:disabled){ border-color:var(--good); color:var(--good); }
-  .own-btn:disabled{ opacity:.3; cursor:default; }
-  .own-count{ min-width:26px; text-align:center; font-size:0.9rem; font-weight:800; color:var(--good); }
-  .own-all{ height:24px; padding:0 8px; border-radius:6px; border:1px solid var(--border); background:#1d212b; color:var(--text-dim); font:inherit; font-size:0.7rem; font-weight:700; cursor:pointer; }
-  .own-all:hover{ border-color:var(--good); color:var(--good); }
+  .own-row .qty-input{ border-color:var(--good); color:var(--good); }
+  .own-row .qty-btn:hover:not(:disabled), .own-row .max-btn:hover:not(:disabled){ border-color:var(--good); color:var(--good); }
+  .own-row .qty-cap{ color:var(--text-dim); }
+  body.own-edit-on .row-total{ color:var(--good); }
+  body.own-edit-on .item-row.picked{ border-color:var(--border); background:#11141a; }
+  body.own-edit-on .item-row.picked .item-icon{ border-color:var(--border); background:#1d212b; }
+  body.own-edit-on .item-row.owned{ border-color:rgba(76,175,125,.55); background:rgba(76,175,125,.05); }
+  body.own-edit-on .item-row.owned .item-icon{ border-color:var(--good); }
+  body.own-edit-on .item-icon::after{ background:var(--good); }
+  body.own-edit-on .item-icon:hover:not(:disabled){ border-color:var(--good); }
 
   /* 오른쪽: 가격 줄 + 수량 조절 */
   .item-buy{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
@@ -133,7 +141,7 @@
   .row-total{ font-size:1.05rem; font-weight:800; color:var(--accent); }
   .row-total i{ font-style:normal; font-size:0.7rem; font-weight:700; color:var(--text-dim); margin-left:3px; }
   .price-line .arrow{ color:var(--text-dim); font-size:0.8rem; }
-  .item-row:not(.picked) .row-total, .item-row:not(.picked) .price-line .arrow{ visibility:hidden; }
+
 
   .buy-row{ display:flex; align-items:center; gap:5px; }
   .qty-btn{
@@ -323,10 +331,10 @@
           </div>
           <div class="shop-opts">
             <button type="button" class="opt-btn" id="onlyPickedBtn" aria-pressed="false">담은 것만</button>
-            <button type="button" class="opt-btn" id="ownedEditBtn" aria-pressed="false">구매 기록 편집</button>
+            <button type="button" class="opt-btn" id="ownedEditBtn" aria-pressed="false">이미 산 것 입력</button>
           </div>
         </div>
-        <p class="shop-hint" id="shopHint">아이콘을 누르면 1개씩 담깁니다. 수량은 상점 구매 제한(ID당·월드당)까지만 담을 수 있습니다.</p>
+        <p class="shop-hint" id="shopHint"></p>
         <div class="item-list" id="listEnhance"></div>
         <div class="item-list hidden" id="listGrowth"></div>
       </section>
@@ -554,12 +562,6 @@
           '<span class="sub-owned hidden"></span>' +
           '<span class="sub-done hidden">전량 구매 완료</span>' +
         '</div>' +
-        '<div class="own-edit">이미 구매' +
-          '<button type="button" class="own-btn own-minus">−</button>' +
-          '<b class="own-count">0</b>' +
-          '<button type="button" class="own-btn own-plus">+</button>' +
-          '<button type="button" class="own-all">전량</button>' +
-        '</div>' +
       '</div>' +
       '<div class="item-buy">' +
         '<div class="price-line">' +
@@ -574,6 +576,13 @@
           '<span class="qty-cap"></span>' +
           '<button type="button" class="max-btn max-all">최대</button>' +
           '<button type="button" class="clear-btn">×</button>' +
+        '</div>' +
+        '<div class="own-row">' +
+          '<button type="button" class="qty-btn own-minus">−</button>' +
+          '<input type="number" class="qty-input own-input" min="0" value="0" inputmode="numeric">' +
+          '<button type="button" class="qty-btn own-plus">+</button>' +
+          '<span class="qty-cap own-cap"></span>' +
+          '<button type="button" class="max-btn own-all">전량</button>' +
         '</div>' +
       '</div>';
 
@@ -608,10 +617,16 @@
     label('.max-all', '최대로 담기');
     label('.clear-btn', '장바구니에서 빼기');
     label('.qty-input', '담을 수량');
-    label('.own-plus', '구매 기록 1개 추가');
-    label('.own-minus', '구매 기록 1개 빼기');
+    label('.own-plus', '이미 산 개수 1 늘리기');
+    label('.own-minus', '이미 산 개수 1 줄이기');
+    label('.own-all', '전량 구매한 것으로 기록');
+    label('.own-input', '이미 산 개수');
 
-    iconBox.addEventListener('click', function(){ setQty(item.id, (cart[item.id] || 0) + 1); });
+    // 아이콘은 "누르면 1개": 평소엔 장바구니에, 이미 산 것 입력 모드에선 구매 기록에
+    iconBox.addEventListener('click', function(){
+      if (view.ownedEdit) setOwned(item.id, (owned[item.id] || 0) + 1);
+      else setQty(item.id, (cart[item.id] || 0) + 1);
+    });
     row.querySelector('.plus').addEventListener('click', function(){ setQty(item.id, (cart[item.id] || 0) + 1); });
     row.querySelector('.minus').addEventListener('click', function(){ setQty(item.id, (cart[item.id] || 0) - 1); });
     row.querySelector('.clear-btn').addEventListener('click', function(){ setQty(item.id, 0); });
@@ -627,6 +642,10 @@
     // 입력 중엔 커서가 튀지 않게 값을 안 건드리므로, 입력이 끝나면 실제 저장된 수량으로 되돌려 적는다
     input.addEventListener('change', function(){ input.value = String(cart[item.id] || 0); });
     input.addEventListener('focus', function(){ input.select(); });
+    var ownInput = row.querySelector('.own-input');
+    ownInput.addEventListener('input', function(){ setOwned(item.id, parseInt(ownInput.value, 10)); });
+    ownInput.addEventListener('change', function(){ ownInput.value = String(owned[item.id] || 0); });
+    ownInput.addEventListener('focus', function(){ ownInput.select(); });
     return row;
   }
 
@@ -643,6 +662,7 @@
     var maxed = qty > 0 && qty >= buyable;
 
     row.classList.toggle('picked', qty > 0);
+    row.classList.toggle('owned', own > 0);
     row.classList.toggle('done', done);
     row.classList.toggle('hidden', view.onlyPicked && qty === 0);
 
@@ -651,14 +671,21 @@
     subOwned.classList.toggle('hidden', own === 0 || done);
     row.querySelector('.sub-done').classList.toggle('hidden', !done);
 
-    row.querySelector('.row-total').innerHTML = fmt(item.price * qty) + '<i>코인</i>';
+    // 이미 산 것 입력 모드에선 총액 자리에 "이미 사용" 코인을 보여준다
+    var total = row.querySelector('.row-total');
+    total.innerHTML = view.ownedEdit
+      ? fmt(item.price * own) + '<i>코인 사용</i>'
+      : fmt(item.price * qty) + '<i>코인</i>';
+    var showTotal = view.ownedEdit ? own > 0 : qty > 0;
+    total.style.visibility = showTotal ? 'visible' : 'hidden';
+    row.querySelector('.price-line .arrow').style.visibility = showTotal ? 'visible' : 'hidden';
 
     var input = row.querySelector('.qty-input');
     input.max = buyable;
     // 입력 중인 칸은 건드리지 않는다 (커서가 튀지 않게)
     if (document.activeElement !== input) input.value = String(qty);
     input.disabled = done;
-    row.querySelector('.item-icon').disabled = done || maxed;
+    row.querySelector('.item-icon').disabled = view.ownedEdit ? done : (done || maxed);
     row.querySelector('.minus').disabled = qty <= 0;
     row.querySelector('.plus').disabled = qty >= buyable;
     row.querySelector('.max-all').disabled = done || maxed;
@@ -667,9 +694,12 @@
     cap.classList.toggle('maxed', maxed);
     cap.textContent = done ? '' : (maxed ? 'MAX' : '/ ' + fmt(buyable));
 
-    row.querySelector('.own-count').textContent = fmt(own);
+    var ownInput = row.querySelector('.own-input');
+    ownInput.max = item.stock;
+    if (document.activeElement !== ownInput) ownInput.value = String(own);
     row.querySelector('.own-minus').disabled = own <= 0;
     row.querySelector('.own-plus').disabled = own >= item.stock;
+    row.querySelector('.own-cap').textContent = '/ ' + fmt(item.stock);
     row.querySelector('.own-all').textContent = done ? '취소' : '전량';
   }
 
@@ -714,7 +744,8 @@
     el.cartList.innerHTML = '';
     el.planNote.classList.toggle('hidden', ids.length < 2 || settings.perWeek <= 0);
     if (!ids.length) {
-      el.cartList.innerHTML = '<p class="cart-empty">아직 담은 아이템이 없습니다. 상점에서 아이콘을 누르거나 +로 담아보세요.</p>';
+      el.cartList.innerHTML = '<p class="cart-empty">아직 담은 아이템이 없습니다. 상점에서 아이콘을 누르거나 +로 담아보세요.</p>' +
+        (Object.keys(owned).length ? '' : '<p class="cart-empty">이벤트 중간부터 쓰신다면 상점의 <b>이미 산 것 입력</b>으로 먼저 산 개수를 적어 두세요.</p>');
       el.cartSum.textContent = '';
     } else {
       // 담은 순서대로 산다고 보고, 누적 코인이 몇 주차에 모이는지 표시한다
@@ -756,12 +787,15 @@
 
   function render(){
     document.body.classList.toggle('own-edit-on', view.ownedEdit);
-    el.ownedEditBtn.classList.toggle('active', view.ownedEdit);
+    el.ownedEditBtn.classList.toggle('mode-on', view.ownedEdit);
     el.ownedEditBtn.setAttribute('aria-pressed', String(view.ownedEdit));
+    el.ownedEditBtn.textContent = view.ownedEdit ? '입력 완료' : '이미 산 것 입력';
     el.onlyPickedBtn.classList.toggle('active', view.onlyPicked);
     el.onlyPickedBtn.setAttribute('aria-pressed', String(view.onlyPicked));
-    el.shopHint.textContent = view.ownedEdit
-      ? '이미 산 수량을 기록해 두면 그만큼 구매 한도가 줄고 "이미 사용" 코인에 잡힙니다.'
+    el.shopHint.innerHTML = view.ownedEdit
+      ? '<b>이미 산 개수를 입력하는 중입니다.</b> 게임에서 이미 산 품목의 개수를 초록 칸에 적어 주세요. ' +
+        '이벤트 중간부터 계산기를 쓰거나 기록을 고칠 때 씁니다. 적은 만큼 구매 한도가 줄고 "이미 사용" 코인에 잡힙니다. ' +
+        '다 적었으면 <b>입력 완료</b>를 누르세요.'
       : '아이콘을 누르면 1개씩 담깁니다. 수량은 상점 구매 제한(ID당·월드당)까지만 담을 수 있습니다.';
 
     Array.prototype.forEach.call(document.querySelectorAll('.item-row'), refreshRow);
