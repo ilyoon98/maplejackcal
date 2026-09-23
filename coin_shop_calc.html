@@ -21,10 +21,10 @@
     .layout-right{ max-height: calc(100vh - 32px); overflow-y:auto; scrollbar-width:thin; padding-right:2px; }
   }
 
-  /* 코인 획득량 — 3칸 + 주차 선택 */
-  .coin-fields{ grid-template-columns:repeat(3, minmax(0,1fr)); }
-  .coin-fields .field input{ width:100%; min-width:0; }
-  .field .help{ font-size:0.72rem; color:var(--text-dim); margin-top:2px; }
+  /* 이벤트 기간 — 코인 총량 한 줄 + 주차 선택 */
+  .period-line{ margin:0 0 10px; font-size:0.9rem; font-variant-numeric:tabular-nums; }
+  .period-line b{ color:var(--accent); }
+  .period-line .dim{ color:var(--text-dim); font-size:0.8rem; margin-left:6px; }
   .week-row{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; margin-top:4px; }
   .week-row .week-label{ font-size:0.82rem; color:var(--text-dim); }
   .week-pills{ display:flex; flex-wrap:wrap; gap:4px; }
@@ -42,10 +42,6 @@
   .week-pill.today.active::after{ background:#0b0d12; }
   .week-mode{ font-size:0.74rem; color:var(--text-dim); }
   .week-mode button{ background:none; border:none; padding:0; margin-left:4px; color:var(--accent); font:inherit; font-size:0.74rem; font-weight:700; cursor:pointer; text-decoration:underline; }
-  @media (max-width: 600px){
-    .coin-fields{ grid-template-columns:1fr 1fr; }
-    .coin-fields .field:last-child{ grid-column:1/-1; }
-  }
 
   /* 상점 헤더: 탭 + 보기 옵션 */
   .shop-head{ display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
@@ -321,22 +317,8 @@
   <div class="layout">
     <div class="layout-left">
       <section class="card">
-        <h2>코인 획득량</h2>
-        <div class="field-grid coin-fields">
-          <div class="field">
-            <label for="perWeek">주당 획득 코인</label>
-            <input type="number" id="perWeek" min="0" step="100" value="5000">
-          </div>
-          <div class="field">
-            <label for="weeks">기간 (주)</label>
-            <input type="number" id="weeks" min="1" step="1" value="8">
-          </div>
-          <div class="field">
-            <label for="extraSpent">목록 밖에서 쓴 코인</label>
-            <input type="number" id="extraSpent" min="0" step="10" value="0">
-            <div class="help">소비·코디 탭처럼 이 목록에 없는 곳에 쓴 코인</div>
-          </div>
-        </div>
+        <h2>이벤트 기간</h2>
+        <p class="period-line" id="periodLine"></p>
         <div class="week-row">
           <span class="week-label">현재 주차</span>
           <div class="week-pills" id="weekPills" role="radiogroup" aria-label="현재 주차"></div>
@@ -450,12 +432,13 @@
   var cart = {};                 // id -> 담아둔 수량. 키 순서 = 담은 순서 = 구매 우선순위
   var owned = {};                // id -> 이미 구매한 수량
   // weekMode: 'auto'면 오늘 날짜로 현재 주차를 계산하고, 주차 버튼을 직접 누르면 'manual'로 고정된다
-  var settings = { perWeek:EVENT.perWeek, weeks:EVENT.weeks, currentWeek:1, extraSpent:0, weekMode:'auto' };
+  // 주당 코인·기간은 이벤트 데이터에 고정. 사용자가 바꾸는 건 현재 주차뿐이다
+  var settings = { perWeek:EVENT.perWeek, weeks:EVENT.weeks, currentWeek:1, weekMode:'auto' };
   var activeTab = TABS[0].key;
   var view = { onlyPicked:false, ownedEdit:false };
 
   var el = {};
-  ['perWeek','weeks','extraSpent','weekPills','budgetNote','shopLists','shopTabs','eventSub',
+  ['periodLine','weekPills','budgetNote','shopLists','shopTabs','eventSub',
    'onlyPickedBtn','ownedEditBtn','shopHint',
    'remainBig','remainLabel','remainOf','nowLeftBig','nowLeftOf','bar','barOwned','barCart','barNow','nowLabel','nowCoin','spentCoin','usedCoin',
    'progressNote','weekNote','cartSum','planNote','cartList','buyAllBtn','clearBtn','ownedCard','ownedSum','ownedList','resetOwnedBtn',
@@ -484,10 +467,7 @@
       restore(saved && saved.owned, owned, function(item){ return item.stock; });
       restore(saved && saved.cart, cart, function(item){ return item.stock - (owned[item.id] || 0); });
       if (saved && saved.settings) {
-        settings.perWeek = Math.max(0, Number(saved.settings.perWeek) || 0);
-        settings.weeks = Math.max(1, Number(saved.settings.weeks) || 1);
         settings.currentWeek = clamp(Number(saved.settings.currentWeek) || 1, 1, settings.weeks);
-        settings.extraSpent = Math.max(0, Number(saved.settings.extraSpent) || 0);
         settings.weekMode = saved.settings.weekMode === 'manual' ? 'manual' : 'auto';
       }
       if (saved && TAB_LABEL[saved.tab]) activeTab = saved.tab;
@@ -535,7 +515,7 @@
 
   function totalCoins(){ return settings.perWeek * settings.weeks; }   // 기간 동안 받는 코인 전체
   function nowCoins(){ return settings.perWeek * settings.currentWeek; } // 현재 주차까지 받은 코인
-  function spentCoins(){ return coinsOf(owned) + settings.extraSpent; } // 이미 쓴 코인
+  function spentCoins(){ return coinsOf(owned); }                      // 이미 쓴 코인
   function usedCoins(){ return coinsOf(cart); }                        // 장바구니에 담은 코인
   // 이번 주까지 받은 코인에서 이미 쓴 것과 장바구니를 빼면 "이번 주에 더 쓸 수 있는 코인" (넘치면 음수)
   function nowLeftCoins(){ return nowCoins() - spentCoins() - usedCoins(); }
@@ -978,8 +958,7 @@
   function renderBudgetNote(){
     var next = settings.currentWeek < settings.weeks ? weekStart(settings.currentWeek + 1) : null;
     el.budgetNote.textContent =
-      fmt(settings.perWeek) + ' × ' + settings.weeks + '주 = ' + fmt(totalCoins()) + ' 코인' +
-      ' · ' + settings.currentWeek + '주차까지 ' + fmt(nowCoins()) + ' 코인' +
+      settings.currentWeek + '주차까지 받은 코인 ' + fmt(nowCoins()) +
       (next ? ' · ' + (settings.currentWeek + 1) + '주차는 ' + fmtDate(next) + '부터' : '');
 
     var today = autoWeek();
@@ -1034,18 +1013,6 @@
     }
   }
 
-  function readSettings(){
-    settings.perWeek = Math.max(0, parseInt(el.perWeek.value, 10) || 0);
-    settings.weeks = Math.max(1, parseInt(el.weeks.value, 10) || 1);
-    settings.currentWeek = clamp(settings.currentWeek, 1, settings.weeks);
-    settings.extraSpent = Math.max(0, parseInt(el.extraSpent.value, 10) || 0);
-    applyAutoWeek();
-    save();
-    renderWeekPills();
-    renderBudgetNote();
-    render();
-  }
-
   function switchTab(tab){
     activeTab = tab;
     TABS.forEach(function(t){ listOf[t.key].classList.toggle('hidden', t.key !== tab); });
@@ -1076,13 +1043,14 @@
   load();
   buildShop();
   el.eventSub.textContent = EVENT.name + ' · ' + EVENT.season + ' · ' + EVENT.updatedAt + ' 기준. 담으면 예산에 들어오는지, 몇 주차에 살 수 있는지 바로 보여줍니다.';
-  el.perWeek.value = settings.perWeek;
-  el.weeks.value = settings.weeks;
-  el.extraSpent.value = settings.extraSpent;
-
-  ['perWeek','weeks','extraSpent'].forEach(function(k){
-    el[k].addEventListener('input', readSettings);
-  });
+  // 기간 한 줄: 주당 코인 × 기간 = 총량 · 시작일 ~ 종료일
+  (function(){
+    var start = parseStart();
+    var end = start ? weekStart(settings.weeks) : null;
+    if (end) end.setDate(end.getDate() + 6);
+    el.periodLine.innerHTML = '주 ' + fmt(settings.perWeek) + ' × ' + settings.weeks + '주 = <b>' + fmt(totalCoins()) + '</b> 코인' +
+      (start ? '<span class="dim">' + fmtDate(start) + ' ~ ' + fmtDate(end) + '</span>' : '');
+  })();
   el.shopTabs.addEventListener('click', function(e){
     var btn = e.target.closest('button[data-tab]');
     if (btn) switchTab(btn.dataset.tab);
