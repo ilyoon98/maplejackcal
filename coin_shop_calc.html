@@ -22,7 +22,7 @@
   }
 
   /* 이벤트 기간 — 코인 총량 한 줄 + 주차 선택 */
-  .event-pick{ display:flex; align-items:center; gap:8px; margin:-6px 0 14px; font-size:0.82rem; color:var(--text-dim); }
+  .event-pick{ display:flex; align-items:center; gap:8px; margin:0 0 14px; font-size:0.82rem; color:var(--text-dim); }
   .event-pick select{ background:#11141a; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:5px 8px; font:inherit; font-size:0.82rem; }
   .period-line{ margin:0 0 10px; font-size:0.9rem; font-variant-numeric:tabular-nums; }
   .period-line b{ color:var(--accent); }
@@ -43,7 +43,7 @@
   .week-pill.today::after{ content:''; position:absolute; right:3px; top:3px; width:5px; height:5px; border-radius:50%; background:var(--good); }
   .week-pill.today.active::after{ background:#0b0d12; }
   .week-mode{ font-size:0.74rem; color:var(--text-dim); }
-  .week-mode button{ background:none; border:none; padding:0; margin-left:4px; color:var(--accent); font:inherit; font-size:0.74rem; font-weight:700; cursor:pointer; text-decoration:underline; }
+  .week-mode button{ background:none; border:none; padding:0; color:var(--accent); font:inherit; font-size:0.74rem; font-weight:700; cursor:pointer; text-decoration:underline; }
 
   /* 상점 헤더: 탭 + 보기 옵션 */
   .shop-head{ display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
@@ -312,8 +312,7 @@
     </div>
   </nav>
   <header>
-    <h1>🪙 이벤트 코인샵 계산</h1>
-    <p class="sub" id="eventSub"></p>
+    <h1 id="pageTitle">🪙 코인샵 계산</h1>
     <div class="event-pick hidden" id="eventPickWrap">
       <label for="eventPick">이벤트</label>
       <select id="eventPick"></select>
@@ -330,7 +329,6 @@
           <div class="week-pills" id="weekPills" role="radiogroup" aria-label="현재 주차"></div>
           <span class="week-mode" id="weekMode"></span>
         </div>
-        <p class="note" id="budgetNote"></p>
       </section>
 
       <section class="card">
@@ -368,7 +366,6 @@
           <span class="k-cart"><i></i>장바구니</span>
           <span class="k-now"><i></i>현재 주차</span>
         </div>
-        <p class="note" id="progressNote"></p>
         <div class="mini-grid">
           <div class="mini"><div class="label" id="nowLabel">지금 보유</div><div class="value" id="nowCoin">5,000</div></div>
           <div class="mini"><div class="label">이미 사용</div><div class="value" id="spentCoin">0</div></div>
@@ -382,7 +379,6 @@
           <h2>장바구니</h2>
           <span class="list-sum" id="cartSum"></span>
         </div>
-        <p class="plan-note hidden" id="planNote">위에 있는 품목부터 산다고 보고 살 수 있는 주차를 표시합니다. ▲▼로 순서를 바꿉니다.</p>
         <div class="cart-list" id="cartList"></div>
         <div class="btn-row">
           <button type="button" class="link-btn" id="buyAllBtn">전부 구매 처리</button>
@@ -459,10 +455,10 @@
   var view = { onlyPicked:false, ownedEdit:false };
 
   var el = {};
-  ['periodLine','weekPills','budgetNote','shopLists','shopTabs','eventSub','eventPick','eventPickWrap',
+  ['periodLine','weekPills','shopLists','shopTabs','pageTitle','eventPick','eventPickWrap',
    'onlyPickedBtn','ownedEditBtn','shopHint',
    'remainBig','remainLabel','remainOf','nowLeftBig','nowLeftOf','bar','barOwned','barCart','barNow','nowLabel','nowCoin','spentCoin','usedCoin',
-   'progressNote','weekNote','cartSum','planNote','cartList','buyAllBtn','clearBtn','ownedCard','ownedSum','ownedList','resetOwnedBtn',
+   'weekNote','cartSum','cartList','buyAllBtn','clearBtn','ownedCard','ownedSum','ownedList','resetOwnedBtn',
    'mobileBar','mbRemain','mbCart','mbWeek','summaryCard','ownedEditLink','weekMode'
   ].forEach(function(id){ el[id] = document.getElementById(id); });
 
@@ -841,12 +837,9 @@
     var ids = Object.keys(cart);
     el.cartList.innerHTML = '';
     if (!ids.length) {
-      el.planNote.classList.add('hidden');
-      el.cartList.innerHTML = '<p class="cart-empty">아직 담은 아이템이 없습니다. 상점에서 아이콘을 누르거나 +로 담아보세요.</p>' +
-        (Object.keys(owned).length ? '' : '<p class="cart-empty">이벤트 중간부터 쓰신다면 상점의 <b>이미 산 것 입력</b>으로 먼저 산 개수를 적어 두세요.</p>');
+      el.cartList.innerHTML = '<p class="cart-empty">담은 아이템이 없습니다.</p>';
       el.cartSum.textContent = '';
     } else {
-      el.planNote.classList.toggle('hidden', ids.length < 2);
       renderCartList(ids);
       el.cartSum.innerHTML = fmt(ids.length) + '종 ' + fmt(countOf(cart)) + '개<b>' + fmt(usedCoins()) + '</b>';
     }
@@ -870,11 +863,8 @@
     el.ownedEditBtn.textContent = view.ownedEdit ? '입력 완료' : '이미 산 것 입력';
     el.onlyPickedBtn.classList.toggle('active', view.onlyPicked);
     el.onlyPickedBtn.setAttribute('aria-pressed', String(view.onlyPicked));
-    el.shopHint.innerHTML = view.ownedEdit
-      ? '<b>이미 산 개수를 입력하는 중입니다.</b> 게임에서 이미 산 품목의 개수를 초록 칸에 적어 주세요. ' +
-        '이벤트 중간부터 계산기를 쓰거나 기록을 고칠 때 씁니다. 적은 만큼 구매 한도가 줄고 "이미 사용" 코인에 잡힙니다. ' +
-        '다 적었으면 <b>입력 완료</b>를 누르세요.'
-      : '아이콘을 누르면 1개씩 담깁니다. <b>최대</b>는 구매 제한(ID당·월드당)까지, <b>이번 주</b>는 이번 주 남은 코인으로 살 수 있는 만큼 담습니다.';
+    el.shopHint.classList.toggle('hidden', !view.ownedEdit);
+    el.shopHint.innerHTML = '<b>이미 산 개수</b>를 초록 칸에 적고 <b>입력 완료</b>를 누르세요.';
 
     Array.prototype.forEach.call(document.querySelectorAll('.item-row'), refreshRow);
     TABS.forEach(function(t){
@@ -926,10 +916,6 @@
     el.barCart.style.width = Math.max(0, Math.min(100 - ownedPct, pctOf(used))) + '%';
     el.barNow.style.left = pctOf(nowCoins()) + '%';
     el.bar.classList.toggle('over', remain < 0);
-    el.progressNote.textContent = remain < 0
-      ? '코인이 ' + fmt(-remain) + '개 부족합니다. 장바구니에서 ' + fmt(-remain) + '개어치를 빼야 예산에 맞습니다.'
-      : '총 ' + fmt(total) + '개 중 ' + fmt(spent + used) + '개 사용 (' +
-        (total > 0 ? ((spent + used) / total * 100).toFixed(1) : '0.0') + '%)';
 
     // 코인은 매주 들어오므로, 현재 주차 보유분으로 살 수 있는지 / 몇 주차까지 모아야 하는지
     var mbWeekText = '', mbWeekCls = '';
@@ -973,20 +959,11 @@
     renderCart();
   }
 
+  // 주차를 직접 골랐을 때만 오늘 주차로 돌아오는 링크를 보여준다
   function renderBudgetNote(){
-    var next = settings.currentWeek < settings.weeks ? weekStart(settings.currentWeek + 1) : null;
-    el.budgetNote.textContent =
-      settings.currentWeek + '주차까지 받은 코인 ' + fmt(nowCoins()) +
-      (next ? ' · ' + (settings.currentWeek + 1) + '주차는 ' + fmtDate(next) + '부터' : '');
-
     var today = autoWeek();
     el.weekMode.innerHTML = '';
-    if (today === null) {
-      el.weekMode.textContent = '';
-    } else if (settings.weekMode === 'auto') {
-      el.weekMode.textContent = '오늘 기준 · 매주 ' + DAY_KO[parseStart().getDay()] + '요일에 다음 주차로';
-    } else {
-      el.weekMode.textContent = '직접 고름 (오늘은 ' + today + '주차)';
+    if (today !== null && settings.weekMode === 'manual') {
       var back = document.createElement('button');
       back.type = 'button';
       back.textContent = '오늘 주차로';
@@ -1060,7 +1037,8 @@
   // ---- 초기화 ----
   load();
   buildShop();
-  el.eventSub.textContent = EVENT.name + ' · ' + fmtDate(parseStart()) + ' ~ ' + fmtDate(parseEnd()) + '. 담으면 예산에 들어오는지, 몇 주차에 살 수 있는지 바로 보여줍니다.';
+  el.pageTitle.textContent = '🪙 코인샵 계산 (' + EVENT.name + ')';
+  document.title = '코인샵 계산 (' + EVENT.name + ')';
   // 이벤트가 여럿이면 고를 수 있게
   if (EVENTS.length > 1) {
     el.eventPickWrap.classList.remove('hidden');
