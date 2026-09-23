@@ -188,7 +188,11 @@
     .item-icon.pair img{ width:24px; height:24px; }
   }
 
-  /* 요약 카드 */
+  /* 요약 카드: 전체 예산 기준과 이번 주 기준을 나란히 */
+  .big-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; }
+  .big-label{ font-size:0.74rem; color:var(--text-dim); font-weight:700; }
+  .coin-big.now{ font-size:1.6rem; color:var(--accent); }
+  .coin-big.now.over{ color:var(--bad); }
   .coin-big{ font-size:2.1rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.15; }
   .coin-big.ok{ color:var(--good); }
   .coin-big.over{ color:var(--bad); }
@@ -221,7 +225,8 @@
   .owned-edit-link{ padding:3px 9px; font-size:11.5px; }
   .plan-note{ font-size:0.72rem; color:var(--text-dim); margin:0 0 6px; }
   .cart-list{ display:flex; flex-direction:column; }
-  .cart-row{ display:grid; grid-template-columns:minmax(0,1fr) auto auto auto; align-items:center; gap:8px; padding:8px 0; font-size:0.84rem; }
+  .cart-row{ display:flex; align-items:center; gap:8px; padding:8px 0; font-size:0.84rem; }
+  .cart-name{ flex:1 1 auto; }
   .cart-row + .cart-row{ border-top:1px solid var(--border); }
   .cart-name{ min-width:0; word-break:keep-all; }
   .cart-name em{ font-style:normal; color:var(--text-dim); font-size:0.78rem; margin-left:4px; }
@@ -242,6 +247,34 @@
   .cart-btn.buy:hover{ background:rgba(76,175,125,.3); }
   .cart-btn.del{ background:rgba(226,102,74,.15); color:var(--bad); }
   .cart-btn.del:hover{ background:rgba(226,102,74,.3); }
+  .cart-btn.mv{ background:#1d212b; color:var(--text-dim); font-size:11px; }
+  .cart-btn.mv:hover:not(:disabled){ color:var(--text); background:#2a2e38; }
+  .cart-btn.mv:disabled{ opacity:.25; cursor:default; }
+  .cart-name .part{ font-style:normal; color:var(--text-dim); font-size:0.72rem; margin-left:3px; }
+
+  /* 장바구니 보기 전환 (주차별 / 목록) */
+  .view-tabs{ display:inline-flex; background:#1d212b; border:1px solid var(--border); border-radius:8px; padding:2px; gap:2px; }
+  .view-tabs button{ border:none; background:none; color:var(--text-dim); font:inherit; font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:6px; cursor:pointer; }
+  .view-tabs button.active{ background:var(--accent-strong); color:#0b0d12; }
+
+  /* 주차별 계획 */
+  .past-note{ font-size:0.74rem; color:var(--text-dim); margin:0 0 4px; }
+  .wk{ background:#11141a; border:1px solid var(--border); border-radius:10px; padding:8px 10px; margin-top:8px; }
+  .wk.now{ border-color:var(--accent-strong); background:#18213a; }
+  .wk.over{ border-color:var(--bad); background:rgba(226,102,74,.06); }
+  .wk-head{ display:flex; align-items:baseline; gap:8px; font-size:0.82rem; font-weight:800; }
+  .wk.now .wk-head{ color:var(--accent); }
+  .wk.over .wk-head{ color:var(--bad); }
+  .wk-head .wk-tag{ font-size:0.66rem; font-weight:800; padding:1px 6px; border-radius:5px; background:rgba(110,168,254,.15); color:var(--accent); }
+  .wk-head .wk-avail{ margin-left:auto; font-size:0.72rem; font-weight:700; color:var(--text-dim); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .wk-head .wk-avail b{ color:var(--text); }
+  .wk .cart-row{ padding:6px 0; font-size:0.8rem; }
+  .wk .cart-empty{ margin:6px 0 2px; font-size:0.78rem; }
+  .wk-foot{ display:flex; align-items:center; gap:8px; font-size:0.74rem; color:var(--text-dim); margin-top:4px; padding-top:6px; border-top:1px dashed var(--border); font-variant-numeric:tabular-nums; }
+  .wk-foot b{ color:var(--good); }
+  .wk.over .wk-foot b{ color:var(--bad); }
+  .wk-foot .link-btn{ margin-left:auto; padding:3px 9px; font-size:11px; }
+  .wk-gap{ font-size:0.74rem; color:var(--text-dim); margin:8px 4px 0; }
   .cart-empty{ color:var(--text-dim); font-size:0.84rem; margin:6px 0 0; }
   .btn-row{ display:flex; gap:8px; margin-top:12px; }
   .btn-row .link-btn{ flex:1; text-align:center; padding:7px 8px; }
@@ -294,7 +327,7 @@
   </nav>
   <header>
     <h1>🪙 이벤트 코인샵 계산</h1>
-    <p class="sub">아르고 주화 상점(강화·성장 탭) 기준. 담으면 예산에 들어오는지, 몇 주차에 살 수 있는지 바로 보여줍니다.</p>
+    <p class="sub" id="eventSub"></p>
   </header>
 
   <div class="layout">
@@ -325,25 +358,29 @@
 
       <section class="card">
         <div class="shop-head">
-          <div class="shop-tabs" id="shopTabs">
-            <button type="button" data-tab="enhance" class="active">강화<span class="tab-count" id="cntEnhance"></span></button>
-            <button type="button" data-tab="growth">성장<span class="tab-count" id="cntGrowth"></span></button>
-          </div>
+          <div class="shop-tabs" id="shopTabs"></div>
           <div class="shop-opts">
             <button type="button" class="opt-btn" id="onlyPickedBtn" aria-pressed="false">담은 것만</button>
             <button type="button" class="opt-btn" id="ownedEditBtn" aria-pressed="false">이미 산 것 입력</button>
           </div>
         </div>
         <p class="shop-hint" id="shopHint"></p>
-        <div class="item-list" id="listEnhance"></div>
-        <div class="item-list hidden" id="listGrowth"></div>
+        <div id="shopLists"></div>
       </section>
     </div>
 
     <aside class="layout-right">
       <section class="card card-primary" id="summaryCard" style="margin-top:0;">
-        <h2>남은 코인</h2>
-        <div class="coin-big ok" id="remainBig">40,000</div>
+        <div class="big-grid">
+          <div>
+            <div class="big-label" id="remainLabel">전체 남은 코인</div>
+            <div class="coin-big ok" id="remainBig">40,000</div>
+          </div>
+          <div>
+            <div class="big-label">이번 주 더 쓸 수 있는</div>
+            <div class="coin-big now" id="nowLeftBig">5,000</div>
+          </div>
+        </div>
         <div class="bar" id="bar">
           <span class="fill-owned" id="barOwned" style="width:0%"></span>
           <span class="fill-cart" id="barCart" style="width:0%"></span>
@@ -356,7 +393,7 @@
         </div>
         <p class="note" id="progressNote"></p>
         <div class="mini-grid">
-          <div class="mini now"><div class="label" id="nowLabel">지금 보유</div><div class="value" id="nowCoin">5,000</div><div class="sub hidden" id="nowShort"></div></div>
+          <div class="mini"><div class="label" id="nowLabel">지금 보유</div><div class="value" id="nowCoin">5,000</div></div>
           <div class="mini"><div class="label" id="totalLabel">총 획득</div><div class="value" id="totalCoin">40,000</div></div>
           <div class="mini"><div class="label">이미 사용</div><div class="value" id="spentCoin">0</div></div>
           <div class="mini"><div class="label">장바구니</div><div class="value" id="usedCoin">0</div></div>
@@ -367,9 +404,13 @@
       <section class="card">
         <div class="list-head">
           <h2>장바구니</h2>
+          <div class="view-tabs" id="cartViewTabs">
+            <button type="button" data-view="weekly" class="active">주차별</button>
+            <button type="button" data-view="list">목록</button>
+          </div>
           <span class="list-sum" id="cartSum"></span>
         </div>
-        <p class="plan-note hidden" id="planNote">담은 순서대로 산다고 보고, 각 품목을 살 수 있는 주차를 표시합니다.</p>
+        <p class="plan-note hidden" id="planNote"></p>
         <div class="cart-list" id="cartList"></div>
         <div class="btn-row">
           <button type="button" class="link-btn" id="buyAllBtn">전부 구매 처리</button>
@@ -398,72 +439,42 @@
     <span class="mb-remain ok" id="mbRemain">40,000</span>
   </div>
   <div class="mb-side">
-    <span class="mb-cart" id="mbCart">장바구니 <b>0</b></span>
+    <span class="mb-cart" id="mbCart">이번 주 더 쓸 수 있는 <b>0</b></span>
     <span class="mb-week" id="mbWeek"></span>
   </div>
   <span class="mb-arrow">▾</span>
 </div>
 
 <script src="site_nav.js"></script>
+<script src="coin_shop_data.js"></script>
 <script>
 (function(){
-  // 아르고 주화 상점 — 강화 / 성장 탭. price = 아르고 주화, stock = "남은 수량" 표기값.
-  // limit: 'M' = 메이플ID 기준 제한, 'W' = 월드 기준 제한
-  var SHOP = {
-    enhance: [
-      { id:'karma-bronze-add-cube',  name:'카르마 브론즈 에디셔널 큐브',              price:100,   stock:100, limit:'M', icon:'🧊', img:'브론즈.webp' },
-      { id:'karma-silver-cube',      name:'카르마 실버 큐브',                         price:100,   stock:100, limit:'M', icon:'🧊', img:'실버.webp' },
-      { id:'epic-pot-scroll',        name:'에픽 잠재능력 부여 스크롤 100%',           price:300,   stock:5,   limit:'M', icon:'📜', img:'에픽잠재.png' },
-      { id:'special-add-pot-scroll', name:'스페셜 에디셔널 잠재능력 부여 스크롤 100%', price:300,   stock:5,   limit:'M', icon:'📜', img:'스페셜에디.webp' },
-      { id:'innocent-scroll',        name:'이노센트 주문서 100%',                     price:100,   stock:20,  limit:'M', icon:'📜', img:'이노센트.png' },
-      // 선택권은 고를 수 있는 주문서가 둘이라 아이콘도 둘 다 보여준다
-      { id:'pet-equip-scroll-box',   name:'펫장비 주문서 선택권',                     price:500,   stock:20,  limit:'M', icon:'🐾', img:['펫장비 공주문서.png','펫장비 마주문서.png'] },
-      { id:'pure-white-scroll',      name:'순백의 주문서 100%',                       price:200,   stock:10,  limit:'M', icon:'📜', img:'순백100.png' },
-      { id:'event-ring-box',         name:'이벤트 링 선택권',                         price:3000,  stock:3,   limit:'M', icon:'💍' },
-      { id:'event-ring-gold-cube',   name:'이벤트 링 전용 골드 큐브',                 price:150,   stock:100, limit:'M', icon:'🧊', img:'골드.webp' },
-      { id:'event-ring-leg-scroll',  name:'이벤트 링 전용 레전드리 잠재능력 부여 스크롤', price:4000, stock:2, limit:'M', icon:'📜', img:'이벤트 레전 잠재.png' },
-      { id:'karma-unique-scroll',    name:'카르마 유니크 잠재능력 부여 스크롤 100%',  price:3000,  stock:4,   limit:'M', icon:'📜', img:'유니크.png' },
-      { id:'karma-add-epic-scroll',  name:'카르마 에디셔널 에픽 잠재능력 부여 스크롤', price:3000,  stock:4,   limit:'M', icon:'📜', img:'에디에픽잠재.webp' },
-      { id:'karma-heart-scroll-box', name:'카르마 스페셜 하트 주문서 선택권',         price:2000,  stock:10,  limit:'M', icon:'💖', img:['스페셜하트 공주문서.png','스페셜하트 맞주문서.png'] }
-    ],
-    growth: [
-      { id:'ap-reset',          name:'AP 초기화 주문서',                     price:50,    stock:3,   limit:'M', icon:'🔄' },
-      { id:'sp-reset',          name:'SP 초기화 주문서',                     price:50,    stock:3,   limit:'M', icon:'🔄' },
-      { id:'mysterious-momong', name:'의문의 모몽',                          price:300,   stock:40,  limit:'W', icon:'🐷' },
-      { id:'trait-potion',      name:'성향 성장의 비약',                     price:300,   stock:20,  limit:'M', icon:'🧪' },
-      { id:'slot-expand-8',     name:'선택 슬롯 8칸 확장권',                 price:100,   stock:15,  limit:'M', icon:'🎒' },
-      { id:'infinite-fatigue',  name:'무한의 피로회복제',                    price:10,    stock:5,   limit:'M', icon:'🍵' },
-      { id:'char-slot-coupon',  name:'캐릭터 슬롯 증가 쿠폰',                price:200,   stock:5,   limit:'M', icon:'🎫' },
-      { id:'core-gemstone',     name:'경험의 코어 젬스톤',                   price:150,   stock:200, limit:'M', icon:'💠' },
-      { id:'chaos-circulator',  name:'카오스 서큘레이터',                    price:800,   stock:20,  limit:'M', icon:'⚙️' },
-      { id:'black-circulator',  name:'블랙 서큘레이터',                      price:1500,  stock:10,  limit:'M', icon:'⚙️' },
-      { id:'legend-circulator', name:'레전드리 서큘레이터',                  price:2000,  stock:3,   limit:'M', icon:'⚙️' },
-      { id:'strawberry-farm',   name:'슈피겔라의 황금 딸기 농장 1회 입장권', price:200,   stock:5,   limit:'M', icon:'🍓' },
-      { id:'extreme-growth',    name:'익스트림 성장의 비약',                 price:70,    stock:200, limit:'M', icon:'🧪' },
-      { id:'growth-200-249',    name:'성장의 비약 (200~249)',                price:5000,  stock:2,   limit:'M', icon:'🧪' },
-      { id:'growth-200-259',    name:'성장의 비약 (200~259)',                price:10000, stock:1,   limit:'M', icon:'🧪' },
-      { id:'sol-erda',          name:'솔 에르다',                            price:8000,  stock:3,   limit:'M', icon:'🔷' }
-    ]
-  };
-  var TAB_LABEL = { enhance:'강화', growth:'성장' };
+  // 상점 데이터는 coin_shop_data.js에 있다. 이벤트가 바뀌면 그 파일만 고친다.
+  var EVENT = window.COIN_SHOP_EVENT;
+  var SHOP = EVENT.shop;
+  var TABS = EVENT.tabs;
+  var TAB_LABEL = {};
+  TABS.forEach(function(t){ TAB_LABEL[t.key] = t.label; });
   var LIMIT_LABEL = { M:'ID당', W:'월드당' };
-  var ALL = SHOP.enhance.concat(SHOP.growth);
+  var ALL = TABS.reduce(function(acc, t){ return acc.concat(SHOP[t.key]); }, []);
   var BY_ID = {};
   ALL.forEach(function(it){ BY_ID[it.id] = it; });
 
-  var STORE_KEY = 'coinShopPlan.v1';
+  // 저장 키에 이벤트 id를 붙여, 다음 이벤트 때 지난 장바구니가 섞이지 않게 한다
+  var STORE_KEY = 'coinShopPlan.' + EVENT.id;
+  var LEGACY_KEY = 'coinShopPlan.v1';   // id를 붙이기 전에 쓰던 키(아르고 주화 2026 가을)
   var cart = {};                 // id -> 담아둔 수량. 키 순서 = 담은 순서 = 구매 우선순위
   var owned = {};                // id -> 이미 구매한 수량
-  var settings = { perWeek:5000, weeks:8, currentWeek:1, extraSpent:0 };
-  var activeTab = 'enhance';
-  var view = { onlyPicked:false, ownedEdit:false };
+  var settings = { perWeek:EVENT.perWeek, weeks:EVENT.weeks, currentWeek:1, extraSpent:0 };
+  var activeTab = TABS[0].key;
+  var view = { onlyPicked:false, ownedEdit:false, cartView:'weekly' };
 
   var el = {};
-  ['perWeek','weeks','extraSpent','weekPills','budgetNote','listEnhance','listGrowth','shopTabs','cntEnhance','cntGrowth',
+  ['perWeek','weeks','extraSpent','weekPills','budgetNote','shopLists','shopTabs','eventSub',
    'onlyPickedBtn','ownedEditBtn','shopHint',
-   'remainBig','bar','barOwned','barCart','barNow','nowLabel','nowCoin','nowShort','totalLabel','totalCoin','spentCoin','usedCoin',
+   'remainBig','remainLabel','nowLeftBig','bar','barOwned','barCart','barNow','nowLabel','nowCoin','totalLabel','totalCoin','spentCoin','usedCoin',
    'progressNote','weekNote','cartSum','planNote','cartList','buyAllBtn','clearBtn','ownedCard','ownedSum','ownedList','resetOwnedBtn',
-   'mobileBar','mbRemain','mbCart','mbWeek','summaryCard','ownedEditLink'
+   'mobileBar','mbRemain','mbCart','mbWeek','summaryCard','ownedEditLink','cartViewTabs'
   ].forEach(function(id){ el[id] = document.getElementById(id); });
 
   function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
@@ -473,6 +484,7 @@
   function load(){
     try {
       var raw = localStorage.getItem(STORE_KEY);
+      if (!raw && EVENT.id === 'argo-2026-fall') raw = localStorage.getItem(LEGACY_KEY);
       if (!raw) return;
       var saved = JSON.parse(raw);
       function restore(src, target, capOf){
@@ -493,11 +505,12 @@
         settings.extraSpent = Math.max(0, Number(saved.settings.extraSpent) || 0);
       }
       if (saved && TAB_LABEL[saved.tab]) activeTab = saved.tab;
+      if (saved && (saved.cartView === 'list' || saved.cartView === 'weekly')) view.cartView = saved.cartView;
     } catch (e) { /* 저장값이 깨졌으면 기본값으로 시작 */ }
   }
   function save(){
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ cart:cart, owned:owned, settings:settings, tab:activeTab }));
+      localStorage.setItem(STORE_KEY, JSON.stringify({ cart:cart, owned:owned, settings:settings, tab:activeTab, cartView:view.cartView }));
     } catch (e) {}
   }
 
@@ -539,13 +552,57 @@
     render();
   }
 
-  // 장바구니 한 줄을 그대로 "구매 완료"로 옮긴다
-  function buyFromCart(id){
+  // 장바구니의 n개(기본은 전부)를 "구매 완료"로 옮긴다
+  function buyFromCart(id, n){
     if (!cart[id]) return;
-    owned[id] = Math.min(BY_ID[id].stock, (owned[id] || 0) + cart[id]);
-    delete cart[id];
+    var q = Math.min(cart[id], n == null ? cart[id] : n);
+    owned[id] = Math.min(BY_ID[id].stock, (owned[id] || 0) + q);
+    if (cart[id] - q <= 0) delete cart[id]; else cart[id] = cart[id] - q;
     save();
     render();
+  }
+
+  // 담은 순서 = 구매 우선순위. 객체 키 순서를 바꾸려면 다시 만들어야 한다
+  function moveCart(id, dir){
+    var ids = Object.keys(cart);
+    var i = ids.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    ids[i] = ids[j]; ids[j] = id;
+    var next = {};
+    ids.forEach(function(k){ next[k] = cart[k]; });
+    cart = next;
+    save();
+    render();
+  }
+
+  // 주차별 계획: 담은 순서대로, 이번 주부터 매주 들어오는 코인으로 채워 나간다.
+  // 한 품목이 한 주에 다 안 되면 살 수 있는 만큼만 넣고 나머지는 다음 주로 넘긴다.
+  function buildSchedule(){
+    var perWeek = settings.perWeek;
+    var carry = nowCoins() - spentCoins();           // 이번 주까지 받은 코인 중 남은 것
+    var cur = { week:settings.currentWeek, start:carry, items:[], left:carry };
+    var weeks = [cur];
+    var over = { items:[], cost:0 };
+    var avail = carry;
+    Object.keys(cart).forEach(function(id){
+      var price = BY_ID[id].price;
+      var qty = cart[id];
+      while (qty > 0) {
+        if (!cur) { over.items.push({ id:id, qty:qty }); over.cost += qty * price; break; }
+        var n = Math.min(qty, Math.max(0, Math.floor(avail / price)));
+        if (n > 0) { cur.items.push({ id:id, qty:n }); avail -= n * price; cur.left = avail; qty -= n; }
+        if (qty > 0) {
+          if (cur.week >= settings.weeks || perWeek <= 0) { cur = null; }
+          else {
+            avail += perWeek;
+            cur = { week:cur.week + 1, start:avail, items:[], left:avail };
+            weeks.push(cur);
+          }
+        }
+      }
+    });
+    // 기간 초과분은 전체 예산(기간 동안 받는 코인 전부) 기준으로 얼마나 모자란지도 같이 준다
+    return { weeks:weeks, over:over, carry:carry, shortfall:Math.max(0, spentCoins() + usedCoins() - totalCoins()) };
   }
 
   // ---- 아이템 목록 ----
@@ -649,8 +706,26 @@
     return row;
   }
 
-  function buildList(container, items){
-    items.forEach(function(item){ container.appendChild(buildRow(item)); });
+  var listOf = {};   // tab key -> 목록 컨테이너
+  var cntOf = {};    // tab key -> 탭 버튼의 담은 종 수
+  function buildShop(){
+    TABS.forEach(function(t){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.tab = t.key;
+      btn.textContent = t.label;
+      var cnt = document.createElement('span');
+      cnt.className = 'tab-count';
+      btn.appendChild(cnt);
+      el.shopTabs.appendChild(btn);
+      cntOf[t.key] = cnt;
+
+      var list = document.createElement('div');
+      list.className = 'item-list hidden';
+      SHOP[t.key].forEach(function(item){ list.appendChild(buildRow(item)); });
+      el.shopLists.appendChild(list);
+      listOf[t.key] = list;
+    });
   }
 
   function refreshRow(row){
@@ -713,6 +788,12 @@
     var em = document.createElement('em');
     em.textContent = '×' + fmt(qty);
     name.appendChild(em);
+    if (extra.part) {
+      var part = document.createElement('em');
+      part.className = 'part';
+      part.textContent = extra.part;
+      name.appendChild(part);
+    }
     row.appendChild(name);
 
     if (extra.week) row.appendChild(extra.week);
@@ -731,6 +812,7 @@
       btn.textContent = b.text;
       btn.title = b.title;
       btn.setAttribute('aria-label', item.name + ' ' + b.title);
+      btn.disabled = !!b.disabled;
       btn.addEventListener('click', b.onClick);
       actions.appendChild(btn);
     });
@@ -738,38 +820,163 @@
     return row;
   }
 
-  function renderCart(){
-    var spent = spentCoins();
+  // 순서 바꾸기 버튼 두 개 (맨 위/맨 아래에서는 비활성)
+  function moveButtons(id){
+    var ids = Object.keys(cart), i = ids.indexOf(id);
+    return [
+      { cls:'mv', text:'▲', title:'먼저 사기', disabled:i <= 0, onClick:function(){ moveCart(id, -1); } },
+      { cls:'mv', text:'▼', title:'나중에 사기', disabled:i >= ids.length - 1, onClick:function(){ moveCart(id, 1); } }
+    ];
+  }
+
+  function renderCartList(ids){
+    // 담은 순서대로 산다고 보고, 누적 코인이 몇 주차에 모이는지 표시한다
+    var cum = spentCoins();
+    ids.forEach(function(id){
+      var item = BY_ID[id];
+      cum += item.price * cart[id];
+      var week = weekFor(cum);
+      var tag = null;
+      if (isFinite(week)) {
+        tag = document.createElement('span');
+        tag.className = 'cart-week';
+        if (week <= settings.currentWeek) { tag.classList.add('now'); tag.textContent = '지금'; }
+        else if (week <= settings.weeks) { tag.textContent = week + '주차'; }
+        else { tag.classList.add('late'); tag.textContent = week + '주차'; tag.title = '기간(' + settings.weeks + '주) 안에는 못 삽니다'; }
+      }
+      el.cartList.appendChild(cartRow(item, cart[id], {
+        week: tag,
+        buttons: moveButtons(id).concat([
+          { cls:'buy', text:'✓', title:'구매 완료로 옮기기', onClick:function(){ buyFromCart(id); } },
+          { cls:'del', text:'×', title:'빼기', onClick:function(){ setQty(id, 0); } }
+        ])
+      }));
+    });
+  }
+
+  function renderCartWeekly(sched){
+    var frag = el.cartList;
+    // 지난 주차 요약
+    if (settings.currentWeek > 1 || spentCoins() > 0) {
+      var past = document.createElement('p');
+      past.className = 'past-note';
+      past.textContent = settings.currentWeek + '주차까지 받은 ' + fmt(nowCoins()) + ' · 이미 사용 ' + fmt(spentCoins()) +
+        ' → 남은 ' + signed(sched.carry);
+      frag.appendChild(past);
+    }
+
+    var gapRun = [];   // 살 게 없는 주차를 모아서 한 줄로
+    function flushGap(){
+      if (!gapRun.length) return;
+      var g = document.createElement('p');
+      g.className = 'wk-gap';
+      var a = gapRun[0].week, b = gapRun[gapRun.length - 1].week;
+      g.textContent = (a === b ? a + '주차' : a + '~' + b + '주차') + ' · 모으는 중 (+' + fmt(settings.perWeek * gapRun.length) + ') → ' + fmt(gapRun[gapRun.length - 1].left);
+      frag.appendChild(g);
+      gapRun = [];
+    }
+
+    sched.weeks.forEach(function(w, idx){
+      var isNow = idx === 0;
+      if (!isNow && !w.items.length) { gapRun.push(w); return; }
+      flushGap();
+      var box = document.createElement('div');
+      box.className = 'wk' + (isNow ? ' now' : '');
+      var head = document.createElement('div');
+      head.className = 'wk-head';
+      head.innerHTML = '<span>' + w.week + '주차</span>' + (isNow ? '<span class="wk-tag">이번 주</span>' : '') +
+        '<span class="wk-avail">' + (isNow ? '쓸 수 있는 <b>' + signed(w.start) + '</b>' : '+' + fmt(settings.perWeek) + ' → <b>' + fmt(w.start) + '</b>') + '</span>';
+      box.appendChild(head);
+      if (!w.items.length) {
+        var e = document.createElement('p');
+        e.className = 'cart-empty';
+        e.textContent = w.start < 0 ? '이미 쓴 코인이 받은 코인보다 많습니다. 설정을 확인해 주세요.' : '이번 주에 살 수 있는 품목이 없습니다. 다음 주로 넘깁니다.';
+        box.appendChild(e);
+      }
+      w.items.forEach(function(en){
+        var item = BY_ID[en.id];
+        var partial = en.qty < cart[en.id];
+        box.appendChild(cartRow(item, en.qty, {
+          part: partial ? '(' + fmt(cart[en.id]) + '개 중)' : '',
+          buttons: moveButtons(en.id).concat([
+            { cls:'buy', text:'✓', title:isNow ? '이만큼 샀어요' : '구매 완료로 옮기기', onClick:function(){ buyFromCart(en.id, en.qty); } },
+            { cls:'del', text:'×', title:'빼기', onClick:function(){ setQty(en.id, 0); } }
+          ])
+        }));
+      });
+      var foot = document.createElement('div');
+      foot.className = 'wk-foot';
+      foot.innerHTML = '남음 <b>' + signed(w.left) + '</b>' + (idx < sched.weeks.length - 1 ? ' → 이월' : '');
+      if (isNow && w.items.length) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'link-btn';
+        b.textContent = '이번 주 것 전부 구매 처리';
+        b.addEventListener('click', function(){
+          w.items.forEach(function(en){
+            var q = Math.min(cart[en.id] || 0, en.qty);
+            if (!q) return;
+            owned[en.id] = Math.min(BY_ID[en.id].stock, (owned[en.id] || 0) + q);
+            if (cart[en.id] - q <= 0) delete cart[en.id]; else cart[en.id] -= q;
+          });
+          save();
+          render();
+        });
+        foot.appendChild(b);
+      }
+      box.appendChild(foot);
+      frag.appendChild(box);
+    });
+    flushGap();
+
+    var lastWeek = sched.weeks[sched.weeks.length - 1].week;
+    if (!sched.over.items.length && lastWeek < settings.weeks) {
+      var rest = document.createElement('p');
+      rest.className = 'wk-gap';
+      rest.textContent = (lastWeek + 1 === settings.weeks ? settings.weeks + '주차' : (lastWeek + 1) + '~' + settings.weeks + '주차') +
+        ' · 계획 없음 (+' + fmt(settings.perWeek * (settings.weeks - lastWeek)) + ' 더 들어옴)';
+      frag.appendChild(rest);
+    }
+
+    if (sched.over.items.length) {
+      var ob = document.createElement('div');
+      ob.className = 'wk over';
+      ob.innerHTML = '<div class="wk-head"><span>기간 초과</span><span class="wk-avail">' + settings.weeks + '주 안에는 못 삽니다</span></div>';
+      sched.over.items.forEach(function(en){
+        var item = BY_ID[en.id];
+        var partial = en.qty < cart[en.id];
+        ob.appendChild(cartRow(item, en.qty, {
+          part: partial ? '(' + fmt(cart[en.id]) + '개 중)' : '',
+          buttons: moveButtons(en.id).concat([
+            { cls:'del', text:'×', title:'빼기', onClick:function(){ setQty(en.id, 0); } }
+          ])
+        }));
+      });
+      var of = document.createElement('div');
+      of.className = 'wk-foot';
+      of.innerHTML = '전체 예산에서 <b>' + fmt(sched.shortfall) + '</b> 부족 · 순서를 올리거나 다른 품목을 줄여 보세요';
+      ob.appendChild(of);
+      frag.appendChild(ob);
+    }
+  }
+
+  function renderCart(sched){
     var ids = Object.keys(cart);
     el.cartList.innerHTML = '';
-    el.planNote.classList.toggle('hidden', ids.length < 2 || settings.perWeek <= 0);
+    Array.prototype.forEach.call(el.cartViewTabs.querySelectorAll('button'), function(b){
+      b.classList.toggle('active', b.dataset.view === view.cartView);
+    });
     if (!ids.length) {
+      el.planNote.classList.add('hidden');
       el.cartList.innerHTML = '<p class="cart-empty">아직 담은 아이템이 없습니다. 상점에서 아이콘을 누르거나 +로 담아보세요.</p>' +
         (Object.keys(owned).length ? '' : '<p class="cart-empty">이벤트 중간부터 쓰신다면 상점의 <b>이미 산 것 입력</b>으로 먼저 산 개수를 적어 두세요.</p>');
       el.cartSum.textContent = '';
     } else {
-      // 담은 순서대로 산다고 보고, 누적 코인이 몇 주차에 모이는지 표시한다
-      var cum = spent;
-      ids.forEach(function(id){
-        var item = BY_ID[id];
-        cum += item.price * cart[id];
-        var week = weekFor(cum);
-        var tag = null;
-        if (isFinite(week)) {
-          tag = document.createElement('span');
-          tag.className = 'cart-week';
-          if (week <= settings.currentWeek) { tag.classList.add('now'); tag.textContent = '지금'; }
-          else if (week <= settings.weeks) { tag.textContent = week + '주차'; }
-          else { tag.classList.add('late'); tag.textContent = week + '주차'; tag.title = '기간(' + settings.weeks + '주) 안에는 못 삽니다'; }
-        }
-        el.cartList.appendChild(cartRow(item, cart[id], {
-          week: tag,
-          buttons: [
-            { cls:'buy', text:'✓', title:'구매 완료로 옮기기', onClick:function(){ buyFromCart(id); } },
-            { cls:'del', text:'×', title:'빼기', onClick:function(){ setQty(id, 0); } }
-          ]
-        }));
-      });
+      el.planNote.classList.toggle('hidden', ids.length < 2);
+      el.planNote.textContent = view.cartView === 'weekly'
+        ? '위에 있는 품목부터 삽니다. ▲▼로 순서를 바꾸면 계획이 다시 짜집니다.'
+        : '위에 있는 품목부터 산다고 보고 살 수 있는 주차를 표시합니다. ▲▼로 순서를 바꿉니다.';
+      if (view.cartView === 'weekly') renderCartWeekly(sched); else renderCartList(ids);
       el.cartSum.innerHTML = fmt(ids.length) + '종 ' + fmt(countOf(cart)) + '개<b>' + fmt(usedCoins()) + '</b>';
     }
 
@@ -799,8 +1006,9 @@
       : '아이콘을 누르면 1개씩 담깁니다. 수량은 상점 구매 제한(ID당·월드당)까지만 담을 수 있습니다.';
 
     Array.prototype.forEach.call(document.querySelectorAll('.item-row'), refreshRow);
-    ['enhance','growth'].forEach(function(tab){
-      var list = tab === 'enhance' ? el.listEnhance : el.listGrowth;
+    TABS.forEach(function(t){
+      var tab = t.key;
+      var list = listOf[tab];
       var empty = list.querySelector('.shop-empty');
       var anyVisible = SHOP[tab].some(function(it){ return !view.onlyPicked || cart[it.id]; });
       if (!anyVisible && !empty) {
@@ -824,8 +1032,13 @@
     el.nowLabel.textContent = '지금 보유 (' + settings.currentWeek + '주차)';
     el.totalLabel.textContent = '총 획득 (' + settings.weeks + '주)';
     el.nowCoin.textContent = signed(nowAvailable);
-    el.nowShort.classList.toggle('hidden', !(used > 0 && shortNow > 0));
-    el.nowShort.textContent = '장바구니보다 ' + fmt(Math.max(0, shortNow)) + ' 부족';
+
+    // 주차별 계획에서 이번 주 칸에 남는 코인 = 계획대로 사고도 이번 주에 더 쓸 수 있는 코인
+    var sched = buildSchedule();
+    var nowLeft = sched.weeks[0].left;
+    el.remainLabel.textContent = '전체 남은 코인 (' + settings.weeks + '주 기준)';
+    el.nowLeftBig.textContent = signed(nowLeft);
+    el.nowLeftBig.classList.toggle('over', nowLeft < 0);
 
     el.totalCoin.textContent = fmt(total);
     el.spentCoin.textContent = fmt(spent);
@@ -871,7 +1084,7 @@
     el.mbRemain.textContent = signed(remain);
     el.mbRemain.classList.toggle('over', remain < 0);
     el.mbRemain.classList.toggle('ok', remain >= 0);
-    el.mbCart.innerHTML = '장바구니 <b>' + fmt(used) + '</b>';
+    el.mbCart.innerHTML = '이번 주 더 쓸 수 있는 <b>' + signed(nowLeft) + '</b>';
     el.mbWeek.textContent = mbWeekText;
     el.mbWeek.className = 'mb-week' + (mbWeekCls ? ' ' + mbWeekCls : '');
 
@@ -880,12 +1093,12 @@
     el.resetOwnedBtn.disabled = Object.keys(owned).length === 0;
     disarm(el.clearBtn); disarm(el.resetOwnedBtn);
 
-    var pickedEnhance = SHOP.enhance.filter(function(it){ return cart[it.id]; }).length;
-    var pickedGrowth = SHOP.growth.filter(function(it){ return cart[it.id]; }).length;
-    el.cntEnhance.textContent = pickedEnhance ? '(' + pickedEnhance + ')' : '';
-    el.cntGrowth.textContent = pickedGrowth ? '(' + pickedGrowth + ')' : '';
+    TABS.forEach(function(t){
+      var picked = SHOP[t.key].filter(function(it){ return cart[it.id]; }).length;
+      cntOf[t.key].textContent = picked ? '(' + picked + ')' : '';
+    });
 
-    renderCart();
+    renderCart(sched);
   }
 
   function renderBudgetNote(){
@@ -930,8 +1143,7 @@
 
   function switchTab(tab){
     activeTab = tab;
-    el.listEnhance.classList.toggle('hidden', tab !== 'enhance');
-    el.listGrowth.classList.toggle('hidden', tab !== 'growth');
+    TABS.forEach(function(t){ listOf[t.key].classList.toggle('hidden', t.key !== tab); });
     Array.prototype.forEach.call(el.shopTabs.querySelectorAll('button'), function(b){
       b.classList.toggle('active', b.dataset.tab === tab);
     });
@@ -957,8 +1169,8 @@
 
   // ---- 초기화 ----
   load();
-  buildList(el.listEnhance, SHOP.enhance);
-  buildList(el.listGrowth, SHOP.growth);
+  buildShop();
+  el.eventSub.textContent = EVENT.name + ' · ' + EVENT.season + ' · ' + EVENT.updatedAt + ' 기준. 담으면 주차별로 언제 살 수 있는지 바로 보여줍니다.';
   el.perWeek.value = settings.perWeek;
   el.weeks.value = settings.weeks;
   el.extraSpent.value = settings.extraSpent;
@@ -971,6 +1183,13 @@
     if (btn) switchTab(btn.dataset.tab);
   });
   el.onlyPickedBtn.addEventListener('click', function(){ view.onlyPicked = !view.onlyPicked; render(); });
+  el.cartViewTabs.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-view]');
+    if (!btn) return;
+    view.cartView = btn.dataset.view;
+    save();
+    render();
+  });
   el.ownedEditBtn.addEventListener('click', function(){ view.ownedEdit = !view.ownedEdit; render(); });
   el.ownedEditLink.addEventListener('click', function(){
     view.ownedEdit = true;
