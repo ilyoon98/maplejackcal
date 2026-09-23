@@ -5,10 +5,10 @@ const TIERS = [
   { key: 'eternel', name: '에테르넬', level: 250 },
 ];
 
-const ICON_BASE = 'https://maplestory.io/api/KMS/389/item';
+const ICON_BASE = 'icons/Trace'; // maplestory.io(KMS 389)에서 받아 둔 아이템 아이콘, 파일명은 아이템 ID
 
 // 서버 없이 동작하도록 티어별 부위 대표 아이템(아이콘/이름/레벨)을 하드코딩.
-// maplestory.io 공개 아이콘을 직접 <img src>로 불러오므로 서버가 필요 없음.
+// 아이콘은 icons/Trace/<아이템 ID>.webp 로컬 파일을 사용.
 const PART_LABELS = { weapon: '무기', hat: '모자', armor: '방어구', glove: '장갑' };
 const BUCKET_ORDER = ['weapon', 'hat', 'armor', 'glove'];
 const TIER_ITEMS = {
@@ -208,7 +208,7 @@ function renderTierCards() {
       renderExtra: (el, item) => {
         const firstBucket = BUCKET_ORDER.find((b) => TIER_ITEMS[item.key][b]);
         const img = el.querySelector('[data-icon]');
-        if (img && firstBucket) img.src = `${ICON_BASE}/${TIER_ITEMS[item.key][firstBucket].id}/icon`;
+        if (img && firstBucket) img.src = `${ICON_BASE}/${TIER_ITEMS[item.key][firstBucket].id}.webp`;
       },
     }
   );
@@ -238,7 +238,7 @@ function selectTier(tier) {
       onChange: (keys) => selectPart(keys[0]),
       renderExtra: (el, item) => {
         const img = el.querySelector('[data-icon]');
-        if (img) img.src = `${ICON_BASE}/${TIER_ITEMS[tier.key][item.key].id}/icon`;
+        if (img) img.src = `${ICON_BASE}/${TIER_ITEMS[tier.key][item.key].id}.webp`;
       },
     }
   );
@@ -269,7 +269,7 @@ function updateItemPreview() {
   }
   const approxText = item.approxIcon ? ' · 실제 아이템이 없어 아이콘은 유사 부위로 대체' : '';
   itemPreviewEl.innerHTML = `
-    <img src="${ICON_BASE}/${item.id}/icon" alt="${item.name}" />
+    <img src="${ICON_BASE}/${item.id}.webp" alt="${item.name}" />
     <span>${item.name} <span class="note">(Lv.${item.requiredLevel}, ${jakDef.label} · 총 ${jakDef.totalJak}작${costText}${approxText})</span></span>
   `;
 }

@@ -32,13 +32,12 @@ body {
 header h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .sub { color: var(--text-dim); margin-top: 0; font-size: 0.9rem; }
 
-/* 상단 탭 바: 모든 페이지가 항상 같은 8개 탭을 같은 자리에 그대로 보여준다.
-   드롭다운으로 숨기지 않고 세그먼트 컨트롤처럼 한 줄로 펼쳐두고, 활성 탭 아래로
-   filled pill이 부드럽게 슬라이드해 지금 위치를 보여준다(site_nav.js가 위치 계산). */
-.site-tabs {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* 상단 탭 한 줄(홈·계산기·놀이)과, 분류를 누르면 그 아래로 펼쳐지는 목록 패널.
+   페이지가 늘어도 탭이 잘리지 않고, 패널은 겹쳐 띄우므로 본문이 밀리지 않는다.
+   활성 탭 아래로는 filled pill이 미끄러진다(site_nav.js가 위치 계산). */
+.site-nav {
+  position: relative;
+  z-index: 40;
   max-width: calc(1280px - 32px);
   margin: 0 auto 18px;
 }
@@ -46,7 +45,6 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
   position: relative;
   display: flex;
   gap: 2px;
-  flex: 1 1 auto;
   min-width: 0;
   background: #171a21;
   border: 1px solid var(--border);
@@ -56,6 +54,43 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
   scrollbar-width: none;
 }
 .site-tabs-track::-webkit-scrollbar { display: none; }
+
+/* 펼침 목록: 예전 드롭다운처럼 좁지 않게 탭 바 폭을 그대로 쓰고, 이름 옆에 설명까지 둔다. */
+.site-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 6px;
+  padding: 10px;
+  background: #1a1e27;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  animation: site-menu-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.site-menu[hidden] { display: none; }
+@keyframes site-menu-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+.site-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.site-menu-item:hover { background: rgba(110, 168, 254, 0.12); }
+.site-menu-item.active { background: rgba(76, 141, 255, 0.16); }
+.site-menu-icon { flex: 0 0 auto; font-size: 1.35rem; line-height: 1; }
+.site-menu-name { display: block; font-size: 0.92rem; font-weight: 700; color: var(--text); }
+.site-menu-desc { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--text-dim); }
+
 .site-tabs-pill {
   position: absolute;
   top: 4px;
@@ -64,7 +99,7 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
   width: 0;
   background: var(--accent-strong);
   border-radius: 8px;
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), width 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
   z-index: 0;
 }
 .site-tab {
@@ -77,14 +112,21 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
   flex: 0 0 128px;
   width: 128px;
   padding: 8px 10px;
+  border: none;
   border-radius: 8px;
+  background: none;
+  font: inherit;
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-dim);
   text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
   transition: color 0.2s ease;
 }
+/* 대분류는 3개뿐이라 줄을 꽉 채워 크게 쓴다. */
+.site-groups .site-tab { flex: 1 1 0; width: auto; }
+.site-tab[aria-expanded="true"]::after { content: "▾"; font-size: 0.65rem; opacity: 0.8; }
 .site-tab:hover { color: var(--text); }
 .site-tab.active { color: #0b0d12; }
 .site-tab-icon { font-size: 0.95rem; line-height: 1; }

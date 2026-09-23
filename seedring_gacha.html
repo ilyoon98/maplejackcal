@@ -203,18 +203,52 @@
 </head>
 <body>
 <main class="sr-wrap">
-  <nav class="site-tabs">
-    <div class="site-tabs-track">
+  <nav class="site-nav">
+    <div class="site-tabs-track site-groups">
       <span class="site-tabs-pill" aria-hidden="true"></span>
-      <a class="site-tab" href="index.html"><span class="site-tab-icon">🏠</span>홈</a>
-      <a class="site-tab" href="trace_calc.html"><span class="site-tab-icon">📜</span>주흔</a>
-      <a class="site-tab" href="authentic_symbol_calc.html"><span class="site-tab-icon">🔮</span>어센틱 심볼</a>
-      <a class="site-tab" href="boss_income_calc.html"><span class="site-tab-icon">💰</span>보스 수익</a>
-      <a class="site-tab" href="cube_calc.html"><span class="site-tab-icon">🎲</span>큐브</a>
-      <a class="site-tab" href="coin_shop_calc.html"><span class="site-tab-icon">🪙</span>코인샵</a>
-      <a class="site-tab" href="boutique_gacha.html"><span class="site-tab-icon">🎁</span>부티크</a>
-      <a class="site-tab" href="pet_gacha.html"><span class="site-tab-icon">🐾</span>펫 뽑기</a>
-      <a class="site-tab active" href="seedring_gacha.html"><span class="site-tab-icon">💍</span>시드링</a>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab active" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>놀이</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 놀이</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 뽑기 놀이</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+      </a>
+      <a class="site-menu-item active" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 뽑기</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+      </a>
     </div>
   </nav>
 
