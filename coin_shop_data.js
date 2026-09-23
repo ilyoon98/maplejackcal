@@ -3,7 +3,7 @@
 // - startDate: 1주차 시작일(YYYY-MM-DD). 오늘 날짜로 현재 주차를 자동 계산하는 데 쓴다. 없으면 수동.
 // - perWeek/weeks: 주당 코인과 기간(주). 페이지에서 바꿀 수 없다.
 // - shop: 탭별 품목. price = 코인 개수, stock = 상점의 "남은 수량" 표기값(= 구매 제한),
-//   limit: 'M' = 메이플ID 기준 제한, 'W' = 월드 기준 제한, img: icons/ 폴더의 파일명(없으면 icon 이모지)
+//   limit: 'M' = 메이플ID 기준 제한, 'W' = 월드 기준 제한, img: icons/CoinShop/ 폴더의 파일명(없으면 icon 이모지)
 window.COIN_SHOP_EVENT = {
   id: 'argo-2026-fall',
   name: '아르고 주화 상점',
