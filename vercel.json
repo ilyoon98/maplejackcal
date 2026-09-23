@@ -1,0 +1,3 @@
+{
+  "buildCommand": "node tools/build_coin_shop_data.js"
+}
