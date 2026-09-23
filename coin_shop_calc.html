@@ -61,6 +61,10 @@
   .opt-btn:hover{ border-color:var(--accent); color:var(--text); }
   .opt-btn.active{ border-color:var(--accent-strong); background:rgba(76,141,255,.14); color:var(--accent); }
   .shop-hint{ font-size:0.76rem; color:var(--text-dim); margin:0 0 12px; }
+  .shop-hint b{ color:var(--text); font-weight:700; }
+  .max-btn.week-fill:hover:not(:disabled){ border-color:var(--good); color:var(--good); }
+  /* 아주 좁은 화면에선 버튼이 한 줄에 안 들어가니 × 는 뺀다 (−로 0까지 내릴 수 있다) */
+  @media (max-width: 480px){ .clear-btn{ display:none; } }
   /* "이미 산 것 입력" 모드: 안내를 배너로 키우고 상점 전체가 초록 톤으로 바뀌어 모드에 들어왔음을 알린다 */
   body.own-edit-on .shop-hint{
     background:rgba(76,175,125,.1); border:1px solid var(--good); border-radius:10px;
@@ -190,6 +194,8 @@
 
   /* 요약 카드: 전체 예산 기준과 이번 주 기준을 나란히 */
   .big-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; }
+  .coin-line{ display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
+  .coin-of{ font-size:0.8rem; font-weight:700; color:var(--text-dim); font-variant-numeric:tabular-nums; white-space:nowrap; }
   .big-label{ font-size:0.74rem; color:var(--text-dim); font-weight:700; }
   .coin-big.now{ font-size:1.6rem; color:var(--accent); }
   .coin-big.now.over{ color:var(--bad); }
@@ -207,10 +213,10 @@
   .bar-legend .k-owned i{ background:var(--good); }
   .bar-legend .k-cart i{ background:var(--accent-strong); }
   .bar-legend .k-now i{ width:2px; height:10px; border-radius:1px; background:var(--text); }
-  .mini-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+  .mini-grid{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-top:10px; }
   .mini{ background:#11141a; border:1px solid var(--border); border-radius:10px; padding:8px 10px; }
   .mini .label{ font-size:0.72rem; color:var(--text-dim); }
-  .mini .value{ font-size:1rem; font-weight:700; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .mini .value{ font-size:0.95rem; font-weight:700; margin-top:2px; font-variant-numeric:tabular-nums; }
   .mini .sub{ font-size:0.7rem; color:var(--bad); font-weight:700; margin-top:2px; }
   .mini.now .value{ color:var(--accent); }
   .callout.warn{ background:rgba(226,102,74,0.1); border-color:var(--bad); }
@@ -374,11 +380,11 @@
         <div class="big-grid">
           <div>
             <div class="big-label" id="remainLabel">전체 남은 코인</div>
-            <div class="coin-big ok" id="remainBig">40,000</div>
+            <div class="coin-line"><span class="coin-big ok" id="remainBig">40,000</span><span class="coin-of" id="remainOf"></span></div>
           </div>
           <div>
             <div class="big-label">이번 주 더 쓸 수 있는</div>
-            <div class="coin-big now" id="nowLeftBig">5,000</div>
+            <div class="coin-line"><span class="coin-big now" id="nowLeftBig">5,000</span><span class="coin-of" id="nowLeftOf"></span></div>
           </div>
         </div>
         <div class="bar" id="bar">
@@ -394,7 +400,6 @@
         <p class="note" id="progressNote"></p>
         <div class="mini-grid">
           <div class="mini"><div class="label" id="nowLabel">지금 보유</div><div class="value" id="nowCoin">5,000</div></div>
-          <div class="mini"><div class="label" id="totalLabel">총 획득</div><div class="value" id="totalCoin">40,000</div></div>
           <div class="mini"><div class="label">이미 사용</div><div class="value" id="spentCoin">0</div></div>
           <div class="mini"><div class="label">장바구니</div><div class="value" id="usedCoin">0</div></div>
         </div>
@@ -405,8 +410,8 @@
         <div class="list-head">
           <h2>장바구니</h2>
           <div class="view-tabs" id="cartViewTabs">
-            <button type="button" data-view="weekly" class="active">주차별</button>
-            <button type="button" data-view="list">목록</button>
+            <button type="button" data-view="list" class="active">목록</button>
+            <button type="button" data-view="weekly">주차별</button>
           </div>
           <span class="list-sum" id="cartSum"></span>
         </div>
@@ -467,12 +472,12 @@
   var owned = {};                // id -> 이미 구매한 수량
   var settings = { perWeek:EVENT.perWeek, weeks:EVENT.weeks, currentWeek:1, extraSpent:0 };
   var activeTab = TABS[0].key;
-  var view = { onlyPicked:false, ownedEdit:false, cartView:'weekly' };
+  var view = { onlyPicked:false, ownedEdit:false, cartView:'list' };
 
   var el = {};
   ['perWeek','weeks','extraSpent','weekPills','budgetNote','shopLists','shopTabs','eventSub',
    'onlyPickedBtn','ownedEditBtn','shopHint',
-   'remainBig','remainLabel','nowLeftBig','bar','barOwned','barCart','barNow','nowLabel','nowCoin','totalLabel','totalCoin','spentCoin','usedCoin',
+   'remainBig','remainLabel','remainOf','nowLeftBig','nowLeftOf','bar','barOwned','barCart','barNow','nowLabel','nowCoin','spentCoin','usedCoin',
    'progressNote','weekNote','cartSum','planNote','cartList','buyAllBtn','clearBtn','ownedCard','ownedSum','ownedList','resetOwnedBtn',
    'mobileBar','mbRemain','mbCart','mbWeek','summaryCard','ownedEditLink','cartViewTabs'
   ].forEach(function(id){ el[id] = document.getElementById(id); });
@@ -524,6 +529,8 @@
   function nowCoins(){ return settings.perWeek * settings.currentWeek; } // 현재 주차까지 받은 코인
   function spentCoins(){ return coinsOf(owned) + settings.extraSpent; } // 이미 쓴 코인
   function usedCoins(){ return coinsOf(cart); }                        // 장바구니에 담은 코인
+  // 이번 주까지 받은 코인에서 이미 쓴 것과 장바구니를 빼면 "이번 주에 더 쓸 수 있는 코인" (넘치면 음수)
+  function nowLeftCoins(){ return nowCoins() - spentCoins() - usedCoins(); }
   function leftToBuy(id){ return BY_ID[id].stock - (owned[id] || 0); } // 아직 살 수 있는 수량
   // 누적 코인 c를 손에 넣는 주차 (0이면 지금, Infinity면 주당 코인이 없어 계산 불가)
   function weekFor(c){
@@ -632,6 +639,7 @@
           '<button type="button" class="qty-btn plus">+</button>' +
           '<span class="qty-cap"></span>' +
           '<button type="button" class="max-btn max-all">최대</button>' +
+          '<button type="button" class="max-btn week-fill">이번 주</button>' +
           '<button type="button" class="clear-btn">×</button>' +
         '</div>' +
         '<div class="own-row">' +
@@ -671,7 +679,9 @@
     var label = function(sel, text){ row.querySelector(sel).setAttribute('aria-label', item.name + ' ' + text); };
     label('.plus', '1개 더 담기');
     label('.minus', '1개 빼기');
-    label('.max-all', '최대로 담기');
+    label('.max-all', '구매 제한까지 담기');
+    label('.week-fill', '이번 주 남은 코인으로 살 수 있는 만큼 담기');
+    row.querySelector('.week-fill').title = '이번 주 남은 코인으로 살 수 있는 만큼 담기';
     label('.clear-btn', '장바구니에서 빼기');
     label('.qty-input', '담을 수량');
     label('.own-plus', '이미 산 개수 1 늘리기');
@@ -688,6 +698,9 @@
     row.querySelector('.minus').addEventListener('click', function(){ setQty(item.id, (cart[item.id] || 0) - 1); });
     row.querySelector('.clear-btn').addEventListener('click', function(){ setQty(item.id, 0); });
     row.querySelector('.max-all').addEventListener('click', function(){ setQty(item.id, leftToBuy(item.id)); });
+    row.querySelector('.week-fill').addEventListener('click', function(){
+      setQty(item.id, (cart[item.id] || 0) + Math.floor(Math.max(0, nowLeftCoins()) / item.price));
+    });
     row.querySelector('.own-plus').addEventListener('click', function(){ setOwned(item.id, (owned[item.id] || 0) + 1); });
     row.querySelector('.own-minus').addEventListener('click', function(){ setOwned(item.id, (owned[item.id] || 0) - 1); });
     row.querySelector('.own-all').addEventListener('click', function(){
@@ -764,6 +777,7 @@
     row.querySelector('.minus').disabled = qty <= 0;
     row.querySelector('.plus').disabled = qty >= buyable;
     row.querySelector('.max-all').disabled = done || maxed;
+    row.querySelector('.week-fill').disabled = done || maxed || nowLeftCoins() < item.price;
 
     var cap = row.querySelector('.qty-cap');
     cap.classList.toggle('maxed', maxed);
@@ -1003,7 +1017,7 @@
       ? '<b>이미 산 개수를 입력하는 중입니다.</b> 게임에서 이미 산 품목의 개수를 초록 칸에 적어 주세요. ' +
         '이벤트 중간부터 계산기를 쓰거나 기록을 고칠 때 씁니다. 적은 만큼 구매 한도가 줄고 "이미 사용" 코인에 잡힙니다. ' +
         '다 적었으면 <b>입력 완료</b>를 누르세요.'
-      : '아이콘을 누르면 1개씩 담깁니다. 수량은 상점 구매 제한(ID당·월드당)까지만 담을 수 있습니다.';
+      : '아이콘을 누르면 1개씩 담깁니다. <b>최대</b>는 구매 제한(ID당·월드당)까지, <b>이번 주</b>는 이번 주 남은 코인으로 살 수 있는 만큼 담습니다.';
 
     Array.prototype.forEach.call(document.querySelectorAll('.item-row'), refreshRow);
     TABS.forEach(function(t){
@@ -1029,18 +1043,20 @@
     // 현재 주차까지 받은 코인에서 이미 쓴 걸 빼면 "지금 실제로 쓸 수 있는 코인"
     var nowAvailable = nowCoins() - spent;
     var shortNow = used - nowAvailable;           // 지금 기준 모자란 코인
-    el.nowLabel.textContent = '지금 보유 (' + settings.currentWeek + '주차)';
-    el.totalLabel.textContent = '총 획득 (' + settings.weeks + '주)';
+    el.nowLabel.textContent = '지금 보유';
+    el.nowLabel.title = settings.currentWeek + '주차까지 받은 코인에서 이미 쓴 것을 뺀 값';
     el.nowCoin.textContent = signed(nowAvailable);
 
     // 주차별 계획에서 이번 주 칸에 남는 코인 = 계획대로 사고도 이번 주에 더 쓸 수 있는 코인
     var sched = buildSchedule();
-    var nowLeft = sched.weeks[0].left;
-    el.remainLabel.textContent = '전체 남은 코인 (' + settings.weeks + '주 기준)';
+    var nowLeft = nowLeftCoins();
+    el.remainLabel.textContent = '전체 남은 코인 (' + settings.weeks + '주)';
+    el.remainOf.textContent = '/ ' + fmt(total);
     el.nowLeftBig.textContent = signed(nowLeft);
     el.nowLeftBig.classList.toggle('over', nowLeft < 0);
+    el.nowLeftOf.textContent = '/ ' + fmt(nowCoins());
+    el.nowLeftOf.title = settings.currentWeek + '주차까지 받은 코인';
 
-    el.totalCoin.textContent = fmt(total);
     el.spentCoin.textContent = fmt(spent);
     el.usedCoin.textContent = fmt(used);
 
