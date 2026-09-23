@@ -71,7 +71,6 @@
   .pity-cap { color:var(--text-dim); font-size:.82rem; font-variant-numeric:tabular-nums; }
   .runs-num { font-variant-numeric:tabular-nums; font-weight:800; color:var(--cube-cyan); }
   @keyframes pity-pop { 0%{ transform:scale(1.5) translateY(-3px); opacity:.4; } 100%{ transform:scale(1) translateY(0); opacity:1; } }
-  .decision-msg { color:var(--cube-gold) !important; font-weight:700; margin-top:6px; }
   .sim-percentiles { display:flex; flex-direction:column; gap:9px; margin:16px 0 0; }
   .sim-percentiles:empty { display:none; }
   .stat-tile { background:#1d1e2e; border:1px solid #2d2e48; border-radius:12px; padding:12px 14px; min-width:0; }
@@ -86,13 +85,24 @@
   .stat-tile.compare { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; }
   .stat-tile.compare .expected .value { color:var(--text-dim); }
   .cmp-vs { font-size:.7rem; font-weight:800; color:var(--text-dim); letter-spacing:.06em; }
-  .cmp-verdict { grid-column:1 / -1; display:flex; align-items:baseline; justify-content:space-between; gap:10px; border-top:1px solid rgba(255,255,255,.1); padding-top:10px; margin-top:2px; font-size:.74rem; color:var(--text-dim); }
+  .cmp-verdict { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 10px; border-top:1px solid rgba(255,255,255,.1); padding-top:10px; margin-top:2px; font-size:.74rem; color:var(--text-dim); }
+  .cmp-verdict > span { white-space:nowrap; }
   .cmp-verdict b { font-size:1.1rem; white-space:nowrap; }
   .cmp-verdict b.good { color:#9de5c0; }
   .cmp-verdict b.bad { color:#ffaaa1; }
+  .stat-tile.cumulative { background:#191a28; border-color:#39304a; }
+  .stat-tile.cumulative .value { font-size:1.12rem; }
   .stat-tile.total { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
   .stat-tile.total .value { margin-top:0; font-size:1.12rem; color:var(--cube-gold); }
   .sim-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  /* 두 줄을 같은 칸에 겹쳐 둬서, 등급업 선택지로 바뀌어도 높이가 변하지 않는다. */
+  .sim-action-stack { display:grid; }
+  .sim-action-stack > .sim-actions { grid-area:1 / 1; }
+  .sim-actions.one { grid-template-columns:1fr; }
+  /* 세션 초기화는 등급업 선택지가 떠 있어도 계속 누를 수 있어야 한다. */
+  .reset-row { margin-top:8px; }
+  .reset-btn { width:100%; padding:9px 12px; font-size:.86rem; font-weight:700; }
+  .sim-actions.is-hidden { visibility:hidden; pointer-events:none; }
   .run-log { margin-top:16px; border-top:1px solid #2d2e48; padding-top:12px; }
   .run-log:empty { display:none; }
   .run-log-head { font-size:.82rem; font-weight:800; margin-bottom:6px; }
@@ -172,7 +182,7 @@
       <div class="cube-panel"><div class="panel-head"><h2>종류 및 현재 등급 설정</h2><label class="miracle-toggle-inline" for="miracleCheckbox"><input type="checkbox" id="miracleCheckbox"><span class="miracle-slider"></span><span class="miracle-text"><strong>미라클 타임</strong></span></label></div><p class="panel-kicker">잠재능력과 에디셔널 잠재능력, 현재 등급을 고르면 레전드리까지 자동으로 도전합니다.</p><div class="rank-row" id="kindTabs"></div><div class="rank-row" id="rankGoalRow" style="margin-top:10px;"></div><h3>큐브 종류</h3><div class="cube-grid" id="cubeChoices"></div><div class="rank-row" id="levelRow" style="margin-top:12px;"></div></div>
     </section>
     <aside class="layout-right">
-      <div class="cube-panel sticky card-primary"><h2>가상 큐브 게임</h2><p class="panel-kicker">자동 굴리기 중 한 단계 등급업하면 멈추고 다시 돌릴지 다음 단계로 갈지 물어봅니다. 세션 초기화 전까지 통계가 누적돼요.</p><div class="sim-stage"><div class="sim-info"><strong id="simLabel">레어 → 에픽</strong><span id="simPity">현재 카운터 0회</span><span id="simRuns" class="sim-runs"></span><span id="decisionMsg" class="decision-msg" style="display:none;"></span></div></div><div class="sim-actions" id="normalActions"><button class="primary-btn" id="autoBtn">자동 굴리기</button><button class="ghost-btn" id="resetBtn">세션 초기화</button></div><div class="sim-actions" id="decisionRow" style="display:none;"><button class="primary-btn" id="retryBtn">다시 돌리기</button><button class="ghost-btn" id="nextBtn">다음 가기</button></div><div class="sim-percentiles" id="simPercentiles"></div><div class="run-log" id="runLog"></div></div>
+      <div class="cube-panel sticky card-primary"><h2>가상 큐브 게임</h2><p class="panel-kicker">자동 굴리기 중 한 단계 등급업하면 멈추고 다시 돌릴지 다음 단계로 갈지 물어봅니다. 세션 초기화 전까지 통계가 누적돼요.</p><div class="sim-stage"><div class="sim-info"><strong id="simLabel">레어 → 에픽</strong><span id="simPity">현재 카운터 0회</span><span id="simRuns" class="sim-runs"></span></div></div><div class="sim-action-stack"><div class="sim-actions one" id="normalActions"><button class="primary-btn" id="autoBtn">자동 굴리기</button></div><div class="sim-actions is-hidden" id="decisionRow"><button class="primary-btn" id="retryBtn">다시 돌리기</button><button class="ghost-btn" id="nextBtn">다음 가기</button></div></div><div class="reset-row"><button class="ghost-btn reset-btn" id="resetBtn">세션 초기화</button></div><div class="sim-percentiles" id="simPercentiles"></div><div class="run-log" id="runLog"></div></div>
     </aside>
   </main>
 </div>
