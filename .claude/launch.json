@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Users/imtl/AppData/Local/Temp/claude/C--Users-imtl-ilyoon-Git-maplejackcal/d3d369b9-4473-4a0a-b92e-e49af5bd4998/scratchpad/static.js"],
+      "port": 8765,
+      "autoPort": true
+    }
+  ]
+}
