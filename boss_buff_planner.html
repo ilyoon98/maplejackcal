@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<link rel="icon" type="image/png" href="favicon.png?v=2" />
+<meta name="description" content="30분 버프 안에 보스를 어떻게 묶어 돌아야 시간을 안 버리는지 계산" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="메이플 계산기 모음" />
+<meta property="og:description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
+<meta property="og:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>보스 버프 동선 짜기</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .setting-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; }
+  .setting { display:flex; flex-direction:column; gap:6px; }
+  .setting label { font-size:0.8rem; color:var(--text-dim); }
+  .setting .with-unit { display:flex; align-items:center; gap:6px; }
+  .setting input { width:86px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.95rem; }
+  .setting input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .setting .unit { color:var(--text-dim); font-size:0.85rem; }
+
+  .list-tools { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .list-tools input[type="text"] { flex:1 1 140px; min-width:0; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.88rem; }
+  .tool-btn { background:none; border:1px solid var(--border); color:var(--text-dim); font-size:0.8rem; font-weight:700; padding:7px 12px; border-radius:999px; cursor:pointer; white-space:nowrap; }
+  .tool-btn:hover { border-color:var(--accent); color:var(--text); }
+
+  .boss-head, .boss-row { display:grid; grid-template-columns:24px 30px minmax(0,1fr) 92px 92px 34px 30px; gap:8px; align-items:center; }
+  .boss-head { padding:0 2px 6px; font-size:0.74rem; color:var(--text-dim); text-align:center; }
+  .boss-head .name-col { text-align:left; }
+  .boss-row { padding:6px 2px; border-top:1px solid var(--border); }
+  .boss-row.off { opacity:0.42; }
+  .row-check { display:flex; justify-content:center; }
+  .row-check input { width:16px; height:16px; accent-color:var(--accent-strong); cursor:pointer; }
+  .row-icon { width:28px; height:28px; object-fit:contain; }
+  .row-icon.blank { display:inline-block; }
+  .row-name strong { display:block; font-size:0.88rem; font-weight:600; }
+  .row-name small { color:var(--text-dim); font-size:0.72rem; }
+  .row-input { display:flex; align-items:center; gap:4px; }
+  .row-input input { width:100%; min-width:0; padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.85rem; font-variant-numeric:tabular-nums; }
+  .row-input input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .row-input .unit { color:var(--text-dim); font-size:0.75rem; }
+  .row-btn { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:0.85rem; padding:4px; border-radius:6px; line-height:1; }
+  .row-btn:hover { color:var(--text); background:#11141a; }
+  .row-btn.pin { filter:grayscale(1); opacity:0.45; }
+  .row-btn.pin.on { filter:none; opacity:1; }
+
+  .combo, .pack-bin { border:1px solid var(--border); border-radius:10px; padding:11px 12px; margin-top:10px; background:#11141a; }
+  .combo.best { border-color:var(--accent-strong); box-shadow:0 0 0 1px rgba(76,141,255,0.18); }
+  .combo-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:0.8rem; }
+  .combo-head strong { font-size:0.88rem; }
+  .badge { background:var(--accent-strong); color:#0b0d12; font-weight:800; font-size:0.72rem; padding:2px 8px; border-radius:999px; }
+  .badge.alt { background:#2a2e38; color:var(--text-dim); }
+  .bin-time { font-variant-numeric:tabular-nums; font-weight:700; }
+  .bin-left { color:var(--text-dim); }
+  .bin-left.zero { color:var(--good); font-weight:700; }
+  .cnt { margin-left:auto; color:var(--text-dim); }
+  .bar { height:7px; border-radius:999px; background:#22262f; overflow:hidden; margin:9px 0; }
+  .bar span { display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-strong)); }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { display:inline-flex; align-items:center; gap:5px; background:#1b1f27; border:1px solid var(--border); border-radius:999px; padding:3px 10px 3px 4px; font-size:0.78rem; }
+  .chip img { width:20px; height:20px; object-fit:contain; }
+  .chip small { color:var(--text-dim); font-variant-numeric:tabular-nums; }
+  .new-mult { flex:0 0 78px; }
+  .new-mult input { width:52px; padding:8px 8px; border-radius:8px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.88rem; }
+  .route { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
+  .step-no { display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; border-radius:50%; background:#2a2e38; color:var(--text-dim); font-size:0.66rem; font-weight:800; margin-right:1px; }
+  .move { color:var(--text-dim); font-size:0.7rem; white-space:nowrap; }
+  .pack-head { margin-bottom:4px; }
+  .pack-head .big { font-size:1.6rem; font-weight:900; color:var(--accent); vertical-align:-2px; margin-right:2px; }
+  .empty { color:var(--text-dim); font-size:0.84rem; margin:8px 0 0; }
+  .warn { color:var(--bad); }
+  .how { font-size:0.8rem; color:var(--text-dim); line-height:1.75; margin:0; }
+  .how b { color:var(--text); }
+
+  /* 좁은 화면에서는 이름 칸이 글자당 한 줄로 쪼개질 만큼 좁아진다.
+     격자를 풀고 줄바꿈을 허용해 이름 → 입력칸 순으로 흐르게 한다. */
+  @media (max-width:520px) {
+    .boss-head { display:none; }
+    .boss-row { display:flex; flex-wrap:wrap; gap:6px; }
+    .row-name { flex:1 1 90px; }
+    .row-input { flex:0 0 76px; }
+    .row-input input { width:52px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="site-nav">
+    <div class="site-tabs-track site-groups">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab active" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>놀이</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item active" href="boss_buff_planner.html">
+        <span class="site-menu-icon">⏱️</span>
+        <span><span class="site-menu-name">보스 버프 동선 짜기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_option_calc.html">
+        <span class="site-menu-icon">🎯</span>
+        <span><span class="site-menu-name">큐브 옵션 확률</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 놀이</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+    </div>
+  </nav>
+
+  <header>
+    <h1>⏱️ 보스 버프 동선 짜기</h1>
+    <p class="sub">보스마다 배율(100% = 기준 시간)을 적으면 버프 한 번을 가장 알차게 쓰는 조합을 찾아줍니다.</p>
+  </header>
+
+  <div class="layout">
+    <div class="layout-left">
+      <section class="card">
+        <h2>버프 설정</h2>
+        <div class="setting-row">
+          <div class="setting">
+            <label for="buffMin">버프 지속 시간</label>
+            <div class="with-unit"><input type="number" id="buffMin" min="1" step="1" value="30"><span class="unit">분</span></div>
+          </div>
+          <div class="setting">
+            <label for="baseMin">배율 100%일 때 걸리는 시간</label>
+            <div class="with-unit"><input type="number" id="baseMin" min="1" step="1" value="20"><span class="unit">분</span></div>
+          </div>
+          <div class="setting">
+            <label for="moveMin">보스 간 이동 시간</label>
+            <div class="with-unit"><input type="number" id="moveMin" min="0" step="0.5" value="1"><span class="unit">분</span></div>
+          </div>
+          <div class="setting">
+            <label for="slackMin">보스당 여유 시간 +</label>
+            <div class="with-unit"><input type="number" id="slackMin" min="0" step="0.5" value="0"><span class="unit">분</span></div>
+          </div>
+        </div>
+        <p class="note">배율 200%면 그 절반(10분), 400%면 5분으로 계산합니다. 배율 대신 오른쪽 '분' 칸에 실제 클리어 시간을 바로 적어도 됩니다. 이동 시간은 한 버프 안에서 보스를 옮길 때마다 더해집니다(3마리면 2번). 여유 시간은 풀도핑을 못 하거나 실수로 늘어질 때를 대비해 <b>보스마다</b> 더해두는 값입니다.</p>
+      </section>
+
+      <section class="card">
+        <h2>보스 목록</h2>
+        <div class="list-tools">
+          <button type="button" class="tool-btn" id="allOn">전체 켜기</button>
+          <button type="button" class="tool-btn" id="allOff">전체 끄기</button>
+          <button type="button" class="tool-btn" id="resetBtn">초기화</button>
+          <input type="text" id="newName" placeholder="보스 이름 추가" maxlength="20">
+          <div class="row-input new-mult"><input type="number" id="newMult" min="1" step="10" value="100" placeholder="배율"><span class="unit">%</span></div>
+          <button type="button" class="tool-btn" id="addBoss">+ 추가</button>
+        </div>
+        <div class="boss-head">
+          <span></span><span></span><span class="name-col">보스</span><span>배율</span><span>소요</span><span>📌</span><span></span>
+        </div>
+        <div id="bossList"></div>
+        <p class="note">📌 를 누른 보스는 추천 조합에 반드시 포함됩니다. 입력한 값은 이 브라우저에 저장됩니다.</p>
+      </section>
+
+      <section class="card card-secondary">
+        <h2>어떻게 계산하나요</h2>
+        <p class="how">
+          <b>소요 시간 = 기준 시간 ÷ (배율 ÷ 100)</b>, 한 버프에 n마리를 넣으면 <b>이동 시간 × (n−1)</b>이 더 붙습니다. 그걸로<br>
+          ① 켜둔 보스를 전부 도는 <b>최소 버프 개수</b>와 각 버프에 넣을 보스·순서를 짭니다. 보스 15마리까지는 정확한 최적해, 그보다 많으면 근사값입니다.<br>
+          ② 버프를 한 번만 쓸 때 <b>남는 시간이 가장 적은</b> 조합도 따로 보여줍니다. 같은 시간이면 보스를 더 많이 잡는 쪽이 위로 옵니다.
+        </p>
+      </section>
+    </div>
+
+    <div class="layout-right">
+      <section class="card card-primary">
+        <h2>전체 보스 도는 순서</h2>
+        <div id="packResult"></div>
+      </section>
+      <section class="card card-secondary">
+        <h2>버프 하나만 쓸 때 (참고)</h2>
+        <p class="note" style="margin:-6px 0 4px">시간이 없어 한 판만 돌 때 가장 알찬 조합입니다.</p>
+        <div id="comboResult"></div>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="site_nav.js"></script>
+<script src="boss_buff_planner.js"></script>
+</body>
+</html>
