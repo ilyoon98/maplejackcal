@@ -5,13 +5,18 @@ const DATA = CUBE_OPTION_DATA;
 const MAIN_STATS = ['STR|%', 'DEX|%', 'INT|%', 'LUK|%'];
 const ALL_STAT = '올스탯|%';
 const TABS = [['potential','잠재능력'],['additional','에디셔널 잠재능력']];
-// data: cube_option_data.js의 큐브 키. official: 공식 재설정 비용표가 있는 큐브 (cube_calc.js와 같은 기준)
+// data: cube_option_data.js의 큐브 키(생략하면 자기 키). 옵션 확률은 같아도 비용 기준이 달라 항목을 나눈다.
+// official: 큐브 없이 메소로만 재설정하는 모드. 등급·레벨 구간별 비용표를 쓴다.
+// 나머지(큐브)는 아이템 레벨로만 정해지는 재설정 비용을 쓴다.
 const CUBES = {
-  black:{ name:'잠재능력 재설정 / 블랙 큐브', icon:['잠재.png','블랙.webp'], tab:'potential', official:'potential' },
+  potentialMeso:{ name:'잠재능력 재설정 (메소)', icon:['잠재.png'], tab:'potential', data:'black', official:'potential' },
+  black:{ name:'블랙 큐브', icon:['블랙.webp'], tab:'potential', data:'black' },
   red:{ name:'레드 큐브', icon:['레드.webp'], tab:'potential' },
   artisan:{ name:'명장의 큐브 / 골드 큐브', icon:['명장.webp','골드.webp'], tab:'potential' },
-  addi:{ name:'에디셔널 잠재능력 재설정 / 에디셔널 큐브 / 화이트 에디셔널 큐브', icon:['에디잠재.png','화이트에디.webp'], tab:'additional', official:'additional' }
+  addiMeso:{ name:'에디셔널 잠재능력 재설정 (메소)', icon:['에디잠재.png'], tab:'additional', data:'addi', official:'additional' },
+  addi:{ name:'에디셔널 큐브 / 화이트 에디셔널 큐브', icon:['에디큐브.webp','화이트에디.webp'], tab:'additional' }
 };
+const dataKey = cube => CUBES[cube].data || cube;
 // 비용 기준은 cube_calc.js(등급업 계산기)와 같은 표. 레벨구간 → [레어,에픽,유니크,레전드리] 재설정 메소
 const LEVEL_BRACKETS = [[1,'1~159'],[160,'160~199'],[200,'200~249'],[250,'250~300']];
 const POTENTIAL_COST = { 1:[4000000,16000000,34000000,40000000], 160:[4250000,17000000,36125000,42500000], 200:[4500000,18000000,38250000,45000000], 250:[5000000,20000000,42500000,50000000] };
@@ -74,7 +79,7 @@ function contrib(info, key){
 }
 
 function findBracket(cube, part, level){
-  return (DATA.cubes[cube].parts[part] || []).find(b => b.min <= level && level <= b.max) || null;
+  return (DATA.cubes[dataKey(cube)].parts[part] || []).find(b => b.min <= level && level <= b.max) || null;
 }
 
 // 조건에 필요한 값만 남겨서 같은 기여·같은 제한 계열인 옵션끼리 합친다
@@ -165,12 +170,23 @@ function mesoText(n){
 function iconImg(files){ return files.map(f => `<img src="icons/Cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-// 레전드리 재설정 1회 메소. 공식 가격이 없는 큐브는 0
-function cubePrice(cube){
+// 큐브를 쓸 때 같이 나가는 메소. 큐브 종류·등급과 무관하게 아이템 레벨 n으로만 정해진다.
+// (인게임 재설정 창의 "재설정 비용". 200제면 200*200*20 = 800,000)
+function cubeFee(level = state.level){
+  const n = Number(level) || 0;
+  const rate = n >= 121 ? 20 : n >= 71 ? 2.5 : n >= 31 ? .25 : 0;
+  return Math.floor(n * n * rate);
+}
+// 큐브 없이 메소만으로 재설정할 때 값. 레벨 구간과 현재 등급(레전드리)으로 정해진다
+function mesoResetPrice(cube){
   const d = CUBES[cube];
   return d.official ? (PRICE_TABLES[d.official][state.costLevel] || [])[LEGENDARY] || 0 : 0;
 }
-function brackets(){ return DATA.cubes[state.cube].parts[state.part] || []; }
+// 이 항목 1회에 나가는 메소. 메소 재설정이면 비용표, 큐브면 레벨 공식
+function attemptPrice(cube = state.cube){
+  return CUBES[cube].official ? mesoResetPrice(cube) : cubeFee();
+}
+function brackets(){ return DATA.cubes[dataKey(state.cube)].parts[state.part] || []; }
 // 확률 구간(201~250)과 재설정 비용 구간(200~249, 250~300)이 서로 다르게 끊긴다.
 // 둘을 겹쳐서 잘라야 고른 레벨의 확률과 비용이 같이 맞는다.
 function costRanges(){
@@ -188,11 +204,16 @@ function levelSegments(){
   return segs;
 }
 function currentBracket(){ return findBracket(state.cube, state.part, state.level); }
+// 아이템 레벨 하나로 확률 구간과 메소 재설정 비용 구간을 함께 정한다
+function setLevel(level){
+  state.level = Math.min(Math.max(Math.round(Number(level) || 0), 1), 300);
+  state.costLevel = [...LEVEL_BRACKETS].reverse().find(([lv]) => state.level >= lv)[0];
+}
 // 고른 레벨이 이 부위·큐브 표에 없으면 가장 높은 구간으로 옮긴다
 function ensureBracket(){
   if(currentBracket()) return;
   const list = brackets();
-  if(list.length) state.level = list[list.length - 1].max;
+  if(list.length) setLevel(list[list.length - 1].max);
 }
 
 // 이 구간 옵션표에 있는 key와 한 줄에 뜰 수 있는 수치들
@@ -256,12 +277,15 @@ function renderCubes(){
 }
 
 function renderCost(){
-  $('costLevelRow').innerHTML = LEVEL_BRACKETS.map(([level, label]) =>
-    `<button type="button" class="rank-chip ${state.costLevel === level ? 'active' : ''}" data-cost-level="${level}">${label}</button>`).join('');
-  const price = cubePrice(state.cube);
-  $('costInfo').innerHTML = price
-    ? `레전드리 재설정 1회 <strong>${fmt(price)}</strong> 메소`
-    : '공식 가격 없음 — 기대 메소는 재설정 비용표가 있는 큐브만 계산해요.';
+  const input = $('itemLevel');
+  // 타이핑 중에는 입력칸을 건드리지 않는다
+  if(document.activeElement !== input) input.value = state.level;
+  const meso = CUBES[state.cube].official;
+  const bracket = LEVEL_BRACKETS.find(([lv]) => lv === state.costLevel)[1];
+  $('costInfo').innerHTML = meso
+    ? `메소 재설정 1회 <strong>${fmt(mesoResetPrice(state.cube))}</strong> 메소 <span class="tiny">(레전드리 · ${bracket} 구간)</span>`
+      + `<br><span class="tiny">큐브를 쓰면 1회 ${fmt(cubeFee())} 메소</span>`
+    : `큐브 1회 <strong>${fmt(cubeFee())}</strong> 메소 <span class="tiny">(${state.level} × ${state.level} × ${state.level >= 121 ? 20 : state.level >= 71 ? 2.5 : '0.25'})</span>`;
 }
 
 function goalChips(need){
@@ -323,7 +347,7 @@ function renderSets(bracket){
 function renderResult(bracket, goals){
   const cube = state.cube;
   const p = bracket && goals.length ? successProb(bracket.lines, goals) : null;
-  const price = cubePrice(cube);
+  const price = attemptPrice();
   if(p === null){
     ['resProb','resTries','resMeso','resMedian'].forEach(id => $(id).textContent = '-');
     $('resProbSub').textContent = goals.length ? '' : '목표 옵션을 고르면 계산합니다.';
@@ -337,7 +361,7 @@ function renderResult(bracket, goals){
   $('resProbSub').textContent = p > 0 ? `약 ${fmt(tries)}번에 1번` : '이 구간에서는 나올 수 없는 조합';
   $('resTries').textContent = p > 0 ? `${fmt(tries)}회` : '불가능';
   $('resMedian').textContent = p > 0 ? `${fmt(cubesFor(p, .5))}개` : '-';
-  $('resMeso').textContent = !price ? '공식 가격 없음' : p > 0 ? `${mesoText(tries * price)} 메소` : '불가능';
+  $('resMeso').textContent = !price ? '비용 없음' : p > 0 ? `${mesoText(tries * price)} 메소` : '불가능';
 
   $('quantileTable').innerHTML = p > 0 ? `<table class="data-table">
     <thead><tr><th>이 확률로 성공하려면</th><th>큐브 사용량</th>${price ? '<th>메소</th>' : ''}</tr></thead>
@@ -348,8 +372,7 @@ function renderResult(bracket, goals){
   const rows = Object.keys(CUBES).filter(k => CUBES[k].tab === state.tab).map(k => {
     const b = findBracket(k, state.part, state.level);
     const pk = b ? successProb(b.lines, goals) : 0;
-    const ck = cubePrice(k);
-    return `<tr class="${k === cube ? 'current' : ''}"><td>${esc(CUBES[k].name)}</td><td>${pctText(pk)}</td><td>${pk > 0 ? fmt(1 / pk) + '회' : '-'}</td><td>${pk > 0 && ck ? mesoText(ck / pk) : '-'}</td></tr>`;
+    return `<tr class="${k === cube ? 'current' : ''}"><td>${esc(CUBES[k].name)}</td><td>${pctText(pk)}</td><td>${pk > 0 ? fmt(1 / pk) + '회' : '-'}</td><td>${pk > 0 && attemptPrice(k) ? mesoText(attemptPrice(k) / pk) : '-'}</td></tr>`;
   });
   $('comparePanel').classList.toggle('hidden', rows.length < 2);
   $('compareTable').innerHTML = rows.length > 1 ? `<table class="data-table">
@@ -411,17 +434,13 @@ document.addEventListener('click', e => {
     resetGoals(); // 잠재·에디셔널은 옵션 목록이 달라 목표를 비운다
   } else if(t.dataset.part){
     state.part = t.dataset.part;
-    state.level = state.level >= COMMON_LEVEL ? state.level : 200; // 부위를 바꾸면 자주 쓰는 구간부터
+    setLevel(state.level >= COMMON_LEVEL ? state.level : 200); // 부위를 바꾸면 자주 쓰는 구간부터
   } else if(t.dataset.level){
-    state.level = Number(t.dataset.level);
-    // 비용 기준도 구간 끝 레벨에 맞춘다 (따로 바꿀 수 있음)
-    state.costLevel = [...LEVEL_BRACKETS].reverse().find(([lv]) => state.level >= lv)[0];
+    setLevel(Number(t.dataset.level));
   } else if(t.id === 'levelMore'){
     showAllLevels = !showAllLevels; renderLevels(); return;
   } else if(t.dataset.cube){
     state.cube = t.dataset.cube;
-  } else if(t.dataset.costLevel){
-    state.costLevel = Number(t.dataset.costLevel);
   } else if(t.dataset.add){
     const rows = state.sets[state.active].rows;
     if(rows.length >= MAX_ROWS) return;
@@ -454,6 +473,14 @@ $('optionRows').addEventListener('input', e => {
   document.querySelectorAll(`.val-chip[data-set="${set}"][data-row="${row}"]`).forEach(c => c.classList.toggle('active', Number(c.dataset.val) === Number(e.target.value)));
   renderOutputs();
 });
+
+// 아이템 레벨은 확률 구간과 재설정 비용을 한꺼번에 정한다. 입력 중에는 칸을 되돌려 쓰지 않는다
+$('itemLevel').addEventListener('input', e => {
+  if(e.target.value === '') return;
+  setLevel(e.target.value);
+  render();
+});
+$('itemLevel').addEventListener('blur', () => render());
 
 $('dataSource').textContent = `넥슨 공식 확률 검색 기준 · ${DATA.fetchedAt} 수집`;
 render();

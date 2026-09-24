@@ -110,7 +110,10 @@
   .primary-metric .label { color:#a9abc7; font-size:.76rem; }
   .primary-metric .value { font-size:1.45rem; font-weight:900; margin-top:5px; color:var(--cube-gold); line-height:1.15; word-break:break-word; }
   .primary-metric .sub { color:var(--text-dim); font-size:.74rem; margin-top:4px; }
-  .cost-row { display:flex; flex-wrap:wrap; gap:6px; }
+  .cost-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .cost-row label { color:var(--text-dim); font-size:.8rem; }
+  .cost-row input { width:90px; background:#11141a; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 9px; font:inherit; font-size:.9rem; }
+  .cost-info .tiny { color:#777992; }
   .cost-info { margin-top:8px; color:var(--text-dim); font-size:.8rem; }
   .cost-info strong { color:var(--text); }
   .data-table { width:100%; border-collapse:collapse; font-size:.78rem; }
@@ -155,6 +158,10 @@
       <a class="site-menu-item" href="boss_income_calc.html">
         <span class="site-menu-icon">💰</span>
         <span><span class="site-menu-name">보스 수익 정산</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_buff_planner.html">
+        <span class="site-menu-icon">⏱️</span>
+        <span><span class="site-menu-name">보스 버프 동선 짜기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
@@ -240,8 +247,11 @@
           <div class="primary-metric"><div class="label">중앙값 (50%)</div><div class="value" id="resMedian">-</div></div>
           <div class="primary-metric wide"><div class="label">기대 메소</div><div class="value" id="resMeso">-</div></div>
         </div>
-        <h3>비용 기준 (장비 레벨)</h3>
-        <div class="cost-row" id="costLevelRow"></div>
+        <h3>비용 기준</h3>
+        <div class="cost-row">
+          <label for="itemLevel">아이템 레벨</label>
+          <input type="number" id="itemLevel" min="1" max="300" step="1" inputmode="numeric">
+        </div>
         <div class="cost-info" id="costInfo"></div>
         <h3>큐브 사용량</h3>
         <div id="quantileTable"></div>

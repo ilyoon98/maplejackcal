@@ -7,21 +7,22 @@ const POTENTIAL_COST = { 1:[4000000,16000000,34000000,40000000], 160:[4250000,17
 const ADDITIONAL_COST = { 1:[9750000,27300000,66300000,78000000], 160:[10375000,29050000,70550000,83000000], 200:[11000000,30800000,74800000,88000000], 250:[12250000,34300000,83300000,98000000] };
 const PRICE_TABLES = { potential:POTENTIAL_COST, additional:ADDITIONAL_COST };
 const CUBE_ICON = {
-  potentialReset:['잠재.png','블랙.webp'], red:['레드.webp'], meisterMax:['명장.webp','골드.webp'], meister:['장인.webp','실버.webp'], suspicious:['수상한.png'],
+  potentialMeso:['잠재.png'], black:['블랙.webp'], red:['레드.webp'], meisterMax:['명장.webp','골드.webp'], meister:['장인.webp','실버.webp'], suspicious:['수상한.png'],
   addReset:['에디잠재.png'], addWhite:['에디큐브.webp','화이트에디.webp'], addSuspicious:['수상한에디.webp','브론즈.webp']
 };
 function iconImg(files){ return files.map(f=>`<img src="icons/Cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
 const CUBES = {
-  potentialReset:{name:'잠재능력 재설정 / 블랙 큐브', kind:'normal', p:[.15,.035,.014], cap:[10,42,107], official:'potential'},
+  potentialMeso:{name:'잠재능력 재설정 (메소)', kind:'normal', p:[.15,.035,.014], cap:[10,42,107], official:'potential'},
+  black:{name:'블랙 큐브', kind:'normal', p:[.15,.035,.014], cap:[10,42,107]},
   red:{name:'레드 큐브', kind:'normal', p:[.06,.018,.003], cap:[25,83,500]},
   meisterMax:{name:'명장의 큐브 / 골드 큐브', kind:'normal', p:[.079994,.016959,.001996], cap:[null,null,null]},
   meister:{name:'장인의 큐브 / 실버 큐브', kind:'normal', p:[.047619,.011858], cap:[null,null]},
   suspicious:{name:'수상한 큐브', kind:'normal', p:[.009901], cap:[null]},
   addReset:{name:'에디셔널 잠재 재설정', kind:'additional', p:[.02381,.009804,.007], cap:[62,152,214], official:'additional'},
-  addWhite:{name:'에디셔널 큐브 / 화이트 에디셔널 큐브', kind:'additional', p:[.047619,.019608,.007], cap:[62,152,214], official:'additional'},
+  addWhite:{name:'에디셔널 큐브 / 화이트 에디셔널 큐브', kind:'additional', p:[.047619,.019608,.007], cap:[62,152,214]},
   addSuspicious:{name:'수상한 에디셔널 큐브 / 브론즈 에디셔널 큐브', kind:'additional', p:[.004], cap:[null]}
 };
-let state = { tab:'normal', cube:'potentialReset', from:0, to:3, level:1, actual:{}, miracle:false };
+let state = { tab:'normal', cube:'black', from:0, to:3, level:200, actual:{}, miracle:false };
 function effP(p){ return state.miracle ? Math.min(p*2, .999) : p; }
 function maxTo(key){ return CUBES[key].p.length; }
 function ensureValidCube(){
@@ -41,10 +42,20 @@ function successCdf(k, p, cap){
 }
 function rankSpan(i){ return `<span style="color:${RANK_COLORS[i]}">${RANKS[i]}</span>`; }
 function stageNameHtml(i){ return `${rankSpan(i)} → ${rankSpan(i+1)}`; }
+// 큐브 1회에 나가는 메소. 큐브 종류·등급과 무관하게 아이템 레벨 n으로만 정해진다.
+// (인게임 재설정 창의 "재설정 비용". 200제면 200*200*20 = 800,000)
+function cubeFee(level=state.level){
+  const n=Number(level)||0;
+  const rate = n>=121 ? 20 : n>=71 ? 2.5 : n>=31 ? .25 : 0;
+  return Math.floor(n*n*rate);
+}
+// 메소 재설정 비용표의 레벨 구간 키
+function costBracket(level=state.level){ return [...LEVEL_BRACKETS].reverse().find(([lv])=>level>=lv)[0]; }
+// 이 항목 1회 메소. 메소 재설정이면 등급별 비용표, 큐브면 레벨 공식
 function attemptPrice(cube, stage){
-  const d = CUBES[cube];
-  if(d.official) return (PRICE_TABLES[d.official][state.level] || [0,0,0,0])[stage] || 0;
-  return 0;
+  const d=CUBES[cube];
+  if(d.official) return (PRICE_TABLES[d.official][costBracket()] || [0,0,0,0])[stage] || 0;
+  return cubeFee();
 }
 function expectedPlan(cube){
   const d=CUBES[cube], steps=[]; let total=0;
@@ -58,7 +69,7 @@ function expectedPlan(cube){
 function renderTabs(){
   const row=$('kindTabs'); if(!row) return; row.innerHTML='';
   [['normal','잠재능력'],['additional','에디셔널 잠재능력']].forEach(([key,label])=>{
-    const b=document.createElement('button'); b.className='rank-chip tab-chip'+(state.tab===key?' active':''); b.innerHTML=`${iconImg(CUBE_ICON[key==='normal'?'potentialReset':'addReset'])}<span>${label}</span>`;
+    const b=document.createElement('button'); b.className='rank-chip tab-chip'+(state.tab===key?' active':''); b.innerHTML=`${iconImg(CUBE_ICON[key==='normal'?'black':'addReset'])}<span>${label}</span>`;
     b.onclick=()=>{ if(state.tab===key) return; state.tab=key; const first=Object.keys(CUBES).find(k=>CUBES[k].kind===key); state.cube=first; state.actual={}; renderAll(); };
     row.appendChild(b);
   });
@@ -93,13 +104,9 @@ function renderRanks(){
   row.appendChild(goalGroup);
 }
 function renderLevelRow(){
-  const row=$('levelRow'); if(!row) return; row.innerHTML='';
-  LEVEL_BRACKETS.forEach(([level,label])=>{
-    const b=document.createElement('button'); b.className='rank-chip'+(state.level===level?' active':'');
-    b.textContent=label;
-    b.onclick=()=>{ state.level=level; renderAll(); };
-    row.appendChild(b);
-  });
+  const input=$('itemLevel'); if(!input) return;
+  // 타이핑 중에는 입력칸을 건드리지 않는다
+  if(document.activeElement!==input) input.value=state.level;
 }
 function renderChoices(){
   const box=$('cubeChoices'); box.innerHTML='';
@@ -119,13 +126,14 @@ function renderChoices(){
 }
 function renderPriceBox(){
   const box=$('priceBox'); if(!box) return;
-  const d=CUBES[state.cube];
-  if(d.official){
-    const table=PRICE_TABLES[d.official][state.level];
-    box.innerHTML=RANKS.map((name,i)=>`<div class="price-chip"><div class="price-chip-label" style="color:${RANK_COLORS[i]}">${name}</div><div class="price-chip-value">${fmt(table[i])}</div></div>`).join('');
-  } else {
-    box.innerHTML=`<div class="field-note">공식 가격 없음</div>`;
-  }
+  const d=CUBES[state.cube], n=state.level;
+  const rate = n>=121 ? 20 : n>=71 ? 2.5 : n>=31 ? 0.25 : 0;
+  const meso = d.official ? PRICE_TABLES[d.official][costBracket()] : null;
+  const bracketLabel = LEVEL_BRACKETS.find(([lv])=>lv===costBracket())[1];
+  box.innerHTML = meso
+    ? `<div class="field-note">메소 재설정 1회 · ${bracketLabel} 구간</div><div class="price-chip-row">`
+      + RANKS.map((name,i)=>`<div class="price-chip"><div class="price-chip-label" style="color:${RANK_COLORS[i]}">${name}</div><div class="price-chip-value">${fmt(meso[i])}</div></div>`).join('') + '</div>'
+    : `<div class="field-note">큐브 1회 <strong>${fmt(cubeFee())}</strong> 메소 (${n} × ${n} × ${rate})</div>`;
 }
 function renderData(){
   const plan=expectedPlan(state.cube);
@@ -172,4 +180,11 @@ function renderProbTable(){
 }
 function renderAll(){ensureValidCube();renderTabs();renderRanks();renderLevelRow();renderChoices();renderPriceBox();renderData();renderStrategy();renderCeilings();renderProbTable();}
 $('miracleCheckbox').onchange=e=>{state.miracle=e.target.checked;renderAll();};
+// 아이템 레벨이 큐브 1회 메소와 메소 재설정 구간을 함께 정한다
+$('itemLevel').addEventListener('input',e=>{
+  if(e.target.value==='') return;
+  state.level=Math.min(Math.max(Math.round(Number(e.target.value)||0),1),300);
+  renderAll();
+});
+$('itemLevel').addEventListener('blur',renderAll);
 renderAll();
