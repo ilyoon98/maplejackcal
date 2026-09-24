@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<link rel="icon" type="image/png" href="favicon.png?v=2" />
+<meta name="description" content="메이플스토리 스타포스 강화를 공식 확률 그대로 굴려보는 놀이 시뮬레이터" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="메이플 계산기 모음" />
+<meta property="og:description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
+<meta property="og:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>스타포스 놀이</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .sf-page { --sf-gold:#f3c969; --sf-cyan:#55d9ff; --sf-red:#ff7a6b; --sf-green:#9de5c0; --sf-panel:#171827; }
+  .sf-page .wrap { max-width:1280px; }
+  .sf-hero { margin:22px 0 14px; padding:26px 28px; border:1px solid #3b3a2e; border-radius:18px; position:relative; overflow:hidden;
+             background: radial-gradient(circle at 86% 8%, rgba(243,201,105,.20), transparent 36%), linear-gradient(135deg,#1b1a22,#13141e 70%); }
+  .eyebrow { color:var(--sf-cyan); font-size:.72rem; letter-spacing:.16em; font-weight:800; text-transform:uppercase; }
+  .sf-hero h1 { margin:8px 0 8px; font-size:clamp(1.7rem,4vw,2.7rem); letter-spacing:-.045em; }
+  .sf-hero p { max-width:780px; margin:0; color:var(--text-dim); font-size:.9rem; }
+
+  .sf-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,.85fr); gap:18px; align-items:start; }
+  @media(max-width:900px){ .sf-layout{ grid-template-columns:1fr; } .sf-panel.sticky{ position:static; } }
+  .sf-panel { background:var(--sf-panel); border:1px solid #2d2e48; border-radius:14px; padding:18px; margin-top:16px; }
+  .sf-panel h2 { margin:0 0 13px; font-size:1rem; }
+  .panel-kicker { color:var(--text-dim); font-size:.78rem; margin:-6px 0 13px; }
+  .sub-label { color:var(--text-dim); font-size:.78rem; margin:16px 0 7px; }
+  .sub-label:first-of-type { margin-top:0; }
+
+  .sf-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .sf-chip { padding:7px 12px; border:1px solid #373854; background:#20213a; color:var(--text);
+             border-radius:9px; cursor:pointer; font:inherit; font-size:.82rem; }
+  .sf-chip:hover { border-color:var(--sf-gold); }
+  .sf-chip.active { background:var(--sf-gold); border-color:transparent; color:#15131e; font-weight:800; }
+  .sf-chip.sf-chip-level { min-width:64px; text-align:center; font-size:.95rem; font-weight:800; }
+  .sf-chip-preset { border-style:dashed; color:var(--sf-cyan); }
+  .sf-chip-preset.active { color:#15131e; }
+
+  .sf-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; }
+  .sf-field label { display:block; color:var(--text-dim); font-size:.76rem; margin-bottom:5px; }
+  .sf-field input { width:100%; background:#11141a; border:1px solid var(--border); color:var(--text);
+                    border-radius:8px; padding:9px 10px; font:inherit; font-size:.95rem; }
+  .sf-field input:focus { outline:none; border-color:var(--sf-gold); }
+  .field-note { color:var(--text-dim); font-size:.76rem; margin:8px 0 0; }
+  .tiny { color:#777992; font-size:.72rem; line-height:1.7; margin:0; }
+
+  /* ------- 강화 무대 ------- */
+  .star-box { background:linear-gradient(135deg,#242033,#191a28); border:1px solid #3c3352; border-radius:14px;
+              padding:18px; text-align:center; transition:.2s ease; }
+  .star-box.cleared { border-color:var(--sf-gold); background:linear-gradient(135deg,#2e2718,#1c1b2a); }
+  .star-now { display:flex; align-items:baseline; justify-content:center; gap:8px; }
+  .star-num { font-size:3.2rem; font-weight:900; line-height:1; color:var(--sf-gold); font-variant-numeric:tabular-nums;
+              text-shadow:0 0 18px rgba(243,201,105,.35); }
+  .star-mark { font-size:1.6rem; color:var(--sf-gold); }
+  .star-goal { color:var(--text-dim); font-size:.84rem; margin-left:4px; }
+  .star-track { height:6px; border-radius:999px; background:#2c2d46; margin:14px 0 10px; overflow:hidden; }
+  .star-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#f3c969,#55d9ff); transition:width .18s ease; }
+  .stage-odds { font-size:.8rem; color:var(--text-dim); }
+  .stage-odds b { color:var(--text); font-variant-numeric:tabular-nums; }
+  .stage-odds b.odds-win { color:var(--sf-green); }
+  .stage-odds b.odds-boom { color:var(--sf-red); }
+  .stage-cost { font-size:.74rem; color:#777992; margin-top:5px; font-variant-numeric:tabular-nums; }
+  .sf-tag { display:inline-block; margin-left:5px; padding:1px 6px; border-radius:999px;
+            background:rgba(85,217,255,.16); color:var(--sf-cyan); font-size:.66rem; font-weight:700; }
+
+  .sf-flash { height:26px; margin:10px 0 2px; font-size:.9rem; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .sf-flash.win { color:var(--sf-green); animation:flash-pop .22s ease-out; }
+  .sf-flash.keep { color:#9a9cb7; animation:flash-pop .22s ease-out; }
+  .sf-flash.boom { color:var(--sf-red); animation:flash-shake .3s ease-out; }
+  @keyframes flash-pop { 0%{ transform:scale(1.35); opacity:.3; } 100%{ transform:scale(1); opacity:1; } }
+  @keyframes flash-shake { 0%{ transform:translateX(-6px); } 35%{ transform:translateX(6px); } 70%{ transform:translateX(-3px); } 100%{ transform:translateX(0); } }
+
+  .tape { display:flex; gap:4px; justify-content:center; margin-top:10px; min-height:8px; }
+  .tape-dot { width:8px; height:8px; border-radius:50%; background:#3a3b58; }
+  .tape-dot.win { background:var(--sf-green); }
+  .tape-dot.keep { background:#4d4f70; }
+  .tape-dot.boom { background:var(--sf-red); box-shadow:0 0 7px rgba(255,122,107,.6); }
+
+  .sim-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .sim-action-stack { display:grid; }
+  .sim-action-stack > .sim-actions { grid-area:1 / 1; }
+  .sim-actions.one { grid-template-columns:1fr; }
+  .sim-actions.is-hidden { visibility:hidden; pointer-events:none; }
+  .primary-btn,.ghost-btn { border-radius:9px; padding:12px; cursor:pointer; font:inherit; font-weight:800;
+                            display:flex; flex-direction:column; align-items:center; gap:3px; line-height:1.3; }
+  .primary-btn small,.ghost-btn small { font-weight:600; font-size:.74rem; opacity:.8; word-break:keep-all; }
+  .primary-btn { background:var(--sf-gold); border:1px solid var(--sf-gold); color:#17131f; }
+  .ghost-btn { background:#20213a; color:var(--text); border:1px solid #3a3b58; }
+  .ghost-btn.active { background:var(--sf-cyan); border-color:var(--sf-cyan); color:#0d1720; }
+  .primary-btn:hover,.ghost-btn:hover { filter:brightness(1.1); }
+  .reset-row { margin-top:8px; }
+  .reset-btn { width:100%; padding:9px 12px; font-size:.86rem; font-weight:700; }
+
+  /* ------- 통계 ------- */
+  .sim-stats { display:flex; flex-direction:column; gap:9px; margin-top:16px; }
+  .sim-stats:empty { display:none; }
+  .stat-tile { background:#1d1e2e; border:1px solid #2d2e48; border-radius:12px; padding:12px 14px; min-width:0; }
+  .stat-tile .label { font-size:.74rem; color:var(--text-dim); }
+  .stat-tile .value { font-size:1.3rem; font-weight:900; margin-top:4px; font-variant-numeric:tabular-nums; color:var(--text); white-space:nowrap; }
+  .stat-tile .value.boom { color:var(--sf-red); }
+  .stat-tile .sub { font-size:.7rem; color:var(--text-dim); margin-top:2px; }
+  .stat-tile.hero { background:linear-gradient(135deg,#2e2718,#1c1b2a); border-color:#7a6238; text-align:center; padding:16px; }
+  .stat-tile.hero .label { color:var(--sf-gold); font-weight:700; font-size:.8rem; }
+  .stat-tile.hero .value { font-size:2rem; color:var(--sf-gold); text-shadow:0 0 16px rgba(243,201,105,.3); }
+  .stat-tile.hero .sub { margin-top:6px; line-height:1.5; white-space:normal; word-break:keep-all; }
+  .stage-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(105px,1fr)); gap:9px; }
+  .stage-tiles .value { font-size:1.02rem; }
+  .stat-tile.compare { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; }
+  .stat-tile.compare .expected .value { color:var(--text-dim); }
+  .stat-tile.compare .value { font-size:1.12rem; }
+  .cmp-vs { font-size:.7rem; font-weight:800; color:var(--text-dim); letter-spacing:.06em; }
+  .cmp-verdict { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between;
+                 gap:4px 10px; border-top:1px solid rgba(255,255,255,.1); padding-top:10px; margin-top:2px; font-size:.74rem; color:var(--text-dim); }
+  .cmp-verdict b { font-size:1.1rem; white-space:nowrap; }
+  .cmp-verdict b.good { color:var(--sf-green); }
+  .cmp-verdict b.bad { color:#ffaaa1; }
+  .cmp-note { grid-column:1 / -1; margin-top:8px; color:var(--text-dim); font-size:.72rem; line-height:1.6; }
+  .stat-tile.cumulative { background:#191a28; border-color:#39304a; }
+
+  .run-log { margin-top:16px; border-top:1px solid #2d2e48; padding-top:12px; }
+  .run-log:empty { display:none; }
+  .run-log-head { font-size:.82rem; font-weight:800; margin-bottom:6px; }
+  .run-log-head small { color:var(--text-dim); font-weight:600; margin-left:4px; }
+  .run-log-row { display:grid; grid-template-columns:44px 48px 56px 1fr auto; align-items:baseline; gap:8px; font-size:.8rem;
+                 color:var(--text-dim); padding:6px 2px; border-bottom:1px dashed #2d2e48; font-variant-numeric:tabular-nums; }
+  .run-log-row:last-child { border-bottom:none; }
+  .run-log-head + .run-log-row { color:var(--text); }
+  .rl-n { color:var(--sf-cyan); }
+  .rl-boom.on { color:var(--sf-red); }
+  .rl-rank { color:var(--text); font-weight:700; }
+  .rl-meso { text-align:right; }
+
+  @media(max-width:520px){ .sf-hero{padding:22px 18px;} .sf-panel{padding:14px;} }
+</style>
+</head>
+<body class="sf-page">
+<div class="wrap">
+  <nav class="site-nav">
+    <div class="site-tabs-track site-groups">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab active" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>놀이</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_calc.html">
+        <span class="site-menu-icon">⭐</span>
+        <span><span class="site-menu-name">스타포스 기댓값</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_buff_planner.html">
+        <span class="site-menu-icon">⏱️</span>
+        <span><span class="site-menu-name">보스 버프 동선 짜기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_option_calc.html">
+        <span class="site-menu-icon">🎯</span>
+        <span><span class="site-menu-name">큐브 옵션 확률</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 놀이</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item active" href="starforce_play.html">
+        <span class="site-menu-icon">🌟</span>
+        <span><span class="site-menu-name">스타포스 놀이</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 뽑기 놀이</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+      </a>
+      <a class="site-menu-item" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 뽑기</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+      </a>
+    </div>
+  </nav>
+
+  <header class="sf-hero">
+    <div class="eyebrow">STARFORCE / PLAYGROUND</div>
+    <h1>🌟 스타포스 놀이</h1>
+    <p>공식 확률 그대로 목표 성까지 굴려봅니다. 파괴되면 12성으로 되돌아가고, 한 판이 끝날 때마다 실제 지출을 기대 지출과 나란히 비교해요.</p>
+  </header>
+
+  <main class="sf-layout">
+    <section>
+      <div class="sf-panel">
+        <h2>강화 설정</h2>
+        <p class="panel-kicker">설정을 바꾸면 지출 기준이 달라지기 때문에 세션 기록이 초기화됩니다.</p>
+
+        <p class="sub-label">아이템 레벨</p>
+        <div class="sf-chips" id="levelChips"></div>
+        <div class="sf-fields" style="margin-top:10px;">
+          <div class="sf-field"><label for="levelInput">직접 입력</label><input type="number" id="levelInput" min="1" max="300" step="1" inputmode="numeric"></div>
+          <div class="sf-field"><label for="startInput">시작 성</label><input type="number" id="startInput" min="0" max="29" step="1" inputmode="numeric"></div>
+          <div class="sf-field"><label for="goalInput">목표 성</label><input type="number" id="goalInput" min="1" max="30" step="1" inputmode="numeric"></div>
+        </div>
+
+        <p class="sub-label">MVP 할인</p>
+        <div class="sf-chips" id="mvpChips"></div>
+
+        <p class="sub-label">이벤트</p>
+        <div class="sf-chips" id="eventChips"></div>
+
+        <p class="sub-label">파괴방지 (비용 3배)</p>
+        <div class="sf-chips" id="safeguardChips"></div>
+
+        <p class="sub-label">대체 장비값 (노작값)</p>
+        <div class="sf-fields">
+          <div class="sf-field"><label for="spareInput">파괴 1회당 메소</label><input type="text" id="spareInput" inputmode="numeric" placeholder="0"></div>
+        </div>
+        <p class="field-note" id="spareNote"></p>
+      </div>
+
+      <div class="sf-panel">
+        <h2>이 놀이가 굴리는 방식</h2>
+        <p class="tiny">
+          한 번의 강화를 <b>성공 · 유지 · 파괴</b> 세 갈래로만 봅니다. 하락과 찬스타임은 다루지 않아요.<br>
+          파괴가 나면 <b>12성</b>으로 되돌아가고, 노작값을 넣어 두면 그 자리에서 지출에 더해집니다.<br>
+          MVP·PC방 할인은 <b>17성 미만</b>에만 붙고, 파괴방지 추가 비용에는 할인이 붙지 않습니다.<br>
+          기대 지출은 <b>스타포스 기댓값 계산기</b>와 같은 식으로 뽑은 값이라, 두 페이지의 숫자가 서로 맞습니다.<br>
+          <b>상위 %</b>는 같은 설정으로 12,000판을 미리 굴려 둔 분포에서 읽습니다. 내 지출 이하로 끝난 판의 비율이라 낮을수록 운이 좋았다는 뜻이에요.
+        </p>
+      </div>
+    </section>
+
+    <aside>
+      <div class="sf-panel sticky card-primary">
+        <h2>가상 강화</h2>
+        <p class="panel-kicker">목표 성에 도달하면 한 판으로 기록됩니다. 세션 초기화 전까지 통계가 누적돼요.</p>
+
+        <div class="star-box" id="starBox">
+          <div class="star-now">
+            <span class="star-num" id="stageStar">12</span><span class="star-mark">★</span>
+            <span class="star-goal" id="stageGoal">목표 22★</span>
+          </div>
+          <div class="star-track"><div class="star-fill" id="stageBar"></div></div>
+          <div class="stage-odds" id="stageOdds"></div>
+          <div class="stage-cost" id="stageCost"></div>
+          <div class="tape" id="tape"></div>
+        </div>
+
+        <div class="sf-flash" id="flash"></div>
+
+        <div class="sim-action-stack">
+          <div class="sim-actions" id="normalActions">
+            <button class="primary-btn" id="rollBtn">한 번 강화<small>1회 시도</small></button>
+            <button class="ghost-btn" id="autoBtn">자동 강화<small>목표까지 계속</small></button>
+          </div>
+          <div class="sim-actions one is-hidden" id="clearedActions">
+            <button class="primary-btn" id="nextBtn">다음 판 시작<small>시작 성부터 다시</small></button>
+          </div>
+        </div>
+        <div class="reset-row"><button class="ghost-btn reset-btn" id="resetBtn">세션 초기화</button></div>
+
+        <div class="sim-stats" id="simStats"></div>
+        <div class="run-log" id="runLog"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+<script src="site_nav.js"></script>
+<script src="starforce_data.js"></script>
+<script src="starforce_play.js"></script>
+</body>
+</html>
