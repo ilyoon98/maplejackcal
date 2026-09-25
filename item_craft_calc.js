@@ -50,6 +50,9 @@
   const RANK_COLORS = ['#7cd4ff', '#b58cff', '#ffa94d', '#6bd98a'];
   const MVP_OPTIONS = [[0, '없음'], [0.03, '실버'], [0.05, '골드'], [0.10, '다이아']];
   const MAX_GOALS = 3;
+  // 추가옵션을 띄울 만한 장비(파프니르·앱솔랩스·아케인셰이드·에테르넬, 여명·칠흑 악세 등)는
+  // 사실상 전부 보스 드롭이라 언제나 보스 규칙(옵션 4개 고정 · 3~7단계)으로 계산한다.
+  const BOSS = true;
   // 샤이닝 스타포스: 비용 30% 할인 + 파괴확률 30% 감소 + 5·10·15성 100% 성공
   const SHINING = ['discount30', 'destroyDown30', 'lucky5'];
   // 목표로 고를 수 있는 등급 = cube_option_data.js에 옵션표를 모아 둔 등급.
@@ -68,7 +71,7 @@
 
   const STORE_KEY = 'itemCraftCalc';
   const state = {
-    level: 200, part: '무기', boss: true, base: 0,
+    level: 200, part: '무기', base: 0,
     flame: 'mesoReset', flameConds: [],
     // 기본값은 샤이닝 스타포스가 열린 때 기준. 파괴방지는 노작값을 보고 자동으로 정한다.
     star: { start: 0, goal: 22, mvp: 0, pcRoom: false, discount30: true, destroyDown30: true, lucky5: true },
@@ -128,7 +131,7 @@
     const part = partOf(state.part);
     if (!state.on.flame || !part.flame || !state.flameConds.length) return null;
     const p = F.probability({
-      level: state.level, weapon: part.flame === 'weapon', boss: state.boss,
+      level: state.level, weapon: part.flame === 'weapon', boss: BOSS,
       flame: state.flame, conds: state.flameConds
     });
     return stage(p, F.FLAMES[state.flame].meso, 1);
@@ -235,16 +238,10 @@
     if (document.activeElement !== $('basePrice')) $('basePrice').value = comma(state.base);
     $('part').innerHTML = PARTS.map(p =>
       '<option value="' + esc(p.key) + '"' + (p.key === state.part ? ' selected' : '') + '>' + esc(p.short || p.key) + '</option>').join('');
-    $('bossGear').checked = state.boss;
     const br = costBracket(state.level);
     $('itemNote').innerHTML = '재설정 비용 구간 ' + LEVEL_BRACKETS.find(([lv]) => lv === br)[1] +
       ' · 레전드리 잠재 재설정 1회 ' + fmt(PRICE_TABLES.potential[br][LEGENDARY]) + ' 메소';
-    // 보스 장비 여부로 추가옵션 확률이 수백 배 갈리는데 체크박스 하나라 놓치기 쉽다.
-    // 종결급을 쓰는 레벨대에서 꺼져 있으면 경고한다.
-    $('bossWarn').classList.toggle('hidden', state.boss || state.level < BOSS_GEAR_LEVEL);
   }
-  // 이 레벨대 장비는 사실상 전부 보스 드롭이거나 보스 재료로 만든다
-  const BOSS_GEAR_LEVEL = 160;
 
   function renderFlame() {
     const part = partOf(state.part);
@@ -254,7 +251,7 @@
     }
     const weapon = part.flame === 'weapon';
     const list = F.candidates(state.level, weapon);
-    const tiers = F.tiers(state.boss);
+    const tiers = F.tiers(BOSS);
     const used = state.flameConds;
     const full = used.length >= MAX_GOALS;
 
@@ -297,8 +294,7 @@
       (others.length ? '<button type="button" class="ic-more" data-more="flame">' +
         (state.showAll.flame ? '다른 옵션 접기 ▴' : '다른 옵션 펼치기 (' + others.length + ') ▾') + '</button>' +
         '<div class="ic-picks' + (state.showAll.flame ? '' : ' hidden') + '">' + others.map(pick).join('') + '</div>' : '') +
-      '<details class="ic-assume"><summary>단계별로 붙는 수치 보기 (Lv.' + state.level + ' · ' +
-        (state.boss ? '보스 장비 3~7단계' : '일반 1~5단계') + ')</summary>' +
+      '<details class="ic-assume"><summary>단계별로 붙는 수치 보기 (Lv.' + state.level + ' · 3~7단계)</summary>' +
       '<div class="ic-scroll">' + tierTable(list, tiers, weapon) + '</div></details>';
   }
 
@@ -518,7 +514,6 @@
   document.addEventListener('click', e => {
     const t = e.target.closest('button');
     if (!t) return;
-    if (t.id === 'bossFix') { state.boss = true; retierConds(); refresh(); return; }
     if (t.id === 'resetAll') {
       try { localStorage.removeItem(STORE_KEY); } catch (err) {}
       location.reload();
@@ -526,7 +521,7 @@
     }
     const d = t.dataset;
     if (d.flame) state.flame = d.flame;
-    else if (d.addflame) { if (state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'opt', id: d.addflame, minTier: state.boss ? 6 : 4 }); }
+    else if (d.addflame) { if (state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'opt', id: d.addflame, minTier: 6 }); }
     else if (d.addgrade) { if (state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'grade', min: 0 }); }
     else if (d.delcond !== undefined) state.flameConds.splice(Number(d.delcond), 1);
     else if (d.tier !== undefined) state.flameConds[Number(d.cond)].minTier = Number(d.tier);
@@ -582,16 +577,8 @@
       refresh();
     }
     else if (e.target.id === 'part') { state.part = e.target.value; state.flameConds = []; refresh(); }
-    else if (e.target.id === 'bossGear') { state.boss = e.target.checked; retierConds(); refresh(); }
   });
 
-  // 보스 장비는 3~7단계, 일반은 1~5단계라 조건에 걸어둔 단계가 범위를 벗어난다
-  function retierConds() {
-    const range = F.tiers(state.boss);
-    state.flameConds.forEach(c => {
-      if (c.kind === 'opt') c.minTier = Math.min(range[4], Math.max(range[0], c.minTier + (state.boss ? 2 : -2)));
-    });
-  }
 
   document.addEventListener('DOMContentLoaded', () => {
     $('dataSource').textContent = '잠재 옵션표 ' + DATA.fetchedAt + ' 수집 · 추가옵션 · 스타포스는 공식 확률 공개 기준';
