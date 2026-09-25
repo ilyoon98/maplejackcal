@@ -93,6 +93,35 @@ function bracketOf(dataName, part, level, grade){
 function partsOf(dataName, grade){
   return (DATA.cubes[dataName].grades || {})[grade || '레전드리'] || {};
 }
+// STR·DEX·INT·LUK %는 확률이 완전히 같아서 하나로 묶어 "주스탯 %"로 보여준다(대표는 STR).
+const MAIN_STAT_KEY = 'STR|%';
+const HIDDEN_STAT_KEYS = ['DEX|%', 'INT|%', 'LUK|%'];
+
+// 목표 수치는 "이상" 조건이라, 실제로 구분되는 값은 세 줄로 만들 수 있는 합계들뿐이다.
+// (9%와 1%는 결과가 같다. 둘 다 9 이상이면 성공이므로.)
+// 그 합계를 줄 수별로 모아 돌려준다. 같은 합계는 더 적은 줄 수 쪽에만 넣는다.
+function reachableSums(bracket, key){
+  const keys = keysOf(bracket);
+  const info = keys.get(key);
+  if(!info || !key.includes('|')) return [];
+  const set = new Set(info.values);
+  // 주스탯 %에는 올스탯 %가 같은 양으로 더해지므로 올스탯 수치도 후보에 넣는다
+  if(MAIN_STATS.includes(key) && keys.has(ALL_STAT)) for(const v of keys.get(ALL_STAT).values) set.add(v);
+  const vals = [...set].sort((a, b) => a - b);
+  const groups = [];
+  const seen = new Set();
+  let cur = [0];
+  for(let n = 1; n <= 3; n++){
+    const next = new Set();
+    for(const s of cur) for(const v of vals) next.add(Number((s + v).toFixed(4)));
+    cur = [...next].sort((a, b) => a - b);
+    const sums = cur.filter(v => !seen.has(v));
+    sums.forEach(v => seen.add(v));
+    if(sums.length) groups.push({ n, sums });
+  }
+  return groups;
+}
+
 // 이 구간 옵션표에 있는 key와 한 줄에 뜰 수 있는 수치들
 function keysOf(bracket){
   const seen = new Map();

@@ -65,9 +65,18 @@
   .opt-unit { color:var(--text-dim); font-size:.8rem; white-space:nowrap; }
   .opt-remove { background:none; border:1px solid #3a3b58; color:var(--text-dim); border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:1.1rem; line-height:1; }
   .opt-remove:hover { color:var(--bad); border-color:var(--bad); }
-  .opt-chips { display:flex; flex-wrap:wrap; gap:5px; width:100%; }
+  .opt-chips { display:flex; flex-direction:column; gap:5px; width:100%; }
+  .chip-line { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
+  .chip-line-label { flex:none; width:32px; color:#6f7191; font-size:.68rem; }
   .val-chip { padding:3px 10px; border:1px solid #373854; background:#191a2a; color:var(--text-dim); border-radius:999px; cursor:pointer; font:inherit; font-size:.76rem; }
+  .val-chip:hover { border-color:var(--cube-purple); }
   .val-chip.active { background:var(--cube-gold); border-color:transparent; color:#15131e; font-weight:800; }
+  .chip-note { color:#777992; font-size:.72rem; }
+  .chip-note:empty { display:none; }
+  .chip-note b { color:var(--cube-gold); font-weight:700; }
+  .stat-any { padding:3px 9px; border:1px solid #3a3b58; background:none; color:var(--text-dim); border-radius:999px; cursor:pointer; font:inherit; font-size:.72rem; }
+  .stat-any:hover { border-color:var(--cube-cyan); }
+  .stat-any.on { background:rgba(85,217,255,.14); border-color:var(--cube-cyan); color:var(--cube-cyan); font-weight:700; }
   .opt-empty { padding:14px; border:1px dashed #3a3b58; border-radius:10px; color:var(--text-dim); font-size:.84rem; text-align:center; }
   .hidden { display:none !important; }
   .goal-summary { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px; }
@@ -241,7 +250,9 @@
         <p class="tiny">
           · 수치는 <b>최소값</b>이에요. 보스 데미지 30%를 고르면 35%·40%가 떠도 성공으로 칩니다.<br>
           · 세 줄의 수치를 <b>합산</b>해요. STR 18%면 9%+9%, 12%+9%, 12%+9%+9% 모두 성공이고, 같은 옵션을 두 번 추가하면 그 합이 목표가 됩니다.<br>
-          · STR·DEX·INT·LUK %에는 <b>올스탯 %가 같은 양으로 더해져요</b>. STR 12% + STR 9% + 올스탯 6% = STR 27%.<br>
+          · 배지는 <b>세 줄로 만들 수 있는 합계</b>예요. 누르면 그 합계가 그대로 들어가고, 직접 친 숫자는 그 이상에서 가장 가까운 합계부터 성공합니다(20% = 실제로는 21%부터).<br>
+          · STR·DEX·INT·LUK는 확률이 완전히 같아 <b>주스탯 %</b> 하나로 묶었어요. 올스탯 %가 같은 양으로 더해집니다. 주스탯 12% + 주스탯 9% + 올스탯 6% = 27%.<br>
+          · 넷 중 뭐가 떠도 되면 <b>아무 스탯이나</b>를 켜세요. STR·DEX·INT·LUK 각각으로 갈라서 그중 하나만 맞아도 성공으로 칩니다.<br>
           · <b>또는(OR) 조건 추가</b>로 조건을 늘리면 그중 하나만 만족해도 성공이에요. 예: 조건 A 보스 데미지 30% + 공격력 9% 또는 조건 B 공격력 21%.
         </p>
       </div>

@@ -44,7 +44,8 @@ try {
 if(!CUBES[state.cube]) state.cube = 'black';
 state.tab = CUBES[state.cube].tab;
 state.sets = (Array.isArray(state.sets) ? state.sets : []).slice(0, MAX_SETS)
-  .map(set => ({ rows:(Array.isArray(set && set.rows) ? set.rows : []).filter(r => r && r.key).slice(0, MAX_ROWS) }));
+  .map(set => ({ rows:(Array.isArray(set && set.rows) ? set.rows : []).filter(r => r && r.key).slice(0, MAX_ROWS)
+    .map(r => HIDDEN_STAT_KEYS.includes(r.key) ? { ...r, key:MAIN_STAT_KEY } : r) }));
 if(!state.sets.length) state.sets = [{ rows:[] }];
 if(!(state.active < state.sets.length)) state.active = 0;
 let showAllLevels = false;
@@ -107,6 +108,10 @@ function ensureBracket(){
 }
 
 
+const LINE_LABEL = { 1:'한 줄', 2:'두 줄', 3:'세 줄' };
+// STR·DEX·INT·LUK는 확률이 같아 "주스탯 %" 하나로 묶어 보여준다
+const optLabel = key => key === MAIN_STAT_KEY ? '주스탯 %' : keyLabel(key);
+
 function needOf(set){
   const sums = new Map();
   for(const r of set.rows){
@@ -116,7 +121,13 @@ function needOf(set){
   }
   return [...sums];
 }
-function goalsOf(){ return state.sets.map(needOf).filter(g => g.length); }
+// "아무 스탯이나" 행은 STR·DEX·INT·LUK 각각으로 갈라서 OR 조건을 늘린다.
+// 나머지 행은 그대로 따라붙으므로 "보스뎀 30 AND (주스탯 21 중 아무거나)"가 정확히 계산된다.
+function setVariants(set){
+  if(!set.rows.some(r => r.any && r.key === MAIN_STAT_KEY)) return [needOf(set)];
+  return MAIN_STATS.map(stat => needOf({ rows:set.rows.map(r => r.any && r.key === MAIN_STAT_KEY ? { ...r, key:stat } : r) }));
+}
+function goalsOf(){ return state.sets.flatMap(setVariants).filter(g => g.length); }
 function resetGoals(){ state.sets = [{ rows:[] }]; state.active = 0; }
 
 // ---------- 그리기 ----------
@@ -169,10 +180,11 @@ function renderCost(){
     : `큐브 1회 <strong>${fmt(cubeFee(state.level))}</strong> 메소 <span class="tiny">(${state.level} × ${state.level} × ${state.level >= 121 ? 20 : state.level >= 71 ? 2.5 : '0.25'})</span>`;
 }
 
-function goalChips(need){
+function goalChips(need, set){
+  const anyStat = set && set.rows.some(r => r.any && r.key === MAIN_STAT_KEY);
   return need.map(([k, v]) => {
     const unit = keyUnit(k);
-    const name = keyLabel(k) + (MAIN_STATS.includes(k) ? ' (올스탯 포함)' : '');
+    const name = optLabel(k) + (MAIN_STATS.includes(k) ? (anyStat ? ' (넷 중 아무거나 · 올스탯 포함)' : ' (올스탯 포함)') : '');
     const text = unit === '줄' ? `${esc(k)} ${v}줄 이상` : `${esc(name)} 합계 ${v}${esc(unit)} 이상`;
     return `<span class="goal-chip">${text}</span>`;
   }).join('<span class="goal-and">AND</span>');
@@ -185,16 +197,30 @@ function renderSets(bracket){
   const multi = state.sets.length > 1;
   const rowHtml = (r, si, i) => {
     const info = keys.get(r.key);
-    const values = info ? [...info.values].sort((a, b) => a - b) : [];
     const isCount = !r.key.includes('|');
+    // 배지는 한 줄 값이 아니라 "세 줄로 만들 수 있는 합계"다. 입력칸과 단위가 같아야 헷갈리지 않는다.
+    const groups = info && !isCount ? reachableSums(bracket, r.key) : [];
+    const all = groups.flatMap(g => g.sums);
+    const min = Number(r.min);
+    // 친 숫자 이상에서 가장 가까운 합계가 실제 성공 기준이다
+    const hit = all.find(v => v >= min - 1e-9);
+    const unit = keyUnit(r.key);
+    // 안내문 칸은 비어 있어도 남겨 둔다. 타이핑 중에는 이 칸만 갱신한다.
+    const note = !(min > 0) || !all.length ? ''
+      : hit === undefined ? `세 줄로 만들 수 없는 값이에요 (최대 ${all[all.length - 1]}${esc(unit)})`
+      : Math.abs(hit - min) > 1e-9 ? `${min}${esc(unit)} 이상 = 실제로는 <b>${hit}${esc(unit)}</b>부터 성공` : '';
     return `<div class="opt-row ${info ? '' : 'missing'}">
-      <span class="opt-name">${esc(keyLabel(r.key))}${MAIN_STATS.includes(r.key) ? '<small>올스탯 포함</small>' : ''}${info ? '' : '<small class="missing-note">이 부위·레벨에는 없는 옵션</small>'}</span>
+      <span class="opt-name">${esc(optLabel(r.key))}${MAIN_STATS.includes(r.key) ? '<small>올스탯 포함</small>' : ''}${info ? '' : '<small class="missing-note">이 부위·레벨에는 없는 옵션</small>'}</span>
+      ${r.key === MAIN_STAT_KEY ? `<button type="button" class="stat-any ${r.any ? 'on' : ''}" data-set="${si}" data-any="${i}" title="STR·DEX·INT·LUK 중 아무거나 하나만 맞으면 성공으로 칩니다">${r.any ? '아무 스탯이나' : '한 스탯으로'}</button>` : ''}
       ${isCount ? '<span class="opt-unit">1줄 이상</span>' : `<span class="opt-min">
         <input type="number" min="0" step="any" data-set="${si}" data-row="${i}" class="opt-val" value="${esc(r.min)}" placeholder="최소값">
-        <span class="opt-unit">${esc(keyUnit(r.key))} 이상</span>
+        <span class="opt-unit">${esc(unit)} 이상</span>
       </span>`}
-      <button type="button" class="opt-remove" data-set="${si}" data-remove="${i}" aria-label="${esc(keyLabel(r.key))} 지우기">×</button>
-      ${isCount ? '' : `<span class="opt-chips">${values.map(v => `<button type="button" class="val-chip ${Number(r.min) === v ? 'active' : ''}" data-set="${si}" data-row="${i}" data-val="${v}">${v}</button>`).join('')}</span>`}
+      <button type="button" class="opt-remove" data-set="${si}" data-remove="${i}" aria-label="${esc(optLabel(r.key))} 지우기">×</button>
+      ${groups.length ? `<span class="opt-chips">${groups.map(g => `<span class="chip-line">
+        <span class="chip-line-label">${LINE_LABEL[g.n]}</span>
+        ${g.sums.map(v => `<button type="button" class="val-chip ${v === hit ? 'active' : ''}" data-set="${si}" data-row="${i}" data-val="${v}">${v}</button>`).join('')}
+      </span>`).join('')}<span class="chip-note">${note}</span></span>` : ''}
     </div>`;
   };
   $('optionRows').innerHTML = state.sets.map((set, si) => {
@@ -208,16 +234,16 @@ function renderSets(bracket){
         <button type="button" class="opt-remove" data-remove-set="${si}" aria-label="조건 ${SET_NAMES[si]} 지우기">×</button>
       </div>` : ''}
       ${set.rows.length ? set.rows.map((r, i) => rowHtml(r, si, i)).join('') : '<div class="opt-empty">위에서 옵션을 눌러 목표에 추가하세요.</div>'}
-      ${need.length ? `<div class="goal-summary">${goalChips(need)}</div>` : ''}
+      ${need.length ? `<div class="goal-summary">${goalChips(need, set)}</div>` : ''}
     </div>`;
   }).join('');
   $('addSet').disabled = !bracket || state.sets.length >= MAX_SETS;
 
   const target = state.sets[state.active];
   const full = target.rows.length >= MAX_ROWS;
-  const primary = PRIMARY_KEYS.filter(k => keys.has(k));
-  const others = [...keys.keys()].filter(k => !PRIMARY_KEYS.includes(k));
-  const chip = k => `<button type="button" class="pick-chip" data-add="${esc(k)}" ${full ? 'disabled' : ''}>${esc(keyLabel(k))}</button>`;
+  const primary = PRIMARY_KEYS.filter(k => keys.has(k) && !HIDDEN_STAT_KEYS.includes(k));
+  const others = [...keys.keys()].filter(k => !PRIMARY_KEYS.includes(k) && !HIDDEN_STAT_KEYS.includes(k));
+  const chip = k => `<button type="button" class="pick-chip" data-add="${esc(k)}" ${full ? 'disabled' : ''}>${esc(optLabel(k))}</button>`;
   $('pickTarget').textContent = multi ? `조건 ${SET_NAMES[state.active]}에 추가` : '목표에 추가';
   $('pickCount').textContent = `${target.rows.length}/${MAX_ROWS}`;
   $('primaryPicks').innerHTML = primary.map(chip).join('');
@@ -282,7 +308,7 @@ function renderOutputs(){
     let box = card.querySelector('.goal-summary');
     if(!need.length){ if(box) box.remove(); return; }
     if(!box){ box = document.createElement('div'); box.className = 'goal-summary'; card.appendChild(box); }
-    box.innerHTML = goalChips(need);
+    box.innerHTML = goalChips(need, set);
   });
   renderResult(bracket, goals);
   renderOptionTable(bracket, goals);
@@ -328,6 +354,9 @@ document.addEventListener('click', e => {
     const info = keysOf(currentBracket()).get(t.dataset.add);
     // 기본값: 이 옵션의 가장 낮은 수치 (최소값 조건이라 그 위 수치도 모두 성공)
     rows.push({ key:t.dataset.add, min:t.dataset.add.includes('|') ? Math.min(...info.values) : 1 });
+  } else if(t.dataset.any){
+    const row = state.sets[t.dataset.set].rows[Number(t.dataset.any)];
+    row.any = !row.any;
   } else if(t.dataset.remove){
     state.sets[t.dataset.set].rows.splice(Number(t.dataset.remove), 1);
   } else if(t.classList.contains('val-chip')){
@@ -351,7 +380,19 @@ $('optionRows').addEventListener('input', e => {
   if(!e.target.classList.contains('opt-val')) return;
   const { set, row } = e.target.dataset;
   state.sets[set].rows[row].min = e.target.value;
-  document.querySelectorAll(`.val-chip[data-set="${set}"][data-row="${row}"]`).forEach(c => c.classList.toggle('active', Number(c.dataset.val) === Number(e.target.value)));
+  // 입력칸을 다시 그리면 포커스가 날아가므로, 켜지는 배지와 안내문만 손으로 갱신한다.
+  // 친 숫자 이상에서 가장 가까운 합계가 실제 성공 기준이다.
+  const min = Number(e.target.value);
+  const chips = [...document.querySelectorAll(`.val-chip[data-set="${set}"][data-row="${row}"]`)];
+  const hit = chips.map(c => Number(c.dataset.val)).sort((a, b) => a - b).find(v => v >= min - 1e-9);
+  chips.forEach(c => c.classList.toggle('active', Number(c.dataset.val) === hit));
+  const note = e.target.closest('.opt-row').querySelector('.chip-note');
+  if(note){
+    const unit = keyUnit(state.sets[set].rows[row].key);
+    note.innerHTML = !(min > 0) || hit === min ? ''
+      : hit === undefined ? `세 줄로 만들 수 없는 값이에요`
+      : `${min}${esc(unit)} 이상 = 실제로는 <b>${hit}${esc(unit)}</b>부터 성공`;
+  }
   renderOutputs();
 });
 
