@@ -75,6 +75,7 @@
     flame: 'mesoReset', flameConds: [],
     // 기본값은 샤이닝 스타포스가 열린 때 기준. 파괴방지는 노작값을 보고 자동으로 정한다.
     star: { start: 0, goal: 22, mvp: 0, pcRoom: false, discount30: true, destroyDown30: true, lucky5: true },
+    miracle: false,
     pot: { from: 2, to: 3, rows: [] },
     addi: { from: 0, to: 3, rows: [] },
     // 이미 되어 있는 걸 사서 나머지만 작할 수도 있어서 단계마다 계산에서 뺄 수 있게 한다
@@ -174,6 +175,10 @@
     };
   }
 
+  // 미라클 타임은 등급 상승 확률만 2배로 올린다. 원하는 옵션이 뜰 확률과 천장은 그대로다.
+  // (잠재능력 큐브 연구소 cube_calc.js와 같은 규칙)
+  const miracleP = p => state.miracle ? Math.min(p * 2, 0.999) : p;
+
   // 잠재 / 에디셔널: 메소 재설정으로 레전드리까지 등급을 올린 뒤, 원하는 옵션이 뜰 때까지 다시 돌린다.
   // 등급업에 성공한 그 재설정이 이미 레전드리 옵션을 한 번 굴려준 셈이라 옵션 단계에서 1회를 뺀다.
   function potentialResult(cfg) {
@@ -185,8 +190,9 @@
     const steps = [];
     let min = 0, avg = 0;
     for (let i = cur.from; i < cur.to; i++) {
-      const tries = cubeExpected(grade.p[i], grade.cap[i]);
-      steps.push({ label: RANKS[i] + ' → ' + RANKS[i + 1], p: grade.p[i], cap: grade.cap[i], tries, price: prices[i] });
+      const p = miracleP(grade.p[i]);
+      const tries = cubeExpected(p, grade.cap[i]);
+      steps.push({ label: RANKS[i] + ' → ' + RANKS[i + 1], p, cap: grade.cap[i], tries, price: prices[i] });
       min += prices[i];
       avg += tries * prices[i];
     }
@@ -398,6 +404,12 @@
       '<div class="ic-chips">' + goalsFor(cfg.short).map(i =>
         '<button type="button" class="ic-chip grade' + (cur.to === i ? ' active' : '') + (i < cur.from ? ' dim' : '') +
         '" style="--chip:' + RANK_COLORS[i] + '" data-goal="' + cfg.short + '" data-i="' + i + '">' + RANKS[i] + '</button>').join('') + '</div></div>' +
+      // 미라클 타임은 잠재·에디에 같이 걸리는 이벤트라 스위치는 잠재 쪽에만 두고, 에디에는 상태만 보여준다
+      (cfg.short === 'pot'
+        ? '<div class="ic-sub">이벤트</div>' +
+          '<div class="ic-chips">' + chip('✨ 미라클 타임', state.miracle, 'data-miracle="1"') + '</div>' +
+          '<p class="ic-note">등급 상승 확률이 2배가 됩니다. 에디셔널에도 같이 적용돼요. (옵션이 뜰 확률과 천장은 그대로)</p>'
+        : (state.miracle ? '<p class="ic-note">✨ 미라클 타임 적용 중 — 등급 상승 확률 2배</p>' : '')) +
       '<div class="ic-sub">목표 옵션 <small>' + RANKS[cur.to] + ' 옵션표 기준</small> <span class="ic-count">' + cur.rows.length + '/' + MAX_GOALS + '</span></div>' +
       (b ? '' : '<p class="ic-empty bad">' + esc(state.part) + '은(는) ' + RANKS[cur.to] + ' 확률표에 없어 옵션 계산을 할 수 없습니다.</p>') +
       (rows || '<p class="ic-empty">옵션을 고르지 않으면 등급업 비용만 계산합니다.</p>') +
@@ -528,6 +540,7 @@
     else if (d.mvp !== undefined) state.star.mvp = Number(d.mvp);
     else if (d.sf) state.star[d.sf] = !state.star[d.sf];
     else if (d.shining) { const on = !SHINING.every(k => state.star[k]); SHINING.forEach(k => { state.star[k] = on; }); }
+    else if (d.miracle) state.miracle = !state.miracle;
     else if (d.grade) { const c = cfgOf(d.grade); c.from = Number(d.i); if (c.to < c.from) c.to = 3; }
     else if (d.goal) { const c = cfgOf(d.goal); c.to = Number(d.i); if (c.from > c.to) c.from = c.to; }
     else if (d.addpot) {
