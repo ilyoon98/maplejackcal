@@ -27,6 +27,9 @@
   .ic-toggle { margin-left:auto; display:inline-flex; align-items:center; gap:6px;
     color:var(--text-dim); font-size:.74rem; font-weight:400; cursor:pointer; }
   .ic-toggle input { width:15px; height:15px; }
+  .ic-reset { margin-left:auto; padding:4px 11px; border:1px solid #3a3b58; background:none;
+    color:var(--text-dim); border-radius:999px; cursor:pointer; font:inherit; font-size:.74rem; font-weight:400; }
+  .ic-reset:hover { color:var(--bad); border-color:var(--bad); }
   .ic-panel.off > h2 { color:var(--text-dim); }
   .ic-panel.off > h2 .ic-toggle { color:#6f7192; }
   .ic-panel.off > :not(h2) { opacity:.35; }
@@ -102,6 +105,12 @@
   .ic-ratio { margin:10px 0 0; color:var(--text-dim); font-size:.8rem; text-align:center; }
 
   .ic-note { color:var(--text-dim); font-size:.78rem; margin:6px 0 0; line-height:1.6; }
+  .ic-warn { margin:12px 0 0; padding:11px 13px; border:1px solid var(--bad); border-radius:10px;
+    background:rgba(214,92,92,.08); color:var(--text); font-size:.79rem; line-height:1.7; }
+  .ic-warn b { color:var(--bad); }
+  .ic-warn-fix { margin-left:6px; padding:4px 11px; border:1px solid var(--bad); background:none;
+    color:var(--bad); border-radius:999px; cursor:pointer; font:inherit; font-size:.75rem; font-weight:700; }
+  .ic-warn-fix:hover { background:var(--bad); color:#15131e; }
   .ic-card { margin-top:14px; padding:14px; border:1px solid #2d2e48; border-radius:12px; background:#1b1c2d; }
   .ic-card h3 { margin:0 0 6px; font-size:.9rem; }
   .ic-big { margin:8px 0 0; font-size:1.3rem; font-weight:900; color:#f3c969; }
@@ -201,7 +210,8 @@
   <main class="ic-layout">
     <section>
       <div class="ic-panel">
-        <h2>01 · 아이템</h2>
+        <h2>01 · 아이템
+          <button type="button" class="ic-reset" id="resetAll">↺ 설정 초기화</button></h2>
         <div class="ic-fields">
           <div class="ic-field">
             <label for="level">아이템 레벨</label>
@@ -219,6 +229,12 @@
             <input type="text" id="basePrice" inputmode="numeric" placeholder="예: 3,000,000,000">
           </div>
         </div>
+        <p class="ic-warn hidden" id="bossWarn">
+          ⚠️ <b>보스 장비</b>가 꺼져 있습니다. 파프니르 · 앱솔랩스 · 아케인셰이드 · 에테르넬,
+          여명 · 칠흑 악세서리처럼 이 레벨대에서 쓰는 장비는 거의 다 보스 장비예요.
+          꺼져 있으면 추가옵션이 <b>1~5단계 · 1~4줄</b>로 계산돼서 확률이 수백 배 낮게 나옵니다.
+          <button type="button" class="ic-warn-fix" id="bossFix">보스 장비로 켜기</button>
+        </p>
         <p class="ic-note" id="itemNote"></p>
       </div>
 

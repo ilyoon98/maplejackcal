@@ -237,9 +237,14 @@
       '<option value="' + esc(p.key) + '"' + (p.key === state.part ? ' selected' : '') + '>' + esc(p.short || p.key) + '</option>').join('');
     $('bossGear').checked = state.boss;
     const br = costBracket(state.level);
-    $('itemNote').textContent = '재설정 비용 구간 ' + LEVEL_BRACKETS.find(([lv]) => lv === br)[1] +
+    $('itemNote').innerHTML = '재설정 비용 구간 ' + LEVEL_BRACKETS.find(([lv]) => lv === br)[1] +
       ' · 레전드리 잠재 재설정 1회 ' + fmt(PRICE_TABLES.potential[br][LEGENDARY]) + ' 메소';
+    // 보스 장비 여부로 추가옵션 확률이 수백 배 갈리는데 체크박스 하나라 놓치기 쉽다.
+    // 종결급을 쓰는 레벨대에서 꺼져 있으면 경고한다.
+    $('bossWarn').classList.toggle('hidden', state.boss || state.level < BOSS_GEAR_LEVEL);
   }
+  // 이 레벨대 장비는 사실상 전부 보스 드롭이거나 보스 재료로 만든다
+  const BOSS_GEAR_LEVEL = 160;
 
   function renderFlame() {
     const part = partOf(state.part);
@@ -513,6 +518,12 @@
   document.addEventListener('click', e => {
     const t = e.target.closest('button');
     if (!t) return;
+    if (t.id === 'bossFix') { state.boss = true; retierConds(); refresh(); return; }
+    if (t.id === 'resetAll') {
+      try { localStorage.removeItem(STORE_KEY); } catch (err) {}
+      location.reload();
+      return;
+    }
     const d = t.dataset;
     if (d.flame) state.flame = d.flame;
     else if (d.addflame) { if (state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'opt', id: d.addflame, minTier: state.boss ? 6 : 4 }); }
@@ -571,16 +582,16 @@
       refresh();
     }
     else if (e.target.id === 'part') { state.part = e.target.value; state.flameConds = []; refresh(); }
-    else if (e.target.id === 'bossGear') {
-      state.boss = e.target.checked;
-      // 보스 장비는 3~7단계, 일반은 1~5단계라 조건에 걸어둔 단계가 범위를 벗어난다
-      const range = F.tiers(state.boss);
-      state.flameConds.forEach(c => {
-        if (c.kind === 'opt') c.minTier = Math.min(range[4], Math.max(range[0], c.minTier + (state.boss ? 2 : -2)));
-      });
-      refresh();
-    }
+    else if (e.target.id === 'bossGear') { state.boss = e.target.checked; retierConds(); refresh(); }
   });
+
+  // 보스 장비는 3~7단계, 일반은 1~5단계라 조건에 걸어둔 단계가 범위를 벗어난다
+  function retierConds() {
+    const range = F.tiers(state.boss);
+    state.flameConds.forEach(c => {
+      if (c.kind === 'opt') c.minTier = Math.min(range[4], Math.max(range[0], c.minTier + (state.boss ? 2 : -2)));
+    });
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     $('dataSource').textContent = '잠재 옵션표 ' + DATA.fetchedAt + ' 수집 · 추가옵션 · 스타포스는 공식 확률 공개 기준';
