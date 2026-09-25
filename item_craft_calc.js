@@ -56,6 +56,9 @@
   // 에디셔널은 에픽에서 멈추는 것도 흔해서 에픽까지 연다.
   const GOAL_RANKS = { pot: [2, 3], addi: [1, 2, 3] };
   const goalsFor = short => GOAL_RANKS[short] || GOAL_RANKS.pot;
+  // 잠재능력은 레어에서 시작할 일이 없어서(에픽 이상부터 돌린다) 후보에서 뺀다.
+  const FROM_RANKS = { pot: [1, 2, 3], addi: [0, 1, 2, 3] };
+  const fromsFor = short => FROM_RANKS[short] || FROM_RANKS.pot;
   // STR·DEX·INT·LUK %는 확률이 완전히 같아서 하나로 묶어 "주스탯 %"로 보여준다(대표는 STR).
   const MAIN_STAT_KEY = 'STR|%';
   const HIDDEN_STAT_KEYS = ['DEX|%', 'INT|%', 'LUK|%'];
@@ -387,8 +390,8 @@
     $(id).innerHTML =
       '<div class="ic-sub">현재 등급 → 목표 등급</div>' +
       '<div class="ic-grades">' +
-      '<div class="ic-chips">' + RANKS.map((name, i) =>
-        '<button type="button" class="ic-chip grade' + (cur.from === i ? ' active' : '') + '" style="--chip:' + RANK_COLORS[i] + '" data-grade="' + cfg.short + '" data-i="' + i + '">' + name + '</button>').join('') + '</div>' +
+      '<div class="ic-chips">' + fromsFor(cfg.short).map(i =>
+        '<button type="button" class="ic-chip grade' + (cur.from === i ? ' active' : '') + '" style="--chip:' + RANK_COLORS[i] + '" data-grade="' + cfg.short + '" data-i="' + i + '">' + RANKS[i] + '</button>').join('') + '</div>' +
       '<span class="ic-arrow">➔</span>' +
       // 옵션표를 모아 둔 등급까지만 목표로 고를 수 있다(유니크·레전드리)
       '<div class="ic-chips">' + goalsFor(cfg.short).map(i =>
@@ -475,7 +478,9 @@
     state.flameConds = state.flameConds.slice(0, MAX_GOALS);
     [['pot', state.pot], ['addi', state.addi]].forEach(([short, c]) => {
       if (!goalsFor(short).includes(c.to)) c.to = 3;
-      c.from = Math.min(Math.max(c.from | 0, 0), c.to);
+      const froms = fromsFor(short);
+      if (!froms.includes(c.from)) c.from = froms[0];
+      c.from = Math.min(c.from, c.to);
     });
     state.pot.rows = state.pot.rows.slice(0, MAX_GOALS);
     state.addi.rows = state.addi.rows.slice(0, MAX_GOALS);
