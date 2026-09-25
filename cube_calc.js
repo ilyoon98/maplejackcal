@@ -1,26 +1,21 @@
 const RANKS = ['레어', '에픽', '유니크', '레전드리'];
 const RANK_COLORS = ['#7cd4ff', '#b58cff', '#ffa94d', '#6bd98a'];
-const LEVEL_BRACKETS = [[1,'1~159'],[160,'160~199'],[200,'200~249'],[250,'250~300']];
-// 잠재능력 재설정(=블랙 큐브와 동일 기능) 메소 가격. 레벨구간 → [레어,에픽,유니크,레전드리]
-const POTENTIAL_COST = { 1:[4000000,16000000,34000000,40000000], 160:[4250000,17000000,36125000,42500000], 200:[4500000,18000000,38250000,45000000], 250:[5000000,20000000,42500000,50000000] };
-// 에디셔널 잠재능력 재설정(=화이트 에디셔널 큐브와 동일 기능) 메소 가격
-const ADDITIONAL_COST = { 1:[9750000,27300000,66300000,78000000], 160:[10375000,29050000,70550000,83000000], 200:[11000000,30800000,74800000,88000000], 250:[12250000,34300000,83300000,98000000] };
-const PRICE_TABLES = { potential:POTENTIAL_COST, additional:ADDITIONAL_COST };
 const CUBE_ICON = {
   potentialMeso:['잠재.png'], black:['블랙.webp'], red:['레드.webp'], meisterMax:['명장.webp','골드.webp'], meister:['장인.webp','실버.webp'], suspicious:['수상한.png'],
   addReset:['에디잠재.png'], addWhite:['에디큐브.webp','화이트에디.webp'], addSuspicious:['수상한에디.webp','브론즈.webp']
 };
 function iconImg(files){ return files.map(f=>`<img src="icons/Cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
+// 화면에 쓰는 이름·분류. 확률과 천장은 cube_core.js의 CUBE_GRADE를 그대로 가져온다.
 const CUBES = {
-  potentialMeso:{name:'잠재능력 재설정 (메소)', kind:'normal', p:[.15,.035,.014], cap:[10,42,107], official:'potential'},
-  black:{name:'블랙 큐브', kind:'normal', p:[.15,.035,.014], cap:[10,42,107]},
-  red:{name:'레드 큐브', kind:'normal', p:[.06,.018,.003], cap:[25,83,500]},
-  meisterMax:{name:'명장의 큐브 / 골드 큐브', kind:'normal', p:[.079994,.016959,.001996], cap:[null,null,null]},
-  meister:{name:'장인의 큐브 / 실버 큐브', kind:'normal', p:[.047619,.011858], cap:[null,null]},
-  suspicious:{name:'수상한 큐브', kind:'normal', p:[.009901], cap:[null]},
-  addReset:{name:'에디셔널 잠재 재설정', kind:'additional', p:[.02381,.009804,.007], cap:[62,152,214], official:'additional'},
-  addWhite:{name:'에디셔널 큐브 / 화이트 에디셔널 큐브', kind:'additional', p:[.047619,.019608,.007], cap:[62,152,214]},
-  addSuspicious:{name:'수상한 에디셔널 큐브 / 브론즈 에디셔널 큐브', kind:'additional', p:[.004], cap:[null]}
+  potentialMeso:{name:'잠재능력 재설정 (메소)', kind:'normal', official:'potential', ...CUBE_GRADE.potentialMeso},
+  black:{name:'블랙 큐브', kind:'normal', ...CUBE_GRADE.black},
+  red:{name:'레드 큐브', kind:'normal', ...CUBE_GRADE.red},
+  meisterMax:{name:'명장의 큐브 / 골드 큐브', kind:'normal', ...CUBE_GRADE.meisterMax},
+  meister:{name:'장인의 큐브 / 실버 큐브', kind:'normal', ...CUBE_GRADE.meister},
+  suspicious:{name:'수상한 큐브', kind:'normal', ...CUBE_GRADE.suspicious},
+  addReset:{name:'에디셔널 잠재 재설정', kind:'additional', official:'additional', ...CUBE_GRADE.addReset},
+  addWhite:{name:'에디셔널 큐브 / 화이트 에디셔널 큐브', kind:'additional', ...CUBE_GRADE.addWhite},
+  addSuspicious:{name:'수상한 에디셔널 큐브 / 브론즈 에디셔널 큐브', kind:'additional', ...CUBE_GRADE.addSuspicious}
 };
 let state = { tab:'normal', cube:'black', from:0, to:3, level:200, actual:{}, miracle:false };
 function effP(p){ return state.miracle ? Math.min(p*2, .999) : p; }
@@ -34,28 +29,12 @@ function ensureValidCube(){
 const $ = id => document.getElementById(id);
 function fmt(n){ return Number.isFinite(n) ? Math.round(n).toLocaleString('ko-KR') : '∞'; }
 function pct(n){ return `${(n*100).toFixed(4).replace(/0+$/,'').replace(/\.$/,'')}%`; }
-function cubeExpected(p, cap){ return cap ? (1-Math.pow(1-p,cap))/p : 1/p; }
-// 천장(cap)에 도달하면 그 시도에서 반드시 성공하므로, k가 cap 이상이면 성공 확률은 100%다.
-function successCdf(k, p, cap){
-  if(cap && k>=cap) return 1;
-  return 1-Math.pow(1-p, k);
-}
 function rankSpan(i){ return `<span style="color:${RANK_COLORS[i]}">${RANKS[i]}</span>`; }
 function stageNameHtml(i){ return `${rankSpan(i)} → ${rankSpan(i+1)}`; }
-// 큐브 1회에 나가는 메소. 큐브 종류·등급과 무관하게 아이템 레벨 n으로만 정해진다.
-// (인게임 재설정 창의 "재설정 비용". 200제면 200*200*20 = 800,000)
-function cubeFee(level=state.level){
-  const n=Number(level)||0;
-  const rate = n>=121 ? 20 : n>=71 ? 2.5 : n>=31 ? .25 : 0;
-  return Math.floor(n*n*rate);
-}
-// 메소 재설정 비용표의 레벨 구간 키
-function costBracket(level=state.level){ return [...LEVEL_BRACKETS].reverse().find(([lv])=>level>=lv)[0]; }
-// 이 항목 1회 메소. 메소 재설정이면 등급별 비용표, 큐브면 레벨 공식
 function attemptPrice(cube, stage){
   const d=CUBES[cube];
-  if(d.official) return (PRICE_TABLES[d.official][costBracket()] || [0,0,0,0])[stage] || 0;
-  return cubeFee();
+  if(d.official) return (PRICE_TABLES[d.official][costBracket(state.level)] || [0,0,0,0])[stage] || 0;
+  return cubeFee(state.level);
 }
 function expectedPlan(cube){
   const d=CUBES[cube], steps=[]; let total=0;
@@ -128,12 +107,12 @@ function renderPriceBox(){
   const box=$('priceBox'); if(!box) return;
   const d=CUBES[state.cube], n=state.level;
   const rate = n>=121 ? 20 : n>=71 ? 2.5 : n>=31 ? 0.25 : 0;
-  const meso = d.official ? PRICE_TABLES[d.official][costBracket()] : null;
-  const bracketLabel = LEVEL_BRACKETS.find(([lv])=>lv===costBracket())[1];
+  const meso = d.official ? PRICE_TABLES[d.official][costBracket(state.level)] : null;
+  const bracketLabel = LEVEL_BRACKETS.find(([lv])=>lv===costBracket(state.level))[1];
   box.innerHTML = meso
     ? `<div class="field-note">메소 재설정 1회 · ${bracketLabel} 구간</div><div class="price-chip-row">`
       + RANKS.map((name,i)=>`<div class="price-chip"><div class="price-chip-label" style="color:${RANK_COLORS[i]}">${name}</div><div class="price-chip-value">${fmt(meso[i])}</div></div>`).join('') + '</div>'
-    : `<div class="field-note">큐브 1회 <strong>${fmt(cubeFee())}</strong> 메소 (${n} × ${n} × ${rate})</div>`;
+    : `<div class="field-note">큐브 1회 <strong>${fmt(cubeFee(state.level))}</strong> 메소 (${n} × ${n} × ${rate})</div>`;
 }
 function renderData(){
   const plan=expectedPlan(state.cube);

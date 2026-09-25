@@ -114,6 +114,9 @@
     return { kind: 'value', spare: extra / savedDestroys, savedDestroys: savedDestroys };
   }
 
+  // 아이템 제작 비용 계산기(item_craft_calc.js)가 같은 재귀식을 그대로 쓴다.
+  window.StarforceCalc = { calculate: calculate, buildSteps: buildSteps, breakEvenSpare: breakEvenSpare };
+
   // ---------------------------------------------------------------- 표기
 
   function mesoText(n) {
@@ -345,6 +348,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    if (!document.getElementById('levelInput')) return; // 계산기 화면이 아닌 페이지에서는 UI를 만들지 않는다
     load();
     bindNumber('levelInput', 'level', 1, 300);
     bindNumber('startInput', 'start', 0, MAX - 1);

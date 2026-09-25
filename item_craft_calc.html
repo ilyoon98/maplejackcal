@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<link rel="icon" type="image/png" href="favicon.png?v=2" />
+<meta name="description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="메이플 계산기 모음" />
+<meta property="og:description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
+<meta property="og:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>아이템 제작 비용 계산기</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .ic-hero { margin:22px 0 14px; padding:26px 28px; border:1px solid #34345c; border-radius:18px;
+    background: radial-gradient(circle at 84% 10%, rgba(243,201,105,.2), transparent 36%), linear-gradient(135deg,#1a1726,#13141e 70%); }
+  .ic-hero .eyebrow { color:#f3c969; font-size:.72rem; letter-spacing:.16em; font-weight:800; text-transform:uppercase; }
+  .ic-hero h1 { margin:8px 0; font-size:clamp(1.7rem,4vw,2.6rem); letter-spacing:-.045em; }
+  .ic-hero p { max-width:780px; margin:0; color:var(--text-dim); font-size:.9rem; line-height:1.7; }
+
+  .ic-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,.85fr); gap:18px; align-items:start; }
+  @media (max-width:980px){ .ic-layout { grid-template-columns:minmax(0,1fr); } }
+  .ic-panel { background:#171827; border:1px solid #2d2e48; border-radius:14px; padding:18px; margin-top:16px; }
+  .ic-panel > h2 { display:flex; align-items:center; gap:10px; margin:0 0 12px; font-size:1rem; }
+  .ic-toggle { margin-left:auto; display:inline-flex; align-items:center; gap:6px;
+    color:var(--text-dim); font-size:.74rem; font-weight:400; cursor:pointer; }
+  .ic-toggle input { width:15px; height:15px; }
+  .ic-panel.off > h2 { color:var(--text-dim); }
+  .ic-panel.off > h2 .ic-toggle { color:#6f7192; }
+  .ic-panel.off > :not(h2) { opacity:.35; }
+
+  .ic-verdict { display:inline-flex; flex-direction:column; padding:6px 12px; border:1px solid #373854;
+    background:#1d1e2e; color:var(--text-dim); border-radius:10px; font-size:.8rem; font-weight:700; }
+  .ic-verdict.on { border-color:var(--good); color:#6bd98a; }
+  .ic-verdict small { font-weight:400; font-size:.68rem; color:#6f7192; }
+
+  .ic-sub { color:var(--text-dim); font-size:.78rem; margin:15px 0 7px; }
+  .ic-sub:first-child { margin-top:0; }
+  .ic-sub small { color:#6f7192; margin-left:6px; }
+  .ic-count { color:#f3c969; font-weight:800; }
+
+  .ic-fields { display:flex; flex-wrap:wrap; gap:12px; }
+  .ic-field { flex:1 1 150px; min-width:0; }
+  .ic-field label { display:block; color:var(--text-dim); font-size:.76rem; margin-bottom:5px; }
+  .ic-field input, .ic-field select { width:100%; box-sizing:border-box; background:#11141a; border:1px solid var(--border);
+    color:var(--text); border-radius:8px; padding:9px 10px; font:inherit; font-size:.92rem; }
+  .ic-check { display:flex; align-items:center; gap:7px; color:var(--text); font-size:.85rem; padding-top:22px; }
+  .ic-check input { width:16px; height:16px; }
+
+  .ic-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .ic-chip { padding:7px 12px; border:1px solid #373854; background:#1d1e2e; color:var(--text-dim);
+    border-radius:999px; cursor:pointer; font:inherit; font-size:.8rem; }
+  .ic-chip:hover { border-color:#f3c969; }
+  .ic-chip.active { background:#f3c969; border-color:transparent; color:#15131e; font-weight:800; }
+  .ic-chip.grade.active { background:var(--chip); }
+
+  .ic-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 12px; background:#232440;
+    border:1px solid #3c3d64; border-radius:10px; margin-bottom:8px; }
+  .ic-row.missing { opacity:.55; border-style:dashed; }
+  .ic-row-name { flex:1 1 140px; font-weight:800; font-size:.9rem; }
+  .ic-row-name small { display:block; font-weight:400; color:#8d8fb5; font-size:.7rem; }
+  .ic-row-name small.bad { color:var(--bad); }
+  .ic-row-val { display:inline-flex; align-items:center; gap:6px; color:var(--text-dim); font-size:.82rem; }
+  .ic-num { width:84px; background:#11141a; border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:6px 8px; font:inherit; font-size:.88rem; }
+  .ic-x { background:none; border:1px solid #3a3b58; color:var(--text-dim); border-radius:8px;
+    width:30px; height:30px; cursor:pointer; font-size:1.05rem; line-height:1; }
+  .ic-x:hover { color:var(--bad); border-color:var(--bad); }
+  .ic-tiers { display:flex; flex-wrap:wrap; gap:5px; width:100%; }
+  .ic-tier { padding:4px 10px; border:1px solid #373854; background:#191a2a; color:var(--text-dim);
+    border-radius:999px; cursor:pointer; font:inherit; font-size:.74rem; line-height:1.3; }
+  .ic-tier small { display:block; color:#6f7192; font-size:.62rem; }
+  .ic-tier.active { background:#f3c969; border-color:transparent; color:#15131e; font-weight:800; }
+  .ic-tier.active small { color:#5a4a15; }
+
+  .ic-picks { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+  .ic-pick { padding:6px 10px; border:1px solid #373854; background:#20213a; color:var(--text);
+    border-radius:8px; cursor:pointer; font:inherit; font-size:.79rem; }
+  .ic-pick:not(:disabled):hover { border-color:#b58cff; }
+  .ic-pick:disabled { opacity:.4; cursor:default; }
+  .ic-more { display:block; margin-top:9px; background:none; border:none; color:#b58cff; cursor:pointer; font:inherit; font-size:.79rem; padding:0; }
+  .ic-empty { padding:13px; border:1px dashed #3a3b58; border-radius:10px; color:var(--text-dim); font-size:.82rem; text-align:center; margin:0 0 8px; }
+  .ic-empty.bad { color:var(--bad); border-color:var(--bad); }
+  .hidden { display:none !important; }
+
+  .ic-result { position:sticky; top:16px; }
+  .ic-totals { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:520px){ .ic-totals { grid-template-columns:1fr; } }
+  .ic-total { border:1px solid #2d2e48; border-radius:12px; padding:14px 16px; background:#1b1c2d; }
+  .ic-total.jackpot { border-color:#4c8f5f; background:linear-gradient(135deg,#17251d,#1b1c2d); }
+  .ic-total.avg { border-color:#8a6ad0; background:linear-gradient(135deg,#221d33,#1b1c2d); }
+  .ic-total-label { font-size:.74rem; color:var(--text-dim); font-weight:700; }
+  .ic-total-value { margin-top:4px; font-size:1.5rem; font-weight:900; letter-spacing:-.03em; }
+  .jackpot .ic-total-value { color:#6bd98a; }
+  .avg .ic-total-value { color:#c4a6ff; }
+  .ic-total-sub { margin-top:3px; color:#6f7192; font-size:.72rem; }
+  .ic-ratio { margin:10px 0 0; color:var(--text-dim); font-size:.8rem; text-align:center; }
+
+  .ic-note { color:var(--text-dim); font-size:.78rem; margin:6px 0 0; line-height:1.6; }
+  .ic-card { margin-top:14px; padding:14px; border:1px solid #2d2e48; border-radius:12px; background:#1b1c2d; }
+  .ic-card h3 { margin:0 0 6px; font-size:.9rem; }
+  .ic-big { margin:8px 0 0; font-size:1.3rem; font-weight:900; color:#f3c969; }
+  .ic-big small { display:block; margin-top:2px; font-size:.7rem; font-weight:400; color:var(--text-dim); }
+  .ic-scroll { max-height:300px; overflow:auto; border:1px solid #2c2d46; border-radius:10px; }
+  .ic-optname { white-space:nowrap; font-weight:700; }
+  .data-table td.dim { color:#6f7192; font-size:.75rem; }
+  .data-table th small { display:block; font-weight:400; color:#6f7192; font-size:.64rem; }
+  #breakdown td, #breakdown th { font-size:.78rem; }
+  #breakdown td:nth-child(2), #breakdown td:nth-child(3) { white-space:nowrap; }
+  #breakdown td:last-child { color:var(--text-dim); font-size:.72rem; min-width:9rem; }
+  .ic-assume { margin-top:16px; }
+  .ic-assume summary { cursor:pointer; color:var(--text-dim); font-size:.82rem; }
+  .ic-assume ul { margin:10px 0 0; padding-left:18px; color:var(--text-dim); font-size:.8rem; line-height:1.85; }
+  .ic-assume b { color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="site-nav">
+    <div class="site-tabs-track site-groups">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab active" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>놀이</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_calc.html">
+        <span class="site-menu-icon">⭐</span>
+        <span><span class="site-menu-name">스타포스 기댓값</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_buff_planner.html">
+        <span class="site-menu-icon">⏱️</span>
+        <span><span class="site-menu-name">보스 버프 동선 짜기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_option_calc.html">
+        <span class="site-menu-icon">🎯</span>
+        <span><span class="site-menu-name">큐브 옵션 확률</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="item_craft_calc.html">
+        <span class="site-menu-icon">🛠️</span>
+        <span><span class="site-menu-name">아이템 제작 비용</span><span class="site-menu-desc">대박·평균 제작 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 놀이</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_play.html">
+        <span class="site-menu-icon">🌟</span>
+        <span><span class="site-menu-name">스타포스 놀이</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 뽑기 놀이</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+      </a>
+      <a class="site-menu-item" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 뽑기</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+      </a>
+    </div>
+  </nav>
+
+  <header class="ic-hero">
+    <div class="eyebrow">ITEM CRAFT / TOTAL COST</div>
+    <h1>🛠️ 아이템 제작 비용 계산기</h1>
+    <p>노작을 사서 추가옵션 → 스타포스 → 잠재·에디셔널까지 원하는 대로 맞출 때
+       <b>완전 대박이면 얼마</b>, <b>평균적으로는 얼마</b>가 드는지 한 번에 계산합니다.
+       <span id="dataSource"></span></p>
+  </header>
+
+  <main class="ic-layout">
+    <section>
+      <div class="ic-panel">
+        <h2>01 · 아이템</h2>
+        <div class="ic-fields">
+          <div class="ic-field">
+            <label for="level">아이템 레벨</label>
+            <input type="number" id="level" min="1" max="300" inputmode="numeric">
+          </div>
+          <div class="ic-field">
+            <label for="part">부위</label>
+            <select id="part"></select>
+          </div>
+          <label class="ic-check"><input type="checkbox" id="bossGear"> 보스 장비 (추옵 +2단계)</label>
+        </div>
+        <div class="ic-fields" style="margin-top:12px;">
+          <div class="ic-field">
+            <label for="basePrice">노작 가격 (베이스 아이템)</label>
+            <input type="text" id="basePrice" inputmode="numeric" placeholder="예: 3,000,000,000">
+          </div>
+        </div>
+        <p class="ic-note" id="itemNote"></p>
+      </div>
+
+      <div class="ic-panel" id="flamePanel">
+        <h2>02 · 🔥 추가옵션
+          <label class="ic-toggle"><input type="checkbox" id="on-flame"><span>계산에 포함</span></label></h2>
+        <div id="flameBody"></div>
+      </div>
+
+      <div class="ic-panel" id="starPanel">
+        <h2>03 · ⭐ 스타포스
+          <label class="ic-toggle"><input type="checkbox" id="on-star"><span>계산에 포함</span></label></h2>
+        <div class="ic-fields">
+          <div class="ic-field">
+            <label for="starStart">시작 성</label>
+            <input type="number" id="starStart" min="0" max="29" inputmode="numeric">
+          </div>
+          <div class="ic-field">
+            <label for="starGoal">목표 성</label>
+            <input type="number" id="starGoal" min="0" max="30" inputmode="numeric">
+          </div>
+        </div>
+        <div class="ic-sub">MVP 할인</div>
+        <div class="ic-chips" id="mvpChips"></div>
+        <div class="ic-sub">이벤트</div>
+        <div class="ic-chips" id="starEvents"></div>
+        <div class="ic-sub">파괴방지 <small>노작 가격을 보고 자동으로 켭니다 · 강화비용 3배, 파괴 0%</small></div>
+        <div id="safeguardNote"></div>
+      </div>
+
+      <div class="ic-panel" id="potPanel">
+        <h2>04 · 🎲 잠재능력
+          <label class="ic-toggle"><input type="checkbox" id="on-pot"><span>계산에 포함</span></label></h2>
+        <div id="potBody"></div>
+      </div>
+
+      <div class="ic-panel" id="addiPanel">
+        <h2>05 · ✨ 에디셔널 잠재능력
+          <label class="ic-toggle"><input type="checkbox" id="on-addi"><span>계산에 포함</span></label></h2>
+        <div id="addiBody"></div>
+      </div>
+    </section>
+
+    <section class="ic-result">
+      <div class="ic-panel">
+        <h2>제작 비용</h2>
+        <div class="ic-totals">
+          <div class="ic-total jackpot">
+            <div class="ic-total-label">🎉 완전 대박</div>
+            <div class="ic-total-value" id="resMin">-</div>
+            <div class="ic-total-sub" id="resMinSub"></div>
+          </div>
+          <div class="ic-total avg">
+            <div class="ic-total-label">📊 평균</div>
+            <div class="ic-total-value" id="resAvg">-</div>
+            <div class="ic-total-sub" id="resAvgSub"></div>
+          </div>
+        </div>
+        <p class="ic-ratio" id="resRatio"></p>
+        <div class="ic-sub">단계별로 나눠 보기</div>
+        <div id="breakdown"></div>
+        <div id="stageDetail"></div>
+
+        <details class="ic-assume">
+          <summary>어떻게 계산했나요?</summary>
+          <ul>
+            <li><b>대박</b>은 모든 단계가 첫 시도에 성공했을 때의 비용이에요. 이보다 싸게는 만들 수 없습니다.</li>
+            <li><b>평균</b>은 각 단계 기대 비용의 합이에요. 확률이 낮은 단계 하나가 전체를 끌어올립니다.</li>
+            <li>순서는 <b>노작 → 추가옵션 → 스타포스 → 잠재·에디셔널</b>로 봅니다. 스타포스에서 파괴되면
+                노작을 다시 사고 추가옵션도 다시 띄워야 하므로, 그 금액이 파괴 1회 손실로 들어갑니다.</li>
+            <li>잠재·에디셔널은 <b>메소 재설정</b>(잠재능력 재설정 / 에디셔널 잠재능력 재설정)만 씁니다.
+                현금 큐브 값은 들어 있지 않아요. 목표 등급은 레전드리입니다.</li>
+            <li>등급업에 성공한 그 재설정이 레전드리 옵션을 이미 한 번 굴려준 셈이라,
+                옵션 맞추기 기대 횟수에서 1회를 뺐습니다.</li>
+            <li>추가옵션 단계·개수 확률은 <a href="https://maplestory.nexon.com/Guide/OtherProbability/game/gameAddOption" target="_blank" rel="noopener">넥슨 공식 확률 공개</a> 그대로이고,
+                단계별 수치 공식은 공개돼 있지 않아 커뮤니티에서 역산한 표를 따릅니다.
+                무기의 공격력·마력은 무기 종류마다 수치가 달라 <b>단계(추)</b>로만 다룹니다.</li>
+            <li>같은 종류의 추가옵션이 한 장비에 두 번 붙지는 않는 것으로 봅니다.</li>
+            <li><b>주스탯 환산 급수</b>는 주스탯 1 = 1급, 올스탯 1% = 10급, 공격력(마력) 1 = 4급으로 셉니다.
+                복합 스탯은 주스탯 쪽 수치만 세고, 무기는 공격력·마력 수치가 무기마다 달라 급수에서 뺍니다.
+                STR·DEX·INT·LUK은 확률이 완전히 같아서 어느 스탯인지 고를 필요가 없습니다 —
+                잠재능력의 <b>주스탯 %</b>도 같은 이유로 하나로 묶었습니다.</li>
+            <li>불꽃은 아이템이라 메소가 들지 않습니다. <b>추가옵션 재설정 (메소)</b>만 1회 300만 메소가 나가고,
+                확률은 검은 · 영원한 환생의 불꽃과 같습니다.</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="site_nav.js"></script>
+<script src="cube_option_data.js"></script>
+<script src="cube_core.js"></script>
+<script src="flame_core.js"></script>
+<script src="starforce_data.js"></script>
+<script src="starforce_calc.js"></script>
+<script src="item_craft_calc.js"></script>
+</body>
+</html>
