@@ -76,7 +76,7 @@ function mesoResetPrice(cube){
 function attemptPrice(cube = state.cube){
   return CUBES[cube].official ? mesoResetPrice(cube) : cubeFee(state.level);
 }
-function brackets(){ return DATA.cubes[dataKey(state.cube)].parts[state.part] || []; }
+function brackets(){ return partsOf(dataKey(state.cube))[state.part] || []; }
 // 확률 구간(201~250)과 재설정 비용 구간(200~249, 250~300)이 서로 다르게 끊긴다.
 // 둘을 겹쳐서 잘라야 고른 레벨의 확률과 비용이 같이 맞는다.
 function costRanges(){

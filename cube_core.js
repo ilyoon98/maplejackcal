@@ -86,8 +86,12 @@ function contrib(info, key){
 }
 
 // cube_option_data.js의 큐브 키로 확률 구간을 찾는다
-function bracketOf(dataName, part, level){
-  return (DATA.cubes[dataName].parts[part] || []).find(b => b.min <= level && level <= b.max) || null;
+function bracketOf(dataName, part, level, grade){
+  return (partsOf(dataName, grade)[part] || []).find(b => b.min <= level && level <= b.max) || null;
+}
+// 등급별 옵션표. 레드·명장 큐브는 레전드리만 모아 뒀다(유니크 목표로 쓰이지 않아서).
+function partsOf(dataName, grade){
+  return (DATA.cubes[dataName].grades || {})[grade || '레전드리'] || {};
 }
 // 이 구간 옵션표에 있는 key와 한 줄에 뜰 수 있는 수치들
 function keysOf(bracket){

@@ -52,6 +52,9 @@
   const MAX_GOALS = 3;
   // 샤이닝 스타포스: 비용 30% 할인 + 파괴확률 30% 감소 + 5·10·15성 100% 성공
   const SHINING = ['discount30', 'destroyDown30', 'lucky5'];
+  // 목표로 고를 수 있는 등급 = 옵션표를 모아 둔 등급 (유니크 · 레전드리).
+  // 에픽 이하를 목표로 큐브를 돌리는 경우는 없어서 확률표도 받아 두지 않았다.
+  const GOAL_RANKS = [2, 3];
   // STR·DEX·INT·LUK %는 확률이 완전히 같아서 하나로 묶어 "주스탯 %"로 보여준다(대표는 STR).
   const MAIN_STAT_KEY = 'STR|%';
   const HIDDEN_STAT_KEYS = ['DEX|%', 'INT|%', 'LUK|%'];
@@ -65,8 +68,8 @@
     flame: 'mesoReset', flameConds: [],
     // 기본값은 샤이닝 스타포스가 열린 때 기준. 파괴방지는 노작값을 보고 자동으로 정한다.
     star: { start: 0, goal: 22, mvp: 0, pcRoom: false, discount30: true, destroyDown30: true, lucky5: true },
-    pot: { from: 2, rows: [] },
-    addi: { from: 0, rows: [] },
+    pot: { from: 2, to: 3, rows: [] },
+    addi: { from: 0, to: 3, rows: [] },
     // 이미 되어 있는 걸 사서 나머지만 작할 수도 있어서 단계마다 계산에서 뺄 수 있게 한다
     on: { flame: true, star: true, pot: true, addi: true },
     showAll: { flame: false, pot: false, addi: false }
@@ -174,7 +177,7 @@
     const grade = CUBE_GRADE[cfg.gradeCube];
     const steps = [];
     let min = 0, avg = 0;
-    for (let i = cur.from; i < LEGENDARY; i++) {
+    for (let i = cur.from; i < cur.to; i++) {
       const tries = cubeExpected(grade.p[i], grade.cap[i]);
       steps.push({ label: RANKS[i] + ' → ' + RANKS[i + 1], p: grade.p[i], cap: grade.cap[i], tries, price: prices[i] });
       min += prices[i];
@@ -183,9 +186,9 @@
     const need = cur.rows.map(r => [r.key, Number(r.min)]).filter(g => g[0] && g[1] > 0);
     let opt = null;
     if (need.length) {
-      const b = bracketOf(cfg.dataKey, state.part, state.level);
+      const b = bracketOf(cfg.dataKey, state.part, state.level, RANKS[cur.to]);
       const p = b ? successProb(b.lines, [need]) : 0;
-      opt = stage(p, prices[LEGENDARY], cur.from < LEGENDARY ? 0 : 1);
+      opt = stage(p, prices[cur.to], cur.from < cur.to ? 0 : 1);
       opt.missing = !b;
       min += opt.min;
       avg += opt.avg;
@@ -355,7 +358,7 @@
 
   function renderPotential(id, cfg) {
     const cur = cfg.state;
-    const b = bracketOf(cfg.dataKey, state.part, state.level);
+    const b = bracketOf(cfg.dataKey, state.part, state.level, RANKS[cur.to]);
     const keys = b ? keysOf(b) : new Map();
     const primary = PRIMARY_KEYS.filter(k => keys.has(k) && !HIDDEN_STAT_KEYS.includes(k));
     const others = [...keys.keys()].filter(k => !PRIMARY_KEYS.includes(k) && !HIDDEN_STAT_KEYS.includes(k));
@@ -381,11 +384,17 @@
 
     const pick = k => '<button type="button" class="ic-pick" data-addpot="' + cfg.short + '" data-key="' + esc(k) + '"' + (full ? ' disabled' : '') + '>' + esc(potLabel(k)) + '</button>';
     $(id).innerHTML =
-      '<div class="ic-sub">현재 등급 <small>목표는 레전드리</small></div>' +
+      '<div class="ic-sub">현재 등급 → 목표 등급</div>' +
+      '<div class="ic-grades">' +
       '<div class="ic-chips">' + RANKS.map((name, i) =>
         '<button type="button" class="ic-chip grade' + (cur.from === i ? ' active' : '') + '" style="--chip:' + RANK_COLORS[i] + '" data-grade="' + cfg.short + '" data-i="' + i + '">' + name + '</button>').join('') + '</div>' +
-      '<div class="ic-sub">목표 옵션 <span class="ic-count">' + cur.rows.length + '/' + MAX_GOALS + '</span></div>' +
-      (b ? '' : '<p class="ic-empty bad">' + esc(state.part) + '은(는) 이 확률표에 없어 옵션 계산을 할 수 없습니다.</p>') +
+      '<span class="ic-arrow">➔</span>' +
+      // 옵션표를 모아 둔 등급까지만 목표로 고를 수 있다(유니크·레전드리)
+      '<div class="ic-chips">' + GOAL_RANKS.map(i =>
+        '<button type="button" class="ic-chip grade' + (cur.to === i ? ' active' : '') + (i < cur.from ? ' dim' : '') +
+        '" style="--chip:' + RANK_COLORS[i] + '" data-goal="' + cfg.short + '" data-i="' + i + '">' + RANKS[i] + '</button>').join('') + '</div></div>' +
+      '<div class="ic-sub">목표 옵션 <small>' + RANKS[cur.to] + ' 옵션표 기준</small> <span class="ic-count">' + cur.rows.length + '/' + MAX_GOALS + '</span></div>' +
+      (b ? '' : '<p class="ic-empty bad">' + esc(state.part) + '은(는) ' + RANKS[cur.to] + ' 확률표에 없어 옵션 계산을 할 수 없습니다.</p>') +
       (rows || '<p class="ic-empty">옵션을 고르지 않으면 등급업 비용만 계산합니다.</p>') +
       '<div class="ic-picks">' + primary.map(pick).join('') + '</div>' +
       (others.length ? '<button type="button" class="ic-more" data-more="' + cfg.short + '">' +
@@ -463,6 +472,10 @@
     state.star.start = Math.min(SFD.MAX_STAR - 1, Math.max(0, state.star.start));
     state.star.goal = Math.min(SFD.MAX_STAR, Math.max(0, state.star.goal));
     state.flameConds = state.flameConds.slice(0, MAX_GOALS);
+    [state.pot, state.addi].forEach(c => {
+      if (!GOAL_RANKS.includes(c.to)) c.to = 3;
+      c.from = Math.min(Math.max(c.from | 0, 0), c.to);
+    });
     state.pot.rows = state.pot.rows.slice(0, MAX_GOALS);
     state.addi.rows = state.addi.rows.slice(0, MAX_GOALS);
   }
@@ -503,12 +516,13 @@
     else if (d.mvp !== undefined) state.star.mvp = Number(d.mvp);
     else if (d.sf) state.star[d.sf] = !state.star[d.sf];
     else if (d.shining) { const on = !SHINING.every(k => state.star[k]); SHINING.forEach(k => { state.star[k] = on; }); }
-    else if (d.grade) cfgOf(d.grade).from = Number(d.i);
+    else if (d.grade) { const c = cfgOf(d.grade); c.from = Number(d.i); if (c.to < c.from) c.to = 3; }
+    else if (d.goal) { const c = cfgOf(d.goal); c.to = Number(d.i); if (c.from > c.to) c.from = c.to; }
     else if (d.addpot) {
       const cur = cfgOf(d.addpot);
       if (cur.rows.length >= MAX_GOALS) return;
       if (cur.rows.some(r => r.key === d.key)) return;
-      const b = bracketOf(d.addpot === 'pot' ? 'black' : 'addi', state.part, state.level);
+      const b = bracketOf(d.addpot === 'pot' ? 'black' : 'addi', state.part, state.level, RANKS[cur.to]);
       const info = b && keysOf(b).get(d.key);
       cur.rows.push({ key: d.key, min: (d.key.includes('|') && info) ? Math.min(...info.values) : 1 });
     }
