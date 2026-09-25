@@ -14,15 +14,17 @@ const path = require('path');
 const OUT = path.join(path.resolve(__dirname, '..'), 'cube_option_data.js');
 const API = 'https://maplestory.nexon.com/Guide/OtherProbability/cube/GetSearchProbList';
 
-const GRADE_NAME = { 3: '유니크', 4: '레전드리' };
+const GRADE_NAME = { 2: '에픽', 3: '유니크', 4: '레전드리' };
 
-// grades: 이 큐브에서 받아올 등급. 메소 재설정(black·addi)은 목표를 유니크로 잡는 경우가 흔해 유니크까지 받는다.
-// 레드·명장 큐브는 레전드리 목표로만 쓰여서 레전드리만 받는다(파일 크기).
+// grades: 이 큐브에서 받아올 등급.
+//   잠재능력 재설정은 유니크에서 멈추는 경우가 흔해 유니크까지,
+//   에디셔널 재설정은 에픽에서 멈추는 것도 흔해 에픽까지 받는다.
+//   레드·명장 큐브는 레전드리 목표로만 쓰여서 레전드리만 받는다(파일 크기).
 const CUBES = [
   { key: 'black', id: 5062010, name: '잠재능력 재설정 / 블랙 큐브', grades: [3, 4] },
   { key: 'red', id: 5062009, name: '레드 큐브', grades: [4] },
   { key: 'artisan', id: 2711004, name: '명장의 큐브 / 골드 큐브', grades: [4] },
-  { key: 'addi', id: 5062500, name: '에디셔널 잠재능력 재설정 / 에디셔널 큐브 / 화이트 에디셔널 큐브', grades: [3, 4] }
+  { key: 'addi', id: 5062500, name: '에디셔널 잠재능력 재설정 / 에디셔널 큐브 / 화이트 에디셔널 큐브', grades: [2, 3, 4] }
 ];
 const PARTS = ['무기', '엠블렘', '보조무기(포스실드, 소울링 제외)', '포스실드, 소울링', '방패', '모자', '상의', '한벌옷', '하의',
   '신발', '장갑', '망토', '벨트', '어깨장식', '얼굴장식', '눈장식', '귀고리', '반지', '펜던트', '기계심장'];

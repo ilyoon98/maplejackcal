@@ -52,9 +52,10 @@
   const MAX_GOALS = 3;
   // 샤이닝 스타포스: 비용 30% 할인 + 파괴확률 30% 감소 + 5·10·15성 100% 성공
   const SHINING = ['discount30', 'destroyDown30', 'lucky5'];
-  // 목표로 고를 수 있는 등급 = 옵션표를 모아 둔 등급 (유니크 · 레전드리).
-  // 에픽 이하를 목표로 큐브를 돌리는 경우는 없어서 확률표도 받아 두지 않았다.
-  const GOAL_RANKS = [2, 3];
+  // 목표로 고를 수 있는 등급 = cube_option_data.js에 옵션표를 모아 둔 등급.
+  // 에디셔널은 에픽에서 멈추는 것도 흔해서 에픽까지 연다.
+  const GOAL_RANKS = { pot: [2, 3], addi: [1, 2, 3] };
+  const goalsFor = short => GOAL_RANKS[short] || GOAL_RANKS.pot;
   // STR·DEX·INT·LUK %는 확률이 완전히 같아서 하나로 묶어 "주스탯 %"로 보여준다(대표는 STR).
   const MAIN_STAT_KEY = 'STR|%';
   const HIDDEN_STAT_KEYS = ['DEX|%', 'INT|%', 'LUK|%'];
@@ -390,7 +391,7 @@
         '<button type="button" class="ic-chip grade' + (cur.from === i ? ' active' : '') + '" style="--chip:' + RANK_COLORS[i] + '" data-grade="' + cfg.short + '" data-i="' + i + '">' + name + '</button>').join('') + '</div>' +
       '<span class="ic-arrow">➔</span>' +
       // 옵션표를 모아 둔 등급까지만 목표로 고를 수 있다(유니크·레전드리)
-      '<div class="ic-chips">' + GOAL_RANKS.map(i =>
+      '<div class="ic-chips">' + goalsFor(cfg.short).map(i =>
         '<button type="button" class="ic-chip grade' + (cur.to === i ? ' active' : '') + (i < cur.from ? ' dim' : '') +
         '" style="--chip:' + RANK_COLORS[i] + '" data-goal="' + cfg.short + '" data-i="' + i + '">' + RANKS[i] + '</button>').join('') + '</div></div>' +
       '<div class="ic-sub">목표 옵션 <small>' + RANKS[cur.to] + ' 옵션표 기준</small> <span class="ic-count">' + cur.rows.length + '/' + MAX_GOALS + '</span></div>' +
@@ -472,8 +473,8 @@
     state.star.start = Math.min(SFD.MAX_STAR - 1, Math.max(0, state.star.start));
     state.star.goal = Math.min(SFD.MAX_STAR, Math.max(0, state.star.goal));
     state.flameConds = state.flameConds.slice(0, MAX_GOALS);
-    [state.pot, state.addi].forEach(c => {
-      if (!GOAL_RANKS.includes(c.to)) c.to = 3;
+    [['pot', state.pot], ['addi', state.addi]].forEach(([short, c]) => {
+      if (!goalsFor(short).includes(c.to)) c.to = 3;
       c.from = Math.min(Math.max(c.from | 0, 0), c.to);
     });
     state.pot.rows = state.pot.rows.slice(0, MAX_GOALS);
