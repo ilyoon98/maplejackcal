@@ -108,7 +108,6 @@ function ensureBracket(){
 }
 
 
-const LINE_LABEL = { 1:'한 줄', 2:'두 줄', 3:'세 줄' };
 // STR·DEX·INT·LUK는 확률이 같아 "주스탯 %" 하나로 묶어 보여준다
 const optLabel = key => key === MAIN_STAT_KEY ? '주스탯 %' : keyLabel(key);
 
@@ -199,8 +198,8 @@ function renderSets(bracket){
     const info = keys.get(r.key);
     const isCount = !r.key.includes('|');
     // 배지는 한 줄 값이 아니라 "세 줄로 만들 수 있는 합계"다. 입력칸과 단위가 같아야 헷갈리지 않는다.
-    const groups = info && !isCount ? reachableSums(bracket, r.key) : [];
-    const all = groups.flatMap(g => g.sums);
+    // 줄 수로 나누면 같은 합계를 여러 줄 수로 만들 수 있어서(12 = 12 = 6+6) 오히려 헷갈려, 한 줄로 늘어놓는다.
+    const all = info && !isCount ? reachableSums(bracket, r.key).flatMap(g => g.sums).sort((a, b) => a - b) : [];
     const min = Number(r.min);
     // 친 숫자 이상에서 가장 가까운 합계가 실제 성공 기준이다
     const hit = all.find(v => v >= min - 1e-9);
@@ -217,10 +216,10 @@ function renderSets(bracket){
         <span class="opt-unit">${esc(unit)} 이상</span>
       </span>`}
       <button type="button" class="opt-remove" data-set="${si}" data-remove="${i}" aria-label="${esc(optLabel(r.key))} 지우기">×</button>
-      ${groups.length ? `<span class="opt-chips">${groups.map(g => `<span class="chip-line">
-        <span class="chip-line-label">${LINE_LABEL[g.n]}</span>
-        ${g.sums.map(v => `<button type="button" class="val-chip ${v === hit ? 'active' : ''}" data-set="${si}" data-row="${i}" data-val="${v}">${v}</button>`).join('')}
-      </span>`).join('')}<span class="chip-note">${note}</span></span>` : ''}
+      ${all.length ? `<span class="opt-chips">
+        ${all.map(v => `<button type="button" class="val-chip ${v === hit ? 'active' : ''}" data-set="${si}" data-row="${i}" data-val="${v}">${v}</button>`).join('')}
+        <span class="chip-note">${note}</span>
+      </span>` : ''}
     </div>`;
   };
   $('optionRows').innerHTML = state.sets.map((set, si) => {
