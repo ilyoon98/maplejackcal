@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<link rel="icon" type="image/png" href="favicon.png?v=2" />
+<meta name="description" content="경매장 수수료 5%를 떼고 얼마에 팔아야 이득인지, 이 가격에 팔면 얼마 남는지 계산합니다" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="되팔기 손익 계산기" />
+<meta property="og:description" content="경매장 수수료 5%를 떼고 얼마에 팔아야 이득인지, 이 가격에 팔면 얼마 남는지 계산합니다" />
+<meta property="og:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>되팔기 손익 계산기</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .tm-hero { margin:22px 0 14px; padding:26px 28px; border:1px solid #34345c; border-radius:18px;
+    background: radial-gradient(circle at 84% 10%, rgba(107,217,138,.18), transparent 36%), linear-gradient(135deg,#17231e,#13141e 70%); }
+  .tm-hero .eyebrow { color:#6bd98a; font-size:.72rem; letter-spacing:.16em; font-weight:800; text-transform:uppercase; }
+  .tm-hero h1 { margin:8px 0; font-size:clamp(1.7rem,4vw,2.6rem); letter-spacing:-.045em; }
+  .tm-hero p { max-width:780px; margin:0; color:var(--text-dim); font-size:.9rem; line-height:1.7; }
+
+  .tm-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,.9fr); gap:18px; align-items:start; }
+  @media (max-width:980px){ .tm-layout { grid-template-columns:minmax(0,1fr); } }
+  .tm-panel { background:#171827; border:1px solid #2d2e48; border-radius:14px; padding:18px; margin-top:16px; }
+  .tm-panel > h2 { display:flex; align-items:center; gap:10px; margin:0 0 4px; font-size:1rem; }
+  .tm-panel > .tm-kicker { margin:0 0 12px; color:var(--text-dim); font-size:.78rem; line-height:1.6; }
+
+  .tm-fields { display:flex; flex-wrap:wrap; gap:12px; }
+  .tm-field { flex:1 1 150px; min-width:0; }
+  .tm-field.wide { flex:1 1 100%; }
+  .tm-field label { display:block; color:var(--text-dim); font-size:.76rem; margin-bottom:5px; }
+  .tm-field label small { color:#6f7192; }
+  .tm-field input { width:100%; box-sizing:border-box; background:#11141a; border:1px solid var(--border);
+    color:var(--text); border-radius:8px; padding:9px 10px; font:inherit; font-size:.92rem; }
+  .tm-field input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .tm-field input.big { font-size:1.15rem; font-weight:800; letter-spacing:-.02em; }
+  .tm-unit { margin-top:4px; color:#6f7192; font-size:.72rem; min-height:1em; }
+
+  .tm-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+  .tm-chip { padding:6px 11px; border:1px solid #373854; background:#1d1e2e; color:var(--text-dim);
+    border-radius:999px; cursor:pointer; font:inherit; font-size:.78rem; }
+  .tm-chip:hover { border-color:#6bd98a; }
+  .tm-chip.active { background:#6bd98a; border-color:transparent; color:#0e1a12; font-weight:800; }
+
+  .tm-result { position:sticky; top:16px; }
+  .tm-big { border:1px solid #4c8f5f; border-radius:14px; padding:18px 20px;
+    background:linear-gradient(135deg,#17251d,#1b1c2d); }
+  .tm-big .tm-big-label { font-size:.76rem; color:var(--text-dim); font-weight:700; }
+  .tm-big .tm-big-value { margin-top:5px; font-size:clamp(1.5rem,4.6vw,2rem); font-weight:900;
+    letter-spacing:-.04em; color:#6bd98a; }
+  .tm-big .tm-big-sub { margin-top:5px; color:#6f7192; font-size:.74rem; line-height:1.6; }
+  .tm-big.empty { border-color:#3a3b58; background:#1b1c2d; }
+  .tm-big.empty .tm-big-value { color:var(--text-dim); font-size:1.05rem; font-weight:700; }
+
+  .tm-verdict { margin-top:14px; border:1px solid #3a3b58; border-radius:14px; padding:16px 18px; background:#1b1c2d; }
+  .tm-verdict.good { border-color:var(--good); background:linear-gradient(135deg,#17251d,#1b1c2d); }
+  .tm-verdict.bad { border-color:var(--bad); background:linear-gradient(135deg,#261a17,#1b1c2d); }
+  .tm-verdict-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .tm-verdict-tag { padding:3px 10px; border-radius:999px; font-size:.74rem; font-weight:800; background:#2a2b44; color:var(--text-dim); }
+  .tm-verdict.good .tm-verdict-tag { background:rgba(76,175,125,.2); color:#6bd98a; }
+  .tm-verdict.bad .tm-verdict-tag { background:rgba(226,102,74,.2); color:#e2664a; }
+  .tm-verdict-value { font-size:1.45rem; font-weight:900; letter-spacing:-.03em; }
+  .tm-verdict.good .tm-verdict-value { color:#6bd98a; }
+  .tm-verdict.bad .tm-verdict-value { color:#e2664a; }
+  .tm-verdict-rate { color:var(--text-dim); font-size:.84rem; font-weight:700; }
+  .tm-lines { margin:12px 0 0; display:grid; gap:6px; }
+  .tm-line { display:flex; align-items:baseline; gap:8px; font-size:.82rem; }
+  .tm-line .k { color:var(--text-dim); flex:1 1 auto; }
+  .tm-line .v { font-weight:700; white-space:nowrap; }
+  .tm-line .v.dim { color:var(--text-dim); font-weight:400; }
+  .tm-line .v.fee { color:#e2a04a; }
+  .tm-line.total { border-top:1px solid #2d2e48; padding-top:7px; margin-top:2px; }
+
+  .data-table { width:100%; border-collapse:collapse; }
+  .data-table th, .data-table td { padding:8px 6px; border-bottom:1px solid #2c2d46; text-align:right; font-size:.82rem; }
+  .data-table th { color:var(--text-dim); font-weight:500; font-size:.74rem; }
+  .data-table th:first-child, .data-table td:first-child { text-align:left; }
+  .data-table tr:last-child td { border-bottom:none; }
+  .data-table td.name { font-weight:700; white-space:nowrap; }
+  .data-table td.price { white-space:nowrap; font-weight:700; }
+  .data-table td.profit { white-space:nowrap; color:#6bd98a; }
+  .data-table tr.breakeven td, .data-table tr.breakeven td.profit { color:var(--text-dim); }
+  .data-table tr.here { background:rgba(110,168,254,.1); }
+  .tm-pick { background:none; border:none; padding:0; font:inherit; color:var(--accent); cursor:pointer; font-weight:700; }
+  .tm-pick:hover { text-decoration:underline; }
+
+  .tm-note { color:var(--text-dim); font-size:.78rem; margin:10px 0 0; line-height:1.7; }
+  .tm-note b { color:var(--text); }
+  .tm-assume summary { cursor:pointer; color:var(--text-dim); font-size:.82rem; }
+  .tm-assume ul { margin:10px 0 0; padding-left:18px; color:var(--text-dim); font-size:.8rem; line-height:1.85; }
+  .tm-assume b { color:var(--text); }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="site-nav">
+    <div class="site-tabs-track site-groups">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab active" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>놀이</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_calc.html">
+        <span class="site-menu-icon">⭐</span>
+        <span><span class="site-menu-name">스타포스 기댓값</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_buff_planner.html">
+        <span class="site-menu-icon">⏱️</span>
+        <span><span class="site-menu-name">보스 버프 동선 짜기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_option_calc.html">
+        <span class="site-menu-icon">🎯</span>
+        <span><span class="site-menu-name">큐브 옵션 확률</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="item_craft_calc.html">
+        <span class="site-menu-icon">🛠️</span>
+        <span><span class="site-menu-name">아이템 제작 비용</span><span class="site-menu-desc">대박·평균 제작 메소</span></span>
+      </a>
+      <a class="site-menu-item active" href="trade_margin_calc.html">
+        <span class="site-menu-icon">💱</span>
+        <span><span class="site-menu-name">되팔기 손익 계산</span><span class="site-menu-desc">수수료 떼고 남는 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 놀이</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_play.html">
+        <span class="site-menu-icon">🌟</span>
+        <span><span class="site-menu-name">스타포스 놀이</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 뽑기 놀이</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+      </a>
+      <a class="site-menu-item" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 뽑기</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+      </a>
+    </div>
+  </nav>
+
+  <header class="tm-hero">
+    <div class="eyebrow">TRADE / BREAK-EVEN PRICE</div>
+    <h1>💱 되팔기 손익 계산기</h1>
+    <p>경매장은 <b>팔 때 판매가의 5%</b>를 수수료로 뗍니다. 700만에 산 물건을 700만에 다시 걸면 35만 손해라는 뜻이죠.
+       산 가격을 넣으면 <b>본전이 되는 최소 판매가</b>를, 팔려는 가격을 넣으면 <b>실제로 얼마 남는지</b>를 바로 보여줍니다.</p>
+  </header>
+
+  <div class="tm-layout">
+    <div>
+      <section class="tm-panel">
+        <h2>01 · 산 가격</h2>
+        <p class="tm-kicker">경매장에서 살 때는 수수료가 없어서, 낸 메소가 그대로 원가입니다.</p>
+        <div class="tm-fields">
+          <div class="tm-field wide">
+            <label for="buyPrice">개당 구매가 <small>(메소)</small></label>
+            <input type="text" id="buyPrice" class="big" inputmode="numeric" autocomplete="off" placeholder="예: 7,000,000" />
+            <div class="tm-unit" id="buyPriceUnit"></div>
+          </div>
+          <div class="tm-field">
+            <label for="qty">수량 <small>(개)</small></label>
+            <input type="text" id="qty" inputmode="numeric" autocomplete="off" placeholder="1" />
+          </div>
+          <div class="tm-field">
+            <label for="extraCost">추가로 들어간 메소 <small>(총액, 선택)</small></label>
+            <input type="text" id="extraCost" inputmode="numeric" autocomplete="off" placeholder="큐브·스타포스 등" />
+            <div class="tm-unit" id="extraCostUnit"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tm-panel">
+        <h2>02 · 팔려는 가격</h2>
+        <p class="tm-kicker">비워두면 최소 판매가만 계산합니다. 넣으면 수수료를 떼고 얼마가 남는지 바로 나옵니다.</p>
+        <div class="tm-fields">
+          <div class="tm-field wide">
+            <label for="sellPrice">개당 판매가 <small>(메소)</small></label>
+            <input type="text" id="sellPrice" class="big" inputmode="numeric" autocomplete="off" placeholder="본전 판매가보다 낮으면 손해" />
+            <div class="tm-unit" id="sellPriceUnit"></div>
+          </div>
+        </div>
+        <div class="tm-chips" id="sellChips"></div>
+      </section>
+
+      <section class="tm-panel">
+        <h2>03 · 수수료</h2>
+        <p class="tm-kicker">경매장 판매 수수료는 5%입니다. 다른 경로로 거래한다면 직접 바꾸세요.</p>
+        <div class="tm-fields">
+          <div class="tm-field">
+            <label for="feePct">판매 수수료 <small>(%)</small></label>
+            <input type="text" id="feePct" inputmode="decimal" autocomplete="off" placeholder="5" />
+          </div>
+        </div>
+        <div class="tm-chips" id="feeChips"></div>
+      </section>
+    </div>
+
+    <div class="tm-result">
+      <section class="tm-panel" style="margin-top:16px">
+        <h2>최소 판매가</h2>
+        <p class="tm-kicker">본전이 되는 가격이에요. 여기서 1메소라도 높게 팔면 이득입니다.</p>
+        <div class="tm-big empty" id="breakEvenBox">
+          <div class="tm-big-label">본전 판매가</div>
+          <div class="tm-big-value" id="breakEvenValue">구매가를 입력하세요</div>
+          <div class="tm-big-sub" id="breakEvenSub"></div>
+        </div>
+
+        <div class="tm-verdict hidden" id="verdictBox">
+          <div class="tm-verdict-head">
+            <span class="tm-verdict-tag" id="verdictTag">-</span>
+            <span class="tm-verdict-value" id="verdictValue">-</span>
+            <span class="tm-verdict-rate" id="verdictRate"></span>
+          </div>
+          <div class="tm-lines" id="verdictLines"></div>
+        </div>
+
+        <p class="tm-note hidden" id="maxBuyNote"></p>
+      </section>
+
+      <section class="tm-panel hidden" id="targetPanel">
+        <h2>수익률별 판매가</h2>
+        <p class="tm-kicker">원가 대비 남기고 싶은 만큼 받으려면 얼마에 걸어야 하는지. 가격을 누르면 위 <b>팔려는 가격</b>에 들어갑니다.</p>
+        <table class="data-table" id="targetTable">
+          <thead>
+            <tr><th>목표</th><th>개당 판매가</th><th>총 순이익</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <details class="tm-panel tm-assume">
+        <summary>계산 기준 보기</summary>
+        <ul>
+          <li>수수료는 <b>판매가의 5%</b>로, 판매가 전액에서 떼고 나머지가 들어옵니다. (살 때는 수수료 없음)</li>
+          <li>본전 판매가 = <b>(구매가 × 수량 + 추가 비용) ÷ (1 - 수수료율)</b>. 수수료는 올린 판매가에도 붙기 때문에, 그냥 5%만 더해서는 여전히 손해입니다.</li>
+          <li>순이익 = <b>판매가 × 수량 × (1 - 수수료율) - 원가</b>, 수익률은 원가 기준입니다.</li>
+          <li>수량이 여러 개면 전부 같은 가격에 팔린다고 봅니다. 안 팔려서 다시 거는 시간·시세 변동은 계산에 없습니다.</li>
+          <li>입력값은 이 브라우저에만 저장됩니다.</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script src="site_nav.js"></script>
+<script src="trade_margin_calc.js"></script>
+</body>
+</html>
