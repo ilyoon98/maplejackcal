@@ -267,6 +267,59 @@
     border-radius:10px;
     white-space:nowrap;
   }
+  /* 최근에 검색한 캐릭터 배지 — 여러 캐릭터를 번갈아 볼 때 이름을 다시 타이핑하지 않도록
+     성공한 검색만 기록해두고, 배지를 누르면 곧바로 재조회한다. */
+  .char-recent{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    margin-top:10px;
+  }
+  .char-recent-label{
+    font-size:0.8rem;
+    font-weight:700;
+    color:var(--text-dim);
+  }
+  .char-chip{
+    display:inline-flex;
+    align-items:center;
+    border:1px solid var(--border);
+    background:#11141a;
+    border-radius:999px;
+    overflow:hidden;
+  }
+  .char-chip-name{
+    border:0;
+    background:transparent;
+    color:var(--text);
+    font-size:0.9rem;
+    font-weight:700;
+    padding:6px 4px 6px 12px;
+    cursor:pointer;
+    max-width:12em;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .char-chip:hover{ border-color:var(--accent-strong); }
+  .char-chip-name:hover{ color:var(--accent-strong); }
+  .char-chip.active{
+    border-color:var(--accent-strong);
+    background:rgba(76,141,255,.15);
+  }
+  .char-chip.active .char-chip-name{ color:var(--accent-strong); }
+  .char-chip-x{
+    border:0;
+    background:transparent;
+    color:var(--text-dim);
+    font-size:0.95rem;
+    line-height:1;
+    padding:6px 10px 6px 6px;
+    cursor:pointer;
+  }
+  .char-chip-x:hover{ color:var(--bad); }
+
   .char-search-hero .note{ margin:10px 0 0; }
   .char-search-hero.needs-key{
     border-color:var(--bad);
@@ -710,6 +763,7 @@
       <input type="text" id="charNameInput" placeholder="캐릭터 이름" autocomplete="off" spellcheck="false" maxlength="20" aria-label="캐릭터 이름">
       <button type="button" class="fetch-btn" id="fetchBtn">캐릭터 검색</button>
     </div>
+    <div class="char-recent" id="charRecent" hidden></div>
     <div id="apiKeyLine"></div>
     <p class="note fetch-status" id="fetchStatus" aria-live="polite"></p>
   </section>
@@ -1391,12 +1445,15 @@
   // localStorage에서 그대로 읽어온다(계산기별로 다시 입력할 필요 없음).
   var API_BASE = 'https://open.api.nexon.com/maplestory/v1';
   var LS_LAST_CHAR = 'authentic_last_char';
+  var LS_RECENT_CHARS = 'authentic_recent_chars';
+  var RECENT_MAX = 10;
 
   var charNameInput = document.getElementById('charNameInput');
   var fetchBtn = document.getElementById('fetchBtn');
   var fetchStatus = document.getElementById('fetchStatus');
   var apiKeyLine = document.getElementById('apiKeyLine');
   var charSearchHero = document.getElementById('charSearchHero');
+  var charRecent = document.getElementById('charRecent');
 
   function lsGet(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
   function lsSet(k, v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
@@ -1416,8 +1473,66 @@
     fetchStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
   }
 
+  // 최근 검색 캐릭터 목록: 성공한 조회만 최신순으로 쌓는다(대소문자 구분 없이 중복 제거).
+  function loadRecent(){
+    try {
+      var arr = JSON.parse(localStorage.getItem(LS_RECENT_CHARS) || '[]');
+      if (!Array.isArray(arr)) return [];
+      return arr.filter(function(n){ return typeof n === 'string' && n.trim(); }).slice(0, RECENT_MAX);
+    } catch(e){ return []; }
+  }
+  function saveRecent(list){
+    try { localStorage.setItem(LS_RECENT_CHARS, JSON.stringify(list)); } catch(e){}
+  }
+  function addRecent(name){
+    var list = loadRecent().filter(function(n){ return n.toLowerCase() !== name.toLowerCase(); });
+    list.unshift(name);
+    saveRecent(list.slice(0, RECENT_MAX));
+    renderRecent();
+  }
+  function removeRecent(name){
+    saveRecent(loadRecent().filter(function(n){ return n.toLowerCase() !== name.toLowerCase(); }));
+    renderRecent();
+  }
+  function renderRecent(){
+    var list = loadRecent();
+    charRecent.textContent = '';
+    charRecent.hidden = list.length === 0;
+    if (!list.length) return;
+    var label = document.createElement('span');
+    label.className = 'char-recent-label';
+    label.textContent = '최근 검색';
+    charRecent.appendChild(label);
+    var current = charNameInput.value.trim().toLowerCase();
+    list.forEach(function(name){
+      var chip = document.createElement('span');
+      chip.className = 'char-chip' + (name.toLowerCase() === current ? ' active' : '');
+      var pick = document.createElement('button');
+      pick.type = 'button';
+      pick.className = 'char-chip-name';
+      pick.textContent = name;
+      pick.title = name + ' 다시 검색';
+      pick.addEventListener('click', function(){
+        charNameInput.value = name;
+        renderRecent();
+        doFetch();
+      });
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'char-chip-x';
+      del.textContent = '×';
+      del.setAttribute('aria-label', name + ' 목록에서 지우기');
+      del.title = '목록에서 지우기';
+      del.addEventListener('click', function(){ removeRecent(name); });
+      chip.appendChild(pick);
+      chip.appendChild(del);
+      charRecent.appendChild(chip);
+    });
+  }
+
   charNameInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') fetchBtn.click(); });
   charNameInput.addEventListener('focus', function(){ charNameInput.select(); });
+  charNameInput.addEventListener('input', renderRecent);
 
   var API_ERROR_MSG = {
     OPENAPI00001: 'API 서버 내부 오류입니다. 잠시 후 다시 시도하세요.',
@@ -1494,7 +1609,7 @@
     return { found: found, missing: missing };
   }
 
-  fetchBtn.addEventListener('click', function(){
+  function doFetch(){
     var name = charNameInput.value.trim();
     if (!NexonKey.has()){
       refreshApiKeyLine();
@@ -1519,6 +1634,7 @@
       .then(function(data){
         var result = applySymbolData(data);
         lsSet(LS_LAST_CHAR, name);
+        addRecent(name);
         // 불러오기에 성공하면 현재 레벨은 '확인용'이 되므로 접어서 목표·결과에 자리를 내준다.
         if (levelCard && result.found.length) levelCard.open = false;
         var parts = ['✓ ' + name + (data.character_class ? ' (' + data.character_class + ')' : '')];
@@ -1539,9 +1655,12 @@
         fetchBtn.disabled = false;
         fetchBtn.textContent = origText;
       });
-  });
+  }
+
+  fetchBtn.addEventListener('click', doFetch);
 
   charNameInput.value = lsGet(LS_LAST_CHAR);
+  renderRecent();
   refreshApiKeyLine();
   window.addEventListener('storage', function(e){
     if (e.key === NexonKey.STORAGE_KEY) refreshApiKeyLine();
