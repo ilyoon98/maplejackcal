@@ -29,6 +29,20 @@ function ensureValidCube(){
 const $ = id => document.getElementById(id);
 function fmt(n){ return Number.isFinite(n) ? Math.round(n).toLocaleString('ko-KR') : '∞'; }
 function pct(n){ return `${(n*100).toFixed(4).replace(/0+$/,'').replace(/\.$/,'')}%`; }
+// 손익 메소는 값이 커서 억/만으로 줄여 쓴다
+function mesoText(n){
+  if(!Number.isFinite(n)) return '∞';
+  n=Math.round(Math.abs(n));
+  const eok=Math.floor(n/1e8), man=Math.round((n%1e8)/1e4);
+  if(eok>=10000) return `${fmt(Math.floor(eok/10000))}조 ${fmt(eok%10000)}억`;
+  if(eok) return man ? `${fmt(eok)}억 ${fmt(man)}만` : `${fmt(eok)}억`;
+  return man ? `${fmt(man)}만` : `${fmt(n)}`;
+}
+// 기대 횟수보다 적게 썼으면 이득, 많이 썼으면 손해. 메소는 아낀(더 쓴) 횟수 × 1회 비용.
+function stageDiff(step, actual){
+  const gap=step.e-actual;
+  return { gap, meso:gap*step.price, gain:gap>0, flat:Math.abs(gap)<.05 };
+}
 function rankSpan(i){ return `<span style="color:${RANK_COLORS[i]}">${RANKS[i]}</span>`; }
 function stageNameHtml(i){ return `${rankSpan(i)} → ${rankSpan(i+1)}`; }
 function attemptPrice(cube, stage){
@@ -114,29 +128,56 @@ function renderPriceBox(){
       + RANKS.map((name,i)=>`<div class="price-chip"><div class="price-chip-label" style="color:${RANK_COLORS[i]}">${name}</div><div class="price-chip-value">${fmt(meso[i])}</div></div>`).join('') + '</div>'
     : `<div class="field-note">큐브 1회 <strong>${fmt(cubeFee(state.level))}</strong> 메소 (${n} × ${n} × ${rate})</div>`;
 }
+// 한 구간의 결과 칸. 기대치 대비 이득/손해를 횟수와 메소로 같이 보여준다.
+function resultCellHtml(step, actual){
+  if(!actual) return '-';
+  const { gap, meso, gain, flat }=stageDiff(step, actual);
+  const rank=`<div class="luck-sub">상위 ${(successCdf(actual,step.p,step.cap)*100).toFixed(2)}%</div>`;
+  if(flat) return `<div class="luck-main luck-even">기대치와 같음</div>${rank}`;
+  const money = step.price>0 ? `<div class="luck-meso">메소 ${mesoText(meso)} ${gain?'아낌':'더 씀'}</div>` : '';
+  return `<div class="luck-main ${gain?'luck-good':'luck-bad'}">${Math.abs(gap).toFixed(1)}회 ${gain?'이득':'손해'}</div>${money}${rank}`;
+}
+// 입력한 구간만 모아 합산 손익을 한 줄로 알려준다.
+function summaryHtml(plan){
+  const filled=plan.steps.filter(s=>state.actual[s.i]>0);
+  if(!filled.length) return '<div class="tiny luck-summary">실제로 쓴 횟수를 넣으면 기대치보다 이득인지 손해인지 계산해준다.</div>';
+  const expected=filled.reduce((sum,s)=>sum+s.e,0);
+  const used=filled.reduce((sum,s)=>sum+state.actual[s.i],0);
+  const meso=filled.reduce((sum,s)=>sum+(s.e-state.actual[s.i])*s.price,0);
+  const gap=expected-used, gain=gap>0;
+  const verdict = Math.abs(gap)<.05
+    ? '<b class="luck-even">기대치와 같음</b>'
+    : `<b class="${gain?'luck-good':'luck-bad'}">${Math.abs(gap).toFixed(1)}회 ${gain?'이득':'손해'}${Math.abs(meso)>=1?` · 메소 ${mesoText(meso)} ${gain?'아낀 셈':'더 쓴 셈'}`:''}</b>`;
+  const cashNote = CUBES[state.cube].official ? '' : '<div class="tiny">메소는 재설정 비용만 센다. 큐브 자체 값(캐시·현물)은 빠져 있다.</div>';
+  return `<div class="luck-summary">입력한 구간 합계 · 기대 ${expected.toFixed(1)}회 → 실제 ${fmt(used)}회 : ${verdict}${cashNote}</div>`;
+}
 function renderData(){
   const plan=expectedPlan(state.cube);
   const rows=plan.steps.map(s=>{
     const actual=state.actual[s.i];
-    const pctLabel = actual ? `상위 ${(successCdf(actual,s.p,s.cap)*100).toFixed(2)}%` : '-';
     return `<tr data-i="${s.i}">
       <td>${s.name}</td>
       <td>${pct(s.p)}</td>
       <td>${s.cap?`${s.cap}회`:'-'}</td>
       <td>${fmt(s.e)}회</td>
       <td><input class="actual-input" type="number" min="1" data-i="${s.i}" value="${actual||''}" placeholder="내 횟수"></td>
-      <td class="pct-cell">${pctLabel}</td>
+      <td class="pct-cell">${resultCellHtml(s, actual)}</td>
     </tr>`;
   }).join('');
-  $('dataTable').innerHTML=`<table class="data-table"><thead><tr><th>구간</th><th>1회 확률</th><th>천장</th><th>기대 횟수</th><th>내 실제 횟수</th><th>내 운 순위</th></tr></thead><tbody>${rows||'<tr><td colspan="6">목표 등급을 선택하세요.</td></tr>'}</tbody></table>`;
-  // 입력할 때마다 표 전체를 다시 그리면 입력창이 리셋되며 포커스가 빠지므로, 해당 칸만 갱신한다.
+  $('dataTable').innerHTML=`<table class="data-table"><thead><tr><th>구간</th><th>1회 확률</th><th>천장</th><th>기대 횟수</th><th>내 실제 횟수</th><th>내 결과</th></tr></thead><tbody>${rows||'<tr><td colspan="6">목표 등급을 선택하세요.</td></tr>'}</tbody></table>`
+    + (plan.steps.length ? summaryHtml(plan) : '');
+  // 입력할 때마다 표 전체를 다시 그리면 입력창이 리셋되며 포커스가 빠지므로, 해당 칸과 합계 줄만 갱신한다.
   $('dataTable').querySelectorAll('.actual-input').forEach(inp=>{
     inp.oninput=e=>{
-      const i=Number(e.target.dataset.i), v=Number(e.target.value);
-      if(v>0) state.actual[i]=v; else delete state.actual[i];
+      const i=Number(e.target.dataset.i);
       const step=plan.steps.find(s=>s.i===i);
-      const label = v>0 ? `상위 ${(successCdf(v,step.p,step.cap)*100).toFixed(2)}%` : '-';
-      e.target.closest('tr').querySelector('.pct-cell').textContent = label;
+      let v=Number(e.target.value);
+      // 천장을 넘는 횟수는 나올 수 없으므로 천장으로 잘라 준다
+      if(step.cap && v>step.cap){ v=step.cap; e.target.value=v; }
+      if(v>0) state.actual[i]=v; else delete state.actual[i];
+      e.target.closest('tr').querySelector('.pct-cell').innerHTML = resultCellHtml(step, v>0?v:0);
+      const box=$('dataTable').querySelector('.luck-summary');
+      if(box) box.outerHTML = summaryHtml(plan);
     };
   });
 }

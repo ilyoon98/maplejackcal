@@ -81,6 +81,14 @@
   .data-table th:first-child,.data-table td:first-child { text-align:left; }
   .data-table th { color:#8e90ab; }
   .tiny { color:#777992; font-size:.7rem; line-height:1.55; }
+  .luck-main { font-weight:800; font-size:.78rem; white-space:nowrap; }
+  .luck-meso { font-size:.7rem; color:#b9bad2; white-space:nowrap; margin-top:1px; }
+  .luck-sub { font-size:.68rem; color:#777992; margin-top:1px; }
+  .luck-good { color:#6bd98a; }
+  .luck-bad { color:#ff8484; }
+  .luck-even { color:#c9c8e9; }
+  .luck-summary { margin-top:11px; padding:10px 12px; border:1px solid #34354d; border-radius:10px; background:#1c1d2e; font-size:.78rem; color:#a9abc7; line-height:1.55; }
+  .luck-summary .tiny { margin-top:4px; }
   .actual-input { width:80px; background:#10111a; border:1px solid #34354d; border-radius:6px; color:var(--text); padding:5px 6px; font:inherit; font-size:.74rem; }
   #ceilingPanel, #probPanel { margin-top:16px; }
   #ceilingPanel summary, #probPanel summary { cursor:pointer; font-weight:700; font-size:1rem; list-style:none; }
@@ -89,7 +97,14 @@
   #ceilingPanel[open] summary::before, #probPanel[open] summary::before { transform:rotate(90deg); }
   #ceilingPanel > div, #ceilingPanel > p, #probPanel > div { margin-top:12px; }
   @media(max-width:900px){ .cube-layout{grid-template-columns:1fr;} .cube-panel.sticky{position:static;} }
+  #dataTable th, #dataTable td { white-space:nowrap; }
   @media(max-width:520px){ .primary-metrics,.price-chip-row{grid-template-columns:repeat(2,1fr);} .cube-hero{padding:22px 18px;} .cube-panel{padding:14px;} }
+  /* 좁은 화면에서는 1회 확률·천장을 접는다. 아래 "큐브별 등업 확률"과 "등급업 천장 요약"에 같은 값이 있다. */
+  @media(max-width:560px){
+    #dataTable th:nth-child(2), #dataTable td:nth-child(2), #dataTable th:nth-child(3), #dataTable td:nth-child(3) { display:none; }
+    #dataTable th, #dataTable td { padding:7px 3px; }
+    .actual-input { width:62px; }
+  }
 </style>
 </head>
 <body class="cube-page">
