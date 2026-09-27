@@ -57,7 +57,14 @@ function expectedPlan(cube){
     total+=e;
     steps.push({ i, name:stageNameHtml(i), p, cap, e, price:attemptPrice(cube,i) });
   }
-  return {total, steps, cost:steps.reduce((sum,s)=>sum+s.e*s.price,0)};
+  // 천장은 한 구간이라도 없으면 합계를 낼 수 없다
+  const hardCap = steps.length && steps.every(s=>s.cap) ? steps.reduce((sum,s)=>sum+s.cap,0) : 0;
+  return {
+    total, steps,
+    cost:steps.reduce((sum,s)=>sum+s.e*s.price,0),
+    hardCap,
+    hardCost: hardCap ? steps.reduce((sum,s)=>sum+s.cap*s.price,0) : 0
+  };
 }
 function renderTabs(){
   const row=$('kindTabs'); if(!row) return; row.innerHTML='';
@@ -184,10 +191,17 @@ function renderData(){
 function renderStrategy(){
   const plan=expectedPlan(state.cube);
   $('expectedCubes').textContent=fmt(plan.total)+'회';
-  const hard=plan.steps.reduce((s,x)=>s+(x.cap||0),0);
-  $('ceilingCount').textContent=hard?fmt(hard)+'회':'미제공';
-  const costBox=$('expectedCostBox');
-  if(plan.cost>0){ costBox.style.display=''; $('expectedCost').textContent=fmt(plan.cost)+' 메소'; } else { costBox.style.display='none'; }
+  $('ceilingCount').textContent=plan.hardCap?fmt(plan.hardCap)+'회':'미제공';
+  // 큰 숫자는 억/만으로 줄여 카드에 넣고, 정확한 값은 title로 남긴다
+  const setMeso=(id,box,v)=>{
+    $(box).style.display = v>0 ? '' : 'none';
+    if(v>0){ $(id).textContent=mesoText(v)+' 메소'; $(id).title=fmt(v)+' 메소'; }
+  };
+  setMeso('expectedCost','expectedCostBox',plan.cost);
+  setMeso('ceilingCost','ceilingCostBox',plan.hardCost);
+  const shown=(plan.cost>0?1:0)+(plan.hardCost>0?1:0);
+  $('costRow').style.display = shown ? '' : 'none';
+  $('costRow').classList.toggle('primary-metrics-1', shown===1);
 }
 function renderCeilings(){
   const rows=Object.entries(CUBES).filter(([,d])=>d.kind===state.tab).map(([,d])=>`<tr><td>${d.name}</td>${[0,1,2].map(i=>`<td>${d.cap[i]?`${d.cap[i]}회`:'-'}</td>`).join('')}</tr>`).join('');

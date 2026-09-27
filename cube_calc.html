@@ -67,6 +67,9 @@
   .primary-metric { background:linear-gradient(135deg,#292a48,#20213a); border:1px solid #3c3d64; border-radius:12px; padding:14px; }
   .primary-metric .label { color:#a9abc7; font-size:.76rem; }
   .primary-metric .value { font-size:1.5rem; font-weight:900; margin-top:5px; color:var(--cube-gold); line-height:1.15; word-break:break-word; white-space:nowrap; }
+  /* 메소 값은 길어서 줄바꿈을 허용한다. 단위(억·만) 안에서는 끊기지 않게 keep-all */
+  #costRow .value { font-size:1.22rem; white-space:normal; word-break:keep-all; line-height:1.25; }
+  #ceilingCostBox .value { color:#ff9f6e; }
   .price-chip-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:14px; }
   .level-input-row { display:flex; align-items:center; gap:8px; }
   .level-input-row label { color:var(--text-dim); font-size:.82rem; }
@@ -205,7 +208,10 @@
           <div class="primary-metric"><div class="label">기대 횟수</div><div class="value" id="expectedCubes">-</div></div>
           <div class="primary-metric"><div class="label">천장</div><div class="value" id="ceilingCount">-</div></div>
         </div>
-        <div class="primary-metrics primary-metrics-1"><div class="primary-metric" id="expectedCostBox"><div class="label">기대 메소</div><div class="value" id="expectedCost">-</div></div></div>
+        <div class="primary-metrics" id="costRow">
+          <div class="primary-metric" id="expectedCostBox"><div class="label">기대 메소</div><div class="value" id="expectedCost">-</div></div>
+          <div class="primary-metric" id="ceilingCostBox"><div class="label">천장까지 쓰면</div><div class="value" id="ceilingCost">-</div></div>
+        </div>
       </div>
       <div class="cube-panel"><h2>03 · 큐브 데이터</h2><div id="dataTable"></div></div>
     </aside>
