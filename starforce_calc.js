@@ -155,7 +155,7 @@
     level: 200, start: 12, goal: 22, spare: 0,
     mvp: 0, pcRoom: false,
     discount30: false, destroyDown30: false, lucky5: false,
-    safeguard: {},
+    safeguard: {}, autoSafeguard: true,
     view: 'step'
   };
 
@@ -211,15 +211,17 @@
 
     var sg = $('safeguardChips');
     sg.innerHTML = '';
+    sg.appendChild(chip('자동 · 최소 기대비용', state.autoSafeguard, function () { state.autoSafeguard = true; refresh(); }));
+    sg.appendChild(chip('직접 선택', !state.autoSafeguard, function () { state.autoSafeguard = false; refresh(); }));
     D.PROTECT_STARS.forEach(function (s) {
       sg.appendChild(chip(s + '성', !!state.safeguard[s], function () {
-        state.safeguard[s] = !state.safeguard[s]; refresh();
+        state.autoSafeguard = false; state.safeguard[s] = !state.safeguard[s]; refresh();
       }));
     });
 
     $('startInput').value = state.start;
     $('goalInput').value = state.goal;
-    $('spareInput').value = state.spare ? state.spare : '';
+    $('spareInput').value = state.spare ? state.spare.toLocaleString('en-US') : '';
 
     $('viewStep').classList.toggle('active', state.view === 'step');
     $('viewCum').classList.toggle('active', state.view === 'cum');
@@ -322,12 +324,16 @@
     state.level = Math.min(300, Math.max(1, state.level || 1));
     state.start = Math.min(MAX - 1, Math.max(0, state.start));
     state.goal = Math.min(MAX, Math.max(0, state.goal));
-    renderControls();
     var opts = {
       level: state.level, start: state.start, goal: state.goal, spare: state.spare,
       mvp: state.mvp, pcRoom: state.pcRoom, discount30: state.discount30,
       destroyDown30: state.destroyDown30, lucky5: state.lucky5, safeguard: state.safeguard
     };
+    if (state.autoSafeguard) {
+      state.safeguard = D.bestSafeguard(opts, function (o) { return calculate(o).total.meso; });
+      opts.safeguard = state.safeguard;
+    }
+    renderControls();
     var res = calculate(opts);
     renderResult(res);
     renderSafeguardAdvice(opts);
@@ -355,10 +361,14 @@
     bindNumber('goalInput', 'goal', 1, MAX);
     $('spareInput').addEventListener('input', function () {
       var el = $('spareInput');
+      var digitsBefore = el.value.slice(0, el.selectionStart).replace(/\D/g, '').length;
       var raw = el.value.replace(/[^0-9]/g, '');
       state.spare = raw ? parseInt(raw, 10) : 0;
       refresh();
       el.focus();
+      var pos = 0, seen = 0;
+      while (pos < el.value.length && seen < digitsBefore) { if (/\d/.test(el.value[pos])) seen++; pos++; }
+      el.setSelectionRange(pos, pos);
     });
     $('viewStep').addEventListener('click', function () { state.view = 'step'; refresh(); });
     $('viewCum').addEventListener('click', function () { state.view = 'cum'; refresh(); });

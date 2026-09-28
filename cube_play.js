@@ -172,7 +172,7 @@ function roll(){
       // 목표 등급에 도달한 순간 그 자체로 "한 판" 완료. 이후 재도전/다음 판 선택과 무관하게 바로 기록한다.
       const finalRunPct=runCombinedPercentile(), finalRunStages=runStageCount();
       const miracle = state.runMiracleOn ? (state.runMiracleOff ? 'mixed' : 'on') : 'off';
-      state.runLog.push({ n:state.sessionRuns+1, attempts:state.runAttempts, pct:finalRunPct, meso:state.runMeso, miracle });
+      state.runLog.push({ n:state.sessionRuns+1, attempts:state.runAttempts, pct:finalRunPct, meso:state.runMeso, expected:state.runExpected, miracle });
       state.sessionRuns++;
       state.runStagePct={}; state.runMiracleOn=false; state.runMiracleOff=false; state.runAttempts=0; state.runMeso=0; state.runExpected=0;
       state.pendingChoice = { prevFrom:startI, final:true, pityUsed, finalRunPct, finalRunStages };
@@ -255,6 +255,8 @@ function renderRunLog(){
 function renderPercentiles(){
   const box=$('simPercentiles'); if(!box) return;
   const parts=[];
+  const lastRun=state.runLog[state.runLog.length-1];
+  if(lastRun) parts.push('<div hidden class="ux-score-source"><span data-ux-rank>상위 '+pct(lastRun.pct)+'</span><span data-ux-cost>'+verdictHtml(lastRun.meso-lastRun.expected)+'</span></div>');
   const pc=state.pendingChoice;
   const showCombo = pc && pc.final ? pc.finalRunStages>1 : runStageCount()>1;
   if(showCombo){

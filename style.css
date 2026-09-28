@@ -534,3 +534,8 @@ button.primary:hover { filter: brightness(1.08); }
 .slot-btn:hover { border-color: var(--accent); }
 .slot-btn.success { background: rgba(76,175,125,0.18); border-color: var(--good); color: var(--good); }
 .slot-btn.fail { background: rgba(226,102,74,0.18); border-color: var(--bad); color: var(--bad); }
+
+.site-menu { max-height:min(75dvh,680px); overflow-y:auto; }
+.site-menu-category { min-width:0; }
+.site-menu-category h3 { font-size:.75rem; color:var(--text-dim); margin:4px 10px 8px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+@media(max-width:520px) { .site-menu { grid-template-columns:1fr; } .site-menu-desc { display:none; } }

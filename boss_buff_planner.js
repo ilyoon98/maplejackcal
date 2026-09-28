@@ -36,6 +36,9 @@
   var BIN_W = 1000000;       // DP 점수: 버프 한 개 = 100만점. 남는 초 단위 비교보다 항상 우선한다.
   var INF = 0x3fffffff;
 
+  var profiles = [];
+  var activeProfile = '';
+  try { profiles = JSON.parse(localStorage.getItem('bossBuffPlanner.profiles') || '[]').filter(function(p){return p && typeof p.name === 'string' && p.state && Array.isArray(p.state.bosses);}); } catch (e) {}
   var state = loadState();
 
   function defaultState() {
@@ -51,9 +54,9 @@
       })
     };
   }
-  function loadState() {
+  function loadState(snapshot) {
     try {
-      var raw = localStorage.getItem(STORE_KEY);
+      var raw = snapshot ? JSON.stringify(snapshot) : localStorage.getItem(STORE_KEY);
       if (!raw) return defaultState();
       var s = JSON.parse(raw);
       if (!s || !Array.isArray(s.bosses) || !s.bosses.length) return defaultState();
@@ -78,7 +81,13 @@
     } catch (err) { return defaultState(); }
   }
   function saveState() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (err) {}
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+      if (activeProfile) {
+        var profile = profiles.find(function(p){ return p.name === activeProfile; });
+        if (profile) { profile.state = JSON.parse(JSON.stringify(state)); localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); }
+      }
+    } catch (err) { if (typeof setStatus === 'function' && fetchStatus) setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err'); }
   }
   function num(v, fallback) {
     var n = parseFloat(v);
@@ -676,9 +685,14 @@
           .then(null, function (e) { e.stage = 'scheduler'; throw e; });
       })
       .then(function (data) {
+        var savedProfile = profiles.find(function(p){ return p.name === name; });
+        if (savedProfile) state = loadState(savedProfile.state);
         var parsed = bossesFromScheduler(data);
         if (!parsed.bosses.length) { setStatus('스케줄러에 등록된 주간·월간 보스가 없습니다.', 'err'); return; }
         state.bosses = parsed.bosses;
+        syncProfileInputs();
+        activeProfile = name;
+        rememberProfile(name);
         saveState(); renderAll();
         var offCnt = parsed.bosses.filter(function (b) { return !b.on; }).length;
         setStatus('보스 ' + parsed.bosses.length + '마리를 불러왔습니다.' +
@@ -692,6 +706,56 @@
   fetchBtn.addEventListener('click', importCharacter);
   charInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') importCharacter(); });
   try { charInput.value = localStorage.getItem('bossBuffPlanner.lastChar') || ''; } catch (err) {}
+
+  var profileBar = document.createElement('div'); profileBar.className = 'ux-profile-list';
+  profileBar.setAttribute('aria-label', '저장한 캐릭터');
+  fetchStatus.after(profileBar);
+  var saveProfileButton = document.createElement('button'); saveProfileButton.type = 'button';
+  saveProfileButton.className = 'ux-button'; saveProfileButton.textContent = '현재 설정 저장';
+  fetchBtn.after(saveProfileButton);
+  function syncProfileInputs() {
+    buffInput.value = trim(state.buffMin); baseInput.value = trim(state.baseMin);
+    moveInput.value = trim(state.moveMin); slackInput.value = trim(state.slackPct); fullRunsInput.value = state.fullRuns;
+    syncRice(); document.dispatchEvent(new Event('buff-profile-loaded'));
+  }
+  function rememberProfile(name) {
+    var p = profiles.find(function(p){ return p.name === name; });
+    if (!p) { p = {name:name}; profiles.push(p); }
+    p.state = JSON.parse(JSON.stringify(state));
+    activeProfile = name;
+    try { localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); }
+    catch(e) { setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err'); }
+    renderProfiles();
+  }
+  function renderProfiles() {
+    profileBar.replaceChildren();
+    profiles.forEach(function(p){
+      var group = document.createElement('span'); group.className = 'ux-profile';
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'ux-button';
+      b.textContent = p.name; b.setAttribute('aria-pressed', String(p.name === activeProfile));
+      b.addEventListener('click', function(){
+        activeProfile = p.name; charInput.value = p.name; state = loadState(p.state);
+        syncProfileInputs(); saveState(); renderAll(); renderProfiles();
+        setStatus('저장한 배율과 보스 선택을 불러왔습니다. 최신 완료 상태는 스케줄러 불러오기를 눌러 갱신하세요.', 'ok');
+      });
+      var del = document.createElement('button'); del.type = 'button'; del.className = 'ux-button'; del.textContent = '×';
+      del.setAttribute('aria-label', p.name + ' 저장 삭제');
+      del.addEventListener('click', function(){
+        profiles = profiles.filter(function(x){ return x !== p; });
+        if(activeProfile === p.name) activeProfile = '';
+        try { localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); } catch(e) {}
+        renderProfiles();
+      });
+      group.append(b, del); profileBar.append(group);
+    });
+  }
+  saveProfileButton.addEventListener('click', function(){
+    var name = charInput.value.trim();
+    if(!name) { setStatus('저장할 캐릭터 이름을 입력하세요.', 'err'); charInput.focus(); return; }
+    rememberProfile(name); saveState();
+    setStatus('캐릭터 설정을 저장했습니다. 이후 변경한 배율과 보스 선택도 함께 저장됩니다.', 'ok');
+  });
+  renderProfiles();
   refreshKeyState();
 
   renderAll();

@@ -113,7 +113,7 @@
   var settings = {
     level: 200, start: 12, goal: 22, spare: 0,
     mvp: 0, pcRoom: false, discount30: false, destroyDown30: false, lucky5: false,
-    safeguard: {}
+    safeguard: {}, autoSafeguard: true
   };
   var session = null;
   var steps = [], expTotal = null, autoTimer = null;
@@ -207,15 +207,17 @@
     }), 'sf-chip-preset'));
 
     var sg = $('safeguardChips'); sg.innerHTML = '';
+    sg.appendChild(chip('자동 · 최소 기대비용', settings.autoSafeguard, changeSetting(function () { settings.autoSafeguard = true; })));
+    sg.appendChild(chip('직접 선택', !settings.autoSafeguard, changeSetting(function () { settings.autoSafeguard = false; })));
     D.PROTECT_STARS.forEach(function (s) {
       sg.appendChild(chip(s + '성', !!settings.safeguard[s], changeSetting(function () {
-        settings.safeguard[s] = !settings.safeguard[s];
+        settings.autoSafeguard = false; settings.safeguard[s] = !settings.safeguard[s];
       })));
     });
 
     if (document.activeElement !== $('startInput')) $('startInput').value = settings.start;
     if (document.activeElement !== $('goalInput')) $('goalInput').value = settings.goal;
-    if (document.activeElement !== $('spareInput')) $('spareInput').value = settings.spare ? settings.spare : '';
+    if (document.activeElement !== $('spareInput')) $('spareInput').value = settings.spare ? settings.spare.toLocaleString('en-US') : '';
     $('spareNote').textContent = settings.spare > 0
       ? '파괴 1회마다 ' + meso(settings.spare) + ' 메소가 지출에 더해집니다.'
       : '대체 장비값을 넣으면 파괴 손실까지 지출에 합산합니다.';
@@ -252,8 +254,7 @@
       return '<span class="tape-dot ' + t + '"></span>';
     }).join('');
 
-    var one = $('rollBtn'), auto = $('autoBtn');
-    one.disabled = done;
+    var auto = $('autoBtn');
     auto.disabled = done;
     auto.innerHTML = (autoTimer ? '정지' : '자동 강화') + '<small>' + (autoTimer ? '자동 진행 중' : '목표까지 계속') + '</small>';
     auto.classList.toggle('active', !!autoTimer);
@@ -264,6 +265,8 @@
   function renderStats() {
     var parts = [];
     var perRunExp = expTotal;
+    var lastRun = session.log[session.log.length - 1];
+    if (lastRun) parts.push('<div hidden class="ux-score-source"><span data-ux-rank>상위 ' + rankPct(lastRun.rank) + '</span><span data-ux-cost>' + verdict(lastRun.meso - perRunExp.meso) + '</span></div>');
 
     // 방금 끝난 판의 등수. 진행 중인 판은 아직 총지출이 정해지지 않아 띄우지 않는다.
     if (session.cleared && session.log.length) {
@@ -410,6 +413,10 @@
       mvp: settings.mvp, pcRoom: settings.pcRoom, discount30: settings.discount30,
       destroyDown30: settings.destroyDown30, lucky5: settings.lucky5, safeguard: settings.safeguard
     };
+    if (settings.autoSafeguard) {
+      settings.safeguard = D.bestSafeguard(opts, function (o) { return expected(o).meso; });
+      opts.safeguard = settings.safeguard;
+    }
     steps = buildSteps(opts);
     expTotal = expected(opts);
     renderControls();
@@ -441,10 +448,14 @@
       var raw = el.value.replace(/[^0-9]/g, '');
       stopAuto();
       settings.spare = raw ? parseInt(raw, 10) : 0;
+      var digitsBefore = el.value.slice(0, el.selectionStart).replace(/\D/g, '').length;
+      el.value = raw ? settings.spare.toLocaleString('en-US') : '';
+      var pos = 0, seen = 0;
+      while (pos < el.value.length && seen < digitsBefore) { if (/\d/.test(el.value[pos])) seen++; pos++; }
+      el.setSelectionRange(pos, pos);
       restart();
       el.focus();
     });
-    $('rollBtn').addEventListener('click', function () { stopAuto(); attempt(); });
     $('autoBtn').addEventListener('click', toggleAuto);
     $('nextBtn').addEventListener('click', nextRun);
     $('resetBtn').addEventListener('click', function () { stopAuto(); restart(); });

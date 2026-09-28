@@ -22,8 +22,9 @@ function effP(p){ return state.miracle ? Math.min(p*2, .999) : p; }
 function maxTo(key){ return CUBES[key].p.length; }
 function ensureValidCube(){
   if(maxTo(state.cube) < state.to){
-    const alt = Object.keys(CUBES).find(k=>CUBES[k].kind===state.tab && maxTo(k)>=state.to);
-    if(alt){ state.cube=alt; state.actual={}; }
+    state.to=maxTo(state.cube);
+    if(state.from>=state.to) state.from=state.to-1;
+    state.actual={};
   }
 }
 const $ = id => document.getElementById(id);
@@ -82,6 +83,8 @@ function renderRanks(){
   RANKS.slice(0,3).forEach((name,i)=>{
     const b=document.createElement('button'); b.className='rank-chip'+(state.from===i?' active':'');
     b.style.setProperty('--chip-color', RANK_COLORS[i]); b.textContent=name;
+    b.disabled=i>=maxTo(state.cube);
+    if(b.disabled) b.title='선택한 큐브로 이 등급에서 등급업할 수 없습니다.';
     b.onclick=()=>{ state.from=i; if(state.to<=i) state.to=Math.min(i+1,3); state.actual={}; renderAll(); };
     curChips.appendChild(b);
   });
@@ -94,14 +97,21 @@ function renderRanks(){
   goalGroup.innerHTML='<div class="rank-group-label">목표</div>';
   const goalChips=document.createElement('div'); goalChips.className='rank-row';
   RANKS.slice(1).forEach((name,idx)=>{
-    const i=idx+1, disabled=i<=state.from;
+    const i=idx+1, disabled=i<=state.from || i>maxTo(state.cube);
     const b=document.createElement('button'); b.className='rank-chip'+(state.to===i?' active':'')+(disabled?' disabled':'');
     b.style.setProperty('--chip-color', RANK_COLORS[i]); b.textContent=name;
+    b.disabled=disabled;
+    if(i>maxTo(state.cube)) b.title='다른 큐브를 먼저 선택하세요.';
     if(!disabled) b.onclick=()=>{ state.to=i; state.actual={}; renderAll(); };
     goalChips.appendChild(b);
   });
   goalGroup.appendChild(goalChips);
   row.appendChild(goalGroup);
+  if(maxTo(state.cube)<3){
+    const note=document.createElement('p'); note.className='ux-hint';
+    note.textContent=`${CUBES[state.cube].name}는 ${RANKS[maxTo(state.cube)]}까지 등급업할 수 있어요. 더 높은 목표는 큐브 종류를 먼저 바꿔주세요.`;
+    row.appendChild(note);
+  }
 }
 function renderLevelRow(){
   const input=$('itemLevel'); if(!input) return;

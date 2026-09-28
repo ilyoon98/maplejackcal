@@ -39,6 +39,17 @@
     PROTECT_STARS: [15, 16, 17],
     PROTECT_COST_MULTIPLIER: 3, // 파괴방지는 강화비용 3배(200% 추가)
     RATES: RATES,
-    baseCost: baseCost
+    baseCost: baseCost,
+    // Compare every allowed combination using the caller's existing cost model.
+    bestSafeguard: function (opts, costOf) {
+      var best = {}, lowest = Infinity;
+      for (var mask = 0; mask < 8; mask++) {
+        var safeguard = {};
+        [15, 16, 17].forEach(function (star, i) { safeguard[star] = !!(mask & (1 << i)); });
+        var cost = costOf(Object.assign({}, opts, { safeguard: safeguard }));
+        if (cost < lowest) { lowest = cost; best = safeguard; }
+      }
+      return best;
+    }
   };
 })(window);

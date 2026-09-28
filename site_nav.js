@@ -47,6 +47,22 @@
     var pill = track.querySelector('.site-tabs-pill');
     var tabs = [].slice.call(track.querySelectorAll('.site-tab'));
     var menus = [].slice.call(nav.querySelectorAll('.site-menu'));
+    var categories = [
+      ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','item_craft_calc.html']],
+      ['보스', ['boss_income_calc.html','boss_buff_planner.html']],
+      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','coin_shop_calc.html','authentic_symbol_calc.html']],
+      ['강화 놀이', ['cube_play.html','starforce_play.html']],
+      ['뽑기 놀이', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']]
+    ];
+    menus.forEach(function (menu) {
+      categories.forEach(function (category) {
+        var links = category[1].map(function (href) { return menu.querySelector('a[href="' + href + '"]'); }).filter(Boolean);
+        if (!links.length) return;
+        var group = document.createElement('section'); group.className = 'site-menu-category';
+        var heading = document.createElement('h3'); heading.textContent = category[0]; group.appendChild(heading);
+        links.forEach(function (link) { group.appendChild(link); }); menu.appendChild(group);
+      });
+    });
 
     function tabOf(group) {
       for (var i = 0; i < tabs.length; i++) if (tabs[i].dataset.group === group) return tabs[i];
