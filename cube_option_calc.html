@@ -139,6 +139,8 @@
   @media(max-width:640px){ .part-group{flex-direction:column; align-items:flex-start; gap:5px;} .part-group-title{width:auto;} .part-chips{flex-wrap:wrap; overflow:visible;} }
   @media(max-width:520px){ .cube-hero{padding:22px 18px;} .cube-panel{padding:14px;} .tab-chip{padding:9px 14px 9px 10px; font-size:.86rem;} .level-card{min-width:0; flex:1 1 40%;} }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body class="cube-page">
 <div class="wrap">
@@ -172,7 +174,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item active" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -240,7 +242,7 @@
       </div>
       <div class="cube-panel">
         <div class="panel-head">
-          <h2>03 · 목표 옵션 <span class="tiny">(조건 안은 모두 만족 · 조건끼리는 하나만 만족)</span></h2>
+          <h2>03 · 목표 옵션 <span class="tiny">(한 조건의 옵션을 모두 만족)</span></h2>
           <button type="button" class="reset-btn" id="resetGoals">↺ 초기화</button>
         </div>
         <div class="pick-box">
@@ -251,14 +253,14 @@
           <summary>기타 옵션</summary>
           <div class="pick-chips" id="otherPicks"></div>
         </details>
-        <div id="optionRows"></div>
-        <button type="button" class="add-set" id="addSet">+ 또는(OR) 조건 추가</button>
-        <p class="tiny">
+        <p class="ux-hint">세 줄 합계가 입력값 이상이면 성공 · 주스탯 %는 올스탯 포함</p><div id="optionRows"></div>
+        <button type="button" class="add-set" id="addSet">+ 다른 성공 조건 추가 (또는)</button>
+        <div data-ux-help="목표 옵션 입력 방법"><p class="tiny">
           · 수치는 세 줄 <b>합계의 최소값</b>이에요. 18%면 9%+9%, 12%+9%, 12%+9%+9% 모두 성공입니다.<br>
           · 배지는 세 줄로 <b>만들 수 있는 합계</b>예요. 누르면 그대로 들어가고, 직접 친 숫자는 그 이상에서 가장 가까운 합계부터 성공합니다(20% = 실제로는 21%부터).<br>
           · STR·DEX·INT·LUK는 확률이 같아 <b>주스탯 %</b>로 묶었고, 올스탯 %가 같은 양으로 더해져요. 넷 중 아무거나 뜨면 되면 <b>아무 스탯이나</b>를 켜세요.<br>
           · <b>또는(OR) 조건 추가</b>로 조건을 늘리면 그중 하나만 만족해도 성공이에요. 예: 조건 A 보스 데미지 30% + 공격력 9% 또는 조건 B 공격력 21%.
-        </p>
+        </p></div>
       </div>
     </section>
     <aside>
@@ -267,7 +269,7 @@
         <div class="primary-metrics">
           <div class="primary-metric wide"><div class="label">큐브 1회 성공 확률</div><div class="value" id="resProb">-</div><div class="sub" id="resProbSub"></div></div>
           <div class="primary-metric"><div class="label">기대 횟수 (평균 큐브 사용량)</div><div class="value" id="resTries">-</div></div>
-          <div class="primary-metric"><div class="label">중앙값 (50%)</div><div class="value" id="resMedian">-</div></div>
+          <div class="primary-metric"><div class="label">절반이 성공하는 횟수 (50%)</div><div class="value" id="resMedian">-</div></div>
           <div class="primary-metric wide"><div class="label">기대 메소</div><div class="value" id="resMeso">-</div></div>
         </div>
         <h3>비용 기준</h3>
@@ -276,11 +278,11 @@
           <input type="number" id="itemLevel" min="1" max="300" step="1" inputmode="numeric">
         </div>
         <div class="cost-info" id="costInfo"></div>
-        <h3>큐브 사용량</h3>
+        <h3>성공 확률별 필요 횟수</h3>
         <div id="quantileTable"></div>
-        <div id="comparePanel">
-          <h3>같은 조건, 다른 큐브</h3>
-          <div id="compareTable"></div>
+        <div id="comparePanel"><details class="ux-details"><summary>같은 조건, 다른 큐브 비교</summary>
+
+          <div id="compareTable"></div></details>
         </div>
       </div>
     </aside>

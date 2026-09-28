@@ -135,6 +135,8 @@
 
   @media(max-width:520px){ .sf-hero{padding:22px 18px;} .sf-panel{padding:14px;} }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body class="sf-page">
 <div class="wrap">
@@ -168,7 +170,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -251,7 +253,7 @@
         <p class="field-note" id="spareNote"></p>
       </div>
 
-      <div class="sf-panel">
+      <div data-ux-help="가상 강화·기록 비교 기준"><div class="sf-panel">
         <h2>이 놀이가 굴리는 방식</h2>
         <p class="tiny">
           한 번의 강화를 <b>성공 · 유지 · 파괴</b> 세 갈래로만 봅니다. 하락과 찬스타임은 다루지 않아요.<br>
@@ -260,7 +262,7 @@
           기대 지출은 <b>스타포스 기댓값 계산기</b>와 같은 식으로 뽑은 값이라, 두 페이지의 숫자가 서로 맞습니다.<br>
           <b>상위 %</b>는 같은 설정으로 12,000판을 미리 굴려 둔 분포에서 읽습니다. 내 지출 이하로 끝난 판의 비율이라 낮을수록 운이 좋았다는 뜻이에요.
         </p>
-      </div>
+      </div></div>
     </section>
 
     <aside>

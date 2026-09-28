@@ -434,7 +434,7 @@
       '<td class="strong">' + mesoText(p.avg) + '</td>' +
       '<td class="ic-note">' + esc(detailOf(p)) + '</td></tr>').join('');
     $('breakdown').innerHTML = '<table class="data-table">' +
-      '<thead><tr><th>단계</th><th>대박</th><th>평균</th><th>내용</th></tr></thead>' +
+      '<thead><tr><th>단계</th><th>최소</th><th>평균</th><th>내용</th></tr></thead>' +
       '<tbody>' + (body || '<tr><td colspan="4">값을 넣으면 계산합니다.</td></tr>') + '</tbody></table>';
 
     $('stageDetail').innerHTML = [flameDetail(r.flame), starDetail(r.star), potDetail(r.pot), potDetail(r.addi)]

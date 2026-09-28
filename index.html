@@ -99,6 +99,8 @@
   .tool-section h2{ font-size:1.15rem; margin:0 0 4px; }
   .tool-section .section-sub{ margin:0; color:var(--text-dim); font-size:0.85rem; }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -132,7 +134,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -182,8 +184,8 @@
     <h1>🏠 메이플 계산기 모음</h1>
   </header>
 
-  <section class="card" id="apiKey">
-    <h2>넥슨 오픈 API 키</h2>
+  <details class="card ux-api" id="apiKey"><summary>내 캐릭터 연결 <span>API 키 설정 · 선택 사항</span></summary>
+    <p class="ux-hint">캐릭터를 불러오는 계산기에서만 필요합니다. 일반 계산기는 연결 없이 사용할 수 있어요.</p>
     <p class="note" style="margin-top:0;">한 번만 등록하면 캐릭터 이름만으로 자동 불러오기가 됩니다. 이 브라우저에만 저장됩니다.</p>
 
     <div id="apiKeyRegistered" class="hidden key-hero">
@@ -196,13 +198,13 @@
     </div>
 
     <div id="apiKeyForm">
-      <ol class="key-guide">
+      <details class="ux-details"><summary>API 키 발급 방법</summary><ol class="key-guide">
         <li><a href="https://openapi.nexon.com/" target="_blank" rel="noopener">openapi.nexon.com</a>에서 넥슨 ID로 로그인</li>
         <li>우측 상단 <b>마이 페이지</b>로 이동</li>
         <li><b>애플리케이션 등록</b>에서 게임으로 "메이플스토리"를 선택해 신청</li>
         <li>등록 완료 후 발급된 <b>API Key</b>를 복사</li>
         <li>아래 입력칸에 붙여넣고 <b>등록</b> 버튼 클릭</li>
-      </ol>
+      </ol></details>
       <div class="api-key-row">
         <input type="password" id="apiKeyInput" placeholder="발급받은 API Key 붙여넣기" autocomplete="off" spellcheck="false">
         <button type="button" class="fetch-btn" id="apiKeySaveBtn">등록</button>
@@ -210,7 +212,7 @@
       </div>
       <p class="note" id="apiKeyStatus"></p>
     </div>
-  </section>
+  </details>
 
   <section class="tool-section">
     <h2>🧮 계산기</h2>
@@ -247,9 +249,9 @@
       </a>
 
       <a class="tool-card" href="cube_calc.html">
-        <h2>🎲 잠재능력 큐브 연구소</h2>
+        <h2>🎲 큐브 등급업 비용</h2>
         <p>큐브별 기대 개수 계산 · 천장 게임</p>
-        <span class="go">연구소 열기 →</span>
+        <span class="go">계산기 열기 →</span>
       </a>
 
       <a class="tool-card" href="cube_option_calc.html">
@@ -286,7 +288,7 @@
 
   <section class="tool-section">
     <h2>🎰 놀이터</h2>
-    <p class="section-sub">공식 확률표 그대로 돌려보는 가챠 시뮬레이터</p>
+    <p class="section-sub">기대값과 내 기록을 비교하는 가상 뽑기</p>
     <div class="tool-grid">
       <a class="tool-card" href="cube_play.html">
         <h2>🎮 큐브 놀이</h2>

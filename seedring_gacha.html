@@ -200,6 +200,8 @@
     table.probtable td.num:before{content:attr(data-label);display:block;margin-bottom:2px;color:var(--text-dim);font-size:.62rem}
   }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body>
 <main class="sr-wrap">
@@ -233,7 +235,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -298,7 +300,7 @@
 
       <div id="gachaPanel" role="tabpanel" aria-labelledby="modeDaily">
         <section class="sr-card vault" id="vaultPanel">
-          <div class="vault-label">선택한 상자</div>
+          <div class="vault-label">선택한 상자 · 추정 확률 기준</div>
           <div class="vault-boxname" id="vaultBoxName">—</div>
           <div class="vault-hint">리스트레인트 링 Lv.4 · 컨티뉴어스 링 Lv.4 · 생명의 연마석이 나오면 당첨입니다</div>
           <div class="daily-status" id="dailyStatus" aria-live="polite"></div>
@@ -315,9 +317,9 @@
 
     <aside class="sr-right">
       <section class="sr-card">
-        <button class="probtoggle-btn" id="probToggleBtn" type="button" aria-expanded="true" aria-controls="probTableWrap"><span class="car">▸</span> <span id="probToggleLabel">확률표 접기</span></button>
+        <button class="probtoggle-btn" id="probToggleBtn" type="button" aria-expanded="false" aria-controls="probTableWrap"><span class="car">▸</span> <span id="probToggleLabel">확률표 펼쳐보기</span></button>
         <p class="probtoggle-note">종류를 먼저 뽑은 뒤, 반지가 나온 경우에만 레벨을 뽑습니다. 생명의 연마석에는 레벨이 없습니다.</p>
-        <div class="probtable-wrap" id="probTableWrap"></div>
+        <div class="probtable-wrap" id="probTableWrap" hidden></div>
         <p class="sr-footer">확률 수치는 <a href="https://matsu1207.tistory.com/144" target="_blank" rel="noopener">커뮤니티 정리 자료</a>를 바탕으로 재구성한 추정치이며, 실제 게임 내 확률과 다를 수 있습니다.</p>
       </section>
     </aside>

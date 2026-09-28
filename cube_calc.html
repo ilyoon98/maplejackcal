@@ -11,7 +11,7 @@
 <meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>잠재능력 큐브 연구소</title>
+<title>큐브 등급업 비용</title>
 <link rel="stylesheet" href="style.css" />
 <style>
   .cube-page { --cube-purple:#b58cff; --cube-cyan:#55d9ff; --cube-gold:#f3c969; --cube-panel:#171827; --cube-panel-2:#20213a; }
@@ -109,6 +109,8 @@
     .actual-input { width:62px; }
   }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body class="cube-page">
 <div class="wrap">
@@ -142,7 +144,7 @@
       </a>
       <a class="site-menu-item active" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -188,7 +190,7 @@
       </a>
     </div>
   </nav>
-  <header class="cube-hero"><div class="eyebrow">CUBE LAB / PROBABILITY DECK</div><h1>🎲 잠재능력 큐브 연구소</h1></header>
+  <header class="cube-hero"><div class="eyebrow">CUBE LAB / PROBABILITY DECK</div><h1>🎲 큐브 등급업 비용</h1></header>
   <main class="cube-layout">
     <section>
       <div class="cube-panel">
@@ -217,7 +219,7 @@
           <div class="primary-metric" id="ceilingCostBox"><div class="label">천장까지 쓰면</div><div class="value" id="ceilingCost">-</div></div>
         </div>
       </div>
-      <div class="cube-panel"><h2>03 · 큐브 데이터</h2><div id="dataTable"></div></div>
+      <div class="cube-panel"><h2>내 기록 비교</h2><p class="ux-hint">실제 사용 횟수를 입력하면 평균보다 얼마나 덜 썼는지, 더 썼는지 확인할 수 있어요.</p><div id="dataTable"></div></div>
     </aside>
   </main>
   <details class="cube-panel" id="ceilingPanel">

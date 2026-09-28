@@ -103,6 +103,8 @@
     .row-input input { width:52px; }
   }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -132,7 +134,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -181,7 +183,7 @@
 
   <header>
     <h1>⏱️ 보스 버프 동선 짜기</h1>
-    <p class="sub">보스마다 배율(100% = 기준 시간)을 적으면 버프 한 번을 가장 알차게 쓰는 조합을 찾아줍니다.</p>
+    <p class="sub">내 클리어 시간에 맞춰 버프별 보스 조합을 확인하세요.</p>
   </header>
 
   <div class="layout">
@@ -206,7 +208,7 @@
             <div class="with-unit"><input type="number" id="slackPct" min="0" step="5" value="0"><span class="unit">%</span></div>
           </div>
         </div>
-        <p class="note">배율 200%면 그 절반(10분), 400%면 5분으로 계산합니다. 배율 대신 오른쪽 '분' 칸에 실제 클리어 시간을 바로 적어도 됩니다. 이동 시간은 한 버프 안에서 보스를 옮길 때마다 더해집니다(3마리면 2번). 여유 시간은 모든 보스의 처치 시간을 그 비율만큼 늘려 잡습니다(10%면 10분 → 11분).</p>
+        <div data-ux-help="배율·이동·여유 시간"><p class="note">배율 200%면 그 절반(10분), 400%면 5분으로 계산합니다. 배율 대신 오른쪽 '분' 칸에 실제 클리어 시간을 바로 적어도 됩니다. 이동 시간은 한 버프 안에서 보스를 옮길 때마다 더해집니다(3마리면 2번). 여유 시간은 모든 보스의 처치 시간을 그 비율만큼 늘려 잡습니다(10%면 10분 → 11분).</p></div>
       </section>
 
       <section class="card">
@@ -232,14 +234,14 @@
           <div class="row-input new-mult"><input type="number" id="newMult" min="1" step="10" value="100" placeholder="배율"><span class="unit">%</span></div>
           <button type="button" class="tool-btn" id="addBoss">+ 추가</button>
         </div>
-        <div class="boss-head">
+        <p class="ux-hint">배율 또는 실제 클리어 시간(분)을 입력하세요. 두 값은 함께 반영됩니다.</p><div class="boss-head">
           <span></span><span></span><span class="name-col">보스</span><span>배율</span><span>소요</span><span></span>
         </div>
         <div id="bossList"></div>
         <p class="note">윌은 페이즈 이동 때문에 처치 시간에 +4분이 자동으로 붙습니다. 입력한 값은 이 브라우저에 저장됩니다.</p>
       </section>
 
-      <section class="card card-secondary">
+      <div data-ux-help="동선 계산 방식"><section class="card card-secondary">
         <h2>어떻게 계산하나요</h2>
         <p class="how">
           <b>소요 시간 = 기준 시간 ÷ (배율 ÷ 100) × (1 + 여유%)</b>, 한 버프에 n마리를 넣으면 <b>이동 시간 × (n−1)</b>이 더 붙습니다. 그걸로<br>
@@ -247,7 +249,7 @@
           ② 버프를 한 번만 쓸 때 <b>남는 시간이 가장 적은</b> 조합도 따로 보여줍니다. 같은 시간이면 보스를 더 많이 잡는 쪽이 위로 옵니다.<br>
           ③ <b>쌀도핑</b>을 켜면 풀도핑으로 돌 수 있는 판 수를 정할 수 있고, 나머지 판은 배율 ×0.97(상대 3% 감소)로 계산합니다. 어느 보스를 풀도핑 판에 몰아야 버프를 가장 적게 쓰는지까지 같이 풉니다.
         </p>
-      </section>
+      </section></div>
     </div>
 
     <div class="layout-right">

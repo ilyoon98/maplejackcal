@@ -294,6 +294,8 @@
     .mobile-bar .mb-arrow{ color:var(--text-dim); font-size:0.9rem; }
   }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -327,7 +329,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -408,13 +410,13 @@
 
     <aside class="layout-right">
       <section class="card card-primary" id="summaryCard" style="margin-top:0;">
-        <div class="big-grid">
+        <p class="ux-hint">매주 코인을 모두 획득하는 계획 기준 · 종료 예상 잔액에는 앞으로 받을 코인도 포함됩니다.</p><div class="big-grid">
           <div>
-            <div class="big-label" id="remainLabel">전체 남은 코인</div>
+            <div class="big-label" id="remainLabel">종료까지 예상 잔액</div>
             <div class="coin-line"><span class="coin-big ok" id="remainBig">40,000</span><span class="coin-of" id="remainOf"></span></div>
           </div>
           <div>
-            <div class="big-label">이번 주 더 쓸 수 있는</div>
+            <div class="big-label">장바구니 반영 후 이번 주 잔액</div>
             <div class="coin-line"><span class="coin-big now" id="nowLeftBig">5,000</span><span class="coin-of" id="nowLeftOf"></span></div>
           </div>
         </div>
@@ -429,7 +431,7 @@
           <span class="k-now"><i></i>현재 주차</span>
         </div>
         <div class="mini-grid">
-          <div class="mini"><div class="label" id="nowLabel">지금 보유</div><div class="value" id="nowCoin">5,000</div></div>
+          <div class="mini"><div class="label" id="nowLabel">현재까지 사용 가능</div><div class="value" id="nowCoin">5,000</div></div>
           <div class="mini"><div class="label">이미 사용</div><div class="value" id="spentCoin">0</div></div>
           <div class="mini"><div class="label">장바구니</div><div class="value" id="usedCoin">0</div></div>
         </div>
@@ -469,7 +471,7 @@
     <span class="mb-remain ok" id="mbRemain">40,000</span>
   </div>
   <div class="mb-side">
-    <span class="mb-cart" id="mbCart">이번 주 더 쓸 수 있는 <b>0</b></span>
+    <span class="mb-cart" id="mbCart">장바구니 반영 후 이번 주 잔액 <b>0</b></span>
     <span class="mb-week" id="mbWeek"></span>
   </div>
   <span class="mb-arrow">▾</span>
@@ -672,7 +674,7 @@
           '<button type="button" class="qty-btn plus">+</button>' +
           '<span class="qty-cap"></span>' +
           '<button type="button" class="max-btn max-all">최대</button>' +
-          '<button type="button" class="max-btn week-fill">이번 주</button>' +
+          '<button type="button" class="max-btn week-fill">이번 주 예산만큼</button>' +
           '<button type="button" class="clear-btn">×</button>' +
         '</div>' +
         '<div class="own-row">' +
@@ -952,13 +954,13 @@
     // 현재 주차까지 받은 코인에서 이미 쓴 걸 빼면 "지금 실제로 쓸 수 있는 코인"
     var nowAvailable = nowCoins() - spent;
     var shortNow = used - nowAvailable;           // 지금 기준 모자란 코인
-    el.nowLabel.textContent = '지금 보유';
+    el.nowLabel.textContent = '현재까지 사용 가능';
     el.nowLabel.title = settings.currentWeek + '주차까지 받은 코인에서 이미 쓴 것을 뺀 값';
     el.nowCoin.textContent = signed(nowAvailable);
 
     // 주차별 계획에서 이번 주 칸에 남는 코인 = 계획대로 사고도 이번 주에 더 쓸 수 있는 코인
     var nowLeft = nowLeftCoins();
-    el.remainLabel.textContent = '전체 남은 코인 (' + settings.weeks + '주)';
+    el.remainLabel.textContent = '종료까지 예상 잔액 (' + settings.weeks + '주)';
     el.remainOf.textContent = '/ ' + fmt(total);
     el.nowLeftBig.textContent = signed(nowLeft);
     el.nowLeftBig.classList.toggle('over', nowLeft < 0);
@@ -1004,7 +1006,7 @@
     el.mbRemain.textContent = signed(remain);
     el.mbRemain.classList.toggle('over', remain < 0);
     el.mbRemain.classList.toggle('ok', remain >= 0);
-    el.mbCart.innerHTML = '이번 주 더 쓸 수 있는 <b>' + signed(nowLeft) + '</b>';
+    el.mbCart.innerHTML = '장바구니 반영 후 이번 주 잔액 <b>' + signed(nowLeft) + '</b>';
     el.mbWeek.textContent = mbWeekText;
     el.mbWeek.className = 'mb-week' + (mbWeekCls ? ' ' + mbWeekCls : '');
 

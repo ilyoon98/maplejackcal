@@ -186,7 +186,7 @@ function goalChips(need, set){
     const name = optLabel(k) + (MAIN_STATS.includes(k) ? (anyStat ? ' (넷 중 아무거나 · 올스탯 포함)' : ' (올스탯 포함)') : '');
     const text = unit === '줄' ? `${esc(k)} ${v}줄 이상` : `${esc(name)} 합계 ${v}${esc(unit)} 이상`;
     return `<span class="goal-chip">${text}</span>`;
-  }).join('<span class="goal-and">AND</span>');
+  }).join('<span class="goal-and">그리고</span>');
 }
 
 function renderSets(bracket){

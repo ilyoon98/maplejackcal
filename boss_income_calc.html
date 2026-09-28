@@ -276,6 +276,8 @@
   }
   @media(prefers-reduced-motion:reduce){ .boss-row{ transition:none; } }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -309,7 +311,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -360,15 +362,15 @@
   </header>
 
   <section class="card overall-card">
-    <h2>캐릭터 총합</h2>
+    <h2>캐릭터 총합</h2><p class="ux-hint">결정석 예상 수익 · 파티 인원은 직접 설정 · 월간은 주간 × 4 + 월간 보스 기준</p>
 <div class="overall-highlights">
   <div class="summary-inner">
     <div class="summary-stat meso primary">
-      <span class="k">이번 주 받을 수익</span>
+      <span class="k">주간 예상 총수익</span>
       <span class="v" id="sumWeekly">0</span>
     </div>
     <div class="summary-stat meso primary earned">
-      <span class="k">이미 획득한 수익</span>
+      <span class="k">완료 보스 기준 수익</span>
       <span class="v" id="sumEarned">0</span>
     </div>
     <div class="summary-stat meso primary">
@@ -925,7 +927,7 @@
         '<span class="chip-meso">주 ' + won(t.weeklyMeso) + '</span>' +
         '<span class="chip-meso chip-earned">완료 ' + won(t.earnedMeso) + '</span>' +
         '<span class="chip-meso chip-monthly">월 ' + won(t.monthlyMeso) + '</span>' +
-        (ch.lastSyncedAt ? '<span class="sync-meta">스케줄러 연동</span>' : '') +
+        (ch.lastSyncedAt ? '<span class="sync-meta">갱신 ' + escapeHtml(new Date(ch.lastSyncedAt).toLocaleString('ko-KR')) + '</span>' : '') +
         '<span class="chip-bosses">' + DISPLAY_BOSSES.filter(function(b){ return ch.bosses[b.name]; }).map(function(b){
           var difficulty = b.diffs[ch.bosses[b.name].diffIdx].label;
           var badge = DIFFICULTY[difficulty];

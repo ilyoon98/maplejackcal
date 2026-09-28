@@ -119,6 +119,8 @@
   .ic-assume ul { margin:10px 0 0; padding-left:18px; color:var(--text-dim); font-size:.8rem; line-height:1.85; }
   .ic-assume b { color:var(--text); }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -152,7 +154,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -202,8 +204,7 @@
   <header class="ic-hero">
     <div class="eyebrow">ITEM CRAFT / TOTAL COST</div>
     <h1>🛠️ 아이템 제작 비용 계산기</h1>
-    <p>노작을 사서 추가옵션 → 스타포스 → 잠재·에디셔널까지 원하는 대로 맞출 때
-       <b>완전 대박이면 얼마</b>, <b>평균적으로는 얼마</b>가 드는지 한 번에 계산합니다.
+    <p>노작부터 완성까지 <b>평균 제작 비용</b>을 확인하세요.
        <span id="dataSource"></span></p>
   </header>
 
@@ -272,14 +273,14 @@
     <section class="ic-result">
       <div class="ic-panel">
         <h2>제작 비용</h2>
-        <div class="ic-totals">
+        <p id="uxCraftScope" class="ux-scope" aria-live="polite"></p><div class="ic-totals">
           <div class="ic-total jackpot">
-            <div class="ic-total-label">🎉 완전 대박</div>
+            <div class="ic-total-label">모든 단계 첫 성공 시 최소 비용</div>
             <div class="ic-total-value" id="resMin">-</div>
             <div class="ic-total-sub" id="resMinSub"></div>
           </div>
           <div class="ic-total avg">
-            <div class="ic-total-label">📊 평균</div>
+            <div class="ic-total-label">평균 제작 비용</div>
             <div class="ic-total-value" id="resAvg">-</div>
             <div class="ic-total-sub" id="resAvgSub"></div>
           </div>
@@ -287,12 +288,12 @@
         <p class="ic-ratio" id="resRatio"></p>
         <div class="ic-sub">단계별로 나눠 보기</div>
         <div id="breakdown"></div>
-        <div id="stageDetail"></div>
+        <details class="ux-details"><summary>단계별 확률·횟수 상세</summary><div id="stageDetail"></div></details>
 
-        <details class="ic-assume">
+        <div data-ux-help="제작 비용 계산 기준"><details class="ic-assume">
           <summary>어떻게 계산했나요?</summary>
           <ul>
-            <li><b>대박</b>은 모든 단계가 첫 시도에 성공했을 때의 비용이에요. 이보다 싸게는 만들 수 없습니다.</li>
+            <li><b>최소 비용</b>은 모든 단계가 첫 시도에 성공했을 때의 비용이에요. 이보다 싸게는 만들 수 없습니다.</li>
             <li><b>평균</b>은 각 단계 기대 비용의 합이에요. 확률이 낮은 단계 하나가 전체를 끌어올립니다.</li>
             <li>순서는 <b>노작 → 추가옵션 → 스타포스 → 잠재·에디셔널</b>로 봅니다. 스타포스에서 파괴되면
                 노작을 다시 사고 추가옵션도 다시 띄워야 하므로, 그 금액이 파괴 1회 손실로 들어갑니다.</li>
@@ -312,7 +313,7 @@
             <li>불꽃은 아이템이라 메소가 들지 않습니다. <b>추가옵션 재설정 (메소)</b>만 1회 300만 메소가 나가고,
                 확률은 검은 · 영원한 환생의 불꽃과 같습니다.</li>
           </ul>
-        </details>
+        </details></div>
       </div>
     </section>
   </main>

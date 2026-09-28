@@ -94,6 +94,8 @@
   .mm-assume b { color:var(--text); }
   .hidden { display:none !important; }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -127,7 +129,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -177,15 +179,14 @@
   <header class="mm-hero">
     <div class="eyebrow">MESO MARKET / BREAK-EVEN RATE</div>
     <h1>💎 메소마켓 시세 계산기</h1>
-    <p>시세판에 뜬 <b>1억 메소당 메포</b>가 그대로 들어오지는 않습니다. 수수료 1%면 2304 시세라도 손에 쥐는 건 2280.96 메포죠.
-       기준 시세를 넣으면 <b>실제로 받는 메포</b>와 <b>직접 걸어서 팔 때 넘겨야 하는 시세</b>를 바로 보여줍니다.</p>
+    <p>지금 거래할 때와 직접 등록할 때, 실수령 메포를 비교하세요.</p>
   </header>
 
   <div class="mm-layout">
     <div>
       <section class="mm-panel">
-        <h2>01 · 기준 시세</h2>
-        <p class="mm-kicker">지금 바로 거래할 수 있는 시세입니다. 이 값이 "이것보다 나아야 이득"의 기준선이 됩니다.</p>
+        <h2>01 · 지금 바로 거래</h2>
+        <p class="mm-kicker">게임에서 확인한 시세를 직접 입력하세요. 실시간 조회값이 아닙니다.</p>
         <div class="mm-fields">
           <div class="mm-field wide">
             <label for="baseRate">1억 메소당 메포 <small>(기준 시세)</small></label>
@@ -201,7 +202,7 @@
       </section>
 
       <section class="mm-panel">
-        <h2>02 · 팔려는 시세</h2>
+        <h2>02 · 직접 등록해서 거래</h2>
         <p class="mm-kicker">직접 등록해서 팔 때 걸 가격입니다. 비워두면 손익분기 시세만 계산합니다.</p>
         <div class="mm-fields">
           <div class="mm-field wide">
@@ -218,11 +219,11 @@
         <p class="mm-kicker">수수료가 <b>메포를 받을 때</b> 붙는지 <b>팔 때</b> 붙는지에 따라 손익분기가 달라집니다. 기본은 받을 때 1%입니다.</p>
         <div class="mm-fields">
           <div class="mm-field">
-            <label for="buyFee">메포 받을 때 <small>(%)</small></label>
+            <label for="buyFee">바로 거래 수수료 <small>(%)</small></label>
             <input type="text" id="buyFee" inputmode="decimal" autocomplete="off" placeholder="1" />
           </div>
           <div class="mm-field">
-            <label for="sellFee">팔 때 <small>(%)</small></label>
+            <label for="sellFee">직접 등록 수수료 <small>(%)</small></label>
             <input type="text" id="sellFee" inputmode="decimal" autocomplete="off" placeholder="0" />
           </div>
         </div>
@@ -267,7 +268,7 @@
         </table>
       </section>
 
-      <details class="mm-panel mm-assume">
+      <div data-ux-help="계산 기준"><details class="mm-panel mm-assume">
         <summary>계산 기준 보기</summary>
         <ul>
           <li>실수령 시세 = <b>기준 시세 × (1 − 받을 때 수수료율)</b>. 2304에 1%면 2280.96 메포입니다.</li>
@@ -277,7 +278,7 @@
           <li>수수료율은 직접 바꿀 수 있습니다. 게임 내 실제 수수료가 바뀌면 그 값을 넣으세요.</li>
           <li>입력값은 이 브라우저에만 저장됩니다.</li>
         </ul>
-      </details>
+      </details></div>
     </div>
   </div>
 </div>

@@ -92,6 +92,8 @@
   .tm-assume b { color:var(--text); }
   .hidden { display:none !important; }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -125,7 +127,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -175,15 +177,14 @@
   <header class="tm-hero">
     <div class="eyebrow">TRADE / BREAK-EVEN PRICE</div>
     <h1>💱 되팔기 손익 계산기</h1>
-    <p>경매장은 <b>팔 때 판매가의 5%</b>를 수수료로 뗍니다. 700만에 산 물건을 700만에 다시 걸면 35만 손해라는 뜻이죠.
-       산 가격을 넣으면 <b>본전이 되는 최소 판매가</b>를, 팔려는 가격을 넣으면 <b>실제로 얼마 남는지</b>를 바로 보여줍니다.</p>
+    <p>수수료를 제외한 순이익과 본전 판매가를 확인하세요.</p>
   </header>
 
   <div class="tm-layout">
     <div>
       <section class="tm-panel">
         <h2>01 · 산 가격</h2>
-        <p class="tm-kicker">경매장에서 살 때는 수수료가 없어서, 낸 메소가 그대로 원가입니다.</p>
+        <p class="tm-kicker">구매가와 추가 비용을 입력하세요.</p>
         <div class="tm-fields">
           <div class="tm-field wide">
             <label for="buyPrice">개당 구매가 <small>(메소)</small></label>
@@ -204,7 +205,7 @@
 
       <section class="tm-panel">
         <h2>02 · 팔려는 가격</h2>
-        <p class="tm-kicker">비워두면 최소 판매가만 계산합니다. 넣으면 수수료를 떼고 얼마가 남는지 바로 나옵니다.</p>
+        <p class="tm-kicker">판매가를 입력하면 순이익이 표시됩니다.</p>
         <div class="tm-fields">
           <div class="tm-field wide">
             <label for="sellPrice">개당 판매가 <small>(메소)</small></label>
@@ -231,7 +232,7 @@
     <div class="tm-result">
       <section class="tm-panel" style="margin-top:16px">
         <h2>최소 판매가</h2>
-        <p class="tm-kicker">본전이 되는 가격이에요. 여기서 1메소라도 높게 팔면 이득입니다.</p>
+        <p class="tm-kicker">구매가만 입력하면 본전 판매가를 보여줍니다.</p>
         <div class="tm-big empty" id="breakEvenBox">
           <div class="tm-big-label">본전 판매가</div>
           <div class="tm-big-value" id="breakEvenValue">구매가를 입력하세요</div>
@@ -261,7 +262,7 @@
         </table>
       </section>
 
-      <details class="tm-panel tm-assume">
+      <div data-ux-help="계산 기준"><details class="tm-panel tm-assume">
         <summary>계산 기준 보기</summary>
         <ul>
           <li>수수료는 <b>판매가의 5%</b>로, 판매가 전액에서 떼고 나머지가 들어옵니다. (살 때는 수수료 없음)</li>
@@ -270,7 +271,7 @@
           <li>수량이 여러 개면 전부 같은 가격에 팔린다고 봅니다. 안 팔려서 다시 거는 시간·시세 변동은 계산에 없습니다.</li>
           <li>입력값은 이 브라우저에만 저장됩니다.</li>
         </ul>
-      </details>
+      </details></div>
     </div>
   </div>
 </div>

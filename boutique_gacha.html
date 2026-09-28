@@ -135,6 +135,8 @@
   @media(max-width:900px){.bt-layout{grid-template-columns:1fr}.bt-right{position:static}.prob-tables{grid-template-columns:1fr}}
   @media(max-width:540px){.bt-hero{padding:24px 20px}.bt-hero:after{display:none}.bt-actions{grid-template-columns:1fr}.result-batch{grid-template-columns:repeat(4,1fr)}}
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body>
 <main class="bt-wrap">
@@ -168,7 +170,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -225,9 +227,9 @@
     <section class="bt-left">
       <section class="bt-card auto-card" id="autoCard">
         <h2>자동 뽑기</h2>
-        <p class="bt-card-sub">목표 티켓이 터질 때까지 계속 돌립니다. 돌리는 동안 티켓·금액이 실시간으로 누적되고, 언제든 중단할 수 있습니다.</p>
+        <p class="bt-card-sub">한 번에 아래 수량 이상의 티켓이 나올 때까지 반복합니다. 누적 티켓 목표가 아닙니다.</p>
         <div class="auto-row">
-          <span class="auto-label">목표</span>
+          <span class="auto-label">한 번에 획득할 티켓</span>
           <button class="chip active" data-target="100" type="button">100개 이상</button>
           <button class="chip" data-target="200" type="button">200개 이상</button>
           <button class="chip" data-target="500" type="button">500개 이상</button>
@@ -251,12 +253,12 @@
       </section>
 
       <section class="bt-card">
-        <h2>확률표</h2>
+        <details class="ux-details"><summary>일반·피버 확률표</summary>
         <p class="bt-card-sub">메이플스토리 캐시샵 공식 확률 공지 기준입니다.</p>
         <div class="prob-tables">
           <table class="prob-table"><caption>일반 확률 (기댓값 <span id="evNormal">-</span>개)</caption><thead><tr><th>아이템</th><th>확률</th></tr></thead><tbody id="tableNormal"></tbody></table>
           <table class="prob-table"><caption>피버 타임 확률 (기댓값 <span id="evFever">-</span>개)</caption><thead><tr><th>아이템</th><th>확률</th></tr></thead><tbody id="tableFever"></tbody></table>
-        </div>
+        </div></details>
       </section>
     </section>
 

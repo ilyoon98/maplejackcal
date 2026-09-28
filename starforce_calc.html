@@ -84,6 +84,8 @@
   @media(max-width:900px){ .sf-layout{ grid-template-columns:1fr; } }
   @media(max-width:520px){ .sf-hero{padding:22px 18px;} .sf-panel{padding:14px;} }
 </style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
 </head>
 <body class="sf-page">
 <div class="wrap">
@@ -117,7 +119,7 @@
       </a>
       <a class="site-menu-item" href="cube_calc.html">
         <span class="site-menu-icon">🎲</span>
-        <span><span class="site-menu-name">잠재능력 큐브 연구소</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
         <span class="site-menu-icon">🎯</span>
@@ -205,22 +207,22 @@
         <div class="sf-chips" id="eventChips"></div>
         <div class="sub-label">파괴방지 <span class="tiny">(강화 비용 3배 · 파괴 확률 0%)</span></div>
         <div class="sf-chips" id="safeguardChips"></div>
-        <p class="tiny" style="margin:12px 0 0;">
+        <div data-ux-help="할인·이벤트 적용 기준"><p class="tiny" style="margin:12px 0 0;">
           · MVP·PC방 할인은 17성 미만 구간에만, 서로 <b>더해서</b> 적용됩니다.<br>
           · 비용 30% 할인은 모든 구간에 적용되지만 <b>파괴방지 추가 비용에는 붙지 않습니다</b>.<br>
           · 샤타포스는 비용 30% 할인 + 21성 이하 파괴확률 30% 감소를 한 번에 켭니다.
-        </p>
+        </p></div>
       </div>
 
       <div class="sf-panel">
         <div class="panel-head">
-          <h2>구간별 기댓값</h2>
+          <h2>구간별 상세</h2>
           <div class="sf-toggle">
             <button type="button" id="viewStep" class="active">단계별</button>
             <button type="button" id="viewCum">누적</button>
           </div>
         </div>
-        <div class="sf-scroll" id="stepTable"></div>
+        <details class="ux-details"><summary>구간별 비용·파괴·시도 보기</summary><div class="sf-scroll" id="stepTable"></div></details>
       </div>
     </section>
 
@@ -250,11 +252,11 @@
         <h3>파괴방지 손익분기</h3>
         <div class="sf-scroll" id="safeguardAdvice"></div>
         <p class="tiny" id="spareCompare" style="margin:8px 0 0;"></p>
-        <p class="tiny" style="margin:4px 0 0;">
+        <div data-ux-help="파괴방지 손익분기"><p class="tiny" style="margin:4px 0 0;">
           손익분기 노작값 = <b>그 성만 켰다 껐을 때</b> 늘어나는 강화비용 ÷ 줄어드는 파괴 횟수.
           노작값이 이 값보다 비싸면 파괴방지가 이득입니다. 나머지 성의 방지 설정은 지금 상태 그대로 둔 기준이라,
           하나를 켜고 끄면 다른 성의 손익분기도 같이 움직입니다.
-        </p>
+        </p></div>
       </div>
 
       <details class="sf-panel" id="refPanel">
@@ -269,10 +271,10 @@
     </aside>
   </main>
 
-  <p class="tiny" style="margin-top:24px;">
+  <div data-ux-help="스타포스 데이터 출처"><p class="tiny" style="margin-top:24px;">
     확률표는 공개된 스타포스 강화 확률을, 비용 계산식은 chuchu.gg · mesu.live의 기댓값을 역산해 맞췄습니다.
     레벨 200 기준 12→30성 누적 기댓값이 소수점 아래까지 일치합니다. 확정 복구(흔적 복구)는 아직 반영하지 않았습니다.
-  </p>
+  </p></div>
 </div>
 <script src="site_nav.js"></script>
 <script src="starforce_data.js"></script>
