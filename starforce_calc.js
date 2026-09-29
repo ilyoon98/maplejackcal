@@ -50,6 +50,12 @@
     var steps = buildSteps(opts);
     var spare = opts.spare || 0;
     var per = [];
+    var recovery = [];
+    // 가이드의 추정 방식: 샤이닝 + 15~17성 파괴방지, 노작값 0의 12성부터 누적 비용.
+    var fees = opts.recoveryMode && opts.recoveryMode !== 'off' ? calculate({
+      level: opts.level, start: RESET, goal: 22, spare: 0,
+      discount30: true, destroyDown30: true, safeguard: {15:true,16:true,17:true}
+    }).rows : [];
     var sumMeso = 0, sumDestroy = 0, sumTries = 0; // 12성부터의 누적
 
     for (var s = 0; s < MAX; s++) {
@@ -61,9 +67,27 @@
         destroys = 0;
         tries = 1 / st.p;
       } else {
-        meso = st.cost / st.p + ratio * (spare + sumMeso);
-        destroys = ratio * (1 + sumDestroy);
-        tries = 1 / st.p + ratio * sumTries;
+        var backMeso = sumMeso, backDestroy = sumDestroy, backTries = sumTries;
+        var restoreStar = Math.min(s, 22);
+        var feeRow = fees[restoreStar - RESET - 1];
+        var fee = feeRow ? feeRow.cumMeso * (opts.recoveryDiscount20 ? 0.8 : 1) : 0;
+        var copies = restoreStar <= 18 ? 1 : restoreStar <= 20 ? 2 : restoreStar === 21 ? 3 : 4;
+        var normalCost = spare + sumMeso;
+        var fixedCost = fee + copies * spare;
+        var tailMeso = 0, tailDestroy = 0, tailTries = 0;
+        for (var j = restoreStar; j < s; j++) {
+          tailMeso += per[j].meso; tailDestroy += per[j].destroys; tailTries += per[j].tries;
+        }
+        fixedCost += tailMeso;
+        var useFixed = !!feeRow && (opts.recoveryMode === 'always' || fixedCost < normalCost);
+        if (useFixed) {
+          backMeso = fixedCost - spare; backDestroy = tailDestroy; backTries = tailTries;
+        }
+        recovery.push({star:s, restoreStar:restoreStar, fee:fee, copies:copies,
+          normalCost:normalCost, fixedCost:fixedCost, useFixed:useFixed, available:!!feeRow, destroy:st.d});
+        meso = st.cost / st.p + ratio * (spare + backMeso);
+        destroys = ratio * (1 + backDestroy);
+        tries = 1 / st.p + ratio * backTries;
         sumMeso += meso; sumDestroy += destroys; sumTries += tries;
       }
       per.push({ star: s, meso: meso, destroys: destroys, tries: tries, step: st });
@@ -83,7 +107,7 @@
         step: per[k].step
       });
     }
-    return { rows: rows, total: total, steps: steps };
+    return { rows: rows, total: total, steps: steps, recovery: recovery };
   }
 
   // 파괴방지 손익분기.
@@ -156,6 +180,7 @@
     mvp: 0, pcRoom: false,
     discount30: false, destroyDown30: false, lucky5: false,
     safeguard: {}, autoSafeguard: true,
+    recoveryMode: 'auto', recoveryDiscount20: false,
     view: 'step'
   };
 
@@ -219,6 +244,15 @@
       }));
     });
 
+    var rc = $('recoveryChips');
+    rc.innerHTML = '';
+    [['auto','자동 · 최소 기대비용'],['off','12성 복구만'],['always','항상 확정 복구']].forEach(function (o) {
+      rc.appendChild(chip(o[1], state.recoveryMode === o[0], function () { state.recoveryMode = o[0]; refresh(); }));
+    });
+    rc.appendChild(chip('복구 메소 20% 할인', state.recoveryDiscount20, function () {
+      state.recoveryDiscount20 = !state.recoveryDiscount20; refresh();
+    }));
+
     $('startInput').value = state.start;
     $('goalInput').value = state.goal;
     $('spareInput').value = state.spare ? state.spare.toLocaleString('en-US') : '';
@@ -235,7 +269,7 @@
     $('resRange').textContent = state.start + '성 → ' + state.goal + '성 · Lv.' + state.level + ' 장비';
 
     $('spareNote').textContent = state.spare > 0
-      ? '파괴 1회마다 ' + mesoText(state.spare) + '이 추가로 들어갑니다.'
+      ? '스페어 1개당 ' + mesoText(state.spare) + '을 반영합니다. 확정 복구에는 성급에 따라 1~4개가 필요합니다.'
       : '대체 장비값(노작값)을 넣으면 파괴 손실까지 메소로 합산합니다.';
 
     var tb = $('stepTable');
@@ -263,11 +297,23 @@
 
   function renderSafeguardAdvice(opts) {
     var box = $('safeguardAdvice');
+    if (opts.recoveryMode !== 'off') {
+      var current = calculate(opts).total.meso;
+      box.innerHTML = '<table class="sf-table"><thead><tr><th>강화 구간</th><th>현재 설정</th><th>반대로 바꾸면</th></tr></thead><tbody>' + D.PROTECT_STARS.map(function (s) {
+        var on = !!opts.safeguard[s];
+        var sg = Object.assign({}, opts.safeguard); sg[s] = !on;
+        var delta = calculate(Object.assign({}, opts, {safeguard:sg})).total.meso - current;
+        return '<tr><td>' + s + ' → ' + (s+1) + '</td><td>' + (on ? 'ON' : 'OFF') + '</td><td>' + (Math.abs(delta) < 1 ? '차이 없음' : mesoText(Math.abs(delta)) + (delta > 0 ? ' 증가' : ' 절약')) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+      $('spareCompare').textContent = '현재 노작값과 복구 선택을 반영한 총 기대비용 비교입니다. 다른 성의 파괴방지는 현재 설정을 유지합니다.';
+      return;
+    }
     var rows = D.PROTECT_STARS.map(function (s) {
       return { star: s, r: breakEvenSpare(opts, s) };
     });
     if (rows.every(function (x) { return x.r.kind === 'none'; })) {
-      box.innerHTML = '<p class="sf-empty">지금 구간에서는 15~17성을 지나지 않아 파괴방지가 의미 없습니다.</p>';
+      box.innerHTML = '<p class="sf-empty">현재 구간과 이벤트에서는 파괴방지로 줄일 파괴가 없습니다.</p>';
+      $('spareCompare').textContent = '';
       return;
     }
     var html = '<table class="sf-table"><thead><tr>' +
@@ -298,7 +344,25 @@
 
     $('spareCompare').textContent = state.spare > 0
       ? '현재 노작값 ' + mesoText(state.spare) + ' 기준으로 판정했습니다.'
-      : '노작값이 0이라 지금은 전부 끄는 게 이득으로 나옵니다. 대체 장비값을 넣고 다시 보세요.';
+      : '노작값 0 메소 기준입니다. 실제 대체 장비값을 입력하면 판정이 달라질 수 있습니다.';
+  }
+
+  function renderStrategy(opts, res) {
+    var best = D.bestSafeguard(opts, function (o) { return calculate(o).total.meso; });
+    $('strategyBasis').textContent = '노작값 ' + mesoText(opts.spare) + ' · 현재 레벨·할인·이벤트 기준';
+    $('safeguardSummary').textContent = '파괴방지 추천: ' + D.PROTECT_STARS.map(function (s) {
+      return s + '→' + (s+1) + '성 ' + (best[s] ? 'ON' : 'OFF');
+    }).join(' · ') + (state.autoSafeguard ? ' (결과에 적용됨)' : ' (직접 선택 설정으로 계산 중)');
+    var relevant = res.recovery.filter(function (r) { return r.star >= 15 && r.star < opts.goal; });
+    var fixed = relevant.filter(function (r) { return r.useFixed && r.destroy > 0; });
+    $('recoverySummary').textContent = opts.goal <= opts.start ? '목표 성을 시작 성보다 높게 설정해 주세요.' :
+      '복구 적용: ' + (fixed.length ? fixed.map(function (r) { return r.star + '성 파괴 시 ' + r.restoreStar + '성 확정 복구'; }).join(' · ') + '. 나머지는 12성 복구.' : '12성 복구 후 재강화');
+    $('recoveryAdvice').innerHTML = opts.recoveryMode === 'off' || !relevant.length || opts.goal <= opts.start ?
+      '<p class="tiny">확정 복구 비교는 자동 또는 항상 확정 복구를 선택하고, 파괴가 있는 목표 구간에서 확인할 수 있습니다.</p>' :
+      '<table class="sf-table"><thead><tr><th>파괴 시점</th><th>12성 복구·재강화</th><th>확정 복구·재강화</th><th>적용</th></tr></thead><tbody>' + relevant.map(function (r) {
+        return '<tr><td>' + r.star + '성</td><td>' + mesoText(r.normalCost) + '</td><td>' + mesoText(r.fixedCost) + '<br><span class="tiny">' + r.restoreStar + '성 복구 · 스페어 ' + r.copies + '개</span></td><td>' +
+          (r.destroy === 0 ? '파괴 없음' : r.useFixed ? '확정 복구' : '12성 복구') + '</td></tr>';
+      }).join('') + '</tbody></table>';
   }
 
   function renderReference(res) {
@@ -327,7 +391,8 @@
     var opts = {
       level: state.level, start: state.start, goal: state.goal, spare: state.spare,
       mvp: state.mvp, pcRoom: state.pcRoom, discount30: state.discount30,
-      destroyDown30: state.destroyDown30, lucky5: state.lucky5, safeguard: state.safeguard
+      destroyDown30: state.destroyDown30, lucky5: state.lucky5, safeguard: state.safeguard,
+      recoveryMode: state.recoveryMode, recoveryDiscount20: state.recoveryDiscount20
     };
     if (state.autoSafeguard) {
       state.safeguard = D.bestSafeguard(opts, function (o) { return calculate(o).total.meso; });
@@ -336,6 +401,7 @@
     renderControls();
     var res = calculate(opts);
     renderResult(res);
+    renderStrategy(opts, res);
     renderSafeguardAdvice(opts);
     renderReference(res);
     save();

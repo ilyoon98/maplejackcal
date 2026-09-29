@@ -169,7 +169,7 @@
   <header class="sf-hero">
     <div class="eyebrow">STARFORCE / EXPECTED VALUE</div>
     <h1>⭐ 스타포스 기댓값 계산기</h1>
-    <p>목표 성까지 들어가는 <b>기대 메소 · 기대 파괴 횟수 · 기대 강화 시도</b>를 계산합니다. 파괴되면 12성으로 되돌아가 다시 올라오는 비용까지 전부 포함한 값이에요.</p>
+    <p>목표 성까지 들어가는 <b>기대 메소 · 기대 파괴 횟수 · 기대 강화 시도</b>를 계산합니다. 노작값에 맞춰 파괴방지와 확정 복구를 선택하고, 복구 후 다시 강화하는 비용까지 포함합니다.</p>
   </header>
 
   <main class="sf-layout">
@@ -207,6 +207,9 @@
         <div class="sf-chips" id="eventChips"></div>
         <div class="sub-label">파괴방지 <span class="tiny">(강화 비용 3배 · 파괴 확률 0%)</span></div>
         <div class="sf-chips" id="safeguardChips"></div>
+        <div class="sub-label">파괴 후 복구 방법</div>
+        <div class="sf-chips" id="recoveryChips"></div>
+        <p class="tiny">자동은 노작값을 포함한 기대비용이 낮은 복구 방법을 성별로 선택합니다. 일반 장비 기준이며 제로 무기·아스트라 보조무기·데스티니 2차 초월 무기는 지원하지 않습니다.</p>
         <div data-ux-help="할인·이벤트 적용 기준"><p class="tiny" style="margin:12px 0 0;">
           · MVP·PC방 할인은 17성 미만 구간에만, 서로 <b>더해서</b> 적용됩니다.<br>
           · 비용 30% 할인은 모든 구간에 적용되지만 <b>파괴방지 추가 비용에는 붙지 않습니다</b>.<br>
@@ -249,14 +252,21 @@
           몇 배를 붓고도 못 가기도 합니다. 특히 22성 이상은 평균 근처에서 끝나는 경우가 오히려 드물어요.
         </p>
 
-        <h3>파괴방지 손익분기</h3>
+        <h3>이렇게 강화하세요</h3>
+        <p class="tiny" id="strategyBasis"></p>
+        <p id="safeguardSummary" style="font-size:.85rem;line-height:1.8;"></p>
+        <p id="recoverySummary" style="font-size:.85rem;line-height:1.8;"></p>
+        <h3>파괴방지 설정 비교</h3>
         <div class="sf-scroll" id="safeguardAdvice"></div>
         <p class="tiny" id="spareCompare" style="margin:8px 0 0;"></p>
         <div data-ux-help="파괴방지 손익분기"><p class="tiny" style="margin:4px 0 0;">
-          손익분기 노작값 = <b>그 성만 켰다 껐을 때</b> 늘어나는 강화비용 ÷ 줄어드는 파괴 횟수.
-          노작값이 이 값보다 비싸면 파괴방지가 이득입니다. 나머지 성의 방지 설정은 지금 상태 그대로 둔 기준이라,
-          하나를 켜고 끄면 다른 성의 손익분기도 같이 움직입니다.
+          자동은 15·16·17성의 모든 방지 조합을 비교합니다. 복구 방법에 따라 추천도 달라집니다.
+          12성 복구만 선택하면 손익분기 노작값도 확인할 수 있습니다. 추천은 평균 메소 기준입니다.
         </p></div>
+        <h3>파괴 시 복구 비용 비교</h3>
+        <div class="sf-scroll" id="recoveryAdvice"></div>
+        <p class="tiny">두 비용 모두 파괴 직전 성까지 돌아오는 비용이며 스페어값을 포함합니다. 재강화 중 다시 파괴될 가능성과 선택한 복구 방식도 반영합니다. 시작 성보다 낮은 구간도 파괴 후 재강화 과정에 포함될 수 있습니다. 23성 이상에서 확정 복구하면 22성으로 돌아옵니다.</p>
+        <p class="tiny">확정 복구 메소는 <b>추정값</b>입니다. <a href="https://www.inven.co.kr/board/maple/2304/47118" target="_blank" rel="noopener noreferrer">참고 가이드</a>처럼 샤이닝·15~17성 파괴방지 기준의 12성부터 누적 강화비용을 사용합니다. 실제 게임 비용과 차이가 있을 수 있습니다. 복구 메소 20% 할인은 별도로 선택해 주세요.</p>
       </div>
 
       <details class="sf-panel" id="refPanel">
@@ -265,7 +275,7 @@
         <p class="tiny" style="margin:12px 0 0;">
           현재 설정(레벨·할인·이벤트·파괴방지)이 반영된 값입니다. 시작~목표 구간은 노란색.<br>
           확률은 스타캐치가 자동 적용된 실제 적용 확률이고, 실패 시 성급 하락은 없습니다.
-          파괴되면 장비는 <b>12성</b>으로 되돌아갑니다.
+          파괴 후에는 선택한 복구 방법에 따라 12성 또는 흔적의 성급으로 복구합니다.
         </p>
       </details>
     </aside>
@@ -273,7 +283,7 @@
 
   <div data-ux-help="스타포스 데이터 출처"><p class="tiny" style="margin-top:24px;">
     확률표는 공개된 스타포스 강화 확률을, 비용 계산식은 chuchu.gg · mesu.live의 기댓값을 역산해 맞췄습니다.
-    레벨 200 기준 12→30성 누적 기댓값이 소수점 아래까지 일치합니다. 확정 복구(흔적 복구)는 아직 반영하지 않았습니다.
+    확정 복구의 스페어 개수와 22성 상한은 <a href="https://maplestory.nexon.com/news/update/799" target="_blank" rel="noopener noreferrer">공식 강화 개편 안내</a>를 반영했습니다. 복구 메소는 참고 가이드 방식의 추정값입니다.
   </p></div>
 </div>
 <script src="site_nav.js"></script>
