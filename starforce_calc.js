@@ -229,29 +229,33 @@
     ev.appendChild(chip('비용 30% 할인', state.discount30, function () { state.discount30 = !state.discount30; refresh(); }));
     ev.appendChild(chip('파괴확률 30% 감소', state.destroyDown30, function () { state.destroyDown30 = !state.destroyDown30; refresh(); }));
     ev.appendChild(chip('5·10·15성 100%', state.lucky5, function () { state.lucky5 = !state.lucky5; refresh(); }));
-    ev.appendChild(chip('샤타포스 한 번에', state.discount30 && state.destroyDown30, function () {
+    renderSwitch('shiningSwitch', '샤타포스', state.discount30 && state.destroyDown30, function () {
       var on = !(state.discount30 && state.destroyDown30);
       state.discount30 = on; state.destroyDown30 = on; refresh();
-    }, 'sf-chip-preset'));
+    });
 
     var sg = $('safeguardChips');
     sg.innerHTML = '';
-    sg.appendChild(chip('자동 · 최소 기대비용', state.autoSafeguard, function () { state.autoSafeguard = true; refresh(); }));
-    sg.appendChild(chip('직접 선택', !state.autoSafeguard, function () { state.autoSafeguard = false; refresh(); }));
+    renderSwitch('safeguardSwitch', '자동 파괴방지', state.autoSafeguard, function () {
+      state.autoSafeguard = !state.autoSafeguard; refresh();
+    });
+    $('safeguardHint').textContent = state.autoSafeguard ? '노작값에 맞춰 선택했어요. 직접 바꾸려면 자동을 꺼 주세요.' : '파괴방지를 켤 구간을 선택하세요.';
     D.PROTECT_STARS.forEach(function (s) {
-      sg.appendChild(chip(s + '성', !!state.safeguard[s], function () {
-        state.autoSafeguard = false; state.safeguard[s] = !state.safeguard[s]; refresh();
-      }));
+      var button = chip(s + '→' + (s+1) + '성 · ' + (state.safeguard[s] ? 'ON' : 'OFF'), !!state.safeguard[s], function () {
+        if (state.autoSafeguard) return;
+        state.safeguard[s] = !state.safeguard[s]; refresh();
+      });
+      button.disabled = state.autoSafeguard;
+      sg.appendChild(button);
     });
 
-    var rc = $('recoveryChips');
-    rc.innerHTML = '';
-    [['auto','자동 · 최소 기대비용'],['off','12성 복구만'],['always','항상 확정 복구']].forEach(function (o) {
-      rc.appendChild(chip(o[1], state.recoveryMode === o[0], function () { state.recoveryMode = o[0]; refresh(); }));
+    renderSwitch('recoverySwitch', '자동 복구 선택', state.recoveryMode === 'auto', function () {
+      state.recoveryMode = state.recoveryMode === 'auto' ? 'off' : 'auto'; refresh();
     });
-    rc.appendChild(chip('복구 메소 20% 할인', state.recoveryDiscount20, function () {
+    $('recoveryHint').textContent = state.recoveryMode === 'auto' ? '파괴되면 확정 복구와 12성 복구 중 더 저렴한 쪽을 선택해요.' : '파괴되면 모두 12성으로 복구해요.';
+    renderSwitch('recoveryDiscountSwitch', '복구 메소 20% 할인', state.recoveryDiscount20, function () {
       state.recoveryDiscount20 = !state.recoveryDiscount20; refresh();
-    }));
+    });
 
     $('startInput').value = state.start;
     $('goalInput').value = state.goal;
@@ -269,9 +273,6 @@
     $('resTries').textContent = num(res.total.tries, 1) + ' 회';
     $('resRange').textContent = state.start + '성 → ' + state.goal + '성 · Lv.' + state.level + ' 장비';
 
-    $('spareNote').textContent = state.spare > 0
-      ? '스페어 1개당 ' + mesoText(state.spare) + '을 반영합니다. 확정 복구에는 성급에 따라 1~4개가 필요합니다.'
-      : '대체 장비값(노작값)을 넣으면 파괴 손실까지 메소로 합산합니다.';
 
     var tb = $('stepTable');
     if (!res.rows.length) {
@@ -348,22 +349,33 @@
       : '노작값 0 메소 기준입니다. 실제 대체 장비값을 입력하면 판정이 달라질 수 있습니다.';
   }
 
+  function renderSwitch(id, label, on, toggle) {
+    var host = $(id);
+    host.innerHTML = '';
+    var button = chip(on ? 'ON' : 'OFF', on, toggle, 'sf-switch');
+    button.setAttribute('role', 'switch');
+    button.setAttribute('aria-checked', String(on));
+    button.setAttribute('aria-label', label);
+    host.appendChild(button);
+  }
+
   function renderStrategy(opts, res) {
-    var best = D.bestSafeguard(opts, function (o) { return calculate(o).total.meso; });
-    $('strategyBasis').textContent = '노작값 ' + mesoText(opts.spare) + ' · 현재 레벨·할인·이벤트 기준';
-    $('safeguardSummary').textContent = '파괴방지 추천: ' + D.PROTECT_STARS.map(function (s) {
-      return s + '→' + (s+1) + '성 ' + (best[s] ? 'ON' : 'OFF');
-    }).join(' · ') + (state.autoSafeguard ? ' (결과에 적용됨)' : ' (직접 선택 설정으로 계산 중)');
+    $('strategyBasis').textContent = '노작값 ' + mesoText(opts.spare) + ' 기준';
+    $('safeguardSummary').innerHTML = D.PROTECT_STARS.map(function (s) {
+      var on = !!opts.safeguard[s];
+      return '<div class="sf-action-card' + (on ? ' is-on' : '') + '"><span>' + s + ' → ' + (s+1) + '성</span><strong>' + (on ? 'ON' : 'OFF') + '</strong></div>';
+    }).join('');
+    $('safeguardMode').textContent = state.autoSafeguard ? '자동 선택 적용' : '직접 선택 적용';
     var relevant = res.recovery.filter(function (r) { return r.star >= 15 && r.star < opts.goal; });
-    var fixed = relevant.filter(function (r) { return r.useFixed && r.destroy > 0; });
-    $('recoverySummary').textContent = opts.goal <= opts.start ? '목표 성을 시작 성보다 높게 설정해 주세요.' :
-      '복구 적용: ' + (fixed.length ? fixed.map(function (r) { return r.star + '성 파괴 시 ' + r.restoreStar + '성 확정 복구'; }).join(' · ') + '. 나머지는 12성 복구.' : '12성 복구 후 재강화');
-    $('recoveryAdvice').innerHTML = opts.recoveryMode === 'off' || !relevant.length || opts.goal <= opts.start ?
-      '<p class="tiny">확정 복구 비교는 자동 또는 항상 확정 복구를 선택하고, 파괴가 있는 목표 구간에서 확인할 수 있습니다.</p>' :
-      '<table class="sf-table"><thead><tr><th>파괴 시점</th><th>12성 복구·재강화</th><th>확정 복구·재강화</th><th>적용</th></tr></thead><tbody>' + relevant.map(function (r) {
-        return '<tr><td>' + r.star + '성</td><td>' + mesoText(r.normalCost) + '</td><td>' + mesoText(r.fixedCost) + '<br><span class="tiny">' + r.restoreStar + '성 복구 · 스페어 ' + r.copies + '개</span></td><td>' +
-          (r.destroy === 0 ? '파괴 없음' : r.useFixed ? '확정 복구' : '12성 복구') + '</td></tr>';
-      }).join('') + '</tbody></table>';
+    var active = relevant.filter(function (r) { return r.destroy > 0; });
+    $('recoverySummary').innerHTML = opts.goal <= opts.start ? '<p class="tiny">목표 성을 시작 성보다 높게 설정해 주세요.</p>' :
+      !active.length ? '<p class="tiny">이 구간에서는 파괴되지 않아요.</p>' : active.map(function (r) {
+        return '<div class="sf-action-card' + (r.useFixed ? ' is-on' : '') + '"><span>' + r.star + '성에서 파괴</span><strong>' + (r.useFixed ? r.restoreStar + '성 확정 복구' : '12성 복구') + '</strong></div>';
+      }).join('');
+    var reference = calculate(Object.assign({}, opts, {recoveryMode:'always'})).recovery.filter(function (r) { return r.star >= 15 && r.star <= 22; });
+    $('recoveryAdvice').innerHTML = '<table class="sf-table"><thead><tr><th>복구할 성</th><th>복구 메소 (추정)</th><th>필요 스페어</th></tr></thead><tbody>' + reference.map(function (r) {
+      return '<tr><td>' + r.restoreStar + '성</td><td>' + mesoText(r.fee) + '</td><td>' + r.copies + '개</td></tr>';
+    }).join('') + '</tbody></table>';
   }
 
   function renderReference(res) {
@@ -386,6 +398,7 @@
   }
 
   function refresh() {
+    if (state.recoveryMode !== 'off') state.recoveryMode = 'auto';
     state.level = Math.min(300, Math.max(1, state.level || 1));
     state.start = Math.min(MAX - 1, Math.max(0, state.start));
     state.goal = Math.min(MAX, Math.max(0, state.goal));

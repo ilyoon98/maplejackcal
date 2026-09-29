@@ -82,7 +82,7 @@ test('결과 UI가 노작값·복구 방법·파괴방지 안내를 렌더링하
   const nodes = new Map();
   function node() {
     return {innerHTML:'',textContent:'',value:'',dataset:{},children:[],listeners:{},classList:{toggle(){}},
-      appendChild(child){this.children.push(child);},addEventListener(type,cb){this.listeners[type]=cb;}};
+      setAttribute(key,value){this[key]=value;},appendChild(child){this.children.push(child);},addEventListener(type,cb){this.listeners[type]=cb;}};
   }
   let ready;
   const ui = {window:{},localStorage:{getItem(){return null;},setItem(){}},document:{
@@ -96,9 +96,17 @@ test('결과 UI가 노작값·복구 방법·파괴방지 안내를 렌더링하
   ready();
   assert.ok(Number.isFinite(nodes.get('resMeso').dataset.expectedUsage));
   assert.match(nodes.get('strategyBasis').textContent,/노작값 0 메소/);
-  assert.match(nodes.get('safeguardSummary').textContent,/15→16성 (ON|OFF)/);
-  assert.match(nodes.get('recoveryAdvice').innerHTML,/스페어 3개/);
-  nodes.get('recoveryChips').children[1].listeners.click();
-  assert.match(nodes.get('recoverySummary').textContent,/12성 복구 후 재강화/);
+  assert.match(nodes.get('safeguardSummary').innerHTML,/15 → 16성/);
+  assert.match(nodes.get('recoveryAdvice').innerHTML,/<td>3개<\/td>/);
+  assert.equal(nodes.get('safeguardChips').children[0].disabled,true);
+  nodes.get('safeguardSwitch').children.at(-1).listeners.click();
+  assert.equal(nodes.get('safeguardChips').children.at(-1).disabled,false);
+  nodes.get('shiningSwitch').children.at(-1).listeners.click();
+  assert.equal(nodes.get('shiningSwitch').children.at(-1)['aria-checked'],'true');
+  nodes.get('recoverySwitch').children.at(-1).listeners.click();
+  assert.equal(nodes.get('recoverySwitch').children.at(-1)['aria-checked'],'false');
+  assert.match(nodes.get('recoverySummary').innerHTML,/12성 복구/);
+  assert.doesNotMatch(nodes.get('recoverySummary').innerHTML,/확정 복구/);
+  assert.match(nodes.get('recoveryAdvice').innerHTML,/<td>3개<\/td>/);
   assert.match(nodes.get('safeguardAdvice').innerHTML,/손익분기/);
 });
