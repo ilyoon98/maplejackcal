@@ -12,10 +12,10 @@
 
   function init() {
     const configs = {
-      'starforce_calc.html': ['#resMeso', '.sf-metrics', '실제로 쓴 메소', '메소', '현재 시작 성 → 목표 성까지의 지출입니다. 파괴 후 복구 메소·장비 재구입비는 포함하고, 처음 장비를 산 비용은 제외하세요.'],
-      'cube_option_calc.html': ['#resMeso', '.primary-metrics', '실제로 쓴 메소', '메소', '목표 옵션을 얻을 때까지 쓴 비용입니다. 메소 재설정은 사용 메소, 큐브는 구입비를 제외한 사용 수수료만 입력하세요.'],
+      'starforce_calc.html': ['#resMeso', '#expectedResultCard', '실제로 쓴 메소', '메소', '현재 시작 성 → 목표 성까지의 지출입니다. 파괴 후 복구 메소·장비 재구입비는 포함하고, 처음 장비를 산 비용은 제외하세요.'],
+      'cube_option_calc.html': ['#resMeso', '#expectedResultCard', '실제로 쓴 메소', '메소', '목표 옵션을 얻을 때까지 쓴 비용입니다. 메소 재설정은 사용 메소, 큐브는 구입비를 제외한 사용 수수료만 입력하세요.'],
       'item_craft_calc.html': ['#resAvg', '#resRatio', '실제 총 제작비', '메소', '노작 구입비와 선택한 제작 단계의 지출을 합산하세요. 기대값에 포함되지 않은 비용은 제외하세요.'],
-      'trace_calc.html': ['#summary', '#resultBody > .card-primary', '실제로 쓴 주흔', '개', '처음부터 완성까지 사용한 주흔 개수입니다. 순백·이노센트를 주흔으로 마련했다면 해당 소모량도 포함하세요. 현재 조달 설정과 같은 범위로 비교합니다.']
+      'trace_calc.html': ['#summary', '#expectedResultCard', '실제로 쓴 주흔', '개', '처음부터 완성까지 사용한 주흔 개수입니다. 순백·이노센트를 주흔으로 마련했다면 해당 소모량도 포함하세요. 현재 조달 설정과 같은 범위로 비교합니다.']
     };
     const config = configs[location.pathname.split('/').pop()];
     if (!config) return;
@@ -31,6 +31,11 @@
       '<p id="actualVerdict" class="actual-verdict" role="status" aria-live="polite"></p>' +
       '<p id="actualHint" class="actual-hint"></p>';
     anchor.after(panel);
+    if (anchor.id === 'expectedResultCard') {
+      panel.classList.add('actual-record-standalone');
+      const heading = document.createElement('h2'); heading.id='actualRecordTitle'; heading.textContent='내 기록 비교';
+      panel.querySelector('h3').replaceWith(heading);
+    }
     const input = panel.querySelector('input');
     const baseline = panel.querySelector('#actualBaseline'), verdict = panel.querySelector('#actualVerdict');
     panel.querySelector('#actualHint').textContent = hint;

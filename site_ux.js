@@ -113,11 +113,14 @@
       sections.forEach((s, i) => { s.id = 'ux-buff-result-' + i; const b = make('button', 'ux-button', i ? '버프 한 번만 쓰기' : '전체 보스 돌기'); b.type = 'button'; b.setAttribute('aria-controls',s.id); b.setAttribute('aria-pressed',String(i===0)); s.hidden = i!==0; switcher.append(b); b.addEventListener('click', () => { sections.forEach((other,j) => { other.hidden=i!==j; switcher.children[j].setAttribute('aria-pressed',String(i===j)); }); }); }); result.prepend(switcher);
     }
     if (page === 'trace_calc.html') {
-      const root = q('#resultBody'); const current = q('.card-primary', root); root.prepend(current);
+      const root = q('#resultBody'); const current = q('.card-primary', root);
+      const expected = q('.card-ref', root); expected.id='expectedResultCard'; root.prepend(expected);
+      q('h2',expected).textContent='기대값';
+      expected.classList.add('ux-expected-card');
+      expected.insertBefore(make('p','ux-hint','처음부터 완성까지 · 현재 선택한 조건 기준'),q('#summary'));
       const p = q('.note', current); p.textContent = '슬롯을 눌러 성공·실패를 표시하세요. 비어 있는 슬롯은 아직 시도하지 않은 상태입니다.';
-      fold(q('.card-ref', root), '처음부터 시작할 때의 전체 기대값');
     }
-    if (page === 'cube_option_calc.html') { const cost = q('#resMeso').closest('.primary-metric'); q('.primary-metrics').prepend(cost); }
+    if (page === 'cube_option_calc.html') { const cost = q('#resMeso').closest('.primary-metric'); q('.primary-metrics').prepend(cost); q('.primary-metrics').closest('.cube-panel').id='expectedResultCard'; }
     if (page === 'cube_calc.html' || page === 'cube_option_calc.html') {
       const host = q('#priceBox') || q('#costInfo'); const note = make('p','ux-scope'); host.after(note);
       const update = () => { const selected = q('#cubeChoices .active'); setText(note, selected && selected.textContent.includes('재설정') ? '메소 재설정 비용 기준' : '큐브 자체 구입비 제외 · 큐브 사용 수수료만 메소에 반영'); };
@@ -168,7 +171,7 @@
       const comparison=q('#spareCompare'); heading.remove();
       const detail=make('details','ux-details'); const summary=make('summary','','파괴방지 손익분기표');
       detail.append(summary,table,comparison); q('#safeguardChips').after(detail);
-      const result=q('#resMeso').closest('.sf-panel'); const note=make('p','ux-scope');q('.sf-metrics',result).before(note);
+      const result=q('#resMeso').closest('.sf-panel'); result.id='expectedResultCard'; const note=make('p','ux-scope');q('.sf-metrics',result).before(note);
       const update=()=>{const empty=!Number(q('#spareInput').value.replaceAll(',',''));setText(note,empty?'노작값 0 · 파괴 시 장비 구매 비용 제외':'입력한 노작값을 파괴 비용에 포함');};q('#spareInput').addEventListener('input',update);new MutationObserver(update).observe(q('#resMeso'),{childList:true,subtree:true,characterData:true});update();
     }
 

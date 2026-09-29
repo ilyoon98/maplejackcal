@@ -158,3 +158,11 @@ body[data-ux-page="cube_play.html"] .sim-stage { min-height:108px; }
 .actual-hint { margin:10px 0 0; font-size:.75rem; color:var(--text-dim,#a9b1c1); line-height:1.6; }
 .money-input-reading { display:block; margin-top:6px; color:var(--ux-accent,#83b7ff); font-size:.8rem; font-weight:600; line-height:1.5; overflow-wrap:anywhere; }
 .money-input-reading:empty { display:none; }
+.actual-record.actual-record-standalone { margin:0 0 16px; padding:20px; background:#191d28; border:1px solid var(--border,#364050); border-radius:14px; }
+.actual-record-standalone h2 { margin:0 0 12px; font-size:1.1rem; }
+#expectedResultCard { margin-bottom:16px; }
+#resultPlaceholderCard:has(#resultPlaceholder.hidden) { display:none; }
+body[data-ux-page="trace_calc.html"] .ux-expected-card .summary-grid { grid-template-columns:1fr 1fr; }
+body[data-ux-page="trace_calc.html"] .ux-expected-card .summary-item:first-child { grid-column:1 / -1; padding:14px; background:#222940; border-radius:10px; }
+body[data-ux-page="trace_calc.html"] .ux-expected-card .summary-item:first-child .value { font-size:1.5rem; color:var(--ux-accent,#83b7ff); font-weight:800; }
+body[data-ux-page="trace_calc.html"] .ux-expected-card h2 { color:var(--ux-text); font-size:1.1rem; }
