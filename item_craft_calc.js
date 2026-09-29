@@ -420,6 +420,7 @@
   }
 
   function renderResult(r) {
+    $('resAvg').dataset.expectedUsage = r.avg;
     $('resMin').textContent = mesoText(r.min);
     $('resAvg').textContent = mesoText(r.avg);
     $('resMinSub').textContent = fmt(r.min) + ' 메소';

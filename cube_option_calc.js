@@ -255,6 +255,7 @@ function renderResult(bracket, goals){
   const p = bracket && goals.length ? successProb(bracket.lines, goals) : null;
   const price = attemptPrice();
   if(p === null){
+    $('resMeso').dataset.expectedUsage = '';
     ['resProb','resTries','resMeso','resMedian'].forEach(id => $(id).textContent = '-');
     $('resProbSub').textContent = goals.length ? '' : '목표 옵션을 고르면 계산합니다.';
     $('quantileTable').innerHTML = '';
@@ -263,6 +264,7 @@ function renderResult(bracket, goals){
     return;
   }
   const tries = p > 0 ? 1 / p : Infinity;
+  $('resMeso').dataset.expectedUsage = p > 0 ? tries * price : Infinity;
   $('resProb').textContent = pctText(p);
   $('resProbSub').textContent = p > 0 ? `약 ${fmt(tries)}번에 1번` : '이 구간에서는 나올 수 없는 조합';
   $('resTries').textContent = p > 0 ? `${fmt(tries)}회` : '불가능';

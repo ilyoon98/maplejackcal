@@ -81,7 +81,7 @@ test('저성 구간과 역방향 구간은 복구 비용을 추가하지 않는�
 test('결과 UI가 노작값·복구 방법·파괴방지 안내를 렌더링하고 설정 변경을 반영한다',()=>{
   const nodes = new Map();
   function node() {
-    return {innerHTML:'',textContent:'',value:'',children:[],listeners:{},classList:{toggle(){}},
+    return {innerHTML:'',textContent:'',value:'',dataset:{},children:[],listeners:{},classList:{toggle(){}},
       appendChild(child){this.children.push(child);},addEventListener(type,cb){this.listeners[type]=cb;}};
   }
   let ready;
@@ -94,6 +94,7 @@ test('결과 UI가 노작값·복구 방법·파괴방지 안내를 렌더링하
     vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ui);
   }
   ready();
+  assert.ok(Number.isFinite(nodes.get('resMeso').dataset.expectedUsage));
   assert.match(nodes.get('strategyBasis').textContent,/노작값 0 메소/);
   assert.match(nodes.get('safeguardSummary').textContent,/15→16성 (ON|OFF)/);
   assert.match(nodes.get('recoveryAdvice').innerHTML,/스페어 3개/);

@@ -503,6 +503,7 @@ let lastLiveParams = null;
 let lastLiveCostResult = null;
 
 function recalcAll() {
+  document.getElementById('summary').dataset.expectedUsage = '';
   const placeholderEl = document.getElementById('resultPlaceholder');
   const bodyEl = document.getElementById('resultBody');
 
@@ -585,6 +586,7 @@ function buildCutoffRows(result, totalJak) {
 
 function renderResult(policyResult, costResult, params, price) {
   const summaryEl = document.getElementById('summary');
+  summaryEl.dataset.expectedUsage = costResult.totalTraces;
   const totalMeso = costResult.totalTraces * price;
   const totalJak = params.totalJak;
 

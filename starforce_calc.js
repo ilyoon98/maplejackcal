@@ -262,6 +262,7 @@
   }
 
   function renderResult(res) {
+    $('resMeso').dataset.expectedUsage = res.total.meso;
     $('resMeso').textContent = mesoText(res.total.meso);
     $('resMesoSub').textContent = Math.round(res.total.meso).toLocaleString('ko-KR') + ' 메소';
     $('resDestroy').textContent = num(res.total.destroys, 2) + ' 회';
