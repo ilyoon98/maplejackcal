@@ -594,6 +594,8 @@ function renderResult(policyResult, costResult, params, price) {
     ${summaryItem('총 기대 주흔', Math.round(costResult.totalTraces).toLocaleString() + ' 개')}
     ${price ? summaryItem('총 기대 메소', Math.round(totalMeso).toLocaleString() + ' 메소') : ''}
     ${summaryItem('기대 주흔작 시도 횟수', Math.round(policyResult.totalAttempts * 10) / 10 + ' 회')}
+    ${summaryItem(`기대 ${resetMode === 'arc' ? '아크 이노센트' : '이노센트'} 사용 횟수`, Math.round(policyResult.totalResets * 10) / 10 + ' 회')}
+    ${summaryItem('기대 순백 사용 횟수', Math.round(policyResult.totalProtects * 10) / 10 + ' 회')}
   `;
 
   if (slotStates.length !== totalJak) slotStates = new Array(totalJak).fill('none');

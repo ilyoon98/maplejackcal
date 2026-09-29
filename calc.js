@@ -104,6 +104,11 @@ function solve(p) {
     if (maxDelta < 1e-7) break;
   }
 
+  // 같은 전략을 단위 비용으로 평가하면 각 도구의 기대 사용 횟수가 된다.
+  // 실패 직후 순백 사용(protectOnFail)과 별도 슬롯 복구(topup)를 모두 포함한다.
+  const resets = evaluate({ ...p, cost: 0, resetCost: 1, protectCost: 0 }, ACT);
+  const protects = evaluate({ ...p, cost: 0, resetCost: 0, protectCost: 1 }, ACT);
+
   return {
     totalJak: n,
     V,
@@ -111,6 +116,8 @@ function solve(p) {
     attempts: A,
     totalTraces: V[0][n],
     totalAttempts: A[0][n],
+    totalResets: resets.totalTraces,
+    totalProtects: protects.totalTraces,
   };
 }
 
