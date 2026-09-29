@@ -156,3 +156,5 @@ body[data-ux-page="cube_play.html"] .sim-stage { min-height:108px; }
 .actual-verdict.is-less { color:#7bdda6; }
 .actual-verdict.is-more { color:#ff9d9d; }
 .actual-hint { margin:10px 0 0; font-size:.75rem; color:var(--text-dim,#a9b1c1); line-height:1.6; }
+.money-input-reading { display:block; margin-top:6px; color:var(--ux-accent,#83b7ff); font-size:.8rem; font-weight:600; line-height:1.5; overflow-wrap:anywhere; }
+.money-input-reading:empty { display:none; }

@@ -229,6 +229,9 @@
     ev.appendChild(chip('비용 30% 할인', state.discount30, function () { state.discount30 = !state.discount30; refresh(); }));
     ev.appendChild(chip('파괴확률 30% 감소', state.destroyDown30, function () { state.destroyDown30 = !state.destroyDown30; refresh(); }));
     ev.appendChild(chip('5·10·15성 100%', state.lucky5, function () { state.lucky5 = !state.lucky5; refresh(); }));
+    ev.appendChild(chip('복구 메소 20% 할인', state.recoveryDiscount20, function () {
+      state.recoveryDiscount20 = !state.recoveryDiscount20; refresh();
+    }));
     renderSwitch('shiningSwitch', '샤타포스', state.discount30 && state.destroyDown30, function () {
       var on = !(state.discount30 && state.destroyDown30);
       state.discount30 = on; state.destroyDown30 = on; refresh();
@@ -253,9 +256,6 @@
       state.recoveryMode = state.recoveryMode === 'auto' ? 'off' : 'auto'; refresh();
     });
     $('recoveryHint').textContent = state.recoveryMode === 'auto' ? '파괴되면 확정 복구와 12성 복구 중 더 저렴한 쪽을 선택해요.' : '파괴되면 모두 12성으로 복구해요.';
-    renderSwitch('recoveryDiscountSwitch', '복구 메소 20% 할인', state.recoveryDiscount20, function () {
-      state.recoveryDiscount20 = !state.recoveryDiscount20; refresh();
-    });
 
     $('startInput').value = state.start;
     $('goalInput').value = state.goal;
@@ -360,7 +360,7 @@
   }
 
   function renderStrategy(opts, res) {
-    $('strategyBasis').textContent = '노작값 ' + mesoText(opts.spare) + ' 기준';
+    $('strategyTitle').textContent = state.autoSafeguard && opts.recoveryMode === 'auto' ? '추천 강화 방식' : '선택한 강화 방식';
     $('safeguardSummary').innerHTML = D.PROTECT_STARS.map(function (s) {
       var on = !!opts.safeguard[s];
       return '<div class="sf-action-card' + (on ? ' is-on' : '') + '"><span>' + s + ' → ' + (s+1) + '성</span><strong>' + (on ? 'ON' : 'OFF') + '</strong></div>';

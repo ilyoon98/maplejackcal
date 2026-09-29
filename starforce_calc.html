@@ -101,6 +101,7 @@
 </style>
 <link rel="stylesheet" href="site_ux.css">
 <script src="site_ux.js" defer></script>
+<script src="money_input.js" defer></script>
 <script src="actual_record.js" defer></script>
 </head>
 <body class="sf-page">
@@ -221,7 +222,6 @@
         <div class="sf-setting sf-setting-group"><div><strong>샤타포스</strong><p class="tiny">강화 비용 30% 할인 + 파괴확률 30% 감소</p></div><div id="shiningSwitch"></div></div>
         <div class="sub-label">개별 할인 · 이벤트</div>
         <div class="sf-chips" id="eventChips"></div>
-        <div class="sf-setting"><strong>복구 메소 20% 할인</strong><div id="recoveryDiscountSwitch"></div></div>
         <div data-ux-help="할인·이벤트 적용 기준"><p class="tiny" style="margin:12px 0 0;">
           · MVP·PC방 할인은 17성 미만 구간에만, 서로 <b>더해서</b> 적용됩니다.<br>
           · 비용 30% 할인은 모든 구간에 적용되지만 <b>파괴방지 추가 비용에는 붙지 않습니다</b>.<br>
@@ -236,7 +236,6 @@
         <div class="sf-chips" id="safeguardChips"></div>
         <div class="sf-setting sf-setting-group"><strong>자동 복구 선택</strong><div id="recoverySwitch"></div></div>
         <p class="tiny" id="recoveryHint"></p>
-        <details class="ux-details"><summary>지원 장비 안내</summary><p class="tiny">일반 장비 기준입니다. 제로 무기·아스트라 보조무기·데스티니 2차 초월 무기는 지원하지 않습니다.</p></details>
       </div>
 
       <div class="sf-panel">
@@ -269,13 +268,10 @@
             <div class="value" id="resTries">-</div>
           </div>
         </div>
-        <p class="tiny" style="margin:14px 0 0;">
-          기댓값은 <b>평균</b>입니다. 스타포스는 분산이 매우 커서 실제로는 절반도 안 쓰고 끝나기도,
-          몇 배를 붓고도 못 가기도 합니다. 특히 22성 이상은 평균 근처에서 끝나는 경우가 오히려 드물어요.
-        </p>
+      </div>
 
-        <h3>적용된 강화 방법</h3>
-        <p class="tiny" id="strategyBasis"></p>
+      <div class="sf-panel" aria-labelledby="strategyTitle">
+        <h2 id="strategyTitle">추천 강화 방식</h2>
         <div class="panel-head"><h3>파괴방지</h3><span class="tiny" id="safeguardMode"></span></div>
         <div id="safeguardSummary" class="sf-action-grid"></div>
         <h3>파괴됐을 때</h3>
@@ -309,7 +305,7 @@
     <p class="tiny">확정 복구 1회에 필요한 메소와 스페어입니다. 스페어 가격은 아래 메소에 포함되지 않습니다.</p>
     <div class="sf-scroll" id="recoveryAdvice"></div>
     <p class="tiny">12성 복구는 스페어 1개만 필요합니다. 23성 이상에서 파괴된 장비는 최대 22성까지 확정 복구할 수 있습니다.</p>
-    <details class="ux-details"><summary>복구 비용 계산 기준</summary><p class="tiny">현재 장비 레벨과 복구 메소 20% 할인 설정을 반영합니다. 메소는 <a href="https://www.inven.co.kr/board/maple/2304/47118" target="_blank" rel="noopener noreferrer">참고 가이드</a>의 샤이닝·15~17성 파괴방지 기준으로 계산한 추정값이며 실제 게임 비용과 다를 수 있습니다.</p></details>
+    <details class="ux-details"><summary>복구 비용 계산 기준</summary><p class="tiny">현재 장비 레벨과 복구 메소 20% 할인 설정을 반영합니다. 메소는 <a href="https://www.inven.co.kr/board/maple/2304/47118" target="_blank" rel="noopener noreferrer">참고 가이드</a>의 샤이닝·15~17성 파괴방지 기준으로 계산한 추정값이며 실제 게임 비용과 다를 수 있습니다.</p><p class="tiny">확정 복구 비용은 일반 장비 기준입니다. 제로 무기·아스트라 보조무기·데스티니 2차 초월 무기의 별도 복구 재료와 추가 메소는 반영하지 않습니다.</p></details>
   </section>
 
   <div data-ux-help="스타포스 데이터 출처"><p class="tiny" style="margin-top:24px;">

@@ -95,11 +95,12 @@ test('결과 UI가 노작값·복구 방법·파괴방지 안내를 렌더링하
   }
   ready();
   assert.ok(Number.isFinite(nodes.get('resMeso').dataset.expectedUsage));
-  assert.match(nodes.get('strategyBasis').textContent,/노작값 0 메소/);
+  assert.equal(nodes.get('strategyTitle').textContent,'추천 강화 방식');
   assert.match(nodes.get('safeguardSummary').innerHTML,/15 → 16성/);
   assert.match(nodes.get('recoveryAdvice').innerHTML,/<td>3개<\/td>/);
   assert.equal(nodes.get('safeguardChips').children[0].disabled,true);
   nodes.get('safeguardSwitch').children.at(-1).listeners.click();
+  assert.equal(nodes.get('strategyTitle').textContent,'선택한 강화 방식');
   assert.equal(nodes.get('safeguardChips').children.at(-1).disabled,false);
   nodes.get('shiningSwitch').children.at(-1).listeners.click();
   assert.equal(nodes.get('shiningSwitch').children.at(-1)['aria-checked'],'true');
