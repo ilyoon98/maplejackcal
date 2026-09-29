@@ -82,6 +82,12 @@ const server=http.createServer((req,res)=>{
     await page.locator('#detailClose').click();
     await page.locator('#historyName').fill('없는캐릭터');assert.equal(await page.locator('#totalTries').innerText(),'0회');assert.equal(await page.locator('#historyDetail').isVisible(),false);
     await page.locator('#historyName').fill('테스터');
+    const beforeCache=calls.length;
+    await page.reload();await page.locator('#historyName').fill('테스터');
+    await page.locator('#historyFetch').click();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('조회 완료'));
+    assert.equal(calls.length,beforeCache);assert.equal(await page.locator('#totalTries').innerText(),'11회');
+    assert.equal(await page.evaluate(async date=>{const cache=await StarforceHistoryCache.open('different-test-key');try{return (await cache.get(date))===undefined;}finally{cache.close();}},today),true);
+    await page.locator('#historyCacheClear').click();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('삭제했습니다'));
     mode='error';await page.locator('#historyFetch').click();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('한도'));assert.equal(await page.locator('#historyResults').isVisible(),false);
     mode='slow';await page.locator('#historyFetch').click();await page.locator('#historyCancel').click();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('중단했습니다'));
     mode='normal';await page.locator('#historyFetch').click();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('조회 완료'));

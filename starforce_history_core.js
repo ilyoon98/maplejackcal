@@ -1,4 +1,4 @@
-/* Read-only account history. No credentials or history are persisted here. */
+/* Read-only account history with an optional completed-day cache adapter. */
 (function (root) {
   'use strict';
   const equipment = typeof module !== 'undefined' && module.exports ? require('./equipment_data.json') : root.EquipmentData;
@@ -149,21 +149,51 @@
       }
     };
   }
-  async function fetchHistory(api, from, to, progress) {
-    const dates = days(from,to), rows = [];
+  async function fetchHistory(api, from, to, progress, options={}) {
+    const dates = days(from,to), rows = [], cached=new Map();
+    if(options.newestFirst)dates.reverse();
+    const checkAbort=()=>{if(options.signal?.aborted)throw new DOMException('중단','AbortError');};
+    // Load every available day first, so a failure on today's request does not hide older records.
+    if(options.cache)for(const date of dates){
+      checkAbort();
+      let entry;
+      try{entry=await options.cache.get(date);}catch(e){options.onCacheError?.();continue;}
+      if(!entry||!Array.isArray(entry.rows))continue;
+      let normalized;
+      try{normalized=normalize(entry.rows,date,date);}catch(e){continue;}
+      // A day fetched before its final five-minute API delay elapsed is not sealed forever.
+      const settledAt=Date.parse(date+'T00:00:00+09:00')+86400000+300000;
+      const validSavedAt=Number.isFinite(entry.savedAt)&&entry.savedAt<=Date.now();
+      const fresh=validSavedAt&&((date<options.refreshFrom&&entry.savedAt>=settledAt)||Date.now()-entry.savedAt<300000);
+      cached.set(date,{rows:normalized,fresh});
+      options.onDay?.(date,normalized,!fresh);
+    }
     for (let i=0;i<dates.length;i++) {
+      checkAbort();
+      if(cached.get(dates[i])?.fresh){
+        rows.push(...cached.get(dates[i]).rows);
+        if(rows.length>200000)throw new Error('기록이 너무 많습니다. 조회 기간을 줄여 주세요.');
+        progress?.(i+1,dates.length,rows.length);
+        continue;
+      }
+      const daily=[];
       let cursor = '', pages = 0;
       const cursors = new Set();
       do {
         const body = await api('/history/starforce', cursor ? {count:1000,cursor} : {count:1000,date:dates[i]});
         if (!body || !Array.isArray(body.starforce_history)) throw new Error('스타포스 기록 응답을 읽을 수 없습니다.');
-        rows.push(...body.starforce_history);
-        if (rows.length > 200000) throw new Error('기록이 너무 많습니다. 조회 기간을 줄여 주세요.');
+        daily.push(...body.starforce_history);
+        if (rows.length+daily.length > 200000) throw new Error('기록이 너무 많습니다. 조회 기간을 줄여 주세요.');
         cursor = body.next_cursor || '';
         if (typeof cursor !== 'string' || (cursor && cursors.has(cursor)) || ++pages > 1000) throw new Error('다음 기록을 불러오는 중 오류가 발생했습니다. 기간을 줄여 다시 조회하세요.');
         if (cursor) cursors.add(cursor);
-        if (progress) progress(i+1, dates.length, rows.length);
+        if (progress) progress(i+1, dates.length, rows.length+daily.length);
       } while(cursor);
+      checkAbort();
+      const completed=normalize(daily,dates[i],dates[i]);
+      rows.push(...completed);
+      if(options.cache)try{await options.cache.set(dates[i],completed);}catch(e){options.onCacheError?.();}
+      options.onDay?.(dates[i],completed,false);
     }
     return normalize(rows,from,to);
   }

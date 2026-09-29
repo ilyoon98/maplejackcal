@@ -4,6 +4,30 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const C = require('../starforce_history_core.js');
+test('완료 날짜는 빈 결과도 저장하고 실패한 페이지의 날짜는 다음에 재시도',async()=>{
+  const saved=new Map(),cache={get:async d=>saved.get(d),set:async(d,rows)=>saved.set(d,{rows,savedAt:Date.now()})};
+  const calls=[];
+  await assert.rejects(C.fetchHistory(async(p,q)=>{
+    calls.push(q);if(q.date==='2026-09-19')return {starforce_history:[]};
+    if(!q.cursor)return {starforce_history:[row('a')],next_cursor:'next'};
+    throw new Error('quota');
+  },'2026-09-19','2026-09-20',null,{cache,refreshFrom:'2026-09-19'}),/quota/);
+  assert.equal(saved.has('2026-09-19'),true);assert.equal(saved.has('2026-09-20'),false);
+  const retry=[];
+  const loaded=await C.fetchHistory(async(p,q)=>{retry.push(q);return {starforce_history:[row('a')]};},'2026-09-19','2026-09-20',null,{cache,refreshFrom:'2026-09-19'});
+  assert.deepEqual(retry,[{count:1000,date:'2026-09-20'}]);assert.equal(loaded.length,1);
+});
+test('최근 날짜만 만료 후 갱신하며 요청 실패 시 기존 저장분을 제공',async()=>{
+  const old=Date.now()-600000,seen=[],calls=[];
+  const cache={get:async()=>({rows:[],savedAt:old}),set:async()=>{}};
+  await assert.rejects(C.fetchHistory(async(p,q)=>{calls.push(q.date);throw new Error('quota');},'2026-09-18','2026-09-20',null,{cache,refreshFrom:'2026-09-19',newestFirst:true,onDay:(d,r,stale)=>seen.push([d,stale])}),/quota/);
+  assert.deepEqual(calls,['2026-09-20']);assert.deepEqual(seen,[['2026-09-20',true],['2026-09-19',true],['2026-09-18',false]]);
+});
+test('저장소 오류로 API 조회가 중단되지 않는다',async()=>{
+  let errors=0;
+  const loaded=await C.fetchHistory(async()=>({starforce_history:[row('a')]}),'2026-09-20','2026-09-20',null,{cache:{get:async()=>{throw Error();},set:async()=>{throw Error();}},onCacheError:()=>errors++});
+  assert.equal(errors,2);assert.equal(loaded.length,1);
+});
 test('장비 JSON은 정식 이름·띄어쓰기·별칭을 연결하고 미등록 장비는 구분한다',()=>{
   const info=C.itemInfo('루즈컨트롤머신마크');
   assert.equal(info.level,160);

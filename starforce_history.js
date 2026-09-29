@@ -212,17 +212,53 @@
     try{C.days(from,to);if(from<earliest()||to>kstToday())throw new Error('최근 2년 이내의 날짜를 선택하세요.');}catch(e){status(e.message,true);return;}
     const request=new AbortController();controller=request;
     const key=NexonKey.get();
+    const completedDays=new Map();let cache=null,cacheFailed=false,lastPreview=0;
+    const showPartial=()=>{
+      rows=C.normalize([...completedDays.values()].flatMap(day=>day.records),from,to);renderGroups();
+      $('historyCoverage').textContent='부분 조회 · '+completedDays.size+' / '+C.days(from,to).length+'일 · 전체 기간 합계가 아닙니다.'+([...completedDays.values()].some(day=>day.stale)?' 갱신 전 저장 기록 포함.':'');
+    };
     rows=[];groups=[];selected=null;selectedRows=[];$('historyResults').hidden=true;
     $('historyFetch').disabled=true;$('historyCancel').hidden=false;
+    $('historyCacheClear').disabled=true;
     status('기록을 불러오는 중입니다.');
     try{
+      try{cache=await StarforceHistoryCache.open(key);}catch(e){cacheFailed=true;}
       const paced=C.pacedRequest((path,params)=>api(key,request.signal,path,params),{signal:request.signal,onRetry:(ms,attempt)=>status('API 호출 제한으로 '+Math.ceil(ms/1000)+'초 대기 후 같은 페이지를 다시 조회합니다. ('+attempt+'/3)')});
-      const loaded=await C.fetchHistory(paced,from,to,(done,total,count)=>status(done+' / '+total+'일 조회 중 · '+fmt(count)+'건 수신'));
+      const loaded=await C.fetchHistory(paced,from,to,(done,total,count)=>status(done+' / '+total+'일 확인 중 · '+fmt(count)+'건 · 저장된 날짜는 API 요청 생략'),{
+        cache,signal:request.signal,newestFirst:true,
+        refreshFrom:new Date(Date.parse(kstToday())-86400000).toISOString().slice(0,10),
+        onCacheError:()=>{cacheFailed=true;},
+        onDay:(date,records,stale)=>{
+          completedDays.set(date,{records,stale});
+          if(!request.signal.aborted&&NexonKey.get()===key&&!$('historyDetail').open&&Date.now()-lastPreview>1000){showPartial();lastPreview=Date.now();}
+        }
+      });
       if(request.signal.aborted||NexonKey.get()!==key)throw new DOMException('중단','AbortError');
       rows=loaded;renderGroups();
-      status(from+' ~ '+to+' · 계정 기록 '+fmt(rows.length)+'건 조회 완료. 닉네임을 바꾸면 다시 요청하지 않고 필터링합니다.');
-    }catch(e){status(e.name==='AbortError'?'조회를 중단했습니다. 부분 기록은 분석하지 않습니다.':e instanceof TypeError?'네트워크 연결을 확인하고 다시 조회하세요.':e.message,true);}
-    finally{controller=null;$('historyFetch').disabled=false;$('historyCancel').hidden=true;}
+      $('historyCoverage').textContent=from+' ~ '+to+' · 전체 기간 조회 완료';
+      status(from+' ~ '+to+' · 계정 기록 '+fmt(rows.length)+'건 조회 완료. 닉네임은 추가 요청 없이 필터링합니다.'+(cacheFailed?' 브라우저 저장 실패: 다음 조회 때 다시 요청할 수 있습니다.':' 이 브라우저에 저장했습니다.'));
+    }catch(e){
+      let message=e.name==='AbortError'?'조회를 중단했습니다.':e instanceof TypeError?'네트워크 연결을 확인하고 다시 조회하세요.':e.message;
+      if(NexonKey.get()===key&&completedDays.size){
+        showPartial();
+        message+=' 현재 '+completedDays.size+' / '+C.days(from,to).length+'일의 부분 기록만 표시합니다. 전체 기간 합계가 아닙니다.';
+        if([...completedDays.values()].some(day=>day.stale))message+=' 최신 갱신에 실패한 저장 기록이 포함되어 있습니다.';
+      }
+      message+=cacheFailed?' 브라우저 저장에 실패해 다시 요청할 수 있습니다.':' 완료한 날짜는 저장되어 다음 조회에서 이어집니다.';
+      status(message,true);
+    }
+    finally{cache?.close();controller=null;$('historyFetch').disabled=false;$('historyCancel').hidden=true;$('historyCacheClear').disabled=false;}
+  });
+  $('historyCacheClear').addEventListener('click',async()=>{
+    if(controller||!NexonKey.has())return;
+    let cache;const button=$('historyCacheClear');button.disabled=true;$('historyFetch').disabled=true;
+    try{
+      cache=await StarforceHistoryCache.open(NexonKey.get());await cache.clear();
+      if($('historyDetail').open)$('historyDetail').close();
+      rows=[];groups=[];selected=null;selectedRows=[];overrides.clear();$('historyResults').hidden=true;
+      status('현재 API 키의 저장 기록을 삭제했습니다. 다음 조회는 다시 API를 요청합니다.');
+    }catch(e){status('저장 기록을 삭제하지 못했습니다. 브라우저 저장소 설정을 확인하세요.',true);}
+    finally{cache?.close();button.disabled=false;$('historyFetch').disabled=false;}
   });
   $('historyCancel').addEventListener('click',()=>controller&&controller.abort());
   $('detailClose').addEventListener('click',()=>$('historyDetail').close());

@@ -16,6 +16,7 @@
 <script src="starforce_data.js" defer></script>
 <script src="starforce_calc.js" defer></script>
 <script src="equipment_data.js" defer></script>
+<script src="history_cache.js" defer></script>
 <script src="starforce_history_core.js" defer></script>
 <script src="starforce_history.js" defer></script>
 <script src="vendor/flatpickr/flatpickr.min.js" defer></script>
@@ -115,10 +116,12 @@
       <label>종료일<input type="date" id="historyTo" required></label>
       <button class="primary" id="historyFetch" type="submit">기록 불러오기</button><button id="historyCancel" type="button" hidden>조회 중단</button>
     </div></form>
-    <p class="history-note">날짜 칸을 누르면 달력에서 선택할 수 있습니다. 등록된 API 키 계정의 최근 2년 기록을 조회하며, 닉네임은 기록 필터입니다. 전체 조회는 날짜별로 요청해 몇 분 걸릴 수 있습니다. 최신 기록은 최대 5분 뒤 반영됩니다.</p>
+    <p class="history-note">처음에는 날짜별 조회로 시간이 걸립니다. 완료한 날짜는 이 브라우저에 저장하며 다음에는 빠진 날짜와 최근 기록만 갱신합니다. 닉네임은 저장된 계정 기록의 필터입니다. 최신 기록은 최대 5분 뒤 반영됩니다.</p>
+    <button id="historyCacheClear" type="button">저장된 기록 삭제</button>
     <p id="historyStatus" class="history-status" role="status" aria-live="polite"></p>
   </section>
   <div id="historyResults" hidden>
+    <p id="historyCoverage" class="history-note" role="status"></p>
     <div class="history-summary" aria-label="선택 캐릭터 전체 집계"><div><span>총 강화 횟수</span><strong id="totalTries">—</strong></div><div><span>파괴 횟수</span><strong id="totalDestroy">—</strong></div><div><span>장비 이름별 묶음</span><strong id="totalItems">—</strong></div></div>
     <p id="costSummary" class="history-note"></p>
     <div class="history-layout"><section aria-labelledby="itemsTitle"><h2 id="itemsTitle">장비별 기록</h2><div id="historyItems" class="history-items"></div></section>
@@ -152,5 +155,5 @@
       </dialog>
     </div>
   </div>
-  <p class="history-note"><a href="https://openapi.nexon.com/ko/game/maplestory/?id=17" target="_blank" rel="noopener">넥슨 공식 스타포스 기록 API</a> · 기록은 이 화면에서만 사용하며 새로고침하면 지워집니다. 상위 확률은 유저 순위가 아닌 동일 조건의 이론적 확률입니다.</p>
+  <p class="history-note"><a href="https://openapi.nexon.com/ko/game/maplestory/?id=17" target="_blank" rel="noopener">넥슨 공식 스타포스 기록 API</a> · 기록은 현재 브라우저에 저장됩니다. 상위 확률은 유저 순위가 아닌 동일 조건의 이론적 확률입니다.</p>
 </main></div></body></html>
