@@ -1,0 +1,101 @@
+// Run explicitly with Playwright available on NODE_PATH. Uses mocked API data only.
+const {chromium} = require('playwright');
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+const server=http.createServer((req,res)=>{
+  const url=new URL(req.url,'http://localhost');
+  const file=path.resolve(root,'.'+decodeURIComponent(url.pathname==='/'?'/index.html':url.pathname));
+  if(!file.startsWith(root+path.sep)||!['.html','.js','.css','.png','.webp','.ico'].includes(path.extname(file))){res.writeHead(404);res.end();return;}
+  fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[path.extname(file)]||'application/octet-stream');res.end(data);});
+});
+(async()=>{
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  let browser;
+  try{
+    browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHANNEL?{channel:process.env.PLAYWRIGHT_CHANNEL}:{})});
+    const page=await browser.newPage({viewport:{width:1280,height:960}});
+    const errors=[];page.on('pageerror',e=>errors.push(e.message));
+    const base='http://127.0.0.1:'+server.address().port;
+    let mode='normal',calls=[];
+    const today=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+    const rows=Array.from({length:12},(_,i)=>({id:'fixture-'+i,character_name:i===11?'다른캐릭터':'테스터',world_name:'스카니아',target_item:i===11?'<img src=x onerror=alert(1)>':'아케인셰이드 나이트헬름',date_create:today+'T12:'+String(i).padStart(2,'0')+':00+09:00',before_starforce_count:i<10?12+i:22,after_starforce_count:i<10?13+i:22,item_upgrade_result:i<10?'성공':'실패',starcatch_result:'성공',starforce_event_list:[]}));
+    await page.route('https://open.api.nexon.com/**',async route=>{
+      const url=new URL(route.request().url());calls.push(url);
+      assert.equal(url.pathname,'/maplestory/v1/history/starforce');
+      assert.equal(url.searchParams.has('ocid'),false);
+      if(mode==='error'){await route.fulfill({status:429,json:{error:{name:'OPENAPI00007'}}});return;}
+      if(mode==='slow'){await new Promise(r=>setTimeout(r,300));}
+      await route.fulfill({json:url.searchParams.has('cursor')?{starforce_history:rows.slice(5),next_cursor:null}:{starforce_history:rows.slice(0,6),next_cursor:'fixture-next'}});
+    });
+    await page.goto(base+'/starforce_history.html');
+    const fetchBefore=await page.locator('#historyFetch').boundingBox();
+    await page.locator('#historyFrom').click();
+    assert.equal(await page.locator('#historyFromCalendar').isVisible(),true);
+    await page.locator('#historyFrom').click();
+    assert.equal(await page.locator('#historyFromCalendar').isVisible(),false);
+    await page.locator('#historyFrom').click();
+    assert.equal(await page.locator('#historyFromCalendar').isVisible(),true);
+    assert.equal((await page.locator('#historyFetch').boundingBox()).y,fetchBefore.y);
+    const monthButtonBefore=await page.locator('#historyFromCalendar .flatpickr-prev-month').boundingBox();
+    await page.locator('#historyFromCalendar .flatpickr-prev-month').click();
+    assert.equal((await page.locator('#historyFromCalendar .flatpickr-prev-month').boundingBox()).y,monthButtonBefore.y);
+    await page.locator('#historyFromCalendar .flatpickr-next-month').click();
+    await page.locator('#historyFromCalendar .flatpickr-day.selected').click();
+    assert.equal(await page.locator('#historyFromCalendar').isVisible(),false);
+    await page.locator('#historyPeriods [data-days="7"]').click();
+    assert.equal(await page.locator('#historyFrom').inputValue(),new Date(Date.parse(today)-6*86400000).toISOString().slice(0,10));
+    await page.locator('#historyPeriods [data-days="all"]').click();
+    assert.ok(await page.locator('#historyFrom').evaluate(el=>el.value===el.min));
+    await page.locator('#historyTo').focus();await page.locator('#historyTo').press('Enter');
+    assert.equal(await page.locator('#historyToCalendar').isVisible(),true);
+    await page.locator('#historyTo').press('Escape');
+    assert.equal(await page.locator('#historyPeriods [data-days="1"]').count(),0);
+    assert.match(await page.locator('#keyState').innerText(),/등록/);
+    await page.locator('#historyFetch').click();assert.match(await page.locator('#historyStatus').innerText(),/먼저 등록/);
+    await page.evaluate(()=>{localStorage.setItem('nxopen_api_key','test-only-key');localStorage.setItem('boss_income_state',JSON.stringify({characters:[{name:'테스터',ocid:'unused'}]}));});
+    await page.reload();
+    assert.equal(await page.locator('#historyCharacters option').getAttribute('value'),'테스터');
+    assert.equal(await page.locator('.site-tab[data-group=history].active').count(),1);
+    await page.locator('#historyFetch').click();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('조회 완료'));
+    assert.equal(await page.locator('#totalTries').innerText(),'12회');assert.equal(calls.length,2);
+    assert.equal(await page.locator('#historyItems img').count(),0);
+    await page.locator('#historyName').fill('테스터');assert.equal(await page.locator('#totalTries').innerText(),'11회');assert.equal(calls.length,2);
+    assert.equal(await page.locator('#historyDetail').isVisible(),false);
+    assert.equal(await page.locator('#historyItems .history-stat.success b').innerText(),'10');
+    assert.equal(await page.locator('.history-table th').count(),5);
+    await page.locator('#historyItems button').first().click();
+    assert.equal(await page.locator('#itemLevel').inputValue(),'200');
+    assert.equal(await page.locator('#analysisSettings').evaluate(el=>el.open),false);
+    const detailTop=(await page.locator('#historyDetail').boundingBox()).y;
+    await page.locator('#analysisSettings > summary').click();
+    assert.equal((await page.locator('#historyDetail').boundingBox()).y,detailTop);
+    await page.locator('#itemLevel').fill('200');await page.locator('#analysisConfirmed').check();
+    await page.locator('#analysisForm button[type=submit]').click();
+    let result=await page.locator('#analysisResult').innerText();
+    assert.match(result,/최초 22성 달성까지 10회/);assert.match(result,/상위/);assert.match(result,/이후 1회/);
+    assert.match(await page.locator('#costSummary').innerText(),/11 \/ 11회/);
+    await page.locator('#rangeSettings > summary').click();
+    await page.locator('#rangeTo').fill('5');await page.locator('#rangeApply').click();
+    await page.locator('#analysisConfirmed').check();await page.locator('#analysisForm button[type=submit]').click();
+    result=await page.locator('#analysisResult').innerText();assert.match(result,/미달성/);assert.doesNotMatch(result,/절약\n|상위/);
+    await page.locator('#rangeTo').fill('4');await page.locator('#analysisConfirmed').check();await page.locator('#analysisForm button[type=submit]').click();assert.match(await page.locator('#analysisResult').innerText(),/구간 적용을 먼저/);
+    await page.locator('#detailClose').click();
+    await page.locator('#historyName').fill('없는캐릭터');assert.equal(await page.locator('#totalTries').innerText(),'0회');assert.equal(await page.locator('#historyDetail').isVisible(),false);
+    await page.locator('#historyName').fill('테스터');
+    mode='error';await page.locator('#historyFetch').click();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('한도'));assert.equal(await page.locator('#historyResults').isVisible(),false);
+    mode='slow';await page.locator('#historyFetch').click();await page.locator('#historyCancel').click();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('중단했습니다'));
+    mode='normal';await page.locator('#historyFetch').click();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('조회 완료'));
+    const output=process.env.TEMP||root;
+    await page.screenshot({path:path.join(output,'starforce-history-desktop.png'),fullPage:true});
+    await page.locator('#historyItems button').first().click();
+    await page.screenshot({path:path.join(output,'starforce-history-detail.png'),fullPage:true});
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(output,'starforce-history-mobile.png'),fullPage:true});
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>window.innerWidth).slice(0,12).map(e=>[e.tagName,e.className,e.getBoundingClientRect().width]))));
+    await page.goto(base+'/index.html');assert.equal(await page.locator('.site-tab[data-group=history]').count(),1);
+    await page.locator('.site-tab[data-group=history]').click();assert.match(page.url(),/starforce_history.html/);
+    assert.deepEqual(errors,[]);
+    console.log('PASS: no-key, shared key/name, paging/dedupe, filtering, XSS text, completed/incomplete analysis, range changes, API error/cancel, navigation, mobile overflow, no browser errors.');
+    console.log('Screenshots: '+path.join(output,'starforce-history-desktop.png')+'; '+path.join(output,'starforce-history-mobile.png'));
+  }finally{if(browser)await browser.close();server.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

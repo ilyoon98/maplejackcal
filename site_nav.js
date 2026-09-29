@@ -44,6 +44,19 @@
     if (!nav) return;
     var track = nav.querySelector('.site-groups');
     if (!track) return;
+    // 공통 탭으로 추가해 모든 기존 계산기에서 기록 화면으로 이동한다.
+    if (!track.querySelector('[data-group="history"]')) {
+      var historyTab = document.createElement('a');
+      historyTab.href = 'starforce_history.html';
+      historyTab.className = 'site-tab';
+      historyTab.dataset.group = 'history';
+      historyTab.textContent = '📋 로그보기';
+      if (location.pathname.endsWith('/starforce_history.html')) {
+        track.querySelectorAll('.active').forEach(function (el) { el.classList.remove('active'); });
+        historyTab.classList.add('active');
+      }
+      track.appendChild(historyTab);
+    }
     var pill = track.querySelector('.site-tabs-pill');
     var tabs = [].slice.call(track.querySelectorAll('.site-tab'));
     var menus = [].slice.call(nav.querySelectorAll('.site-menu'));

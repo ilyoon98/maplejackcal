@@ -19,7 +19,7 @@
     const head = make('div', 'ux-help-head'); const title = make('h2', '', '사용법 · 계산 기준'); title.id = 'uxHelpTitle'; title.textContent = '사용법 · 계산 기준';
     const close = make('button', 'ux-button', '닫기 ✕'); close.type = 'button'; close.setAttribute('aria-label', '도움말 닫기');
     head.append(title, close); help.append(head);
-    const intro = make('p', 'ux-hint', /play|gacha/.test(page) ? '가상으로 진행한 결과와 기록을 확인할 수 있어요. 실제 게임의 아이템이나 재화는 사용하지 않습니다.' : '입력값을 바꾸면 결과가 자동으로 갱신됩니다. 상세 내역은 결과 아래에서 펼쳐볼 수 있어요.'); help.append(intro);
+    const intro = make('p', 'ux-hint', page === 'starforce_history.html' ? '본인 API 키로 기록을 조회한 뒤 장비를 선택하세요. 강화 조건을 확인하고 선택 구간 분석을 누르면 결과가 갱신됩니다.' : /play|gacha/.test(page) ? '가상으로 진행한 결과와 기록을 확인할 수 있어요. 실제 게임의 아이템이나 재화는 사용하지 않습니다.' : '입력값을 바꾸면 결과가 자동으로 갱신됩니다. 상세 내역은 결과 아래에서 펼쳐볼 수 있어요.'); help.append(intro);
     qa('[data-ux-help]').forEach(n => {
       const section = make('section', 'ux-help-section'); section.append(make('h3', '', n.dataset.uxHelp));
       const detail = q('details', n); if (detail) { q('summary', detail)?.remove(); section.append(...detail.childNodes); }

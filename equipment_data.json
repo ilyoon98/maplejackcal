@@ -1,0 +1,613 @@
+{
+  "schemaVersion": 1,
+  "description": "장비 이름으로 조회하는 기본 정보. 전체 장비 목록이 아닌 공식 자료 확인분부터 확장하는 초기 데이터입니다. level은 기본 착용 레벨이며 실제 소비 메소, 세트 효과 수치, 아이템 개체 ID는 포함하지 않습니다.",
+  "items": [
+    {
+      "name": "루즈 컨트롤 머신 마크",
+      "level": 160,
+      "slot": "얼굴장식",
+      "set": "칠흑의 보스",
+      "aliases": [
+        "루컨마"
+      ],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/497"
+      ]
+    },
+    {
+      "name": "마력이 깃든 안대",
+      "level": 160,
+      "slot": "눈장식",
+      "set": "칠흑의 보스",
+      "aliases": [
+        "마깃안"
+      ],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/497"
+      ]
+    },
+    {
+      "name": "몽환의 벨트",
+      "level": 200,
+      "slot": "벨트",
+      "set": "칠흑의 보스",
+      "aliases": [
+        "몽벨"
+      ],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/497",
+        "https://archive.maplestory.nexon.com/News/Update/471?p=20"
+      ]
+    },
+    {
+      "name": "에테르넬 나이트헬름",
+      "level": 250,
+      "slot": "모자",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 메이지햇",
+      "level": 250,
+      "slot": "모자",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 아처햇",
+      "level": 250,
+      "slot": "모자",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 시프반다나",
+      "level": 250,
+      "slot": "모자",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 파이렛햇",
+      "level": 250,
+      "slot": "모자",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 나이트아머",
+      "level": 250,
+      "slot": "상의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 메이지로브",
+      "level": 250,
+      "slot": "상의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 아처후드",
+      "level": 250,
+      "slot": "상의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 시프셔츠",
+      "level": 250,
+      "slot": "상의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 파이렛코트",
+      "level": 250,
+      "slot": "상의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 나이트팬츠",
+      "level": 250,
+      "slot": "하의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 메이지팬츠",
+      "level": 250,
+      "slot": "하의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 아처팬츠",
+      "level": 250,
+      "slot": "하의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 시프팬츠",
+      "level": 250,
+      "slot": "하의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "에테르넬 파이렛팬츠",
+      "level": 250,
+      "slot": "하의",
+      "set": "에테르넬",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/665"
+      ]
+    },
+    {
+      "name": "앱솔랩스 나이트헬름",
+      "level": 160,
+      "slot": "모자",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 메이지크라운",
+      "level": 160,
+      "slot": "모자",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 아처후드",
+      "level": 160,
+      "slot": "모자",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 시프캡",
+      "level": 160,
+      "slot": "모자",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 파이렛페도라",
+      "level": 160,
+      "slot": "모자",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 나이트슈트",
+      "level": 160,
+      "slot": "한벌옷",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 메이지슈트",
+      "level": 160,
+      "slot": "한벌옷",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 아처슈트",
+      "level": 160,
+      "slot": "한벌옷",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 시프슈트",
+      "level": 160,
+      "slot": "한벌옷",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 파이렛슈트",
+      "level": 160,
+      "slot": "한벌옷",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 나이트숄더",
+      "level": 160,
+      "slot": "어깨장식",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 메이지숄더",
+      "level": 160,
+      "slot": "어깨장식",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 아처숄더",
+      "level": 160,
+      "slot": "어깨장식",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 시프숄더",
+      "level": 160,
+      "slot": "어깨장식",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 파이렛숄더",
+      "level": 160,
+      "slot": "어깨장식",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 샤이닝로드",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 소울슈터",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 데스페라도",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 에너지소드(도적)",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 에너지소드(해적)",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 세이버",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 엑스",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 비트해머",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 슬래셔",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 핀쳐케인",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 스펠링완드",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 스펠링스태프",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 ESP 리미터",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 파일 갓",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 브로드세이버",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 브로드엑스",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 브로드해머",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 피어싱스피어",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 핼버드",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 슈팅보우",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 크로스보우",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 리벤지가즈",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 블로우너클",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 포인팅건",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 듀얼보우건",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 블래스트캐논",
+      "level": 160,
+      "slot": "무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    },
+    {
+      "name": "앱솔랩스 블레이드",
+      "level": 160,
+      "slot": "보조무기",
+      "set": "앱솔랩스",
+      "aliases": [],
+      "sources": [
+        "https://maplestory.nexon.com/News/Update/435"
+      ]
+    }
+  ]
+}

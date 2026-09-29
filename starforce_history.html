@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스타포스 로그</title>
+<meta name="description" content="내 스타포스 강화 기록을 장비별로 모아 보고, 횟수와 비용을 기대값과 비교하세요.">
+<link rel="icon" href="favicon.png?v=2">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="site_ux.css">
+<link rel="stylesheet" href="vendor/flatpickr/flatpickr.min.css">
+<link rel="stylesheet" href="starforce_history.css">
+<script src="site_ux.js" defer></script>
+<script src="site_nav.js" defer></script>
+<script src="nexon_key.js" defer></script>
+<script src="starforce_data.js" defer></script>
+<script src="starforce_calc.js" defer></script>
+<script src="equipment_data.js" defer></script>
+<script src="starforce_history_core.js" defer></script>
+<script src="starforce_history.js" defer></script>
+<script src="vendor/flatpickr/flatpickr.min.js" defer></script>
+<script src="vendor/flatpickr/ko.js" defer></script>
+<script src="history_calendar.js" defer></script>
+</head>
+<body><div class="wrap">
+<nav class="site-nav">
+    <div class="site-tabs-track site-groups">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab active" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>놀이</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_calc.html">
+        <span class="site-menu-icon">⭐</span>
+        <span><span class="site-menu-name">스타포스 기댓값</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_buff_planner.html">
+        <span class="site-menu-icon">⏱️</span>
+        <span><span class="site-menu-name">보스 버프 동선 짜기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_option_calc.html">
+        <span class="site-menu-icon">🎯</span>
+        <span><span class="site-menu-name">큐브 옵션 확률</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="item_craft_calc.html">
+        <span class="site-menu-icon">🛠️</span>
+        <span><span class="site-menu-name">아이템 제작 비용</span><span class="site-menu-desc">대박·평균 제작 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="trade_margin_calc.html">
+        <span class="site-menu-icon">💱</span>
+        <span><span class="site-menu-name">되팔기 손익 계산</span><span class="site-menu-desc">수수료 떼고 남는 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="meso_market_calc.html">
+        <span class="site-menu-icon">💎</span>
+        <span><span class="site-menu-name">메소마켓 시세 계산</span><span class="site-menu-desc">1억 메소당 실수령 메포</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 놀이</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_play.html">
+        <span class="site-menu-icon">🌟</span>
+        <span><span class="site-menu-name">스타포스 놀이</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 뽑기 놀이</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+      </a>
+      <a class="site-menu-item" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 뽑기</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+      </a>
+    </div>
+  </nav>
+<main class="history-page">
+  <header class="history-hero"><h1>스타포스 로그</h1><p>장비별 강화 기록과 사용 비용을 확인하세요.</p></header>
+  <section class="history-panel" aria-labelledby="fetchTitle">
+    <h2 id="fetchTitle">내 강화 기록 불러오기</h2>
+    <div class="history-key"><span id="keyState"></span><a href="index.html#apiKey">API 키 설정</a></div>
+    <form id="historyQuery"><div class="history-tools" id="historyPeriods" role="group" aria-label="조회 기간 빠른 선택">
+      <button type="button" data-days="7" aria-pressed="false">최근 7일</button>
+      <button type="button" data-days="30" aria-pressed="false">최근 30일</button>
+      <button type="button" data-days="365" aria-pressed="false">최근 1년</button>
+      <button type="button" data-days="all" aria-pressed="false">전체 · 최근 2년</button>
+    </div><div class="history-fields">
+      <label>캐릭터 이름 · 선택<input id="historyName" list="historyCharacters" maxlength="20" placeholder="비워두면 계정 전체" autocomplete="off"><datalist id="historyCharacters"></datalist></label>
+      <label>시작일<input type="date" id="historyFrom" required></label>
+      <label>종료일<input type="date" id="historyTo" required></label>
+      <button class="primary" id="historyFetch" type="submit">기록 불러오기</button><button id="historyCancel" type="button" hidden>조회 중단</button>
+    </div></form>
+    <p class="history-note">날짜 칸을 누르면 달력에서 선택할 수 있습니다. 등록된 API 키 계정의 최근 2년 기록을 조회하며, 닉네임은 기록 필터입니다. 전체 조회는 날짜별로 요청해 몇 분 걸릴 수 있습니다. 최신 기록은 최대 5분 뒤 반영됩니다.</p>
+    <p id="historyStatus" class="history-status" role="status" aria-live="polite"></p>
+  </section>
+  <div id="historyResults" hidden>
+    <div class="history-summary" aria-label="선택 캐릭터 전체 집계"><div><span>총 강화 횟수</span><strong id="totalTries">—</strong></div><div><span>파괴 횟수</span><strong id="totalDestroy">—</strong></div><div><span>장비 이름별 묶음</span><strong id="totalItems">—</strong></div></div>
+    <p id="costSummary" class="history-note"></p>
+    <div class="history-layout"><section aria-labelledby="itemsTitle"><h2 id="itemsTitle">장비별 기록</h2><div id="historyItems" class="history-items"></div></section>
+      <dialog id="historyDetail" class="history-panel history-detail-dialog" aria-labelledby="itemTitle">
+        <div class="history-detail-heading"><h2 id="itemTitle"></h2><button id="detailClose" type="button" aria-label="상세보기 닫기">✕</button></div><p id="itemSubtitle" class="history-note"></p>
+        <div id="itemOverview" class="history-verdict"></div>
+        <div id="itemEvents" class="history-event-badges"></div>
+        <details id="rangeSettings"><summary>고급 · 같은 이름의 장비 기록 나누기</summary>
+        <p class="history-note">같은 이름의 장비 여러 개가 섞였을 때만 사용하세요. 기본은 전체 기록입니다. 기록은 오래된 순입니다.</p>
+        <div class="history-tools"><label>시작 순번 <input id="rangeFrom" type="number" min="1" value="1"></label><label>종료 순번 <input id="rangeTo" type="number" min="1" value="1"></label><button id="rangeApply" type="button">구간 적용</button></div>
+        </details>
+        <p id="rangeSummary" class="history-note"></p>
+        <details id="analysisSettings"><summary>레벨·개인 할인 수정 / 목표 달성 분석</summary>
+          <p class="history-note">이벤트 할인과 파괴방지는 기록에서 자동 반영합니다. 알려진 장비는 이름으로 레벨을 채웁니다. 비용은 현재 단가 환산이며 복구·재구입비는 기본 제외합니다. MVP·PC방 할인은 필요할 때만 수정하세요.</p>
+          <form id="analysisForm">
+            <div class="history-fields">
+              <label>장비 레벨<input id="itemLevel" type="number" min="1" max="300" required placeholder="예: 200"></label>
+              <label>목표 별<input id="itemGoal" type="number" min="1" max="30" required value="22"></label>
+              <label>파괴 1회 대체 장비값 · 메소<input id="itemSpare" type="number" min="0" max="1000000000000000" step="1" required value="0"></label>
+              <label>MVP 할인<select id="itemMvp"><option value="0">없음</option><option value="0.03">실버 3%</option><option value="0.05">골드 5%</option><option value="0.1">다이아 10%</option></select></label>
+            </div>
+            <div class="history-checks"><label><input type="checkbox" id="itemPc">PC방 할인</label></div>
+            <button id="costUpdate" type="button">비용 수정 반영</button>
+            <div class="history-checks"><label><input type="checkbox" id="analysisConfirmed" required>목표 분석할 기록은 같은 장비의 연속 강화입니다.</label></div>
+            <p class="history-note">기대값과 상위 확률은 현재 계산기의 스타캐치 적용 확률 기준입니다. 과거 규칙과 다른 기록은 현재 조건으로 환산한 참고 비교입니다.</p>
+            <button class="primary" type="submit">선택 구간 분석</button>
+          </form>
+        <div id="analysisResult" class="history-verdict" role="status" aria-live="polite">장비 레벨과 강화 조건을 확인하면 비용과 기대값을 비교할 수 있습니다.</div>
+        </details>
+        <details open><summary>강화 상세 기록</summary><div class="history-table-wrap"><table class="history-table"><thead><tr><th>순번</th><th>시간</th><th>별 변화</th><th>결과</th><th>추정 비용</th></tr></thead><tbody id="historyRows"></tbody></table></div><div class="history-tools"><button id="rowsPrev" type="button">이전</button><span id="rowsPage"></span><button id="rowsNext" type="button">다음</button></div></details>
+      </dialog>
+    </div>
+  </div>
+  <p class="history-note"><a href="https://openapi.nexon.com/ko/game/maplestory/?id=17" target="_blank" rel="noopener">넥슨 공식 스타포스 기록 API</a> · 기록은 이 화면에서만 사용하며 새로고침하면 지워집니다. 상위 확률은 유저 순위가 아닌 동일 조건의 이론적 확률입니다.</p>
+</main></div></body></html>
