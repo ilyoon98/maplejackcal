@@ -10,6 +10,7 @@
   const LEGACY_ARMOR_PARTS = ['모자', '상의', '한벌옷', '하의', '신발', '장갑', '망토', '벨트', '얼굴장식', '눈장식', '귀고리', '펜던트'];
   const partOf = key => ({ key, flame: key === '무기' ? 'weapon' : 'armor' });
   const BOSS = true, MAX_GOALS = 4;
+  const availableTiers = () => F.tiers(BOSS).filter((tier, i) => F.FLAMES[state.flame].tiers[i] > 0);
   const WEAPON_LEVELS = [150, 160, 200, 250];
   const selectedWeapon = () => state.part === '무기' ? W.resolve(state.weapon, state.weaponSeries) : null;
   const attackId = () => selectedWeapon()?.stat || (state.mainStat === 'INT' ? 'MATT' : 'ATT');
@@ -85,6 +86,7 @@
     // 공·마 중 자신의 직업에 필요한 하나를 대표한다. 두 확률을 더하지 않는다.
     const list = F.candidates(state.level, weapon).filter(o => o.id !== 'MATT');
     const tiers = F.tiers(BOSS).slice().reverse();
+    const allowed = availableTiers();
     const used = state.flameConds;
     const full = used.length >= MAX_GOALS;
 
@@ -97,12 +99,12 @@
       }
       const o = F.BY_ID[c.id];
       const tierChips = tiers.map((t, k) =>
-        '<button type="button" class="ic-tier' + (Number(c.minTier) === t ? ' active' : '') + '" data-cond="' + i + '" data-tier="' + t + '">' +
+        '<button type="button" class="ic-tier' + (Number(c.minTier) === t ? ' active' : '') + '" data-cond="' + i + '" data-tier="' + t + '"' + (allowed.includes(t) ? '' : ' disabled title="이 불꽃에서 나오지 않는 단계입니다"') + '>' +
         (8 - t) + '추<small>' + valueText(o, t) + '</small></button>').join('');
       return '<div class="ic-row">' +
         '<span class="ic-row-name">' + esc(flameLabel(o)) + (o.unit || '') + '</span>' +
         '<span class="ic-row-val">' + (!weapon && ['ATT', 'ALL_PCT'].includes(c.id)
-          ? '<input class="ic-num" type="number" min="3" max="7" step="1" data-required="' + i + '" aria-label="필수 ' + esc(flameLabel(o)) + ' 최소 수치" value="' + c.minTier + '">' + (o.unit || '') + ' 이상'
+          ? '<input class="ic-num" type="number" min="' + Math.min(...allowed) + '" max="' + Math.max(...allowed) + '" step="1" data-required="' + i + '" aria-label="필수 ' + esc(flameLabel(o)) + ' 최소 수치" value="' + c.minTier + '">' + (o.unit || '') + ' 이상'
           : valueText(o, c.minTier) + ' 이상') + '</span>' +
         '<button type="button" class="ic-x" data-delcond="' + i + '">×</button>' +
         '<span class="ic-tiers">' + tierChips + '</span></div>';
@@ -243,7 +245,7 @@
   $('weapon').innerHTML = '<option value="">무기 종류 선택</option>' + ['전사', '마법사', '궁수', '도적', '해적'].map(job => '<optgroup label="' + job + '">' + W.items.filter(w => w.job === job).map(w => '<option value="' + w.id + '">' + esc(w.special ? (w.id === 'lazuli' ? '제로 · 라즐리 (태도)' : '제로 · 라피스 (대검)') : w.type) + '</option>').join('') + '</optgroup>').join('');
   document.querySelector('main').addEventListener('click', e => {
     const el = e.target.closest('button');
-    if (!el) return;
+    if (!el || el.disabled) return;
     const d = el.dataset;
     if (el.id === 'resetAll') state = defaults();
     else if (d.flame) state.flame = d.flame === 'black' ? 'mesoReset' : d.flame;
@@ -273,7 +275,10 @@
       state.part = el.value;
       if (state.part === '무기') state.flameConds = defaults().flameConds;
       else if (wasWeapon) state.flameConds = [{ kind: 'grade', min: 100 }];
-    } else if (el.dataset.required !== undefined) state.flameConds[Number(el.dataset.required)].minTier = Math.ceil(Number(el.value));
+    } else if (el.dataset.required !== undefined) {
+      const allowed = availableTiers();
+      state.flameConds[Number(el.dataset.required)].minTier = Math.max(Math.min(...allowed), Math.min(Math.max(...allowed), Math.ceil(Number(el.value) || Math.min(...allowed))));
+    }
     else if (el.dataset.cond !== undefined) state.flameConds[Number(el.dataset.cond)].min = Number(el.value);
     else return;
     refresh();
