@@ -14,9 +14,9 @@
   // 추가옵션 재설정은 공식 확률표에서 검은/영원한 환생의 불꽃과 같은 줄에 묶여 있다(확률 동일).
   var MESO_RESET_PRICE = 3000000;
   var FLAMES = {
-    black:   { name: '검은 · 영원한 환생의 불꽃', short: '검은 불꽃', tiers: [0, 29, 45, 25, 1], meso: 0 },
+    black:   { name: '검은 환생의 불꽃', short: '검은 불꽃', tiers: [0, 29, 45, 25, 1], meso: 0 },
     abyss:   { name: '심연의 환생의 불꽃', short: '심연 불꽃', tiers: [0, 0, 63, 34, 3], meso: 0 },
-    burning: { name: '타오르는 · 강력한 환생의 불꽃', short: '타오르는 불꽃', tiers: [20, 30, 36, 14, 0], meso: 0 },
+    burning: { name: '타오르는 환생의 불꽃', short: '타오르는 불꽃', tiers: [20, 30, 36, 14, 0], meso: 0 },
     mesoReset: { name: '추가옵션 재설정 (메소)', short: '메소 재설정', tiers: [0, 29, 45, 25, 1], meso: MESO_RESET_PRICE }
   };
   var COUNT_DIST = [40, 40, 16, 4]; // 환생의 불꽃류: 옵션 1개 / 2개 / 3개 / 4개
@@ -43,7 +43,7 @@
     { id: 'DEF', label: '방어력', value: function (lv, t) { return (lv < 140 ? 1 : coefSingle(lv)) * t; } },
     { id: 'ATT', label: '공격력', minLevelArmor: 60, value: function (lv, t) { return t; }, weaponTierOnly: true },
     { id: 'MATT', label: '마력', minLevelArmor: 60, value: function (lv, t) { return t; }, weaponTierOnly: true },
-    { id: 'BOSS_DMG', label: '보스 몬스터 데미지', unit: '%', weaponOnly: true, minLevel: 90, value: function (lv, t) { return t; } },
+    { id: 'BOSS_DMG', label: '보스 몬스터 데미지', unit: '%', weaponOnly: true, minLevel: 90, value: function (lv, t) { return 2 * t; } },
     { id: 'DMG', label: '데미지', unit: '%', weaponOnly: true, value: function (lv, t) { return t; } },
     { id: 'SPEED', label: '이동속도', unit: '%', armorOnly: true, value: function (lv, t) { return t; } },
     { id: 'JUMP', label: '점프력', unit: '%', armorOnly: true, value: function (lv, t) { return t; } },
@@ -69,8 +69,12 @@
   // 복합 스탯은 주스탯 쪽 수치만 센다. 공격력·마력은 둘 중 하나만 쓰는 옵션이라 공격력 하나만 센다.
   // 무기는 공격력·마력 수치가 무기 종류마다 달라 급수에서 빼고, 주스탯 계열만 센다.
   var GRADE_WEIGHT = { STR: 1, STR_DEX: 1, STR_INT: 1, STR_LUK: 1, ALL_PCT: 10, ATT: 4 };
-  function gradeWeight(option, weapon) {
+  function gradeWeight(option, weapon, mainStat) {
     if (weapon && (option.id === 'ATT' || option.id === 'MATT')) return 0;
+    if (mainStat && ['STR', 'DEX', 'INT', 'LUK'].indexOf(mainStat) >= 0) {
+      if (option.stats) return option.stats.indexOf(mainStat) >= 0 ? 1 : 0;
+      if (option.id === 'ATT' || option.id === 'MATT') return option.id === (mainStat === 'INT' ? 'MATT' : 'ATT') ? 4 : 0;
+    }
     return GRADE_WEIGHT[option.id] || 0;
   }
 
@@ -98,7 +102,7 @@
 
     // 옵션 i가 1단계일 때 급수에 얼마나 보태는지 미리 뽑아둔다 (수치는 단계에 정비례한다)
     var give = list.map(function (o) {
-      var w = gradeWeight(o, weapon) * o.value(level, 1);
+      var w = gradeWeight(o, weapon, opts.mainStat) * o.value(level, 1);
       return gradeConds.map(function () { return w; });
     });
 

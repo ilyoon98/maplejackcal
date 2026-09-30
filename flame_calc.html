@@ -3,17 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>아이템 획득량 계산기 · 메이플 계산기</title>
-<meta name="description" content="아획·맵 마릿수·메획으로 솔 에르다 조각과 사냥 메소를 계산합니다. 30분 사냥 및 6분 실측 마릿수 반영.">
+<title>추가옵션 계산기</title>
+<meta name="description" content="원하는 추가옵션의 성공 확률, 환생의 불꽃 평균 사용량과 메소 비용을 계산하세요.">
 <link rel="icon" href="favicon.png?v=2">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="site_ux.css">
-<link rel="stylesheet" href="hunting_calc.css">
-<script src="site_ux.js" defer></script>
-<script src="site_nav.js" defer></script>
-<script src="hunting_calc.js" defer></script>
+<link rel="stylesheet" href="flame_calc.css">
 </head>
-<body><div class="wrap">
+<body>
+<div class="wrap">
 <nav class="site-nav">
     <div class="site-tabs-track site-groups">
       <span class="site-tabs-pill" aria-hidden="true"></span>
@@ -90,35 +88,46 @@
       </a>
     </div>
   </nav>
-<header><h1>아이템 획득량 계산기</h1><p class="sub">30분 사냥으로 모을 조각과 메소를 확인하세요.</p></header>
-<main class="hunt-layout">
-<form id="huntingForm" class="hunt-inputs">
-<section class="hunt-panel"><h2>사냥 설정 <span class="hunt-badge">30분 기준</span></h2>
-<div class="hunt-fields">
-<label>아이템 드랍률 증가 (아획 %)<input name="drop" type="number" min="0" max="10000" step="0.1" value="200" required></label>
-<label>메소 획득량 증가 (메획 %)<input name="meso" type="number" min="0" max="10000" step="0.1" value="100" required><small>버프 포함 최종 증가율. +100%는 2배.</small></label>
-<label>몬스터 레벨<input name="monster" type="number" min="1" max="300" step="1" value="260" required></label>
-<label>맵 마릿수 (1회 젠)<input name="mobs" type="number" min="0" max="10000" step="1" value="38" required><small>7.5초마다 전부 처치하는 기준</small></label>
-<label class="hunt-wide">6분 처치 수 <span class="hunt-optional">선택</span><input name="sixMinuteKills" type="number" min="0" max="480000" step="1" placeholder="미입력 시 맵 마릿수로 계산" aria-describedby="measuredHelp"><small id="measuredHelp">입력하면 실측 마릿수 × 5로 계산합니다. 비워두면 1회 젠마다 모두 잡는 것으로 계산합니다.</small></label>
-</div></section>
-</form>
-<div><p id="inputError" class="hunt-panel" role="alert" hidden>입력값을 확인하세요. 아획·메획은 0 이상, 몬스터 레벨은 1~300, 마릿수는 0 이상의 정수로 입력하세요.</p>
-<section id="results" aria-label="30분 사냥 결과" aria-live="polite">
-<div class="hunt-summary"><strong>30분 사냥 결과</strong><span id="killBasis"></span></div>
-<div class="hunt-overview"><article class="hunt-reward fragment"><h2>솔 에르다 조각</h2><p class="hunt-value"><span id="fragments"></span> <small>개</small></p></article><article class="hunt-reward"><h2>처치 수</h2><p class="hunt-value hunt-kills" id="kills"></p></article></div>
-<section class="hunt-panel hunt-money"><h2>메획 적용 메소 <span class="hunt-badge">30분</span></h2>
-<div class="hunt-metrics"><article class="hunt-metric"><h3>최소</h3><strong id="low"></strong><span>메소</span></article><article class="hunt-metric expected"><h3>기대값</h3><strong id="meso"></strong><span>메소</span></article><article class="hunt-metric"><h3>최대</h3><strong id="high"></strong><span>메소</span></article></div>
-</section>
-<section class="hunt-panel hunt-money pure"><h2>순수 메소 <span class="hunt-badge">메획 미적용</span></h2>
-<div class="hunt-metrics"><article class="hunt-metric"><h3>최소</h3><strong id="pureLow"></strong><span>메소</span></article><article class="hunt-metric expected"><h3>기대값</h3><strong id="pure"></strong><span>메소</span></article><article class="hunt-metric"><h3>최대</h3><strong id="pureHigh"></strong><span>메소</span></article></div>
-</section>
-<div class="hunt-summary hunt-bag"><span>아획에 따른 메소 주머니 드랍 확률</span><strong id="bagRate"></strong></div>
-</section></div>
-<details class="hunt-panel hunt-wide hunt-method"><summary>계산 기준</summary><ul>
-<li>30분 고정. 6분 처치 수 입력 시 × 5, 미입력 시 맵 마릿수 × 240회 젠으로 계산합니다. 0마리를 입력하면 0으로 계산합니다.</li>
-<li>조각 = 처치 수 × 0.000425 × (1 + ln(1 + 아획 ÷ 100)). <a href="https://www.inven.co.kr/board/maple/2304/37701" target="_blank" rel="noopener noreferrer">인벤 헤일맨 게시글</a>의 로그 추정식이며 공식 확률이 아닙니다. 6차 전직 완료 및 조각 드랍 가능 사냥터 기준이며 260 미만 몬스터의 조각은 0으로 계산합니다.</li>
-<li>메소 주머니 드랍 확률 = min(100%, 60% × (1 + 아획 ÷ 100)). 아획 67% 이상은 100%입니다. <a href="https://www.gametoc.co.kr/news/articleView.html?idxno=74654" target="_blank" rel="noopener noreferrer">메소 주머니 확률 참고</a></li>
-<li>순수 메소 = 처치 수 × 메소 주머니 드랍 확률 × 몬스터 레벨 × 6 / 7.5 / 9 (최소 / 기대값 / 최대). 메획 적용 메소는 각각에 (1 + 메획 ÷ 100)을 곱합니다.</li>
-<li>최소·최대는 주머니 금액에 따른 시나리오로, 드랍 확률을 반영한 값입니다. 실제 획득량의 보장 범위가 아닙니다. 일일 메소 상한·레벨 차이 패널티·미회수는 반영하지 않습니다.</li>
-</ul></details>
-</main></div></body></html>
+<header class="fc-header">
+  <div><p class="fc-kicker">환생의 불꽃 · 목표 옵션 설계</p><h1>🔥 추가옵션 계산기</h1><p class="sub">원하는 추옵까지, 불꽃과 메소가 얼마나 필요할까요?</p></div>
+  <a href="item_craft_calc.html">전체 아이템 제작 비용 보기 →</a>
+</header>
+<main class="fc-layout">
+  <section aria-label="추가옵션 설정">
+    <div class="ic-panel">
+      <h2>장비 설정 <button type="button" class="ic-reset" id="resetAll">설정 초기화</button></h2>
+      <div class="ic-fields">
+        <div class="ic-field"><label for="level">아이템 레벨</label><div class="ic-level-control"><button type="button" class="ic-level-step" data-level-step="-10" aria-label="아이템 레벨 10 감소">−</button><input type="number" id="level" min="1" max="300" step="1" inputmode="numeric"><button type="button" class="ic-level-step" data-level-step="10" aria-label="아이템 레벨 10 증가">+</button></div></div>
+        <div class="ic-field"><label for="part">장비 구분</label><select id="part"></select></div>
+      </div>
+      <div class="ic-fields fc-weapon-fields">
+        <div class="ic-field" id="weaponField"><label for="weapon">무기 종류</label><select id="weapon"></select></div>
+      </div>
+      <div id="weaponVariants" class="ic-chips fc-variants" role="group" aria-label="200레벨 무기" hidden></div>
+    </div>
+    <div class="ic-panel"><h2>불꽃과 목표 옵션</h2><p class="ic-note">최대 4개 조건을 동시에 만족하는 확률입니다.</p><div id="flameBody"></div></div>
+  </section>
+  <aside class="ic-panel fc-result" aria-labelledby="resultTitle"><h2>선택한 추가옵션 합계</h2><div id="optionTotal" aria-live="polite"></div><h2 id="resultTitle">목표 달성 예상</h2><div id="flameResult" aria-live="polite" aria-atomic="true"></div></aside>
+</main>
+<details class="ic-panel" id="weaponReference"><summary>1추부터 5추까지</summary><div id="weaponTable"></div><p class="ic-note">수치는 추가옵션으로 붙는 증가량입니다. <a id="weaponSource" href="https://matsu1207.tistory.com/402" target="_blank" rel="noopener">무기 공·마 수치 출처: 정심심</a></p><div id="allOptionTable"></div></details>
+<details class="ic-panel fc-help"><summary>계산 기준과 주스탯 환산 안내</summary>
+  <ul>
+    <li>보스 장비 규칙(옵션 4개 · 3~7단계)으로 계산합니다. 이 규칙을 따르는 방어구·장신구는 같은 레벨이면 추옵 확률과 수치가 같아 하나로 묶었습니다. 추가옵션이 붙지 않는 부위와 별도 규칙의 장비는 대상이 아닙니다.</li>
+    <li>옵션 종류는 중복되지 않으며, 각 옵션의 단계는 개별적으로 결정됩니다. 목표 단계 이상이면 성공으로 계산합니다.</li>
+    <li>주스탯 환산: 주스탯 1 = 1급, 올스탯 1% = 10급, 공격력 또는 마력 1 = 4급. HP는 환산에 포함하지 않습니다.</li>
+    <li>STR·DEX·INT·LUK의 확률이 같으므로 주스탯 종류는 따로 고르지 않습니다. 공·마는 직업에 필요한 한 종류만 환산합니다. 세부 조건은 급수 조건에 추가로 만족해야 하는 조건이며, 급수에 수치를 한 번 더 더하지 않습니다.</li>
+    <li>무기 종류와 레벨·계열에 맞는 공·마 수치표를 자동 적용합니다. 150제 파프니르, 160제 앱솔랩스, 200제 아케인셰이드·제네시스, 250제 데스티니를 지원합니다. 같은 200제라도 아케인과 제네시스의 공·마 수치는 다릅니다.</li>
+    <li>무기 공·마는 급수 계산에서 제외합니다. 지원하지 않는 레벨·무기 조합은 공·마 수치를 임의로 추정하지 않습니다. 데스티니 제로 무기의 3~5추는 출처에서 미확인으로 표기되어 있습니다.</li>
+    <li>최종 합계는 선택한 각 단계에 정확히 맞춘 추가옵션 증가량입니다. 미선택 옵션, 장비 기본 수치, 주문서, 스타포스, 잠재능력은 제외합니다. 올스탯 %와 고정 스탯은 따로 표시합니다.</li>
+    <li>제로 라즐리·라피스는 공·마 참고표만 제공합니다. 일반 보스 장비 규칙과 다른 옵션 생성 규칙을 확인하기 전까지 확률과 기타 옵션 합계는 계산하지 않습니다.</li>
+    <li>메소 비용은 1회 3,000,000 메소로 고정하여 계산합니다.</li>
+    <li>확률은 기존 계산기의 <a href="https://maplestory.nexon.com/Guide/OtherProbability/game/gameAddOption" target="_blank" rel="noopener">넥슨 공개 확률표</a> 기준이며, 단계별 수치는 기존 환산표를 사용합니다.</li>
+  </ul>
+</details>
+</div>
+<script src="flame_core.js"></script>
+<script src="flame_weapon_data.js"></script>
+<script src="flame_calc.js"></script>
+<script src="site_nav.js"></script>
+</body>
+</html>

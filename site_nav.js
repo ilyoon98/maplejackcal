@@ -2,13 +2,13 @@
 // Add a new page's YYYY-MM-DD release date here: NEW expires after 30 days (KST).
 window.SiteNavigation = {
   categories: [
-      ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','item_craft_calc.html','authentic_symbol_calc.html']],
+      ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','flame_calc.html','item_craft_calc.html','authentic_symbol_calc.html']],
       ['보스', ['boss_income_calc.html','boss_buff_planner.html']],
       ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','coin_shop_calc.html']],
       ['강화 시뮬레이터', ['cube_play.html','starforce_play.html']],
       ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']]
     ],
-  releases: { 'hunting_calc.html': '2026-09-30' },
+  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30' },
   newDays: 30
 };
 // 상단 탭 한 줄. 분류(계산기·시뮬레이터)를 누르면 그 아래로 목록 패널이 펼쳐지고,
@@ -71,6 +71,14 @@ window.SiteNavigation = {
       track.appendChild(historyTab);
     }
     var calcMenu = nav.querySelector('.site-menu[data-group="calc"]');
+    if (calcMenu && !calcMenu.querySelector('a[href="flame_calc.html"]')) {
+      var flameLink = document.createElement('a');
+      flameLink.href = 'flame_calc.html';
+      flameLink.className = 'site-menu-item';
+      flameLink.innerHTML = '<span class="site-menu-icon">🔥</span><span><span class="site-menu-name">추가옵션 계산기</span><span class="site-menu-desc">목표 추옵 확률·불꽃·메소</span></span>';
+      if (location.pathname.endsWith('/flame_calc.html')) flameLink.classList.add('active');
+      calcMenu.appendChild(flameLink);
+    }
     if (calcMenu && !calcMenu.querySelector('a[href="hunting_calc.html"]')) {
       var huntingLink = document.createElement('a');
       huntingLink.href = 'hunting_calc.html';
