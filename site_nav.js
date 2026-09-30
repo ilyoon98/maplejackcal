@@ -57,13 +57,22 @@
       }
       track.appendChild(historyTab);
     }
+    var calcMenu = nav.querySelector('.site-menu[data-group="calc"]');
+    if (calcMenu && !calcMenu.querySelector('a[href="hunting_calc.html"]')) {
+      var huntingLink = document.createElement('a');
+      huntingLink.href = 'hunting_calc.html';
+      huntingLink.className = 'site-menu-item';
+      huntingLink.innerHTML = '<span class="site-menu-icon">🍁</span><span><span class="site-menu-name">아이템 획득량 계산기</span><span class="site-menu-desc">30분 사냥 조각·메소</span></span>';
+      if (location.pathname.endsWith('/hunting_calc.html')) huntingLink.classList.add('active');
+      calcMenu.appendChild(huntingLink);
+    }
     var pill = track.querySelector('.site-tabs-pill');
     var tabs = [].slice.call(track.querySelectorAll('.site-tab'));
     var menus = [].slice.call(nav.querySelectorAll('.site-menu'));
     var categories = [
       ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','item_craft_calc.html']],
       ['보스', ['boss_income_calc.html','boss_buff_planner.html']],
-      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','coin_shop_calc.html','authentic_symbol_calc.html']],
+      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','coin_shop_calc.html','authentic_symbol_calc.html']],
       ['강화 놀이', ['cube_play.html','starforce_play.html']],
       ['뽑기 놀이', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']]
     ];

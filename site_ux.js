@@ -53,7 +53,7 @@
     if (page === 'index.html') {
       const api = q('#apiKey'); const tools = qa('.tool-section')[0]; if (api && tools) tools.after(api);
       const openKey = () => { if (location.hash === '#apiKey' && api) { api.open = true; api.scrollIntoView(); } }; window.addEventListener('hashchange', openKey);
-      const groups = [ ['강화 비용', ['trace_calc','starforce_calc','cube_calc','cube_option_calc','item_craft_calc']], ['수익·거래', ['trade_margin_calc','meso_market_calc']], ['캐릭터·보스', ['authentic_symbol_calc','boss_income_calc','boss_buff_planner']], ['이벤트', ['coin_shop_calc']] ];
+      const groups = [ ['강화 비용', ['trace_calc','starforce_calc','cube_calc','cube_option_calc','item_craft_calc']], ['수익·거래', ['trade_margin_calc','meso_market_calc','hunting_calc']], ['캐릭터·보스', ['authentic_symbol_calc','boss_income_calc','boss_buff_planner']], ['이벤트', ['coin_shop_calc']] ];
       const grid = q('.tool-grid', tools); const cards = qa('.tool-card', grid);
       // Keep every calculator in one grid; categories filter it without adding empty rows.
       grid.id = 'ux-tool-grid';

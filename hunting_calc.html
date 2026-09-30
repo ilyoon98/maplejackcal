@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>아이템 획득량 계산기 · 메이플 계산기</title>
+<meta name="description" content="아획·맵 마릿수·메획으로 솔 에르다 조각과 사냥 메소를 계산합니다. 30분 사냥 및 6분 실측 마릿수 반영.">
+<link rel="icon" href="favicon.png?v=2">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="site_ux.css">
+<link rel="stylesheet" href="hunting_calc.css">
+<script src="site_ux.js" defer></script>
+<script src="site_nav.js" defer></script>
+<script src="hunting_calc.js" defer></script>
+</head>
+<body><div class="wrap">
+<nav class="site-nav">
+    <div class="site-tabs-track site-groups">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab active" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>놀이</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_calc.html">
+        <span class="site-menu-icon">⭐</span>
+        <span><span class="site-menu-name">스타포스 기댓값</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_buff_planner.html">
+        <span class="site-menu-icon">⏱️</span>
+        <span><span class="site-menu-name">보스 버프 동선 짜기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">큐브 등급업 비용</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_option_calc.html">
+        <span class="site-menu-icon">🎯</span>
+        <span><span class="site-menu-name">큐브 옵션 확률</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="item_craft_calc.html">
+        <span class="site-menu-icon">🛠️</span>
+        <span><span class="site-menu-name">아이템 제작 비용</span><span class="site-menu-desc">대박·평균 제작 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="trade_margin_calc.html">
+        <span class="site-menu-icon">💱</span>
+        <span><span class="site-menu-name">되팔기 손익 계산</span><span class="site-menu-desc">수수료 떼고 남는 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="meso_market_calc.html">
+        <span class="site-menu-icon">💎</span>
+        <span><span class="site-menu-name">메소마켓 시세 계산</span><span class="site-menu-desc">1억 메소당 실수령 메포</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 놀이</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_play.html">
+        <span class="site-menu-icon">🌟</span>
+        <span><span class="site-menu-name">스타포스 놀이</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 뽑기 놀이</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+      </a>
+      <a class="site-menu-item" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 뽑기</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+      </a>
+    </div>
+  </nav>
+<header><h1>아이템 획득량 계산기</h1><p class="sub">30분 사냥으로 모을 조각과 메소를 확인하세요.</p></header>
+<main class="hunt-layout">
+<form id="huntingForm" class="hunt-inputs">
+<section class="hunt-panel"><h2>사냥 설정 <span class="hunt-badge">30분 기준</span></h2>
+<div class="hunt-fields">
+<label>아이템 드랍률 증가 (아획 %)<input name="drop" type="number" min="0" max="10000" step="0.1" value="200" required></label>
+<label>메소 획득량 증가 (메획 %)<input name="meso" type="number" min="0" max="10000" step="0.1" value="100" required><small>버프 포함 최종 증가율. +100%는 2배.</small></label>
+<label>몬스터 레벨<input name="monster" type="number" min="1" max="300" step="1" value="260" required></label>
+<label>맵 마릿수 (1회 젠)<input name="mobs" type="number" min="0" max="10000" step="1" value="38" required><small>7.5초마다 전부 처치하는 기준</small></label>
+<label class="hunt-wide">6분 처치 수 <span class="hunt-optional">선택</span><input name="sixMinuteKills" type="number" min="0" max="480000" step="1" placeholder="미입력 시 맵 마릿수로 계산" aria-describedby="measuredHelp"><small id="measuredHelp">입력하면 실측 마릿수 × 5로 계산합니다. 비워두면 1회 젠마다 모두 잡는 것으로 계산합니다.</small></label>
+</div></section>
+</form>
+<div><p id="inputError" class="hunt-panel" role="alert" hidden>입력값을 확인하세요. 아획·메획은 0 이상, 몬스터 레벨은 1~300, 마릿수는 0 이상의 정수로 입력하세요.</p>
+<section id="results" aria-label="30분 사냥 결과" aria-live="polite">
+<div class="hunt-summary"><strong>30분 사냥 결과</strong><span id="killBasis"></span></div>
+<div class="hunt-overview"><article class="hunt-reward fragment"><h2>솔 에르다 조각</h2><p class="hunt-value"><span id="fragments"></span> <small>개</small></p></article><article class="hunt-reward"><h2>처치 수</h2><p class="hunt-value hunt-kills" id="kills"></p></article></div>
+<section class="hunt-panel hunt-money"><h2>메획 적용 메소 <span class="hunt-badge">30분</span></h2>
+<div class="hunt-metrics"><article class="hunt-metric"><h3>최소</h3><strong id="low"></strong><span>메소</span></article><article class="hunt-metric expected"><h3>기대값</h3><strong id="meso"></strong><span>메소</span></article><article class="hunt-metric"><h3>최대</h3><strong id="high"></strong><span>메소</span></article></div>
+</section>
+<section class="hunt-panel hunt-money pure"><h2>순수 메소 <span class="hunt-badge">메획 미적용</span></h2>
+<div class="hunt-metrics"><article class="hunt-metric"><h3>최소</h3><strong id="pureLow"></strong><span>메소</span></article><article class="hunt-metric expected"><h3>기대값</h3><strong id="pure"></strong><span>메소</span></article><article class="hunt-metric"><h3>최대</h3><strong id="pureHigh"></strong><span>메소</span></article></div>
+</section>
+<div class="hunt-summary hunt-bag"><span>아획에 따른 메소 주머니 드랍 확률</span><strong id="bagRate"></strong></div>
+</section></div>
+<details class="hunt-panel hunt-wide hunt-method"><summary>계산 기준</summary><ul>
+<li>30분 고정. 6분 처치 수 입력 시 × 5, 미입력 시 맵 마릿수 × 240회 젠으로 계산합니다. 0마리를 입력하면 0으로 계산합니다.</li>
+<li>조각 = 처치 수 × 0.000425 × (1 + ln(1 + 아획 ÷ 100)). <a href="https://www.inven.co.kr/board/maple/2304/37701" target="_blank" rel="noopener noreferrer">인벤 헤일맨 게시글</a>의 로그 추정식이며 공식 확률이 아닙니다. 6차 전직 완료 및 조각 드랍 가능 사냥터 기준이며 260 미만 몬스터의 조각은 0으로 계산합니다.</li>
+<li>메소 주머니 드랍 확률 = min(100%, 60% × (1 + 아획 ÷ 100)). 아획 67% 이상은 100%입니다. <a href="https://www.gametoc.co.kr/news/articleView.html?idxno=74654" target="_blank" rel="noopener noreferrer">메소 주머니 확률 참고</a></li>
+<li>순수 메소 = 처치 수 × 메소 주머니 드랍 확률 × 몬스터 레벨 × 6 / 7.5 / 9 (최소 / 기대값 / 최대). 메획 적용 메소는 각각에 (1 + 메획 ÷ 100)을 곱합니다.</li>
+<li>최소·최대는 주머니 금액에 따른 시나리오로, 드랍 확률을 반영한 값입니다. 실제 획득량의 보장 범위가 아닙니다. 일일 메소 상한·레벨 차이 패널티·미회수는 반영하지 않습니다.</li>
+</ul></details>
+</main></div></body></html>
