@@ -567,7 +567,9 @@
       var label = API_DIFFICULTY[String(item.difficulty || '').toLowerCase()];
       var diffIdx = boss && boss.diffs.findIndex(function(d){ return d.label === label; });
       if (!boss || diffIdx < 0){ skipped.push(apiName + (label ? ' ' + label : '')); return; }
-      bosses[name] = { diffIdx:diffIdx, party:1, complete:trueFlag(item.complete_flag), source:'scheduler' };
+      // clear_flag가 제공되면 우선 사용하고, 기존 complete_flag 응답도 지원한다.
+      var completed = item.clear_flag != null ? item.clear_flag : item.complete_flag;
+      bosses[name] = { diffIdx:diffIdx, party:1, complete:trueFlag(completed), source:'scheduler' };
     });
     return { bosses:bosses, skipped:skipped };
   }

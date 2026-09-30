@@ -102,6 +102,36 @@ test('완료 수익은 완료된 보스의 파티 분배액만 합산한다', ()
   assert.equal(ch.bosses['스우'].source, 'scheduler');
 });
 
+test('월간 검은 마법사의 clear_flag 완료 상태가 수익에 반영된다', () => {
+  const parsed = parseSchedulerBosses({boss_contents:[{
+    content_name:'검은 마법사', difficulty:'hard', cycle:'bossMonthly',
+    registration_flag:true, clear_flag:'TRUE',
+  }]});
+  const character = normalizeCharacter({name:'월간 테스트', bosses:parsed.bosses});
+  const totals = charTotals(character);
+  assert.equal(character.bosses['검은 마법사'].complete, true);
+  assert.equal(totals.completedCount, 1);
+  assert.equal(totals.earnedMeso, totals.monthlyMeso);
+  assert.ok(totals.earnedMeso > 0);
+});
+
+test('완료 필드 호환: clear_flag의 false를 유지하고 없으면 complete_flag를 읽는다', () => {
+  for (const [flags, expected] of [
+    [{clear_flag:true}, true],
+    [{clear_flag:false, complete_flag:true}, false],
+    [{clear_flag:'false', complete_flag:'true'}, false],
+    [{complete_flag:'true'}, true],
+    [{clear_flag:null, complete_flag:true}, true],
+    [{}, false],
+  ]) {
+    const parsed = parseSchedulerBosses({boss_contents:[{
+      content_name:'검은 마법사', difficulty:'hard', cycle:'bossMonthly',
+      registration_flag:true, ...flags,
+    }]});
+    assert.equal(parsed.bosses['검은 마법사'].complete, expected);
+  }
+});
+
 test('스케줄러 권한 오류는 본인 계정과 접속 조건을 안내한다', () => {
   const message = describeApiError({code:'OPENAPI00003', message:'not found'}, 'scheduler');
   assert.match(message, /본인 계정/);
