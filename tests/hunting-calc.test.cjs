@@ -35,3 +35,26 @@ test('메획은 순수 메소·조각에 영향 없고 일일 상한은 적용�
 test('음수·소수 마릿수·범위 밖 입력 거부',()=>{
   for(const invalid of [{drop:NaN},{meso:-1},{monster:301},{monster:260.5},{mobs:1.5},{sixMinuteKills:-1},{sixMinuteKills:1.5},{sixMinuteKills:Infinity}]) assert.throws(()=>calculate({...base,...invalid}),RangeError);
 });
+
+test('상위 확률은 동률 포함 이항분포 상측 확률',()=>{
+  const {upperTail}=require('../hunting_calc.js');
+  assert.equal(upperTail(10,.5,0),1);
+  assert.ok(Math.abs(upperTail(10,.5,5)-638/1024)<1e-14);
+  assert.ok(Math.abs(upperTail(10,.5,10)-1/1024)<1e-14);
+  assert.equal(upperTail(10,.5,11),0);
+  assert.equal(upperTail(0,0,0),1);
+  assert.equal(upperTail(0,0,1),0);
+  assert.equal(upperTail(10,1,10),1);
+  assert.equal(upperTail(10,0,1),0);
+  assert.throws(()=>upperTail(10,.5,-1),RangeError);
+});
+test('낮은 드랍률과 큰 처치 수에서도 확률 안정성 유지',()=>{
+  const {upperTail}=require('../hunting_calc.js');
+  const p=.000425*(1+Math.log(3)), n=9120;
+  assert.ok(Math.abs(upperTail(n,p,1)-(-Math.expm1(n*Math.log1p(-p))))<1e-13);
+  const rare=upperTail(n,p,60);
+  assert.ok(rare>0 && rare<1e-20);
+  assert.ok(upperTail(n,p,12)<upperTail(n,p,8));
+  const large=upperTail(2400000,.002,4800);
+  assert.ok(large>.49 && large<.51);
+});

@@ -104,8 +104,12 @@
 </form>
 <div><p id="inputError" class="hunt-panel" role="alert" hidden>입력값을 확인하세요. 아획·메획은 0 이상, 몬스터 레벨은 1~300, 마릿수는 0 이상의 정수로 입력하세요.</p>
 <section id="results" aria-label="30분 사냥 결과" aria-live="polite">
-<div class="hunt-summary"><strong>30분 사냥 결과</strong><span id="killBasis"></span></div>
-<div class="hunt-overview"><article class="hunt-reward fragment"><h2>솔 에르다 조각</h2><p class="hunt-value"><span id="fragments"></span> <small>개</small></p></article><article class="hunt-reward"><h2>처치 수</h2><p class="hunt-value hunt-kills" id="kills"></p></article></div>
+<div class="hunt-summary"><strong>30분 사냥 결과</strong><div class="hunt-kill-summary"><span>처치 수 <b id="kills"></b></span><span id="killBasis"></span></div></div>
+<div class="hunt-overview"><article class="hunt-reward fragment"><h2>솔 에르다 조각</h2><p class="hunt-value"><span id="fragments"></span> <small>개</small></p></article>
+<section class="hunt-reward hunt-luck"><h2>내 조각 획득 결과</h2>
+<div class="hunt-luck-grid"><label for="actualFragments">실제로 얻은 조각 수<input id="actualFragments" type="number" min="0" max="9007199254740991" step="1" placeholder="획득 개수" aria-describedby="rankNote"></label>
+<div class="hunt-rank"><strong id="fragmentRank">—</strong><p id="rankNote">30분 동안 얻은 조각 수를 입력하세요.</p></div></div>
+</section></div>
 <section class="hunt-panel hunt-money"><h2>메획 적용 메소 <span class="hunt-badge">30분</span></h2>
 <div class="hunt-metrics"><article class="hunt-metric"><h3>최소</h3><strong id="low"></strong><span>메소</span></article><article class="hunt-metric expected"><h3>기대값</h3><strong id="meso"></strong><span>메소</span></article><article class="hunt-metric"><h3>최대</h3><strong id="high"></strong><span>메소</span></article></div>
 </section>
@@ -116,6 +120,7 @@
 </section></div>
 <details class="hunt-panel hunt-wide hunt-method"><summary>계산 기준</summary><ul>
 <li>30분 고정. 6분 처치 수 입력 시 × 5, 미입력 시 맵 마릿수 × 240회 젠으로 계산합니다. 0마리를 입력하면 0으로 계산합니다.</li>
+<li>상위 N%는 각 몬스터가 독립적으로 최대 1개의 조각을 드랍한다고 가정한 이항분포에서, 입력한 개수 이상 얻을 확률 P(X ≥ 획득 개수)입니다. 동률을 포함하며 실제 유저 순위가 아닙니다. 사냥으로 얻은 조각만 입력하세요.</li>
 <li>조각 = 처치 수 × 0.000425 × (1 + ln(1 + 아획 ÷ 100)). <a href="https://www.inven.co.kr/board/maple/2304/37701" target="_blank" rel="noopener noreferrer">인벤 헤일맨 게시글</a>의 로그 추정식이며 공식 확률이 아닙니다. 6차 전직 완료 및 조각 드랍 가능 사냥터 기준이며 260 미만 몬스터의 조각은 0으로 계산합니다.</li>
 <li>메소 주머니 드랍 확률 = min(100%, 60% × (1 + 아획 ÷ 100)). 아획 67% 이상은 100%입니다. <a href="https://www.gametoc.co.kr/news/articleView.html?idxno=74654" target="_blank" rel="noopener noreferrer">메소 주머니 확률 참고</a></li>
 <li>순수 메소 = 처치 수 × 메소 주머니 드랍 확률 × 몬스터 레벨 × 6 / 7.5 / 9 (최소 / 기대값 / 최대). 메획 적용 메소는 각각에 (1 + 메획 ÷ 100)을 곱합니다.</li>

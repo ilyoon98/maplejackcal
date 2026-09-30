@@ -24,9 +24,10 @@
   //   flame: 'weapon' 무기 옵션표 · 'armor' 그 외 장비 옵션표 · null 추가옵션이 안 붙는 부위
   const PARTS = [
     { key: '무기', flame: 'weapon' },
-    { key: '엠블렘', flame: 'weapon' },
+    { key: '엠블렘', flame: null, star: false },
+    // 아스트라처럼 스타포스가 가능한 보조무기도 있어 포함 여부를 직접 선택한다.
     { key: '보조무기(포스실드, 소울링 제외)', short: '보조무기', flame: null },
-    { key: '포스실드, 소울링', short: '포스실드·소울링', flame: null },
+    { key: '포스실드, 소울링', short: '포스실드·소울링', flame: null, star: false },
     { key: '방패', flame: null },
     { key: '모자', flame: 'armor' },
     { key: '상의', flame: 'armor' },
@@ -42,14 +43,33 @@
     { key: '귀고리', flame: 'armor' },
     { key: '반지', flame: null },
     { key: '펜던트', flame: 'armor' },
-    { key: '기계심장', flame: 'armor' }
+    { key: '기계심장', flame: null }
   ];
   const partOf = key => PARTS.find(p => p.key === key);
+  const defaultFlameConds = part => partOf(part).flame === 'weapon'
+    ? [{ kind: 'opt', id: 'ATT', minTier: 6 }] : [];
+  const flameLabel = o => o.id === 'ATT' ? '공격력·마력' : o.label;
 
   const RANKS = ['레어', '에픽', '유니크', '레전드리'];
   const RANK_COLORS = ['#7cd4ff', '#b58cff', '#ffa94d', '#6bd98a'];
   const MVP_OPTIONS = [[0, '없음'], [0.03, '실버'], [0.05, '골드'], [0.10, '다이아']];
   const MAX_GOALS = 3;
+  const MAX_SETS = 4;
+  const SET_NAMES = ['A', 'B', 'C', 'D'];
+  function potentialGoals(cur) {
+    return cur.sets.flatMap(set => {
+      const stats = set.rows.some(r => r.any && r.key === MAIN_STAT_KEY) ? MAIN_STATS : [MAIN_STAT_KEY];
+      return stats.map(stat => {
+        const sums = new Map();
+        for (const r of set.rows) {
+          if (!(Number(r.min) > 0)) continue;
+          const key = r.any && r.key === MAIN_STAT_KEY ? stat : r.key;
+          sums.set(key, (sums.get(key) || 0) + Number(r.min));
+        }
+        return [...sums];
+      });
+    }).filter(g => g.length);
+  }
   // 추가옵션을 띄울 만한 장비(파프니르·앱솔랩스·아케인셰이드·에테르넬, 여명·칠흑 악세 등)는
   // 사실상 전부 보스 드롭이라 언제나 보스 규칙(옵션 4개 고정 · 3~7단계)으로 계산한다.
   const BOSS = true;
@@ -72,7 +92,7 @@
   const STORE_KEY = 'itemCraftCalc';
   const state = {
     level: 200, part: '무기', base: 0,
-    flame: 'mesoReset', flameConds: [],
+    flame: 'mesoReset', flameConds: defaultFlameConds('무기'),
     // 기본값은 샤이닝 스타포스가 열린 때 기준. 파괴방지는 노작값을 보고 자동으로 정한다.
     star: { start: 0, goal: 22, mvp: 0, pcRoom: false, discount30: true, destroyDown30: true, lucky5: true },
     miracle: false,
@@ -196,11 +216,11 @@
       min += prices[i];
       avg += tries * prices[i];
     }
-    const need = cur.rows.map(r => [r.key, Number(r.min)]).filter(g => g[0] && g[1] > 0);
+    const goals = potentialGoals(cur);
     let opt = null;
-    if (need.length) {
+    if (goals.length) {
       const b = bracketOf(cfg.dataKey, state.part, state.level, RANKS[cur.to]);
-      const p = b ? successProb(b.lines, [need]) : 0;
+      const p = b ? successProb(b.lines, goals) : 0;
       opt = stage(p, prices[cur.to], cur.from < cur.to ? 0 : 1);
       opt.missing = !b;
       min += opt.min;
@@ -214,7 +234,7 @@
     // 파괴되면 노작을 다시 사고 추가옵션도 다시 띄워야 한다
     const flameAvg = flame && Number.isFinite(flame.avg) ? flame.avg : 0;
     const spare = state.base + flameAvg;
-    const star = (state.on.star && state.star.goal > state.star.start) ? starResult(spare) : null;
+    const star = (partOf(state.part).star !== false && state.on.star && state.star.goal > state.star.start) ? starResult(spare) : null;
     const pot = potentialResult({ state: state.pot, short: 'pot', official: 'potential', gradeCube: 'potentialMeso', dataKey: 'black', label: '잠재능력', icon: '🎲' });
     const addi = potentialResult({ state: state.addi, short: 'addi', official: 'additional', gradeCube: 'addReset', dataKey: 'addi', label: '에디셔널 잠재능력', icon: '✨' });
 
@@ -234,6 +254,44 @@
     };
   }
 
+  // 현재 제작 조건을 고정해 표본을 한 번 생성하고 입력 메소만 바뀌면 재사용한다.
+  function recordPercentile(r) {
+    const base = state.base;
+    const opts = r.star ? starOpts(r.spare, { ...r.star.safeguard }) : null;
+    let pending;
+    return async actual => {
+      if (!pending) pending = (async () => {
+        let seed = 123456789;
+        const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+        const geometric = p => p >= 1 ? 1 : Math.floor(Math.log1p(-random()) / Math.log1p(-p)) + 1;
+        const sampleStage = s => !s || !s.price ? 0 : Math.max(0, geometric(s.p) - (s.min === 0 ? 1 : 0)) * s.price;
+        const sampleBase = () => base + sampleStage(r.flame);
+        const samplePotential = pot => pot.steps.reduce((sum, s) => sum + Math.min(geometric(s.p), s.cap || Infinity) * s.price, 0) + sampleStage(pot.opt);
+        const count = 5000;
+        let stars = Array(count).fill(0);
+        if (opts) {
+          const gen = SF.sampleCosts(opts, count, random, 5000000, sampleBase);
+          let next;
+          do {
+            next = gen.next();
+            if (!next.done) await new Promise(resolve => setTimeout(resolve, 0));
+          } while (!next.done);
+          if (!next.value) return null;
+          stars = next.value;
+        }
+        return stars.map(cost => cost + sampleBase() + samplePotential(r.pot) + samplePotential(r.addi)).sort((a, b) => a - b);
+      })();
+      const samples = await pending;
+      if (!samples) return null;
+      let lo = 0, hi = samples.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (samples[mid] <= actual) lo = mid + 1; else hi = mid;
+      }
+      return { percent: lo / samples.length * 100, samples: samples.length };
+    };
+  }
+
   // ---------------------------------------------------------------- 그리기
 
   const chip = (label, active, attrs) =>
@@ -246,7 +304,9 @@
       '<option value="' + esc(p.key) + '"' + (p.key === state.part ? ' selected' : '') + '>' + esc(p.short || p.key) + '</option>').join('');
     const br = costBracket(state.level);
     $('itemNote').innerHTML = '재설정 비용 구간 ' + LEVEL_BRACKETS.find(([lv]) => lv === br)[1] +
-      ' · 레전드리 잠재 재설정 1회 ' + fmt(PRICE_TABLES.potential[br][LEGENDARY]) + ' 메소';
+      ' · 레전드리 잠재 재설정 1회 ' + fmt(PRICE_TABLES.potential[br][LEGENDARY]) + ' 메소' +
+      (state.part === '엠블렘' ? ' · 엠블렘은 공식 표가 있는 장비 레벨로 맞춥니다 (최대 200).' : '') +
+      (state.part === '보조무기(포스실드, 소울링 제외)' ? ' · 아스트라 등 스타포스가 가능한 보조무기는 스타포스를 포함하세요. 강화 불가 장비는 계산에 포함을 꺼 주세요.' : '');
   }
 
   function renderFlame() {
@@ -256,7 +316,8 @@
       return;
     }
     const weapon = part.flame === 'weapon';
-    const list = F.candidates(state.level, weapon);
+    // 공·마 중 자신의 직업에 필요한 하나를 대표한다. 두 확률을 더하지 않는다.
+    const list = F.candidates(state.level, weapon).filter(o => o.id !== 'MATT');
     const tiers = F.tiers(BOSS);
     const used = state.flameConds;
     const full = used.length >= MAX_GOALS;
@@ -273,7 +334,7 @@
         '<button type="button" class="ic-tier' + (Number(c.minTier) === t ? ' active' : '') + '" data-cond="' + i + '" data-tier="' + t + '">' +
         (5 - k) + '추<small>' + t + '단계</small></button>').join('');
       return '<div class="ic-row">' +
-        '<span class="ic-row-name">' + esc(o.label) + (o.unit || '') + '</span>' +
+        '<span class="ic-row-name">' + esc(flameLabel(o)) + (o.unit || '') + '</span>' +
         '<span class="ic-row-val">' + c.minTier + '단계 이상</span>' +
         '<button type="button" class="ic-x" data-delcond="' + i + '">×</button>' +
         '<span class="ic-tiers">' + tierChips + '</span></div>';
@@ -282,7 +343,7 @@
     const gradePick = used.some(c => c.kind === 'grade') ? ''
       : '<button type="button" class="ic-pick" data-addgrade="1"' + (full ? ' disabled' : '') + '>주스탯 급수</button>';
     // 주스탯·올스탯·HP 같은 건 급수 하나로 다 들어가므로, 따로 걸 만한 것만 앞에 둔다
-    const pick = o => '<button type="button" class="ic-pick" data-addflame="' + o.id + '"' + (full ? ' disabled' : '') + '>' + esc(o.label) + (o.unit || '') + '</button>';
+    const pick = o => '<button type="button" class="ic-pick" data-addflame="' + o.id + '"' + (full ? ' disabled' : '') + '>' + esc(flameLabel(o)) + (o.unit || '') + '</button>';
     const free = list.filter(o => !used.some(c => c.kind === 'opt' && c.id === o.id));
     const primary = free.filter(o => FLAME_PRIMARY.includes(o.id));
     const others = free.filter(o => !FLAME_PRIMARY.includes(o.id));
@@ -296,7 +357,8 @@
         : '불꽃은 아이템이라 메소가 들지 않습니다. 메소로 돌리려면 <b>추가옵션 재설정 (메소)</b>을 고르세요.') + '</p>' +
       '<div class="ic-sub">목표 추가옵션 <span class="ic-count">' + used.length + '/' + MAX_GOALS + '</span></div>' +
       (condHtml || '<p class="ic-empty">아래에서 원하는 추가옵션을 눌러 조건을 넣으세요. 넣지 않으면 추가옵션 단계는 빼고 계산합니다.</p>') +
-      '<div class="ic-picks">' + gradePick + primary.map(pick).join('') + '</div>' +
+      '<p class="ic-note">공격력·마력은 직업에 맞는 한 종류 기준으로 같은 확률을 사용합니다.</p>' +
+      '<div class="ic-picks">' + (weapon ? primary.map(pick).join('') + gradePick : gradePick + primary.map(pick).join('')) + '</div>' +
       (others.length ? '<button type="button" class="ic-more" data-more="flame">' +
         (state.showAll.flame ? '다른 옵션 접기 ▴' : '다른 옵션 펼치기 (' + others.length + ') ▾') + '</button>' +
         '<div class="ic-picks' + (state.showAll.flame ? '' : ' hidden') + '">' + others.map(pick).join('') + '</div>' : '') +
@@ -319,7 +381,7 @@
         const v = o.value(state.level, t);
         return '<td>' + (v > 0 ? '+' : '') + fmt(v) + (o.unit || '') + '</td>';
       }).join('');
-      return '<tr><td class="ic-optname">' + esc(o.label) + '</td>' + cells + '</tr>';
+      return '<tr><td class="ic-optname">' + esc(flameLabel(o)) + '</td>' + cells + '</tr>';
     }).join('');
     return '<table class="data-table"><thead><tr><th>옵션</th>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
@@ -328,7 +390,11 @@
   const STAGES = [['flame', 'flamePanel'], ['star', 'starPanel'], ['pot', 'potPanel'], ['addi', 'addiPanel']];
   function renderToggles() {
     STAGES.forEach(([key, panel]) => {
-      $('on-' + key).checked = state.on[key];
+      const part = partOf(state.part);
+      const available = key === 'flame' ? !!part.flame : key === 'star' ? part.star !== false : true;
+      $(panel).hidden = !available;
+      $('on-' + key).disabled = !available;
+      $('on-' + key).checked = available && state.on[key];
       $(panel).classList.toggle('off', !state.on[key]);
     });
   }
@@ -376,22 +442,35 @@
     const open = state.showAll[cfg.short];
     const full = cur.rows.length >= MAX_GOALS;
 
-    const rows = cur.rows.map((r, i) => {
+    const rowHtml = (r, si, i) => {
       const info = keys.get(r.key);
-      const values = info ? [...info.values].sort((a, x) => a - x) : [];
       const isCount = !r.key.includes('|');
+      const values = info && !isCount ? reachableSums(b, r.key).flatMap(g => g.sums).sort((a, x) => a - x) : [];
+      const hit = values.find(v => v >= Number(r.min) - 1e-9);
+      const attrs = ' data-pot="' + cfg.short + '" data-set="' + si + '" data-row="' + i + '"';
       return '<div class="ic-row' + (info ? '' : ' missing') + '">' +
         '<span class="ic-row-name">' + esc(potLabel(r.key)) +
           (info ? '<small>' + (MAIN_STATS.includes(r.key) ? '올스탯 포함 · ' : '') +
             '세 줄 합산 · 최대 ' + fmt(maxTotal(b, r.key)) + esc(keyUnit(r.key)) + '</small>' : '') +
           (info ? '' : '<small class="bad">이 부위·레벨에는 없는 옵션</small>') + '</span>' +
+        (r.key === MAIN_STAT_KEY ? '<button type="button" class="ic-chip' + (r.any ? ' active' : '') + '"' + attrs + ' data-any="1">' +
+          (r.any ? '아무 스탯이나' : '한 스탯으로') + '</button>' : '') +
         (isCount ? '<span class="ic-row-val">1줄 이상</span>'
-          : '<span class="ic-row-val"><input type="number" min="0" step="any" class="ic-num" data-pot="' + cfg.short + '" data-row="' + i + '" value="' + esc(r.min) + '"> ' + esc(keyUnit(r.key)) + ' 이상</span>') +
-        '<button type="button" class="ic-x" data-delpot="' + cfg.short + '" data-row="' + i + '">×</button>' +
+          : '<span class="ic-row-val"><input type="number" min="0" step="any" class="ic-num"' + attrs + ' value="' + esc(r.min) + '"> ' + esc(keyUnit(r.key)) + ' 이상</span>') +
+        '<button type="button" class="ic-x" data-delpot="' + cfg.short + '"' + attrs + ' aria-label="옵션 삭제">×</button>' +
         (isCount ? '' : '<span class="ic-tiers">' + values.map(v =>
-          '<button type="button" class="ic-tier' + (Number(r.min) === v ? ' active' : '') + '" data-pot="' + cfg.short + '" data-row="' + i + '" data-val="' + v + '">' + v + '</button>').join('') + '</span>') +
+          '<button type="button" class="ic-tier' + (hit === v ? ' active' : '') + '"' + attrs + ' data-val="' + v + '">' + v + '</button>').join('') +
+          '<span class="ic-note ic-hit-note" id="hit-' + cfg.short + '-' + si + '-' + i + '">' + potentialHitNote(r, values) + '</span></span>') +
         '</div>';
-    }).join('');
+    };
+    const rows = cur.sets.map((set, si) =>
+      (si ? '<div class="ic-or">또는 (OR)</div>' : '') +
+      '<div class="ic-goal-set' + (cur.sets.length > 1 && cur.active === si ? ' active' : '') + '">' +
+      (cur.sets.length > 1 ? '<div class="ic-set-head"><b>조건 ' + SET_NAMES[si] + '</b>' +
+        (cur.active === si ? '<span class="ic-note">옵션 추가 중</span>' : '<button type="button" class="ic-chip" data-activate-set="' + cfg.short + '" data-set="' + si + '">여기에 추가</button>') +
+        '<button type="button" class="ic-x" data-remove-set="' + cfg.short + '" data-set="' + si + '" aria-label="조건 삭제">×</button></div>' : '') +
+      (set.rows.map((r, i) => rowHtml(r, si, i)).join('') || '<p class="ic-empty">위에서 옵션을 골라 목표에 추가하세요. 비어 있는 조건은 계산에서 제외됩니다.</p>') +
+      '<p class="ic-note" id="summary-' + cfg.short + '-' + si + '">' + potentialSummary(set) + '</p></div>').join('');
 
     const pick = k => '<button type="button" class="ic-pick" data-addpot="' + cfg.short + '" data-key="' + esc(k) + '"' + (full ? ' disabled' : '') + '>' + esc(potLabel(k)) + '</button>';
     $(id).innerHTML =
@@ -412,14 +491,31 @@
         : (state.miracle ? '<p class="ic-note">✨ 미라클 타임 적용 중 — 등급 상승 확률 2배</p>' : '')) +
       '<div class="ic-sub">목표 옵션 <small>' + RANKS[cur.to] + ' 옵션표 기준</small> <span class="ic-count">' + cur.rows.length + '/' + MAX_GOALS + '</span></div>' +
       (b ? '' : '<p class="ic-empty bad">' + esc(state.part) + '은(는) ' + RANKS[cur.to] + ' 확률표에 없어 옵션 계산을 할 수 없습니다.</p>') +
-      (rows || '<p class="ic-empty">옵션을 고르지 않으면 등급업 비용만 계산합니다.</p>') +
+      '<p class="ic-note">한 조건 안의 옵션은 모두 만족해야 하며, 조건 A·B 중 하나만 만족해도 성공입니다. 옵션이 없으면 등급업 비용만 계산합니다.</p>' +
+      '<div class="ic-sub">' + (cur.sets.length > 1 ? '조건 ' + SET_NAMES[cur.active] + '에 추가' : '목표에 추가') + '</div>' +
       '<div class="ic-picks">' + primary.map(pick).join('') + '</div>' +
       (others.length ? '<button type="button" class="ic-more" data-more="' + cfg.short + '">' +
         (open ? '다른 옵션 접기 ▴' : '다른 옵션 펼치기 (' + others.length + ') ▾') + '</button>' +
-        '<div class="ic-picks' + (open ? '' : ' hidden') + '">' + others.map(pick).join('') + '</div>' : '');
+        '<div class="ic-picks' + (open ? '' : ' hidden') + '">' + others.map(pick).join('') + '</div>' : '') +
+      rows + '<button type="button" class="ic-chip" data-add-set="' + cfg.short + '"' + (!b || cur.sets.length >= MAX_SETS ? ' disabled' : '') + '>+ 다른 조건 추가 (OR)</button>';
+  }
+
+  function potentialHitNote(row, values) {
+    const min = Number(row.min), hit = values.find(v => v >= min - 1e-9), unit = esc(keyUnit(row.key));
+    if (!(min > 0) || !values.length) return '';
+    if (hit === undefined) return '세 줄로 만들 수 없는 값이에요 (최대 ' + values[values.length - 1] + unit + ')';
+    return Math.abs(hit - min) > 1e-9 ? min + unit + ' 이상 = 실제로는 <b>' + hit + unit + '</b>부터 성공' : '';
+  }
+
+  function potentialSummary(set) {
+    return set.rows.filter(r => Number(r.min) > 0).map(r => esc(potLabel(r.key)) +
+      (r.key === MAIN_STAT_KEY ? (r.any ? ' (넷 중 아무거나 · 올스탯 포함)' : ' (올스탯 포함)') : '') +
+      ' 합계 ' + esc(r.min) + esc(keyUnit(r.key)) + ' 이상').join(' · 그리고 · ');
   }
 
   function renderResult(r) {
+    renderItemPreview();
+    $('resAvg').actualPercentile = Number.isFinite(r.avg) ? recordPercentile(r) : null;
     $('resAvg').dataset.expectedUsage = r.avg;
     $('resMin').textContent = mesoText(r.min);
     $('resAvg').textContent = mesoText(r.avg);
@@ -442,6 +538,40 @@
       .filter(Boolean).join('');
   }
 
+  function renderItemPreview() {
+    const badge = (text, kind = '') => '<span class="ic-option-badge ' + kind + '">' + esc(text) + '</span>';
+    const part = partOf(state.part);
+    const descriptions = {
+      flame: state.flameConds.map(c => c.kind === 'grade' ? '주스탯 ' + c.min + '급 이상'
+        : flameLabel(F.BY_ID[c.id]) + ' ' + (8 - Number(c.minTier)) + '추 이상'),
+      star: [state.star.start + '성 → ' + state.star.goal + '성']
+    };
+    for (const key of ['pot', 'addi']) {
+      const cur = state[key];
+      const groups = cur.sets.map(set => set.rows.filter(r => Number(r.min) > 0).map(r =>
+        potLabel(r.key) + (r.any && r.key === MAIN_STAT_KEY ? ' (아무 스탯)' : '') + ' ' + r.min + keyUnit(r.key) + ' 이상'))
+        .filter(group => group.length);
+      descriptions[key] = [RANKS[cur.from] + ' → ' + RANKS[cur.to]];
+      groups.forEach((group, i) => {
+        if (i) descriptions[key].push('또는');
+        group.forEach((text, j) => { if (j) descriptions[key].push('그리고'); descriptions[key].push(text); });
+      });
+      if (!groups.length) descriptions[key].push('옵션 목표 미설정');
+    }
+    const titles = { flame: '추가옵션', star: '스타포스', pot: '잠재능력', addi: '에디셔널' };
+    const cards = [];
+    for (const key of Object.keys(titles)) {
+      const available = key === 'flame' ? !!part.flame : key === 'star' ? part.star !== false : true;
+      const items = descriptions[key].length ? descriptions[key] : ['목표 미설정'];
+      const markup = (state.on[key] ? '' : badge('비용 제외', 'excluded')) + items.map(text =>
+        badge(text, text === '또는' || text === '그리고' ? 'connector' : '')).join('');
+      $(key + 'Panel').dataset.optionSummary = markup;
+      if (available) cards.push('<div class="ic-preview-stage"><strong>' + titles[key] + '</strong><div class="ic-option-badges">' + markup + '</div></div>');
+    }
+    $('itemPreview').innerHTML = '<p class="ic-preview-name">Lv.' + state.level + ' · ' + esc(part.short || part.key) + '</p>' + cards.join('');
+    if (document.dispatchEvent) document.dispatchEvent(new Event('item-craft-updated'));
+  }
+
   function detailOf(p) {
     if (p.kind === 'base') return '아이템 구입가 그대로';
     if (p.kind === 'flame') return '한 번에 뜰 확률 ' + pctText(p.data.p) + ' · 평균 ' + fmt(p.data.tries) + '개';
@@ -455,7 +585,7 @@
     if (!f) return '';
     const conds = state.flameConds.map(c => c.kind === 'grade'
       ? '주스탯 환산 ' + c.min + '급 이상'
-      : F.BY_ID[c.id].label + (F.BY_ID[c.id].unit || '') + ' ' + c.minTier + '단계 이상').join(' + ');
+      : flameLabel(F.BY_ID[c.id]) + (F.BY_ID[c.id].unit || '') + ' ' + c.minTier + '단계 이상').join(' + ');
     return '<div class="ic-card"><h3>🔥 추가옵션</h3>' +
       '<p class="ic-note">' + esc(F.FLAMES[state.flame].name) + ' · ' + esc(conds) + '</p>' +
       '<p class="ic-big">' + pctText(f.p) + '<small>한 번에 성공할 확률</small></p>' +
@@ -486,18 +616,37 @@
   // ---------------------------------------------------------------- 묶기
 
   function clampState() {
-    state.level = Math.min(300, Math.max(1, Math.round(Number(state.level) || 1)));
+    state.level = Math.min(250, Math.max(1, Math.round(Number(state.level) || 1)));
+    if (state.part === '엠블렘') {
+      const levels = Array.from({ length: 250 }, (_, i) => i + 1).filter(lv =>
+        Object.entries(GOAL_RANKS).every(([short, ranks]) => ranks.every(rank =>
+          bracketOf(short === 'pot' ? 'black' : 'addi', state.part, lv, RANKS[rank]))));
+      if (levels.length) state.level = levels.reduce((best, lv) =>
+        Math.abs(lv - state.level) < Math.abs(best - state.level) ? lv : best);
+    }
     state.star.start = Math.min(SFD.MAX_STAR - 1, Math.max(0, state.star.start));
     state.star.goal = Math.min(SFD.MAX_STAR, Math.max(0, state.star.goal));
-    state.flameConds = state.flameConds.slice(0, MAX_GOALS);
+    const normalized = [];
+    for (const cond of state.flameConds) {
+      const c = cond.kind === 'opt' && cond.id === 'MATT' ? { ...cond, id: 'ATT' } : cond;
+      const previous = normalized.find(p => c.kind === 'opt' && p.kind === 'opt' && p.id === c.id);
+      if (previous) previous.minTier = Math.max(previous.minTier, c.minTier);
+      else normalized.push(c);
+    }
+    state.flameConds = normalized.slice(0, MAX_GOALS);
     [['pot', state.pot], ['addi', state.addi]].forEach(([short, c]) => {
       if (!goalsFor(short).includes(c.to)) c.to = 3;
       const froms = fromsFor(short);
       if (!froms.includes(c.from)) c.from = froms[0];
       c.from = Math.min(c.from, c.to);
+      if (!Array.isArray(c.sets)) c.sets = [{ rows: c.rows || [] }];
+      c.sets = c.sets.slice(0, MAX_SETS).map(set => ({ rows:
+        (Array.isArray(set && set.rows) ? set.rows : []).filter(r => r && r.key).slice(0, MAX_GOALS)
+          .map(r => HIDDEN_STAT_KEYS.includes(r.key) ? { ...r, key: MAIN_STAT_KEY } : r) }));
+      if (!c.sets.length) c.sets = [{ rows: [] }];
+      if (!Number.isInteger(c.active) || c.active < 0 || c.active >= c.sets.length) c.active = 0;
+      c.rows = c.sets[c.active].rows;
     });
-    state.pot.rows = state.pot.rows.slice(0, MAX_GOALS);
-    state.addi.rows = state.addi.rows.slice(0, MAX_GOALS);
   }
 
   function refresh() {
@@ -523,6 +672,7 @@
   // ---------------------------------------------------------------- 이벤트
 
   const cfgOf = short => short === 'pot' ? state.pot : state.addi;
+  const rowsOf = (short, si) => cfgOf(short).sets[Number(si)].rows;
 
   document.addEventListener('click', e => {
     const t = e.target.closest('button');
@@ -533,7 +683,8 @@
       return;
     }
     const d = t.dataset;
-    if (d.flame) state.flame = d.flame;
+    if (d.levelStep) state.level += Number(d.levelStep);
+    else if (d.flame) state.flame = d.flame;
     else if (d.addflame) { if (state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'opt', id: d.addflame, minTier: 6 }); }
     else if (d.addgrade) { if (state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'grade', min: 0 }); }
     else if (d.delcond !== undefined) state.flameConds.splice(Number(d.delcond), 1);
@@ -544,6 +695,19 @@
     else if (d.miracle) state.miracle = !state.miracle;
     else if (d.grade) { const c = cfgOf(d.grade); c.from = Number(d.i); if (c.to < c.from) c.to = 3; }
     else if (d.goal) { const c = cfgOf(d.goal); c.to = Number(d.i); if (c.from > c.to) c.from = c.to; }
+    else if (d.addSet) {
+      const c = cfgOf(d.addSet);
+      if (c.sets.length >= MAX_SETS) return;
+      c.sets.push({ rows: [] }); c.active = c.sets.length - 1;
+    }
+    else if (d.activateSet) cfgOf(d.activateSet).active = Number(d.set);
+    else if (d.removeSet) {
+      const c = cfgOf(d.removeSet), index = Number(d.set);
+      c.sets.splice(index, 1);
+      if (c.active > index) c.active--;
+      else if (c.active === index) c.active = Math.min(index, c.sets.length - 1);
+    }
+    else if (d.any) { const r = rowsOf(d.pot, d.set)[Number(d.row)]; r.any = !r.any; }
     else if (d.addpot) {
       const cur = cfgOf(d.addpot);
       if (cur.rows.length >= MAX_GOALS) return;
@@ -552,8 +716,8 @@
       const info = b && keysOf(b).get(d.key);
       cur.rows.push({ key: d.key, min: (d.key.includes('|') && info) ? Math.min(...info.values) : 1 });
     }
-    else if (d.delpot) cfgOf(d.delpot).rows.splice(Number(d.row), 1);
-    else if (d.val !== undefined) cfgOf(d.pot).rows[Number(d.row)].min = d.val;
+    else if (d.delpot) rowsOf(d.delpot, d.set).splice(Number(d.row), 1);
+    else if (d.val !== undefined) rowsOf(d.pot, d.set)[Number(d.row)].min = d.val;
     else if (d.more) state.showAll[d.more] = !state.showAll[d.more];
     else return;
     refresh();
@@ -562,7 +726,11 @@
   // 입력 중에도 바로 다시 계산하되, 커서가 날아가지 않도록 렌더 뒤 포커스를 돌려준다.
   document.addEventListener('input', e => {
     const el = e.target, d = el.dataset;
-    if (el.id === 'level') { if (el.value === '') return; state.level = Number(el.value); }
+    if (el.id === 'level') {
+      if (el.value === '') return;
+      state.level = Math.min(250, Number(el.value));
+      if (Number(el.value) > 250) el.value = 250;
+    }
     else if (el.id === 'basePrice') { state.base = parseMeso(el.value); el.value = comma(state.base); }
     else if (el.id === 'starStart') { if (el.value === '') return; state.star.start = Number(el.value); }
     else if (el.id === 'starGoal') { if (el.value === '') return; state.star.goal = Number(el.value); }
@@ -573,9 +741,15 @@
       return;
     }
     else if (d.pot !== undefined && d.row !== undefined) {
-      cfgOf(d.pot).rows[Number(d.row)].min = el.value;
-      document.querySelectorAll('.ic-tier[data-pot="' + d.pot + '"][data-row="' + d.row + '"]')
-        .forEach(c => c.classList.toggle('active', Number(c.dataset.val) === Number(el.value)));
+      const cur = cfgOf(d.pot), row = rowsOf(d.pot, d.set)[Number(d.row)];
+      row.min = el.value;
+      const b = bracketOf(d.pot === 'pot' ? 'black' : 'addi', state.part, state.level, RANKS[cur.to]);
+      const values = b ? reachableSums(b, row.key).flatMap(g => g.sums).sort((a, x) => a - x) : [];
+      const hit = values.find(v => v >= Number(el.value) - 1e-9);
+      document.querySelectorAll('.ic-tier[data-pot="' + d.pot + '"][data-set="' + d.set + '"][data-row="' + d.row + '"]')
+        .forEach(c => c.classList.toggle('active', Number(c.dataset.val) === hit));
+      $('hit-' + d.pot + '-' + d.set + '-' + d.row).innerHTML = potentialHitNote(row, values);
+      $('summary-' + d.pot + '-' + d.set).innerHTML = potentialSummary(cur.sets[Number(d.set)]);
       refreshOutputs();
       return;
     }
@@ -590,7 +764,7 @@
       state.on[e.target.id.slice(3)] = e.target.checked;
       refresh();
     }
-    else if (e.target.id === 'part') { state.part = e.target.value; state.flameConds = []; refresh(); }
+    else if (e.target.id === 'part') { state.part = e.target.value; state.flameConds = defaultFlameConds(state.part); refresh(); }
   });
 
 

@@ -14,6 +14,7 @@ function fakeElement(){
   };
 }
 const context = {
+  MapleBossDB: require('../boss_db.js'),
   document: {getElementById: () => fakeElement()},
   localStorage: {getItem: () => null, setItem(){}, removeItem(){}},
   NexonKey: {has:() => false, get:() => '', STORAGE_KEY:'nxopen_api_key'},
@@ -21,9 +22,141 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(script.replace(/  renderAll\(\);\s*\}\)\(\);\s*$/, `
-  globalThis.engine = {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag, describeApiError, BOSS_DATA, validParty, escapeHtml};
+  globalThis.engine = {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag, describeApiError, BOSS_DATA, validParty, escapeHtml, characterBossIcon, weeklyCompletionHtml,
+    partyControlsHtml, characterWeeklyIncomeHtml, allWeeklyComplete,
+    changeDifficulty(ch, name, diff) {
+      var original = renderAll;
+      renderAll = function(){};
+      try { toggleDiff(ch, name, diff); } finally { renderAll = original; }
+    },
+    generatedName(names) {
+      var original = characters;
+      characters = names.map(function(name){ return {name:name}; });
+      try { return nextCharacterName(); } finally { characters = original; }
+    }
+  };
 })();`), context);
 const {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag, describeApiError, BOSS_DATA, validParty, escapeHtml} = context.engine;
+
+test('ALL CLEAR에서는 완료 수익만 표시하고 완료 취소 시 완료/예상 표시로 돌아간다', () => {
+  const ch = {name:'테스트', bosses:{}};
+  applyPreset(ch);
+  Object.values(ch.bosses).forEach(entry => { entry.complete = true; });
+  const full = context.engine.characterWeeklyIncomeHtml(charTotals(ch));
+  assert.match(full, /주간 완료 수익/);
+  assert.match(full, /weekly-values is-complete/);
+  ch.bosses['스우'].complete = false;
+  const partial = context.engine.characterWeeklyIncomeHtml(charTotals(ch));
+  assert.match(partial, /주간 완료 \/ 예상/);
+  assert.doesNotMatch(partial, /is-complete/);
+});
+
+test('전체 합계 완료 판정은 등록된 주간 보스 수를 기준으로 하며 빈 목록은 제외한다', () => {
+  assert.equal(context.engine.allWeeklyComplete(0, 0), false);
+  assert.equal(context.engine.allWeeklyComplete(11, 12), false);
+  assert.equal(context.engine.allWeeklyComplete(12, 12), true);
+  assert.equal(context.engine.allWeeklyComplete(20, 20), true);
+  assert.equal(context.engine.allWeeklyComplete(19, 20), false);
+});
+
+test('캐릭터 카드의 보스 아이콘은 완료 상태와 난이도를 함께 표시한다', () => {
+  const boss = BOSS_DATA.find(b => b.name === '검은 마법사');
+  const completed = context.engine.characterBossIcon(boss, {diffIdx:0, complete:true});
+  assert.match(completed, /is-complete/);
+  assert.match(completed, /class="chip-complete"[^>]*>완료/);
+  assert.match(completed, /aria-label="검은 마법사 · .* · 완료"/);
+  assert.match(completed, /difficulty-mark/);
+  const pending = context.engine.characterBossIcon(boss, {diffIdx:0, complete:false});
+  assert.doesNotMatch(pending, /chip-complete|is-complete/);
+  assert.match(pending, /aria-label="검은 마법사 · .* · 미완료"/);
+});
+
+test('난이도를 바꿔도 완료 상태와 파티 인원이 유지된다', () => {
+  const ch = normalizeCharacter({name:'테스트', bosses:{'스우':{diffIdx:1, party:3, complete:true}}});
+  context.engine.changeDifficulty(ch, '스우', 2);
+  assert.equal(ch.bosses['스우'].diffIdx, 2);
+  assert.equal(ch.bosses['스우'].complete, true);
+  assert.equal(ch.bosses['스우'].party, 3);
+  ch.bosses['스우'].complete = false;
+  context.engine.changeDifficulty(ch, '스우', 1);
+  assert.equal(ch.bosses['스우'].complete, false);
+});
+
+test('닉네임 없이 추가할 이름은 기존 이름과 겹치지 않는다', () => {
+  assert.equal(context.engine.generatedName([]), '캐릭터 1');
+  assert.equal(context.engine.generatedName(['캐릭터 1','캐릭터 3']), '캐릭터 2');
+});
+
+test('3인 보스는 직접 입력·저장 복원·수익 계산·인원 목록에 최대 3인을 적용한다', () => {
+  for (const name of ['림보','벨로나','발드릭스','유피테르','찬란한 흉성','최초의 대적자']) {
+    assert.equal(validParty(6, name), 3);
+    assert.equal(validParty(2, name), 2);
+    const character = normalizeCharacter({name:'테스트', bosses:{[name]:{diffIdx:0, party:6}}});
+    assert.equal(character.bosses[name].party, 3);
+    const boss = BOSS_DATA.find(b => b.name === name);
+    assert.equal(charTotals({bosses:{[name]:{diffIdx:0, party:6}}}).weeklyMeso, Math.floor(boss.diffs[0].price / 3));
+    const controls = context.engine.partyControlsHtml(name, 6);
+    assert.match(controls, /value="3" selected/);
+    assert.doesNotMatch(controls, /option value="[456]"/);
+  }
+  assert.equal(validParty(6, '카링'), 6);
+  assert.match(context.engine.partyControlsHtml('카링', 6), /value="6" selected/);
+});
+
+test('익스트림 스우는 2인 제한이며 난이도 변경 시 인원만 보정하고 완료는 유지한다', () => {
+  const boss = BOSS_DATA.find(b => b.name === '스우');
+  const extreme = boss.diffs.findIndex(d => d.label === '익스트림');
+  const hard = boss.diffs.findIndex(d => d.label === '하드');
+  const ch = normalizeCharacter({name:'테스트', bosses:{'스우':{diffIdx:hard, party:6, complete:true}}});
+  context.engine.changeDifficulty(ch, '스우', extreme);
+  assert.equal(ch.bosses['스우'].party, 2);
+  assert.equal(ch.bosses['스우'].complete, true);
+  assert.equal(charTotals(ch).earnedMeso, 545000000 / 2);
+  const restored = normalizeCharacter({bosses:{'스우':{diffIdx:extreme, party:6}}});
+  assert.equal(restored.bosses['스우'].party, 2);
+  const controls = context.engine.partyControlsHtml('스우', 6, extreme);
+  assert.match(controls, /value="2" selected/);
+  assert.doesNotMatch(controls, /option value="[3456]"/);
+  const blackMage = BOSS_DATA.find(b => b.name === '검은 마법사');
+  assert.equal(validParty(6, blackMage.name, blackMage.diffs.findIndex(d => d.label === '익스트림')), 6);
+});
+
+test('통합 DB의 47개 결정석 가격은 계산기 가격과 일치하며 원본 메타데이터를 제공한다', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../boss_db.json'), 'utf8'));
+  assert.deepEqual(require('../boss_db.js'), data);
+  let matched = 0;
+  for (const boss of BOSS_DATA) {
+    for (const diff of boss.diffs) {
+      if (!diff.details) continue;
+      assert.equal(diff.details.CrystalPrice, diff.price);
+      assert.equal(diff.maxParty, diff.details.RestrictionPersonnel);
+      assert.ok(diff.details.TotalHP);
+      matched++;
+    }
+  }
+  assert.equal(matched, 47);
+});
+
+test('첨부 DB 별칭을 스케줄러 보스 이름으로 연결한다', () => {
+  const parsed = parseSchedulerBosses({boss_contents:[{
+    content_name:'진힐라', difficulty:'hard', cycle:'bossWeekly', registration_flag:true,
+  }]});
+  assert.ok(parsed.bosses['진 힐라']);
+});
+
+test('주간 보스 12마리를 완료해야 ALL CLEAR가 표시되며 검마는 제외한다', () => {
+  const ch = {name:'테스트', bosses:{'검은 마법사':{diffIdx:1, party:1, complete:true}}};
+  applyPreset(ch);
+  Object.values(ch.bosses).forEach(entry => { entry.complete = true; });
+  const full = charTotals(ch);
+  assert.equal(full.weeklyCompletedCount, 12);
+  assert.match(context.engine.weeklyCompletionHtml(full), /ALL CLEAR/);
+  ch.bosses['스우'].complete = false;
+  const partial = charTotals(ch);
+  assert.equal(partial.completedCount, 12);
+  assert.equal(partial.weeklyCompletedCount, 11);
+  assert.doesNotMatch(context.engine.weeklyCompletionHtml(partial), /ALL CLEAR/);
+});
 
 test('검밑솔 12개 수익은 비교 사이트의 주간/월간 합계와 일치한다', () => {
   const ch = {name:'테스트', bosses:{}};
@@ -102,7 +235,7 @@ test('완료 수익은 완료된 보스의 파티 분배액만 합산한다', ()
   assert.equal(ch.bosses['스우'].source, 'scheduler');
 });
 
-test('월간 검은 마법사의 clear_flag 완료 상태가 수익에 반영된다', () => {
+test('월간 검은 마법사는 완료 표시와 월간 수익을 유지하되 주간 완료 수익에서 제외한다', () => {
   const parsed = parseSchedulerBosses({boss_contents:[{
     content_name:'검은 마법사', difficulty:'hard', cycle:'bossMonthly',
     registration_flag:true, clear_flag:'TRUE',
@@ -111,8 +244,26 @@ test('월간 검은 마법사의 clear_flag 완료 상태가 수익에 반영된
   const totals = charTotals(character);
   assert.equal(character.bosses['검은 마법사'].complete, true);
   assert.equal(totals.completedCount, 1);
-  assert.equal(totals.earnedMeso, totals.monthlyMeso);
-  assert.ok(totals.earnedMeso > 0);
+  assert.equal(totals.earnedMeso, 0);
+  assert.ok(totals.monthlyMeso > 0);
+});
+
+test('주간·월간 보스를 모두 완료해도 주간 완료 수익은 주간 예상 수익을 넘지 않는다', () => {
+  const character = normalizeCharacter({name:'혼합 테스트', bosses:{
+    '스우':{diffIdx:1, party:2, complete:true},
+    '데미안':{diffIdx:0, party:1, complete:false},
+    '검은 마법사':{diffIdx:1, party:6, complete:true},
+  }});
+  const before = charTotals(character);
+  assert.equal(before.earnedMeso, Math.floor(48900000 / 2));
+  assert.ok(before.earnedMeso < before.weeklyMeso);
+  character.bosses['데미안'].complete = true;
+  const after = charTotals(character);
+  assert.equal(after.earnedMeso, after.weeklyMeso);
+  assert.equal(after.completedCount, 3);
+  assert.equal(after.monthlyMeso, after.weeklyMeso * 4 + 77500000);
+  character.bosses['검은 마법사'].complete = false;
+  assert.equal(charTotals(character).earnedMeso, after.earnedMeso);
 });
 
 test('완료 필드 호환: clear_flag의 false를 유지하고 없으면 complete_flag를 읽는다', () => {

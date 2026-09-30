@@ -376,7 +376,7 @@
     </div>
   </nav>
   <header>
-    <h1 id="pageTitle">🪙 코인샵 계산</h1>
+    <h1 id="pageTitle">🪙 이벤트 코인샵 계산기</h1>
     <div class="event-pick hidden" id="eventPickWrap">
       <label for="eventPick">이벤트</label>
       <select id="eventPick"></select>
@@ -1101,8 +1101,8 @@
   // ---- 초기화 ----
   load();
   buildShop();
-  el.pageTitle.textContent = '🪙 코인샵 계산 (' + EVENT.name + ')';
-  document.title = '코인샵 계산 (' + EVENT.name + ')';
+  el.pageTitle.textContent = '🪙 이벤트 코인샵 계산기 (' + EVENT.name + ')';
+  document.title = '이벤트 코인샵 계산기 (' + EVENT.name + ')';
   // 이벤트가 여럿이면 고를 수 있게
   if (EVENTS.length > 1) {
     el.eventPickWrap.classList.remove('hidden');

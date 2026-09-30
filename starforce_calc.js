@@ -139,7 +139,61 @@
   }
 
   // 아이템 제작 비용 계산기(item_craft_calc.js)가 같은 재귀식을 그대로 쓴다.
-  window.StarforceCalc = { calculate: calculate, buildSteps: buildSteps, breakEvenSpare: breakEvenSpare };
+  // 유지 실패는 기하분포로 묶고, 성공/파괴 때만 상태를 이동한다.
+  // 전체 표본을 끝내지 못하면 일부 표본으로 백분위를 만들지 않는다.
+  function* sampleCosts(opts, count, random, limit, sampleSpare) {
+    var res = calculate(opts), samples = [], operations = 0;
+    var recovery = {};
+    res.recovery.forEach(function (r) { recovery[r.star] = r; });
+    if (opts.goal <= opts.start) return null;
+    for (var i = 0; i < count; i++) {
+      var star = opts.start, spent = 0;
+      while (star < opts.goal) {
+        if (++operations > limit) return null;
+        if (operations % 10000 === 0) yield null;
+        var st = res.steps[star], event = st.p + st.d;
+        var attempts = event >= 1 ? 1 : Math.floor(Math.log(1 - random()) / Math.log(1 - event)) + 1;
+        spent += attempts * st.cost;
+        if (random() < st.p / event) star++;
+        else {
+          var r = recovery[star];
+          var copies = r.useFixed ? r.copies : 1;
+          spent += r.useFixed ? r.fee : 0;
+          // 제작 비용 분포에서는 대체 장비의 추가옵션 비용도 매번 새로 뽑는다.
+          if (sampleSpare) {
+            for (var copy = 0; copy < copies; copy++) spent += sampleSpare();
+          } else spent += copies * (opts.spare || 0);
+          star = r.useFixed ? r.restoreStar : RESET;
+        }
+      }
+      samples.push(spent);
+    }
+    return samples.sort(function (a,b) { return a-b; });
+  }
+
+  function percentileProvider(opts) {
+    var pending;
+    var snapshot = Object.assign({}, opts, {safeguard:Object.assign({}, opts.safeguard)});
+    return function (actual) {
+      if (!pending) pending = (async function () {
+        var seed = 123456789;
+        function random() { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; }
+        var gen = sampleCosts(snapshot, 5000, random, 5000000), next;
+        do {
+          next = gen.next();
+          if (!next.done) await new Promise(function (resolve) { setTimeout(resolve, 0); });
+        } while (!next.done);
+        return next.value;
+      })();
+      return pending.then(function (samples) {
+        if (!samples) return null;
+        var lo = 0, hi = samples.length;
+        while (lo < hi) { var mid = (lo + hi) >>> 1; if (samples[mid] <= actual) lo = mid + 1; else hi = mid; }
+        return {percent:lo / samples.length * 100, samples:samples.length};
+      });
+    };
+  }
+  window.StarforceCalc = { calculate: calculate, buildSteps: buildSteps, breakEvenSpare: breakEvenSpare, sampleCosts:sampleCosts };
 
   // ---------------------------------------------------------------- 표기
 
@@ -414,6 +468,7 @@
     }
     renderControls();
     var res = calculate(opts);
+    $('resMeso').actualPercentile = percentileProvider(opts);
     renderResult(res);
     renderStrategy(opts, res);
     renderSafeguardAdvice(opts);

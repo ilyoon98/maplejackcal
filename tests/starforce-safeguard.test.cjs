@@ -78,6 +78,27 @@ test('저성 구간과 역방향 구간은 복구 비용을 추가하지 않는�
   assert.equal(cost({...base,start:22,goal:12,recoveryMode:'auto'}),0);
 });
 
+test('기록 백분위 시뮬레이션은 파방·복구·노작값·할인을 반영한 평균과 일치한다',()=>{
+  for (const recoveryMode of ['auto','off']) for (const discounted of [false,true]) {
+    const opts = {...base,goal:20,spare:1.5e9,recoveryMode,discount30:discounted,
+      destroyDown30:discounted,recoveryDiscount20:discounted,safeguard:{15:true,17:true}};
+    let seed=7654321;
+    const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+    const gen=calc.sampleCosts(opts,20000,random,5000000);
+    let next; do {next=gen.next();} while(!next.done);
+    assert.equal(next.value.length,20000);
+    const mean=next.value.reduce((sum,x)=>sum+x,0)/next.value.length;
+    assert.ok(Math.abs(mean/cost(opts)-1)<0.04,`${recoveryMode} ${discounted}: ${mean/cost(opts)}`);
+    assert.ok(next.value.every((v,i,a)=>i===0 || a[i-1]<=v));
+  }
+});
+
+test('표본 계산 제한에 도달하면 편향된 부분 백분위를 반환하지 않는다',()=>{
+  const gen=calc.sampleCosts({...base,recoveryMode:'auto'},5000,()=>0.5,1);
+  assert.equal(gen.next().value,null);
+  assert.equal(calc.sampleCosts({...base,start:22,goal:12},1,()=>0.5,100).next().value,null);
+});
+
 test('결과 UI가 노작값·복구 방법·파괴방지 안내를 렌더링하고 설정 변경을 반영한다',()=>{
   const nodes = new Map();
   function node() {

@@ -1,0 +1,840 @@
+{
+  "BossAliases": {
+    "Akayrum": [
+      "Akayrum",
+      "아카이럼"
+    ],
+    "PinkBean": [
+      "PinkBean",
+      "핑크빈"
+    ],
+    "Cygnus": [
+      "Cygnus",
+      "시그너스"
+    ],
+    "Lotus": [
+      "lotus",
+      "스우"
+    ],
+    "Damien": [
+      "damien",
+      "데미안"
+    ],
+    "GuardianAngelSlime": [
+      "guardianangelslime",
+      "가디언 엔젤 슬라임",
+      "가디언엔젤슬라임",
+      "가엔슬"
+    ],
+    "Lucid": [
+      "lucid",
+      "루시드"
+    ],
+    "Will": [
+      "will",
+      "윌"
+    ],
+    "Dusk": [
+      "Dusk",
+      "더스크"
+    ],
+    "Dunkel": [
+      "Dunkel",
+      "듄켈",
+      "중대장"
+    ],
+    "VerusHilla": [
+      "VerusHilla",
+      "진힐라"
+    ],
+    "BlackMage": [
+      "BlackMage",
+      "검은 마법사",
+      "검은마법사",
+      "검마"
+    ],
+    "ChosenSeren": [
+      "ChosenSeren",
+      "선택받은 세렌",
+      "선택받은세렌",
+      "세렌"
+    ],
+    "KalosTheGuardian": [
+      "KalosTheGuardian",
+      "칼로스",
+      "감시자 칼로스",
+      "감시자칼로스"
+    ],
+    "TheFirstAdversary": [
+      "TheFirstAdversary",
+      "최초의 대적자",
+      "최초의대적자",
+      "대적자",
+      "최적자",
+      "최초의 쌀숭이",
+      "쌀숭이",
+      "최숭이"
+    ],
+    "Kaling": [
+      "Kaling",
+      "카링",
+      "마법의 가루(빨강)"
+    ],
+    "Limbo": [
+      "Limbo",
+      "림보",
+      "느림보"
+    ],
+    "Baldrix": [
+      "Baldrix",
+      "발드릭스",
+      "발드",
+      "말박이"
+    ],
+    "RadiantMalefic": [
+      "RadiantMalefic",
+      "찬란한 흉성",
+      "찬란한흉성",
+      "흉성",
+      "찬란한 흉통",
+      "찬란한흉통",
+      "흉통"
+    ],
+    "Jupiter": [
+      "Jupiter",
+      "유피테르"
+    ],
+    "Bellona": [
+      "Bellona",
+      "벨로나"
+    ],
+    "Kai": [
+      "Kai",
+      "카이"
+    ],
+    "Maerin": [
+      "Maerin",
+      "메이린"
+    ]
+  },
+  "Akayrum": {
+    "Name": "아카이럼",
+    "Image": "https://drive.usercontent.google.com/download?id=1BzEj_Hh1Goko09c1AAsEVMf4ZJbQlyel&authuser=0",
+    "Easy": {
+      "https": null,
+      "RestrictionLevel": 140,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 130,
+      "Force": "X",
+      "TotalHP": "21억",
+      "HPDescription": "X",
+      "Defense": "60%",
+      "DeathCount": 5,
+      "CrystalPrice": 656000
+    },
+    "Normal": {
+      "RestrictionLevel": 140,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 170,
+      "Force": "X",
+      "TotalHP": "126억",
+      "HPDescription": "X",
+      "Defense": "90%",
+      "DeathCount": 5,
+      "CrystalPrice": 1430000
+    }
+  },
+  "PinkBean": {
+    "Name": "핑크빈",
+    "Image": "https://drive.usercontent.google.com/download?id=1maJ5yiLbfvarafPx8qxDbIeuCv2KPPbR&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 140,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 180,
+      "Force": "X",
+      "TotalHP": "108억 5000만",
+      "HPDescription": "1페 : 87억 5000만\n2페 : 21억",
+      "Defense": "1페 : 60%\n2페 :70%",
+      "DeathCount": 5,
+      "CrystalPrice": 799000
+    },
+    "Chaos": {
+      "RestrictionLevel": 170,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 190,
+      "Force": "X",
+      "TotalHP": "2045억",
+      "HPDescription": "1페: 1352억\n2페: 693억\n일일보스로 변경.",
+      "Defense": "1페: 160%\n2페: 100%",
+      "DeathCount": 5,
+      "CrystalPrice": 1320000
+    }
+  },
+  "Cygnus": {
+    "Name": "시그너스",
+    "Image": "https://drive.usercontent.google.com/download?id=1M2nHvapYTxJrN1FBpmL-EeI0WTAgcTVz&authuser=0",
+    "Easy": {
+      "RestrictionLevel": 165,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 140,
+      "Force": "X",
+      "TotalHP": "105억",
+      "HPDescription": "삭제 된 보스",
+      "Defense": "100%",
+      "DeathCount": 5,
+      "CrystalPrice": 0
+    },
+    "Normal": {
+      "RestrictionLevel": 165,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 190,
+      "Force": "X",
+      "TotalHP": "630억",
+      "HPDescription": "일일보스로 변경.",
+      "Defense": "100%",
+      "DeathCount": 5,
+      "CrystalPrice": 1360000
+    }
+  },
+  "Lotus": {
+    "Name": "스우",
+    "Image": "https://drive.usercontent.google.com/download?id=1chzf9ql3Jv8nOlf8f-lyoDrWc2LhYwGM&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 190,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 210,
+      "Force": "X",
+      "TotalHP": "1조 737억",
+      "HPDescription": "1페: 3214억\n2페: 3214억\n3페: 4309억",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 8350000
+    },
+    "Hard": {
+      "RestrictionLevel": 190,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 210,
+      "Force": "X",
+      "TotalHP": "22조 9140억",
+      "HPDescription": "1페: 6조 8400억\n2페: 6조 8400억\n3페: 9조 2340억",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 48900000
+    },
+    "Extreme": {
+      "RestrictionLevel": 190,
+      "RestrictionPersonnel": 2,
+      "BossLevel": 285,
+      "Force": "X",
+      "TotalHP": "1227조 1800억",
+      "HPDescription": "1페: 369조 5100억\n2페: 369조 5100억\n3페: 488조 1600억",
+      "Defense": "380%",
+      "DeathCount": 5,
+      "CrystalPrice": 545000000
+    }
+  },
+  "Damien": {
+    "Name": "데미안",
+    "Image": "https://drive.usercontent.google.com/download?id=1FLFYcTIldXtxcZiZMPzyRVfZ3wM5wRXk&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 190,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 210,
+      "Force": "X",
+      "TotalHP": "8220억",
+      "HPDescription": "1페: 5754억\n2페: 2466억",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 8750000
+    },
+    "Hard": {
+      "RestrictionLevel": 190,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 210,
+      "Force": "X",
+      "TotalHP": "24조 6600억",
+      "HPDescription": "1페: 17조 2620억\n2페: 7조 3980억",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 46400000
+    }
+  },
+  "GuardianAngelSlime": {
+    "Name": "가디언 엔젤 슬라임",
+    "Image": "https://drive.usercontent.google.com/download?id=1fdTqEH8AeLCqlcUfpKMD88AE9ECQGIoo&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 210,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 220,
+      "Force": "X",
+      "TotalHP": "3조 4300억",
+      "HPDescription": "X",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 12700000
+    },
+    "Chaos": {
+      "RestrictionLevel": 210,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 250,
+      "Force": "X",
+      "TotalHP": "61조 7400억",
+      "HPDescription": "X",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 71300000
+    }
+  },
+  "Lucid": {
+    "Name": "루시드",
+    "Image": "https://drive.usercontent.google.com/download?id=1vEmCRdKZszDixG1vR7fn-47cPIYQOwWZ&authuser=0",
+    "Easy": {
+      "RestrictionLevel": 220,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 230,
+      "Force": "아케인포스 360",
+      "TotalHP": "8조 2200억",
+      "HPDescription": "1페: 4조 1100억\n2페: 4조 1100억",
+      "Defense": "300%",
+      "DeathCount": 10,
+      "CrystalPrice": 14900000
+    },
+    "Normal": {
+      "RestrictionLevel": 220,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 230,
+      "Force": "아케인포스 360",
+      "TotalHP": "16조 4400억",
+      "HPDescription": "1페: 8조 2200억\n2페: 8조 2200억",
+      "Defense": "300%",
+      "DeathCount": 10,
+      "CrystalPrice": 17800000
+    },
+    "Hard": {
+      "RestrictionLevel": 220,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 230,
+      "Force": "아케인포스 360",
+      "TotalHP": "87조 7320억",
+      "HPDescription": "1페: 36조 3220억\n2페: 38조 6100억\n3페: 12조 8000억",
+      "Defense": "300%",
+      "DeathCount": 10,
+      "CrystalPrice": 59700000
+    }
+  },
+  "Will": {
+    "Name": "윌",
+    "Image": "https://drive.usercontent.google.com/download?id=1-y5l_tbBidffw9gmYsquxiqRf2isAE1M&authuser=0",
+    "Easy": {
+      "RestrictionLevel": 235,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 235,
+      "Force": "아케인포스 560",
+      "TotalHP": "11조 2463억",
+      "HPDescription": "1페: 3조 7424억\n2페: 2조 8069억\n3페: 4조 6970억",
+      "Defense": "300%",
+      "DeathCount": 10,
+      "CrystalPrice": 16100000
+    },
+    "Normal": {
+      "RestrictionLevel": 235,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 250,
+      "Force": "아케인포스 760",
+      "TotalHP": "16조 8696억",
+      "HPDescription": "1페: 5조 6138억\n2페: 4조 2103억\n3페: 7조 455억",
+      "Defense": "300%",
+      "DeathCount": 10,
+      "CrystalPrice": 20500000
+    },
+    "Hard": {
+      "RestrictionLevel": 235,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 250,
+      "Force": "아케인포스 760",
+      "TotalHP": "125조 7060억",
+      "HPDescription": "1페: 28조 692억\n2페: 21조 519억\n3페: 35조 2275억",
+      "Defense": "300%",
+      "DeathCount": 10,
+      "CrystalPrice": 73200000
+    }
+  },
+  "Dusk": {
+    "Name": "더스크",
+    "Image": "https://drive.usercontent.google.com/download?id=1sP6PDKAniioT4rTZSCRZIzKahh7_Ndoh&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 245,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 255,
+      "Force": "포스 730",
+      "TotalHP": "17조 2635억",
+      "HPDescription": "X",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 22000000
+    },
+    "Chaos": {
+      "RestrictionLevel": 245,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 255,
+      "Force": "포스 730",
+      "TotalHP": "86조 3175억",
+      "HPDescription": "X",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 66300000
+    }
+  },
+  "Dunkel": {
+    "Name": "듄켈",
+    "Image": "https://drive.usercontent.google.com/download?id=1ftEe8XydLDN25b6MdIZVi2AJPzUMALF3&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 255,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 265,
+      "Force": "포스 850",
+      "TotalHP": "17조 8620억",
+      "HPDescription": "X",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 23700000
+    },
+    "Hard": {
+      "RestrictionLevel": 255,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 265,
+      "Force": "포스 850",
+      "TotalHP": "108조 2025억",
+      "HPDescription": "X",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 89600000
+    }
+  },
+  "VerusHilla": {
+    "Name": "진 힐라",
+    "Image": "https://drive.usercontent.google.com/download?id=1ObNRSocU24ithMKdoiMS6eGhZRdPCzZk&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 250,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 250,
+      "Force": "포스 820",
+      "TotalHP": "60조 3680억",
+      "HPDescription": "X",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 67600000
+    },
+    "Hard": {
+      "RestrictionLevel": 250,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 250,
+      "Force": "포스 900",
+      "TotalHP": "120조 7360억",
+      "HPDescription": "X",
+      "Defense": "300%",
+      "DeathCount": 5,
+      "CrystalPrice": 100000000
+    }
+  },
+  "BlackMage": {
+    "Name": "검은 마법사",
+    "Image": "https://drive.usercontent.google.com/download?id=1BqJ-lnV9lfIZj4wMkmM1YABhxocB4dR8&authuser=0",
+    "Hard": {
+      "RestrictionLevel": 255,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 275,
+      "Force": "아케인포스 1320",
+      "TotalHP": "165조 8475억",
+      "HPDescription": "1페: 22조 1130억\n2페: 40조 5405억\n3페: 55조 2825억\n4페 : 47조 9115억",
+      "Defense": "300%",
+      "DeathCount": 12,
+      "CrystalPrice": 465000000
+    },
+    "Extreme": {
+      "RestrictionLevel": 255,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 280,
+      "Force": "아케인포스 1320",
+      "TotalHP": "3255조 160억",
+      "HPDescription": "1페: 798조 8600억\n2페: 806조 3070억\n3페: 869조 9450억\n4페: 779조 9040억",
+      "Defense": "300%",
+      "DeathCount": 12,
+      "CrystalPrice": 5680000000
+    }
+  },
+  "ChosenSeren": {
+    "Name": "선택받은 세렌",
+    "Image": "https://drive.usercontent.google.com/download?id=1SS1fO6OBT1prfQf2D-XfpUHEqE3jfZN1&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 260,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 270,
+      "Force": "어센틱포스 200",
+      "TotalHP": "141조 2320억",
+      "HPDescription": "1페: 35조 6475억\n2페: 105조 5845억",
+      "Defense": "380%",
+      "DeathCount": 8,
+      "CrystalPrice": 167000000
+    },
+    "Hard": {
+      "RestrictionLevel": 260,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 275,
+      "Force": "어센틱포스 200",
+      "TotalHP": "327조 9570억",
+      "HPDescription": "1페: 85조 5540억\n2페: 242조 4030억",
+      "Defense": "380%",
+      "DeathCount": 8,
+      "CrystalPrice": 302000000
+    },
+    "Extreme": {
+      "RestrictionLevel": 260,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 280,
+      "Force": "어센틱포스 200",
+      "TotalHP": "4399조 9200억",
+      "HPDescription": "1페: 896조 2800억\n2페: 3503조 6400억",
+      "Defense": "380%",
+      "DeathCount": 8,
+      "CrystalPrice": 1840000000
+    }
+  },
+  "KalosTheGuardian": {
+    "Name": "감시자 칼로스",
+    "Image": "https://drive.usercontent.google.com/download?id=19Jbevg_3QNjtAQJ1LCQpdKgN9rDKHGN7&authuser=0",
+    "Easy": {
+      "RestrictionLevel": 265,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 270,
+      "Force": "어센틱포스 200",
+      "TotalHP": "238조 4760억",
+      "HPDescription": "1페: 63조 1260억\n2페: 175조 3500억",
+      "Defense": "1페: 330%\n2페: 380%",
+      "DeathCount": 8,
+      "CrystalPrice": 238000000
+    },
+    "Normal": {
+      "RestrictionLevel": 265,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 280,
+      "Force": "어센틱포스 300",
+      "TotalHP": "705조 4080억",
+      "HPDescription": "1페: 224조 4480억\n2페: 480조 9600억",
+      "Defense": "1페: 330%\n2페: 380%",
+      "DeathCount": 8,
+      "CrystalPrice": 479000000
+    },
+    "Chaos": {
+      "RestrictionLevel": 265,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 285,
+      "Force": "어센틱포스 330",
+      "TotalHP": "3420조 1600억",
+      "HPDescription": "1페: 708조 800억\n2페: 2712조 800억",
+      "Defense": "380%",
+      "DeathCount": 8,
+      "CrystalPrice": 1230000000
+    },
+    "Extreme": {
+      "RestrictionLevel": 265,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 285,
+      "Force": "어센틱포스 440",
+      "TotalHP": "1경 4408조 7600억",
+      "HPDescription": "1페: 3987조 9600억\n2페: 1경 420조 8000억",
+      "Defense": "380%",
+      "DeathCount": 8,
+      "CrystalPrice": 4104000000
+    }
+  },
+  "TheFirstAdversary": {
+    "Name": "최초의 대적자",
+    "Image": "https://drive.usercontent.google.com/download?id=16zTUzz5Bq4oB1e0jdVJQjyKPZciwBe2D&authuser=0",
+    "Easy": {
+      "RestrictionLevel": 270,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 270,
+      "Force": "어센틱포스 220",
+      "TotalHP": "387조 1965억",
+      "HPDescription": "1페: 116조 3024억\n2페: 116조 3024억\n3페: 154조 5971억",
+      "Defense": "380%",
+      "DeathCount": "대적의 의지 1000",
+      "CrystalPrice": 261000000
+    },
+    "Normal": {
+      "RestrictionLevel": 270,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 280,
+      "Force": "어센틱포스 320",
+      "TotalHP": "1115조 3138억",
+      "HPDescription": "1페: 335조 73억\n2페: 335조 73억\n3페: 445조 2992억",
+      "Defense": "380%",
+      "DeathCount": "대적의 의지 1000",
+      "CrystalPrice": 532000000
+    },
+    "Hard": {
+      "RestrictionLevel": 270,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 285,
+      "Force": "어센틱포스 340",
+      "TotalHP": "7177조 9860억",
+      "HPDescription": "1페: 2156조 400억\n2페: 2156조 400억\n3페: 2865조 9060억",
+      "Defense": "380%",
+      "DeathCount": "대적의 의지 1000",
+      "CrystalPrice": 1390000000
+    },
+    "Extreme": {
+      "RestrictionLevel": 270,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 290,
+      "Force": "어센틱포스 460",
+      "TotalHP": "2경 2753조 6800억",
+      "HPDescription": "1페:6834조 2400억\n2페: 6834조 2400억\n3페: 9085조 2000억",
+      "Defense": "380%",
+      "DeathCount": "대적의 의지 1000",
+      "CrystalPrice": 4712000000
+    }
+  },
+  "Kaling": {
+    "Name": "카링",
+    "Image": "https://drive.usercontent.google.com/download?id=1rPx-C1NTmkmBKhJ_zPtXrQ_0rEeBT5LO&authuser=0",
+    "Easy": {
+      "RestrictionLevel": 275,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 275,
+      "Force": "어센틱포스 230",
+      "TotalHP": "529조 8569억",
+      "HPDescription": "1페: 흉수 65조 880억*3\n2페: 71조 1900억\n3페: 본 73조 7528억/흉 189조 6501억",
+      "Defense": "380%",
+      "DeathCount": "정신력 1000",
+      "CrystalPrice": 320000000
+    },
+    "Normal": {
+      "RestrictionLevel": 275,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 285,
+      "Force": "어센틱포스 330",
+      "TotalHP": "2254조 4582억",
+      "HPDescription": "1페: 흉수 270조 5220억*3\n2페: 317조 3040억\n3페: 카링 313조 2902억\n3페: 흉수 812조 2980억",
+      "Defense": "380%",
+      "DeathCount": "정신력 1000",
+      "CrystalPrice": 576000000
+    },
+    "Hard": {
+      "RestrictionLevel": 275,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 285,
+      "Force": "어센틱포스 350",
+      "TotalHP": "6873조 5640억",
+      "HPDescription": "1페: 흉수 621조 7260*3\n2페: 957조 3360억\n3페: 카링 1179조 420억\n3페: 흉수 2872조 80억",
+      "Defense": "380%",
+      "DeathCount": "정신력 1000",
+      "CrystalPrice": 1560000000
+    },
+    "Extreme": {
+      "RestrictionLevel": 275,
+      "RestrictionPersonnel": 6,
+      "BossLevel": 285,
+      "Force": "어센틱포스 480",
+      "TotalHP": "3경 1915조 4940억",
+      "HPDescription": "1페: 흉수 4080조 2040억*3\n2페: 4698조 5400억\n3페: 카링 4404조 6270억\n3페: 흉수 3523조 9050억",
+      "Defense": "380%",
+      "DeathCount": "정신력 1000",
+      "CrystalPrice": 5387000000
+    }
+  },
+  "Limbo": {
+    "Name": "림보",
+    "Image": "https://drive.usercontent.google.com/download?id=1EUWK7zXNeY4oGekmDsvuQI56DOwSAXho&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 285,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 285,
+      "Force": "어센틱포스 500",
+      "TotalHP": "4368조 6000억",
+      "HPDescription": "1페: 1310조 5800억\n2페: 655조 2900억*2\n3페: 1747조 4400억",
+      "Defense": "380%",
+      "DeathCount": "침식 수치 1000",
+      "CrystalPrice": 995000000
+    },
+    "Hard": {
+      "RestrictionLevel": 285,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 285,
+      "Force": "어센틱포스 500",
+      "TotalHP": "8391조 6000억",
+      "HPDescription": "1페: 2547조 4500억\n2페: 1273조 7250억*2\n3페: 3296조 7000억",
+      "Defense": "380%",
+      "DeathCount": "침식 수치 1000",
+      "CrystalPrice": 2385000000
+    }
+  },
+  "Baldrix": {
+    "Name": "발드릭스",
+    "Image": "https://drive.usercontent.google.com/download?id=1j1QRO7ZUvM8mw-rAevA1coSitsIq0dSS&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 290,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 290,
+      "Force": "어센틱포스 700",
+      "TotalHP": "5621조 9760억",
+      "HPDescription": "1페: 1612조 9620억\n2페: 1716조 180억\n3페: 2292조 9060억",
+      "Defense": "380%",
+      "DeathCount": "마력 잠식 1000",
+      "CrystalPrice": 1320000000
+    },
+    "Hard": {
+      "RestrictionLevel": 290,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 290,
+      "Force": "어센틱포스 700",
+      "TotalHP": "1경 2629조 7840억",
+      "HPDescription": "1페: 3620조 5200억\n2페: 3856조 4640억\n3페: 5152조 8000억",
+      "Defense": "380%",
+      "DeathCount": "마력 잠식 1000",
+      "CrystalPrice": 3078000000
+    }
+  },
+  "RadiantMalefic": {
+    "Name": "찬란한 흉성",
+    "Image": "https://drive.usercontent.google.com/download?id=1Hk1fUEu0mdXOdBJ9JbhmSntTfpCfzeN4&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 280,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 290,
+      "Force": "어센틱포스 400",
+      "TotalHP": "2235조 8400억",
+      "HPDescription": "X",
+      "Defense": "380%",
+      "DeathCount": "포식 수치 1000",
+      "CrystalPrice": 593000000
+    },
+    "Hard": {
+      "RestrictionLevel": 280,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 280,
+      "Force": "어센틱포스 550",
+      "TotalHP": "1경 23조 2000억",
+      "HPDescription": "X",
+      "Defense": "380%",
+      "DeathCount": "포식 수치 1000",
+      "CrystalPrice": 2678000000
+    }
+  },
+  "Jupiter": {
+    "Name": "유피테르",
+    "Image": "https://drive.usercontent.google.com/download?id=1ZLJwvwST8XFKBLndolikhpYYflhWRs2O&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 295,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 295,
+      "Force": "어센틱포스 810",
+      "TotalHP": "6980조 8800억",
+      "HPDescription": "X",
+      "Defense": "380%",
+      "DeathCount": "파열 수치 1000",
+      "CrystalPrice": 1560000000
+    },
+    "Hard": {
+      "RestrictionLevel": 295,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 295,
+      "Force": "어센틱포스 810",
+      "TotalHP": "3경 2028조",
+      "HPDescription": "X",
+      "Defense": "380%",
+      "DeathCount": "파열 수치 1000",
+      "CrystalPrice": 4845000000
+    }
+  },
+  "Bellona": {
+    "Name": "벨로나",
+    "Image": "https://drive.usercontent.google.com/download?id=11UkZmsNgIhhthbh4Dt7FamyzNr1Iq2Qo&authuser=0",
+    "Easy": {
+      "RestrictionLevel": 280,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 280,
+      "Force": "어센틱포스 400",
+      "TotalHP": "779조",
+      "HPDescription": "1페: 316조\n2페: 463조",
+      "Defense": "380%",
+      "DeathCount": "8",
+      "CrystalPrice": 396000000
+    },
+    "Normal": {
+      "RestrictionLevel": 280,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 280,
+      "Force": "어센틱포스 450",
+      "TotalHP": "4122조",
+      "HPDescription": "1페: 1652조\n2페: 2470조",
+      "Defense": "380%",
+      "DeathCount": "8",
+      "CrystalPrice": 824000000
+    },
+    "Hard": {
+      "RestrictionLevel": 280,
+      "RestrictionPersonnel": 3,
+      "BossLevel": 280,
+      "Force": "어센틱포스 550",
+      "TotalHP": "1경 3716조",
+      "HPDescription": "1페: 5564조\n2페: 8152조",
+      "Defense": "380%",
+      "DeathCount": "5",
+      "CrystalPrice": 2950000000
+    }
+  },
+  "Kai": {
+    "Name": "카이",
+    "Image": "https://drive.usercontent.google.com/download?id=1hUMbl8rOUO5mvSH03Ba4sO3K48DD0azZ&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 270,
+      "RestrictionPersonnel": 1,
+      "BossLevel": 270,
+      "Force": "X",
+      "TotalHP": "63조",
+      "HPDescription": "챌린저스 시즌3 보스",
+      "Defense": "380%",
+      "DeathCount": 5,
+      "CrystalPrice": 300000000
+    },
+    "Hard": {
+      "RestrictionLevel": 280,
+      "RestrictionPersonnel": 1,
+      "BossLevel": 280,
+      "Force": "X",
+      "TotalHP": "241조 5000억",
+      "HPDescription": "챌린저스 시즌3 보스",
+      "Defense": "380%",
+      "DeathCount": 5,
+      "CrystalPrice": 600000000
+    }
+  },
+  "Maerin": {
+    "Name": "메이린",
+    "Image": "https://drive.usercontent.google.com/download?id=1fiAkLhJyFZzh3vz48y7CmJpu98oKqimQ&authuser=0",
+    "Normal": {
+      "RestrictionLevel": 270,
+      "RestrictionPersonnel": 1,
+      "BossLevel": 270,
+      "Force": "X",
+      "TotalHP": "58조 9250억",
+      "HPDescription": "챌린저스 시즌4 보스",
+      "Defense": "380%",
+      "DeathCount": 5,
+      "CrystalPrice": 300000000
+    },
+    "Hard": {
+      "RestrictionLevel": 280,
+      "RestrictionPersonnel": 1,
+      "BossLevel": 280,
+      "Force": "X",
+      "TotalHP": "290조",
+      "HPDescription": "챌린저스 시즌4 보스",
+      "Defense": "380%",
+      "DeathCount": 5,
+      "CrystalPrice": 600000000
+    }
+  }
+}

@@ -254,6 +254,10 @@ function renderResult(bracket, goals){
   const cube = state.cube;
   const p = bracket && goals.length ? successProb(bracket.lines, goals) : null;
   const price = attemptPrice();
+  $('resMeso').dataset.attemptPrice = price;
+  $('resMeso').actualPercentile = p > 0
+    ? async (actual, count) => count === undefined ? cubeOptionRecord(actual, price, p)
+      : { ...cubeOptionRecord(count, 1, p), price } : null;
   if(p === null){
     $('resMeso').dataset.expectedUsage = '';
     ['resProb','resTries','resMeso','resMedian'].forEach(id => $(id).textContent = '-');

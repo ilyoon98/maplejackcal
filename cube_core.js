@@ -184,3 +184,17 @@ function cubesFor(p, q){
   if(p <= 0) return Infinity;
   return Math.ceil(Math.log(1 - q) / Math.log1p(-p));
 }
+
+// 사용 메소 이하로 가능한 정수 횟수와 그 안에 목표를 얻을 누적 확률.
+function cubeOptionRecord(actual, price, p){
+  if(!Number.isSafeInteger(actual) || actual < 0 || !Number.isFinite(price) || price <= 0 ||
+    !Number.isFinite(p) || p <= 0 || p > 1) return null;
+  const attempts = Math.floor(actual / price);
+  if(!Number.isSafeInteger(attempts)) return null;
+  return {
+    attempts,
+    remainder: actual - attempts * price,
+    price,
+    percent: attempts === 0 ? null : (p === 1 ? 100 : -Math.expm1(attempts * Math.log1p(-p)) * 100)
+  };
+}

@@ -1,0 +1,110 @@
+{
+  "sourceFolder": "https://drive.google.com/drive/folders/1qo_uZyLznxDT0Kyea9WwbjbC0QE3wONg",
+  "savedOn": "2026-09-30",
+  "files": [
+    {
+      "name": "CommandDB.json",
+      "url": "https://drive.google.com/file/d/15alEE_NWcNwD2Oj6OF-S37Rwy2HcBt1R/view?usp=drivesdk",
+      "modified": "2026-09-30T04:41:58.743Z",
+      "path": "original/CommandDB.json",
+      "bytes": 11685,
+      "sha256": "11d457c02e4905e64a9a0e0495c0ad0af1c19aee688900e16cb39e6ca70dc6c3"
+    },
+    {
+      "name": "ExpContentDB.json",
+      "url": "https://drive.google.com/file/d/1RK6DxWn0WTarErdPbcU7Mv5T7LvRlCJF/view?usp=drivesdk",
+      "modified": "2026-09-17T07:10:09.750Z",
+      "path": "original/ExpContentDB.json",
+      "bytes": 8023,
+      "sha256": "ecec30edc90f4899a475e623d6a5ffbceccd5b6c89d26fa3c76bfa6fff11a696"
+    },
+    {
+      "name": "ExpGrowthItemsDB.json",
+      "url": "https://drive.google.com/file/d/1sqWrR40I1JIbZM-8Sy-GF2m_UuQmUddT/view?usp=drivesdk",
+      "modified": "2026-09-09T08:32:21.829Z",
+      "path": "original/ExpGrowthItemsDB.json",
+      "bytes": 12527,
+      "sha256": "9472f69ef8d3f742fd58d13e83b75c8a382e20076464ff787a036f5b5d43058a"
+    },
+    {
+      "name": "PromptDB.json",
+      "url": "https://drive.google.com/file/d/11eZdmM-guhMSKwRHQPfSOOknEcyjM34_/view?usp=drivesdk",
+      "modified": "2026-08-28T05:43:16.952Z",
+      "path": "original/PromptDB.json",
+      "bytes": 26550,
+      "sha256": "f416f89de6d68d223bfaba0213e916db1886286aceb2ff2cc63b0552f2c49aee"
+    },
+    {
+      "name": "HexaDB.json",
+      "url": "https://drive.google.com/file/d/1lIJAvuMBTyTpolRSWHTOwGzt4u2K70Sx/view?usp=drivesdk",
+      "modified": "2026-08-26T06:59:17.653Z",
+      "path": "original/HexaDB.json",
+      "bytes": 3776,
+      "sha256": "3d134c688da5640200c73455a8defac7a1277ec0e377902608c7fd0dcce4478d"
+    },
+    {
+      "name": "BossDB.json",
+      "url": "https://drive.google.com/file/d/17_zylab0Un4pIdBLQFwY-dKPtSvK5wSC/view?usp=drivesdk",
+      "modified": "2026-08-14T04:46:40.469Z",
+      "path": "original/BossDB.json",
+      "bytes": 24661,
+      "sha256": "a18f534932a75aae26b99d7c955f96156a5e2cf9b61ecfe7ae2d90bff9818590"
+    },
+    {
+      "name": "ComponentDB.json",
+      "url": "https://drive.google.com/file/d/1DjzU_UAP7uUx2gzxybRveTveWjUeQcWV/view?usp=drivesdk",
+      "modified": "2026-07-30T12:23:29.761Z",
+      "path": "original/ComponentDB.json",
+      "bytes": 6165,
+      "sha256": "3504f0bba1024cf104d73b2d2e00a764f17fe091f6d6ab29a1fe3e9297ad50e6"
+    },
+    {
+      "name": "LevelExpDB.json",
+      "url": "https://drive.google.com/file/d/1S0Ip4a6ypwLBWi26lKs8gqgxwSJzsUC0/view?usp=drivesdk",
+      "modified": "2026-04-15T01:19:40.753Z",
+      "path": "original/LevelExpDB.json",
+      "bytes": 35338,
+      "sha256": "eb0b40fb5c7d0b3e948b560ea6efcca015497f2408cd404ef1ebd9de1fed9c93"
+    },
+    {
+      "name": "EpicDungeonDB.json",
+      "url": "https://drive.google.com/file/d/1iyWx-UmrqaQLfx5CTUyHQOMqRkBEL_HT/view?usp=drivesdk",
+      "modified": "2026-02-03T08:51:57.675Z",
+      "path": "original/EpicDungeonDB.json",
+      "bytes": 2732,
+      "sha256": "d976c645058be0e488cb6c61e52f52ac4a1e680dc49aac96ba8041f1aa853085"
+    },
+    {
+      "name": "ExpCouponDB.json",
+      "url": "https://drive.google.com/file/d/1VLDTGSuiFV1tVnrzuenwUpH5UqwZdYkD/view?usp=drivesdk",
+      "modified": "2026-02-03T04:23:32.829Z",
+      "path": "original/ExpCouponDB.json",
+      "bytes": 6554,
+      "sha256": "bf8061a75ca86473d509df56de9907c9621688423c0c825becae39f223f06d8d"
+    },
+    {
+      "name": "TipDB.json",
+      "url": "https://drive.google.com/file/d/1QohyGkuveVoqIYDY9S7hwSadcT_kjFQy/view?usp=drivesdk",
+      "modified": "2025-09-18T08:35:25.000Z",
+      "path": "original/TipDB.json",
+      "bytes": 5196,
+      "sha256": "01176ad05932cfe4a6409d7662d8ca0ca43f079da55d5e00460fa8bd53e40f91"
+    },
+    {
+      "name": "BossDB_참고.txt",
+      "url": "https://drive.google.com/file/d/1MdwjEnV9k7K3Ujg11qIAzELpMf_quhY7/view?usp=drivesdk",
+      "modified": "2025-09-03T01:20:27.000Z",
+      "path": "original/BossDB_참고.txt",
+      "bytes": 7862,
+      "sha256": "2c95dc3111dfe5d31b6d9447e7f3d20845f515467e7082fbde1e1558750a9a2a"
+    },
+    {
+      "name": "GrowthPotionDB.json",
+      "url": "https://drive.google.com/file/d/1qW_4awOTRVANSXvUHAarAYWb2T_VlhHU/view?usp=drivesdk",
+      "modified": "2025-03-31T01:55:52.000Z",
+      "path": "original/GrowthPotionDB.json",
+      "bytes": 3596,
+      "sha256": "24237c15f8010d4bc2d277a97b001e75aa7b8d0eb958621a6b24381af90c9f4f"
+    }
+  ]
+}

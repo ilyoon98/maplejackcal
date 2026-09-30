@@ -148,6 +148,10 @@ body[data-ux-page="cube_play.html"] .sim-stage { min-height:108px; }
 .actual-baseline { margin:0 0 12px; color:var(--text-dim,#a9b1c1); font-size:.85rem; overflow-wrap:anywhere; }
 .actual-record label { display:block; margin-bottom:6px; font-size:.82rem; font-weight:700; }
 .actual-input-row { display:flex; align-items:center; gap:10px; }
+.actual-input-row[hidden] { display:none; }
+.actual-input-modes { display:flex; gap:6px; margin:0 0 10px; }
+.actual-input-modes button { padding:5px 14px; border:1px solid #46516a; border-radius:8px; background:#10151e; color:var(--text-dim,#a9b1c1); font:inherit; font-size:.82rem; cursor:pointer; }
+.actual-input-modes button[aria-pressed="true"] { color:#edf2ff; border-color:#83b7ff; background:#25354d; }
 .actual-input-row input { width:100%; min-width:0; box-sizing:border-box; padding:11px 12px; border:1px solid #46516a; border-radius:8px; background:#10151e; color:#edf2ff; font:inherit; font-variant-numeric:tabular-nums; }
 .actual-input-row input:focus-visible { outline:2px solid #83b7ff; outline-offset:2px; }
 .actual-input-row > span { flex-shrink:0; font-size:.85rem; }
@@ -155,7 +159,14 @@ body[data-ux-page="cube_play.html"] .sim-stage { min-height:108px; }
 .actual-verdict:empty { display:none; }
 .actual-verdict.is-less { color:#7bdda6; }
 .actual-verdict.is-more { color:#ff9d9d; }
+.actual-rank { padding:12px 14px; border:1px solid currentColor; border-radius:10px; }
+.actual-rank.is-lucky { color:#66b5ff; background:rgba(64,151,255,.14); }
+.actual-rank.is-good { color:#9acbff; background:rgba(64,151,255,.08); }
+.actual-rank.is-neutral { color:#c3cad8; background:rgba(195,202,216,.06); }
+.actual-rank.is-poor { color:#ffa2a2; background:rgba(255,103,103,.08); }
+.actual-rank.is-unlucky { color:#ff7e7e; background:rgba(255,103,103,.14); }
 .actual-hint { margin:10px 0 0; font-size:.75rem; color:var(--text-dim,#a9b1c1); line-height:1.6; }
+.actual-record-compact .actual-rank { font-size:1.15rem; }
 .money-input-reading { display:block; margin-top:6px; color:var(--ux-accent,#83b7ff); font-size:.8rem; font-weight:600; line-height:1.5; overflow-wrap:anywhere; }
 .money-input-reading:empty { display:none; }
 .actual-record.actual-record-standalone { margin:0 0 16px; padding:20px; background:#191d28; border:1px solid var(--border,#364050); border-radius:14px; }

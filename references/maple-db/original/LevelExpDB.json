@@ -1,0 +1,1504 @@
+{
+    "Level": [
+        {
+            "Level": 0,
+            "RequireExp": 0,
+            "TotalExp": 0
+        },
+        {
+            "Level": 1,
+            "RequireExp": 15,
+            "TotalExp": 15
+        },
+        {
+            "Level": 2,
+            "RequireExp": 34,
+            "TotalExp": 49
+        },
+        {
+            "Level": 3,
+            "RequireExp": 57,
+            "TotalExp": 106
+        },
+        {
+            "Level": 4,
+            "RequireExp": 92,
+            "TotalExp": 198
+        },
+        {
+            "Level": 5,
+            "RequireExp": 135,
+            "TotalExp": 333
+        },
+        {
+            "Level": 6,
+            "RequireExp": 372,
+            "TotalExp": 705
+        },
+        {
+            "Level": 7,
+            "RequireExp": 560,
+            "TotalExp": 1265
+        },
+        {
+            "Level": 8,
+            "RequireExp": 840,
+            "TotalExp": 2105
+        },
+        {
+            "Level": 9,
+            "RequireExp": 1242,
+            "TotalExp": 3347
+        },
+        {
+            "Level": 10,
+            "RequireExp": 1242,
+            "TotalExp": 4589
+        },
+        {
+            "Level": 11,
+            "RequireExp": 1242,
+            "TotalExp": 5831
+        },
+        {
+            "Level": 12,
+            "RequireExp": 1242,
+            "TotalExp": 7073
+        },
+        {
+            "Level": 13,
+            "RequireExp": 1242,
+            "TotalExp": 8315
+        },
+        {
+            "Level": 14,
+            "RequireExp": 1242,
+            "TotalExp": 9557
+        },
+        {
+            "Level": 15,
+            "RequireExp": 1490,
+            "TotalExp": 11047
+        },
+        {
+            "Level": 16,
+            "RequireExp": 1788,
+            "TotalExp": 12835
+        },
+        {
+            "Level": 17,
+            "RequireExp": 2145,
+            "TotalExp": 14980
+        },
+        {
+            "Level": 18,
+            "RequireExp": 2574,
+            "TotalExp": 17554
+        },
+        {
+            "Level": 19,
+            "RequireExp": 3088,
+            "TotalExp": 20642
+        },
+        {
+            "Level": 20,
+            "RequireExp": 3705,
+            "TotalExp": 24347
+        },
+        {
+            "Level": 21,
+            "RequireExp": 4446,
+            "TotalExp": 28793
+        },
+        {
+            "Level": 22,
+            "RequireExp": 5335,
+            "TotalExp": 34128
+        },
+        {
+            "Level": 23,
+            "RequireExp": 6402,
+            "TotalExp": 40530
+        },
+        {
+            "Level": 24,
+            "RequireExp": 7682,
+            "TotalExp": 48212
+        },
+        {
+            "Level": 25,
+            "RequireExp": 9218,
+            "TotalExp": 57430
+        },
+        {
+            "Level": 26,
+            "RequireExp": 11061,
+            "TotalExp": 68491
+        },
+        {
+            "Level": 27,
+            "RequireExp": 13273,
+            "TotalExp": 81764
+        },
+        {
+            "Level": 28,
+            "RequireExp": 15927,
+            "TotalExp": 97691
+        },
+        {
+            "Level": 29,
+            "RequireExp": 19112,
+            "TotalExp": 116803
+        },
+        {
+            "Level": 30,
+            "RequireExp": 19112,
+            "TotalExp": 135915
+        },
+        {
+            "Level": 31,
+            "RequireExp": 19112,
+            "TotalExp": 155027
+        },
+        {
+            "Level": 32,
+            "RequireExp": 19112,
+            "TotalExp": 174139
+        },
+        {
+            "Level": 33,
+            "RequireExp": 19112,
+            "TotalExp": 193251
+        },
+        {
+            "Level": 34,
+            "RequireExp": 19112,
+            "TotalExp": 212363
+        },
+        {
+            "Level": 35,
+            "RequireExp": 22934,
+            "TotalExp": 235297
+        },
+        {
+            "Level": 36,
+            "RequireExp": 27520,
+            "TotalExp": 262817
+        },
+        {
+            "Level": 37,
+            "RequireExp": 33024,
+            "TotalExp": 295841
+        },
+        {
+            "Level": 38,
+            "RequireExp": 39628,
+            "TotalExp": 335469
+        },
+        {
+            "Level": 39,
+            "RequireExp": 47553,
+            "TotalExp": 383022
+        },
+        {
+            "Level": 40,
+            "RequireExp": 51357,
+            "TotalExp": 434379
+        },
+        {
+            "Level": 41,
+            "RequireExp": 55465,
+            "TotalExp": 489844
+        },
+        {
+            "Level": 42,
+            "RequireExp": 59902,
+            "TotalExp": 549746
+        },
+        {
+            "Level": 43,
+            "RequireExp": 64694,
+            "TotalExp": 614440
+        },
+        {
+            "Level": 44,
+            "RequireExp": 69869,
+            "TotalExp": 684309
+        },
+        {
+            "Level": 45,
+            "RequireExp": 75458,
+            "TotalExp": 759767
+        },
+        {
+            "Level": 46,
+            "RequireExp": 81494,
+            "TotalExp": 841261
+        },
+        {
+            "Level": 47,
+            "RequireExp": 88013,
+            "TotalExp": 929274
+        },
+        {
+            "Level": 48,
+            "RequireExp": 95054,
+            "TotalExp": 1024328
+        },
+        {
+            "Level": 49,
+            "RequireExp": 102658,
+            "TotalExp": 1126986
+        },
+        {
+            "Level": 50,
+            "RequireExp": 110870,
+            "TotalExp": 1237856
+        },
+        {
+            "Level": 51,
+            "RequireExp": 119739,
+            "TotalExp": 1357595
+        },
+        {
+            "Level": 52,
+            "RequireExp": 129318,
+            "TotalExp": 1486913
+        },
+        {
+            "Level": 53,
+            "RequireExp": 139663,
+            "TotalExp": 1626576
+        },
+        {
+            "Level": 54,
+            "RequireExp": 150836,
+            "TotalExp": 1777412
+        },
+        {
+            "Level": 55,
+            "RequireExp": 162902,
+            "TotalExp": 1940314
+        },
+        {
+            "Level": 56,
+            "RequireExp": 175934,
+            "TotalExp": 2116248
+        },
+        {
+            "Level": 57,
+            "RequireExp": 190008,
+            "TotalExp": 2306256
+        },
+        {
+            "Level": 58,
+            "RequireExp": 205208,
+            "TotalExp": 2511464
+        },
+        {
+            "Level": 59,
+            "RequireExp": 221624,
+            "TotalExp": 2733088
+        },
+        {
+            "Level": 60,
+            "RequireExp": 221624,
+            "TotalExp": 2954712
+        },
+        {
+            "Level": 61,
+            "RequireExp": 221624,
+            "TotalExp": 3176336
+        },
+        {
+            "Level": 62,
+            "RequireExp": 221624,
+            "TotalExp": 3397960
+        },
+        {
+            "Level": 63,
+            "RequireExp": 221624,
+            "TotalExp": 3619584
+        },
+        {
+            "Level": 64,
+            "RequireExp": 221624,
+            "TotalExp": 3841208
+        },
+        {
+            "Level": 65,
+            "RequireExp": 238245,
+            "TotalExp": 4079453
+        },
+        {
+            "Level": 66,
+            "RequireExp": 256113,
+            "TotalExp": 4335566
+        },
+        {
+            "Level": 67,
+            "RequireExp": 275321,
+            "TotalExp": 4610887
+        },
+        {
+            "Level": 68,
+            "RequireExp": 295970,
+            "TotalExp": 4906857
+        },
+        {
+            "Level": 69,
+            "RequireExp": 318167,
+            "TotalExp": 5225024
+        },
+        {
+            "Level": 70,
+            "RequireExp": 342029,
+            "TotalExp": 5567053
+        },
+        {
+            "Level": 71,
+            "RequireExp": 367681,
+            "TotalExp": 5934734
+        },
+        {
+            "Level": 72,
+            "RequireExp": 395257,
+            "TotalExp": 6329991
+        },
+        {
+            "Level": 73,
+            "RequireExp": 424901,
+            "TotalExp": 6754892
+        },
+        {
+            "Level": 74,
+            "RequireExp": 456768,
+            "TotalExp": 7211660
+        },
+        {
+            "Level": 75,
+            "RequireExp": 488741,
+            "TotalExp": 7700401
+        },
+        {
+            "Level": 76,
+            "RequireExp": 522952,
+            "TotalExp": 8223353
+        },
+        {
+            "Level": 77,
+            "RequireExp": 559558,
+            "TotalExp": 8782911
+        },
+        {
+            "Level": 78,
+            "RequireExp": 598727,
+            "TotalExp": 9381638
+        },
+        {
+            "Level": 79,
+            "RequireExp": 640637,
+            "TotalExp": 10022275
+        },
+        {
+            "Level": 80,
+            "RequireExp": 685481,
+            "TotalExp": 10707756
+        },
+        {
+            "Level": 81,
+            "RequireExp": 733464,
+            "TotalExp": 11441220
+        },
+        {
+            "Level": 82,
+            "RequireExp": 784806,
+            "TotalExp": 12226026
+        },
+        {
+            "Level": 83,
+            "RequireExp": 839742,
+            "TotalExp": 13065768
+        },
+        {
+            "Level": 84,
+            "RequireExp": 898523,
+            "TotalExp": 13964291
+        },
+        {
+            "Level": 85,
+            "RequireExp": 961419,
+            "TotalExp": 14925710
+        },
+        {
+            "Level": 86,
+            "RequireExp": 1028718,
+            "TotalExp": 15954428
+        },
+        {
+            "Level": 87,
+            "RequireExp": 1100728,
+            "TotalExp": 17055156
+        },
+        {
+            "Level": 88,
+            "RequireExp": 1177778,
+            "TotalExp": 18232934
+        },
+        {
+            "Level": 89,
+            "RequireExp": 1260222,
+            "TotalExp": 19493156
+        },
+        {
+            "Level": 90,
+            "RequireExp": 1342136,
+            "TotalExp": 20835292
+        },
+        {
+            "Level": 91,
+            "RequireExp": 1429374,
+            "TotalExp": 22264666
+        },
+        {
+            "Level": 92,
+            "RequireExp": 1522283,
+            "TotalExp": 23786949
+        },
+        {
+            "Level": 93,
+            "RequireExp": 1621231,
+            "TotalExp": 25408180
+        },
+        {
+            "Level": 94,
+            "RequireExp": 1726611,
+            "TotalExp": 27134791
+        },
+        {
+            "Level": 95,
+            "RequireExp": 1838840,
+            "TotalExp": 28973631
+        },
+        {
+            "Level": 96,
+            "RequireExp": 1958364,
+            "TotalExp": 30931995
+        },
+        {
+            "Level": 97,
+            "RequireExp": 2085657,
+            "TotalExp": 33017652
+        },
+        {
+            "Level": 98,
+            "RequireExp": 2221224,
+            "TotalExp": 35238876
+        },
+        {
+            "Level": 99,
+            "RequireExp": 2365603,
+            "TotalExp": 37604479
+        },
+        {
+            "Level": 100,
+            "RequireExp": 2365603,
+            "TotalExp": 39970082
+        },
+        {
+            "Level": 101,
+            "RequireExp": 2365603,
+            "TotalExp": 42335685
+        },
+        {
+            "Level": 102,
+            "RequireExp": 2365603,
+            "TotalExp": 44701288
+        },
+        {
+            "Level": 103,
+            "RequireExp": 2365603,
+            "TotalExp": 47066891
+        },
+        {
+            "Level": 104,
+            "RequireExp": 2365603,
+            "TotalExp": 49432494
+        },
+        {
+            "Level": 105,
+            "RequireExp": 2519367,
+            "TotalExp": 51951861
+        },
+        {
+            "Level": 106,
+            "RequireExp": 2683125,
+            "TotalExp": 54634986
+        },
+        {
+            "Level": 107,
+            "RequireExp": 2857528,
+            "TotalExp": 57492514
+        },
+        {
+            "Level": 108,
+            "RequireExp": 3043267,
+            "TotalExp": 60535781
+        },
+        {
+            "Level": 109,
+            "RequireExp": 3241079,
+            "TotalExp": 63776860
+        },
+        {
+            "Level": 110,
+            "RequireExp": 3451749,
+            "TotalExp": 67228609
+        },
+        {
+            "Level": 111,
+            "RequireExp": 3676112,
+            "TotalExp": 70904721
+        },
+        {
+            "Level": 112,
+            "RequireExp": 3915059,
+            "TotalExp": 74819780
+        },
+        {
+            "Level": 113,
+            "RequireExp": 4169537,
+            "TotalExp": 78989317
+        },
+        {
+            "Level": 114,
+            "RequireExp": 4440556,
+            "TotalExp": 83429873
+        },
+        {
+            "Level": 115,
+            "RequireExp": 4729192,
+            "TotalExp": 88159065
+        },
+        {
+            "Level": 116,
+            "RequireExp": 5036589,
+            "TotalExp": 93195654
+        },
+        {
+            "Level": 117,
+            "RequireExp": 5363967,
+            "TotalExp": 98559621
+        },
+        {
+            "Level": 118,
+            "RequireExp": 5712624,
+            "TotalExp": 104272245
+        },
+        {
+            "Level": 119,
+            "RequireExp": 6083944,
+            "TotalExp": 110356189
+        },
+        {
+            "Level": 120,
+            "RequireExp": 6479400,
+            "TotalExp": 116835589
+        },
+        {
+            "Level": 121,
+            "RequireExp": 6900561,
+            "TotalExp": 123736150
+        },
+        {
+            "Level": 122,
+            "RequireExp": 7349097,
+            "TotalExp": 131085247
+        },
+        {
+            "Level": 123,
+            "RequireExp": 7826788,
+            "TotalExp": 138912035
+        },
+        {
+            "Level": 124,
+            "RequireExp": 8335529,
+            "TotalExp": 147247564
+        },
+        {
+            "Level": 125,
+            "RequireExp": 8877338,
+            "TotalExp": 156124902
+        },
+        {
+            "Level": 126,
+            "RequireExp": 9454364,
+            "TotalExp": 165579266
+        },
+        {
+            "Level": 127,
+            "RequireExp": 10068897,
+            "TotalExp": 175648163
+        },
+        {
+            "Level": 128,
+            "RequireExp": 10723375,
+            "TotalExp": 186371538
+        },
+        {
+            "Level": 129,
+            "RequireExp": 11420394,
+            "TotalExp": 197791932
+        },
+        {
+            "Level": 130,
+            "RequireExp": 12162719,
+            "TotalExp": 209954651
+        },
+        {
+            "Level": 131,
+            "RequireExp": 12953295,
+            "TotalExp": 222907946
+        },
+        {
+            "Level": 132,
+            "RequireExp": 13795259,
+            "TotalExp": 236703205
+        },
+        {
+            "Level": 133,
+            "RequireExp": 14691950,
+            "TotalExp": 251395155
+        },
+        {
+            "Level": 134,
+            "RequireExp": 15646926,
+            "TotalExp": 267042081
+        },
+        {
+            "Level": 135,
+            "RequireExp": 16663976,
+            "TotalExp": 283706057
+        },
+        {
+            "Level": 136,
+            "RequireExp": 17747134,
+            "TotalExp": 301453191
+        },
+        {
+            "Level": 137,
+            "RequireExp": 18900697,
+            "TotalExp": 320353888
+        },
+        {
+            "Level": 138,
+            "RequireExp": 20129242,
+            "TotalExp": 340483130
+        },
+        {
+            "Level": 139,
+            "RequireExp": 21437642,
+            "TotalExp": 361920772
+        },
+        {
+            "Level": 140,
+            "RequireExp": 22777494,
+            "TotalExp": 384698266
+        },
+        {
+            "Level": 141,
+            "RequireExp": 24201087,
+            "TotalExp": 408899353
+        },
+        {
+            "Level": 142,
+            "RequireExp": 25713654,
+            "TotalExp": 434613007
+        },
+        {
+            "Level": 143,
+            "RequireExp": 27320757,
+            "TotalExp": 461933764
+        },
+        {
+            "Level": 144,
+            "RequireExp": 29028304,
+            "TotalExp": 490962068
+        },
+        {
+            "Level": 145,
+            "RequireExp": 30842573,
+            "TotalExp": 521804641
+        },
+        {
+            "Level": 146,
+            "RequireExp": 32770233,
+            "TotalExp": 554574874
+        },
+        {
+            "Level": 147,
+            "RequireExp": 34818372,
+            "TotalExp": 589393246
+        },
+        {
+            "Level": 148,
+            "RequireExp": 36994520,
+            "TotalExp": 626387766
+        },
+        {
+            "Level": 149,
+            "RequireExp": 39306677,
+            "TotalExp": 665694443
+        },
+        {
+            "Level": 150,
+            "RequireExp": 41763344,
+            "TotalExp": 707457787
+        },
+        {
+            "Level": 151,
+            "RequireExp": 44373553,
+            "TotalExp": 751831340
+        },
+        {
+            "Level": 152,
+            "RequireExp": 47146900,
+            "TotalExp": 798978240
+        },
+        {
+            "Level": 153,
+            "RequireExp": 50093581,
+            "TotalExp": 849071821
+        },
+        {
+            "Level": 154,
+            "RequireExp": 53224429,
+            "TotalExp": 902296250
+        },
+        {
+            "Level": 155,
+            "RequireExp": 56550955,
+            "TotalExp": 958847205
+        },
+        {
+            "Level": 156,
+            "RequireExp": 60085389,
+            "TotalExp": 1018932594
+        },
+        {
+            "Level": 157,
+            "RequireExp": 63840725,
+            "TotalExp": 1082773319
+        },
+        {
+            "Level": 158,
+            "RequireExp": 67830770,
+            "TotalExp": 1150604089
+        },
+        {
+            "Level": 159,
+            "RequireExp": 72070193,
+            "TotalExp": 1222674282
+        },
+        {
+            "Level": 160,
+            "RequireExp": 76574580,
+            "TotalExp": 1299248862
+        },
+        {
+            "Level": 161,
+            "RequireExp": 81360491,
+            "TotalExp": 1380609353
+        },
+        {
+            "Level": 162,
+            "RequireExp": 86445521,
+            "TotalExp": 1467054874
+        },
+        {
+            "Level": 163,
+            "RequireExp": 91848366,
+            "TotalExp": 1558903240
+        },
+        {
+            "Level": 164,
+            "RequireExp": 97588888,
+            "TotalExp": 1656492128
+        },
+        {
+            "Level": 165,
+            "RequireExp": 103688193,
+            "TotalExp": 1760180321
+        },
+        {
+            "Level": 166,
+            "RequireExp": 110168705,
+            "TotalExp": 1870349026
+        },
+        {
+            "Level": 167,
+            "RequireExp": 117054249,
+            "TotalExp": 1987403275
+        },
+        {
+            "Level": 168,
+            "RequireExp": 124370139,
+            "TotalExp": 2111773414
+        },
+        {
+            "Level": 169,
+            "RequireExp": 132143272,
+            "TotalExp": 2243916686
+        },
+        {
+            "Level": 170,
+            "RequireExp": 138750435,
+            "TotalExp": 2382667121
+        },
+        {
+            "Level": 171,
+            "RequireExp": 145687956,
+            "TotalExp": 2528355077
+        },
+        {
+            "Level": 172,
+            "RequireExp": 152972353,
+            "TotalExp": 2681327430
+        },
+        {
+            "Level": 173,
+            "RequireExp": 160620970,
+            "TotalExp": 2841948400
+        },
+        {
+            "Level": 174,
+            "RequireExp": 168652018,
+            "TotalExp": 3010600418
+        },
+        {
+            "Level": 175,
+            "RequireExp": 177084618,
+            "TotalExp": 3187685036
+        },
+        {
+            "Level": 176,
+            "RequireExp": 185938848,
+            "TotalExp": 3373623884
+        },
+        {
+            "Level": 177,
+            "RequireExp": 195235790,
+            "TotalExp": 3568859674
+        },
+        {
+            "Level": 178,
+            "RequireExp": 204997579,
+            "TotalExp": 3773857253
+        },
+        {
+            "Level": 179,
+            "RequireExp": 215247457,
+            "TotalExp": 3989104710
+        },
+        {
+            "Level": 180,
+            "RequireExp": 226009829,
+            "TotalExp": 4215114539
+        },
+        {
+            "Level": 181,
+            "RequireExp": 237310320,
+            "TotalExp": 4452424859
+        },
+        {
+            "Level": 182,
+            "RequireExp": 249175836,
+            "TotalExp": 4701600695
+        },
+        {
+            "Level": 183,
+            "RequireExp": 261634627,
+            "TotalExp": 4963235322
+        },
+        {
+            "Level": 184,
+            "RequireExp": 274716358,
+            "TotalExp": 5237951680
+        },
+        {
+            "Level": 185,
+            "RequireExp": 288452175,
+            "TotalExp": 5526403855
+        },
+        {
+            "Level": 186,
+            "RequireExp": 302874783,
+            "TotalExp": 5829278638
+        },
+        {
+            "Level": 187,
+            "RequireExp": 318018522,
+            "TotalExp": 6147297160
+        },
+        {
+            "Level": 188,
+            "RequireExp": 333919448,
+            "TotalExp": 6481216608
+        },
+        {
+            "Level": 189,
+            "RequireExp": 350615420,
+            "TotalExp": 6831832028
+        },
+        {
+            "Level": 190,
+            "RequireExp": 368146191,
+            "TotalExp": 7199978219
+        },
+        {
+            "Level": 191,
+            "RequireExp": 386553500,
+            "TotalExp": 7586531719
+        },
+        {
+            "Level": 192,
+            "RequireExp": 405881175,
+            "TotalExp": 7992412894
+        },
+        {
+            "Level": 193,
+            "RequireExp": 426175233,
+            "TotalExp": 8418588127
+        },
+        {
+            "Level": 194,
+            "RequireExp": 447483994,
+            "TotalExp": 8866072121
+        },
+        {
+            "Level": 195,
+            "RequireExp": 469858193,
+            "TotalExp": 9335930314
+        },
+        {
+            "Level": 196,
+            "RequireExp": 493351102,
+            "TotalExp": 9829281416
+        },
+        {
+            "Level": 197,
+            "RequireExp": 518018657,
+            "TotalExp": 10347300073
+        },
+        {
+            "Level": 198,
+            "RequireExp": 543919589,
+            "TotalExp": 10891219662
+        },
+        {
+            "Level": 199,
+            "RequireExp": 571115568,
+            "TotalExp": 11462335230
+        },
+        {
+            "Level": 200,
+            "RequireExp": 2207026470,
+            "TotalExp": 13669361700
+        },
+        {
+            "Level": 201,
+            "RequireExp": 2471869646,
+            "TotalExp": 16141231346
+        },
+        {
+            "Level": 202,
+            "RequireExp": 2768494003,
+            "TotalExp": 18909725349
+        },
+        {
+            "Level": 203,
+            "RequireExp": 3100713283,
+            "TotalExp": 22010438632
+        },
+        {
+            "Level": 204,
+            "RequireExp": 3472798876,
+            "TotalExp": 25483237508
+        },
+        {
+            "Level": 205,
+            "RequireExp": 3889534741,
+            "TotalExp": 29372772249
+        },
+        {
+            "Level": 206,
+            "RequireExp": 4356278909,
+            "TotalExp": 33729051158
+        },
+        {
+            "Level": 207,
+            "RequireExp": 4879032378,
+            "TotalExp": 38608083536
+        },
+        {
+            "Level": 208,
+            "RequireExp": 5464516263,
+            "TotalExp": 44072599799
+        },
+        {
+            "Level": 209,
+            "RequireExp": 6120258214,
+            "TotalExp": 50192858013
+        },
+        {
+            "Level": 210,
+            "RequireExp": 7344309856,
+            "TotalExp": 57537167869
+        },
+        {
+            "Level": 211,
+            "RequireExp": 8152183940,
+            "TotalExp": 65689351809
+        },
+        {
+            "Level": 212,
+            "RequireExp": 9048924173,
+            "TotalExp": 74738275982
+        },
+        {
+            "Level": 213,
+            "RequireExp": 10044305832,
+            "TotalExp": 84782581814
+        },
+        {
+            "Level": 214,
+            "RequireExp": 11149179473,
+            "TotalExp": 95931761287
+        },
+        {
+            "Level": 215,
+            "RequireExp": 13379015367,
+            "TotalExp": 109310776654
+        },
+        {
+            "Level": 216,
+            "RequireExp": 14583126750,
+            "TotalExp": 123893903404
+        },
+        {
+            "Level": 217,
+            "RequireExp": 15895608157,
+            "TotalExp": 139789511561
+        },
+        {
+            "Level": 218,
+            "RequireExp": 17326212891,
+            "TotalExp": 157115724452
+        },
+        {
+            "Level": 219,
+            "RequireExp": 18885572051,
+            "TotalExp": 176001296503
+        },
+        {
+            "Level": 220,
+            "RequireExp": 22662686461,
+            "TotalExp": 198663982964
+        },
+        {
+            "Level": 221,
+            "RequireExp": 24249074513,
+            "TotalExp": 222913057477
+        },
+        {
+            "Level": 222,
+            "RequireExp": 25946509728,
+            "TotalExp": 248859567205
+        },
+        {
+            "Level": 223,
+            "RequireExp": 27762765408,
+            "TotalExp": 276622332613
+        },
+        {
+            "Level": 224,
+            "RequireExp": 29706158986,
+            "TotalExp": 306328491599
+        },
+        {
+            "Level": 225,
+            "RequireExp": 35647390783,
+            "TotalExp": 341975882382
+        },
+        {
+            "Level": 226,
+            "RequireExp": 38142708137,
+            "TotalExp": 380118590519
+        },
+        {
+            "Level": 227,
+            "RequireExp": 40812697706,
+            "TotalExp": 420931288225
+        },
+        {
+            "Level": 228,
+            "RequireExp": 43669586545,
+            "TotalExp": 464600874770
+        },
+        {
+            "Level": 229,
+            "RequireExp": 46726457603,
+            "TotalExp": 511327332373
+        },
+        {
+            "Level": 230,
+            "RequireExp": 56071749123,
+            "TotalExp": 567399081496
+        },
+        {
+            "Level": 231,
+            "RequireExp": 57753901596,
+            "TotalExp": 625152983092
+        },
+        {
+            "Level": 232,
+            "RequireExp": 59486518643,
+            "TotalExp": 684639501735
+        },
+        {
+            "Level": 233,
+            "RequireExp": 61271114202,
+            "TotalExp": 745910615937
+        },
+        {
+            "Level": 234,
+            "RequireExp": 63109247628,
+            "TotalExp": 809019863565
+        },
+        {
+            "Level": 235,
+            "RequireExp": 75731097153,
+            "TotalExp": 884750960718
+        },
+        {
+            "Level": 236,
+            "RequireExp": 78003030067,
+            "TotalExp": 962753990785
+        },
+        {
+            "Level": 237,
+            "RequireExp": 80343120969,
+            "TotalExp": 1043097111754
+        },
+        {
+            "Level": 238,
+            "RequireExp": 82753414598,
+            "TotalExp": 1125850526352
+        },
+        {
+            "Level": 239,
+            "RequireExp": 85236017035,
+            "TotalExp": 1211086543387
+        },
+        {
+            "Level": 240,
+            "RequireExp": 102283220442,
+            "TotalExp": 1313369763829
+        },
+        {
+            "Level": 241,
+            "RequireExp": 105351717055,
+            "TotalExp": 1418721480884
+        },
+        {
+            "Level": 242,
+            "RequireExp": 108512268566,
+            "TotalExp": 1527233749450
+        },
+        {
+            "Level": 243,
+            "RequireExp": 111767636622,
+            "TotalExp": 1639001386072
+        },
+        {
+            "Level": 244,
+            "RequireExp": 115120665720,
+            "TotalExp": 1754122051792
+        },
+        {
+            "Level": 245,
+            "RequireExp": 138144798864,
+            "TotalExp": 1892266850656
+        },
+        {
+            "Level": 246,
+            "RequireExp": 142289142829,
+            "TotalExp": 2034555993485
+        },
+        {
+            "Level": 247,
+            "RequireExp": 146557817113,
+            "TotalExp": 2181113810598
+        },
+        {
+            "Level": 248,
+            "RequireExp": 150954551626,
+            "TotalExp": 2332068362224
+        },
+        {
+            "Level": 249,
+            "RequireExp": 155483188174,
+            "TotalExp": 2487551550398
+        },
+        {
+            "Level": 250,
+            "RequireExp": 186579825808,
+            "TotalExp": 2674131376206
+        },
+        {
+            "Level": 251,
+            "RequireExp": 192177220582,
+            "TotalExp": 2866308596788
+        },
+        {
+            "Level": 252,
+            "RequireExp": 197942537199,
+            "TotalExp": 3064251133987
+        },
+        {
+            "Level": 253,
+            "RequireExp": 203880813314,
+            "TotalExp": 3268131947301
+        },
+        {
+            "Level": 254,
+            "RequireExp": 209997237713,
+            "TotalExp": 3478129185014
+        },
+        {
+            "Level": 255,
+            "RequireExp": 216297154844,
+            "TotalExp": 3694426339858
+        },
+        {
+            "Level": 256,
+            "RequireExp": 222786069489,
+            "TotalExp": 3917212409347
+        },
+        {
+            "Level": 257,
+            "RequireExp": 229469651573,
+            "TotalExp": 4146682060920
+        },
+        {
+            "Level": 258,
+            "RequireExp": 236353741120,
+            "TotalExp": 4383035802040
+        },
+        {
+            "Level": 259,
+            "RequireExp": 243444353353,
+            "TotalExp": 4626480155393
+        },
+        {
+            "Level": 260,
+            "RequireExp": 1731919984062,
+            "TotalExp": 6358400139455
+        },
+        {
+            "Level": 261,
+            "RequireExp": 1749239183902,
+            "TotalExp": 8107639323357
+        },
+        {
+            "Level": 262,
+            "RequireExp": 1766731575741,
+            "TotalExp": 9874370899098
+        },
+        {
+            "Level": 263,
+            "RequireExp": 1784398891498,
+            "TotalExp": 11658769790596
+        },
+        {
+            "Level": 264,
+            "RequireExp": 1802242880412,
+            "TotalExp": 13461012671008
+        },
+        {
+            "Level": 265,
+            "RequireExp": 2342915744535,
+            "TotalExp": 15803928415543
+        },
+        {
+            "Level": 266,
+            "RequireExp": 2366344901980,
+            "TotalExp": 18170273317523
+        },
+        {
+            "Level": 267,
+            "RequireExp": 2390008350999,
+            "TotalExp": 20560281668522
+        },
+        {
+            "Level": 268,
+            "RequireExp": 2413908434508,
+            "TotalExp": 22974190103030
+        },
+        {
+            "Level": 269,
+            "RequireExp": 2438047518853,
+            "TotalExp": 25412237621883
+        },
+        {
+            "Level": 270,
+            "RequireExp": 5412465491853,
+            "TotalExp": 30824703113736
+        },
+        {
+            "Level": 271,
+            "RequireExp": 5466590146771,
+            "TotalExp": 36291293260507
+        },
+        {
+            "Level": 272,
+            "RequireExp": 5521256048238,
+            "TotalExp": 41812549308745
+        },
+        {
+            "Level": 273,
+            "RequireExp": 5576468608720,
+            "TotalExp": 47389017917465
+        },
+        {
+            "Level": 274,
+            "RequireExp": 5632233294807,
+            "TotalExp": 53021251212272
+        },
+        {
+            "Level": 275,
+            "RequireExp": 11377111255510,
+            "TotalExp": 64398362467782
+        },
+        {
+            "Level": 276,
+            "RequireExp": 12514822381061,
+            "TotalExp": 76913184848843
+        },
+        {
+            "Level": 277,
+            "RequireExp": 13766304619167,
+            "TotalExp": 90679489468010
+        },
+        {
+            "Level": 278,
+            "RequireExp": 15142935081083,
+            "TotalExp": 105822424549093
+        },
+        {
+            "Level": 279,
+            "RequireExp": 16657228589191,
+            "TotalExp": 122479653138284
+        },
+        {
+            "Level": 280,
+            "RequireExp": 33647601750165,
+            "TotalExp": 156127254888449
+        },
+        {
+            "Level": 281,
+            "RequireExp": 37012361925181,
+            "TotalExp": 193139616813630
+        },
+        {
+            "Level": 282,
+            "RequireExp": 40713598117699,
+            "TotalExp": 233853214931329
+        },
+        {
+            "Level": 283,
+            "RequireExp": 44784957929468,
+            "TotalExp": 278638172860797
+        },
+        {
+            "Level": 284,
+            "RequireExp": 49263453722414,
+            "TotalExp": 327901626583211
+        },
+        {
+            "Level": 285,
+            "RequireExp": 99512176519276,
+            "TotalExp": 427413803102487
+        },
+        {
+            "Level": 286,
+            "RequireExp": 109463394171203,
+            "TotalExp": 536877197273690
+        },
+        {
+            "Level": 287,
+            "RequireExp": 120409733588323,
+            "TotalExp": 657286930862013
+        },
+        {
+            "Level": 288,
+            "RequireExp": 132450706947155,
+            "TotalExp": 789737637809168
+        },
+        {
+            "Level": 289,
+            "RequireExp": 145695777641870,
+            "TotalExp": 935433415451038
+        },
+        {
+            "Level": 290,
+            "RequireExp": 294305470836577,
+            "TotalExp": 1229738886287615
+        },
+        {
+            "Level": 291,
+            "RequireExp": 323736017920234,
+            "TotalExp": 1553474904207849
+        },
+        {
+            "Level": 292,
+            "RequireExp": 356109619712257,
+            "TotalExp": 1909584523920106
+        },
+        {
+            "Level": 293,
+            "RequireExp": 391720581683482,
+            "TotalExp": 2301305105603588
+        },
+        {
+            "Level": 294,
+            "RequireExp": 430892639851830,
+            "TotalExp": 2732197745455418
+        },
+        {
+            "Level": 295,
+            "RequireExp": 870403132500696,
+            "TotalExp": 3602600877956114
+        },
+        {
+            "Level": 296,
+            "RequireExp": 957443445750765,
+            "TotalExp": 4560044323706879
+        },
+        {
+            "Level": 297,
+            "RequireExp": 1053187790325841,
+            "TotalExp": 5613232114032720
+        },
+        {
+            "Level": 298,
+            "RequireExp": 1158506569358425,
+            "TotalExp": 6771738683391145
+        },
+        {
+            "Level": 299,
+            "RequireExp": 1737759854037637,
+            "TotalExp": 8509498537428782
+        }
+    ]
+}

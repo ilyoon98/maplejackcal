@@ -9,12 +9,24 @@
 .hunt-fields small { display:block; color:var(--text-dim); font-size:.76rem; line-height:1.7; margin-top:6px; }
 .hunt-fields input:focus,summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
 .hunt-wide { grid-column:1/-1; }
+.hunt-luck { border-color:#405b80; }
+.hunt-luck-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
+.hunt-luck label { font-size:.84rem; }
+.hunt-luck input { display:block; width:100%; margin-top:8px; padding:11px; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font:inherit; }
+.hunt-luck input:focus { outline:2px solid var(--accent); outline-offset:3px; }
+.hunt-rank strong { color:#91b7ff; font-size:clamp(1.3rem,2.5vw,1.8rem); font-variant-numeric:tabular-nums; }
+.hunt-rank p { color:var(--text-dim); font-size:.75rem; line-height:1.7; margin:8px 0 0; }
+@media(max-width:480px) { .hunt-luck-grid { grid-template-columns:minmax(0,1fr); gap:14px; } }
 .hunt-badge { display:inline-block; vertical-align:middle; font-size:.72rem; font-weight:500; padding:3px 8px; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); margin-left:6px; }
 .hunt-optional { color:var(--text-dim); font-size:.72rem; margin-left:4px; }
 .hunt-summary { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; padding:4px 0 18px; }
 .hunt-summary strong { font-size:1.15rem; font-variant-numeric:tabular-nums; }
 .hunt-summary span { color:var(--text-dim); font-size:.8rem; }
-.hunt-overview { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+.hunt-overview { display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:12px; margin-bottom:16px; }
+.hunt-kill-summary { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px 12px; }
+.hunt-kill-summary b { color:var(--text); font-variant-numeric:tabular-nums; margin-left:4px; }
+.hunt-overview .fragment { display:flex; flex-direction:column; justify-content:center; }
+.hunt-overview .hunt-luck { border-color:#405b80; }
 .hunt-reward { padding:22px; background:var(--card); border:1px solid var(--border); border-radius:12px; }
 .hunt-reward.fragment { border-top:3px solid #91b7ff; }
 .hunt-reward h2 { color:var(--text-dim); font-size:.85rem; margin-bottom:10px; }

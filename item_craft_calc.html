@@ -49,6 +49,12 @@
   .ic-field label { display:block; color:var(--text-dim); font-size:.76rem; margin-bottom:5px; }
   .ic-field input, .ic-field select { width:100%; box-sizing:border-box; background:#11141a; border:1px solid var(--border);
     color:var(--text); border-radius:8px; padding:9px 10px; font:inherit; font-size:.92rem; }
+  .ic-level-control { display:flex; align-items:stretch; gap:6px; }
+  .ic-level-control input { flex:1; min-width:0; }
+  .ic-level-step { flex:0 0 36px; padding:0; border:1px solid #373854; border-radius:8px;
+    background:#1d1e2e; color:var(--text); font:inherit; font-size:1.2rem; cursor:pointer; }
+  .ic-level-step:hover { border-color:#f3c969; color:#f3c969; }
+  .ic-level-step:focus-visible { outline:2px solid #f3c969; outline-offset:2px; }
 
   .ic-chips { display:flex; flex-wrap:wrap; gap:6px; }
   .ic-chip { padding:7px 12px; border:1px solid #373854; background:#1d1e2e; color:var(--text-dim);
@@ -63,6 +69,20 @@
   .ic-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 12px; background:#232440;
     border:1px solid #3c3d64; border-radius:10px; margin-bottom:8px; }
   .ic-row.missing { opacity:.55; border-style:dashed; }
+  .ic-goal-set { margin:12px 0; padding:10px; border:1px solid #373854; border-radius:12px; }
+  .ic-goal-set.active { border-color:#f3c969; }
+  .ic-set-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:10px; }
+  .ic-set-head .ic-x { margin-left:auto; }
+  .ic-or { text-align:center; color:#f3c969; font-size:.8rem; margin:10px 0; }
+  .ic-hit-note { flex-basis:100%; }
+  .ic-option-badges, .ux-stage-summary.ic-option-badges { display:flex; flex-wrap:wrap; gap:6px; }
+  .ic-option-badge { display:inline-block; padding:4px 9px; border:1px solid #414665; border-radius:8px;
+    background:#242940; color:#dce6ff; font-size:.76rem; font-weight:500; line-height:1.5; overflow-wrap:anywhere; }
+  .ic-option-badge.excluded { color:#abb2c5; border-style:dashed; background:transparent; }
+  .ic-option-badge.connector { border:0; background:transparent; color:#f3c969; padding:4px 2px; }
+  .ic-preview-name { color:#f3c969; font-weight:700; }
+  .ic-preview-stage { padding:12px 0; border-top:1px solid #30344d; }
+  .ic-preview-stage > strong { display:block; margin-bottom:8px; font-size:.82rem; }
   .ic-row-name { flex:1 1 140px; font-weight:800; font-size:.9rem; }
   .ic-row-name small { display:block; font-weight:400; color:#8d8fb5; font-size:.7rem; }
   .ic-row-name small.bad { color:var(--bad); }
@@ -218,7 +238,11 @@
         <div class="ic-fields">
           <div class="ic-field">
             <label for="level">아이템 레벨</label>
-            <input type="number" id="level" min="1" max="300" inputmode="numeric">
+            <div class="ic-level-control">
+              <button type="button" class="ic-level-step" data-level-step="-10" aria-label="아이템 레벨 10 감소">−</button>
+              <input type="number" id="level" min="1" max="250" inputmode="numeric">
+              <button type="button" class="ic-level-step" data-level-step="10" aria-label="아이템 레벨 10 증가">+</button>
+            </div>
           </div>
           <div class="ic-field">
             <label for="part">부위</label>
@@ -290,6 +314,9 @@
         <p class="ic-ratio" id="resRatio"></p>
         <div class="ic-sub">단계별로 나눠 보기</div>
         <div id="breakdown"></div>
+        <h3>최종 목표 아이템</h3>
+        <p class="ic-note">설정한 옵션을 모아 보여줍니다. ‘비용 제외’ 항목도 표시되며, 제작 비용에는 합산하지 않습니다.</p>
+        <div id="itemPreview"></div>
         <details class="ux-details"><summary>단계별 확률·횟수 상세</summary><div id="stageDetail"></div></details>
 
         <div data-ux-help="제작 비용 계산 기준"><details class="ic-assume">

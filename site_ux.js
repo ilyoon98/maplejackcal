@@ -31,7 +31,7 @@
       'index.html': '일반 계산기는 API 연결 없이 사용할 수 있습니다. 캐릭터 정보를 가져오려면 내 캐릭터 연결에서 API 키를 등록하세요. 키와 설정은 이 브라우저에 저장됩니다.',
       'trace_calc.html': '아이템과 작을 선택한 뒤, 진행 중인 작이라면 슬롯을 눌러 성공·실패를 표시하세요. 손절 기준표는 결과 아래에서 펼칠 수 있습니다.',
       'authentic_symbol_calc.html': '캐릭터를 조회하거나 현재 심볼 레벨을 직접 설정하세요. 목표 포스까지 최소 메소가 드는 강화 순서를 보여줍니다. 심볼 보유 수량과 획득 기간을 고려한 경로는 아닙니다.',
-      'boss_income_calc.html': 'API 없이 캐릭터를 직접 추가하고 보스·난이도·완료 상태를 선택할 수 있습니다. API를 연결하면 스케줄러에서 보스와 완료 상태를 가져옵니다. 파티 인원은 직접 확인하세요. 완료 보스 기준 수익은 결정석 판매 여부를 확인한 금액이 아닙니다. 월간 예상은 주간 수익 4회와 월간 보스 수익의 합입니다.',
+      'boss_income_calc.html': 'API 없이 캐릭터를 직접 추가하고 보스·난이도·완료 상태를 선택할 수 있습니다. API를 연결하면 스케줄러에서 보스와 완료 상태를 가져옵니다. 파티 인원은 직접 확인하세요. 주간 완료 수익은 완료한 주간 보스만 합산하며, 검은 마법사 등 월간 보스는 제외합니다. 결정석 판매 여부를 확인한 금액은 아닙니다. 월간 예상은 주간 수익 4회와 월간 보스 수익의 합입니다.',
       'cube_calc.html': '현재 등급과 목표 등급을 선택하세요. 천장은 등급업 기준이며 옵션 획득을 보장하지 않습니다. 내 기록 비교에 실제 사용 횟수를 입력할 수 있습니다.',
       'cube_play.html': '한 단계 등급업하면 자동 진행이 멈춥니다. 같은 구간을 다시 도전하거나 다음 등급으로 진행할 수 있어요. 완료한 판의 평균과 누적 기록은 서로 다른 비교 기준입니다.',
       'pet_gacha.html': '원더블랙 2개 또는 원더블랙과 루나 스윗을 합성합니다. 자동 뽑기는 블랙＋스윗을 우선 사용합니다. 보관함의 확률은 원더베리·합성 등 해당 단계 기준이며 서로 더하지 않습니다.',
@@ -91,14 +91,14 @@
         const label = make('span', 'ux-stage-label', h.childNodes[0].textContent.trim()); const summary = make('span', 'ux-stage-summary'); button.append(label, summary);
         h.childNodes[0].remove(); h.prepend(button); body.hidden = true;
         const update = () => {
-          const enabled = q('#on-' + key).checked;
-          const rows = qa('.ic-row', body).map(row => { const name = q('.ic-row-name', row)?.childNodes[0].textContent.trim() || ''; const input = q('input', row); const val = input ? input.value : q('.ic-row-val', row)?.textContent.trim() || ''; return name + ' ' + val; });
-          const ranks = qa('.ic-grades .active', body).map(n => n.textContent.trim()).join(' → ');
-          const value = !enabled ? '계산에서 제외' : key === 'star' ? q('#starStart').value + '성 → ' + q('#starGoal').value + '성 · ' + (qa('#starEvents .active').map(n => n.textContent.trim()).filter(v => !v.includes('샤이닝')).join(' / ') || '이벤트 없음') : (ranks ? ranks + ' · ' : '') + (rows.length ? rows.join(' / ') : key === 'flame' ? '목표 미설정 · 비용 제외' : '등급업만 계산');
-          setText(summary, value); button.setAttribute('aria-label', label.textContent + ' 설정 ' + (body.hidden ? '펼치기' : '접기') + ' · ' + value);
+          const markup = panel.dataset.optionSummary || '';
+          if (summary.innerHTML !== markup) summary.innerHTML = markup;
+          summary.classList.add('ic-option-badges');
+          button.setAttribute('aria-label', label.textContent + ' 설정 ' + (body.hidden ? '펼치기' : '접기') + ' · ' + summary.textContent);
         };
         button.addEventListener('click', () => { body.hidden = !body.hidden; button.setAttribute('aria-expanded', String(!body.hidden)); update(); });
         panel.addEventListener('input', update); panel.addEventListener('change', update);
+        document.addEventListener('item-craft-updated', update);
         new MutationObserver(update).observe(body, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['class']}); update();
       });
       const scope = q('#uxCraftScope');
