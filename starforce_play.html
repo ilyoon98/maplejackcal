@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <link rel="icon" type="image/png" href="favicon.png?v=2" />
-<meta name="description" content="메이플스토리 스타포스 강화를 공식 확률 그대로 굴려보는 놀이 시뮬레이터" />
+<meta name="description" content="메이플스토리 스타포스 강화를 공식 확률 그대로 굴려보는 시뮬레이터" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="메이플 계산기 모음" />
 <meta property="og:description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
@@ -11,7 +11,7 @@
 <meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>스타포스 놀이</title>
+<title>스타포스 시뮬레이터</title>
 <link rel="stylesheet" href="style.css" />
 <style>
   .sf-page { --sf-gold:#f3c969; --sf-cyan:#55d9ff; --sf-red:#ff7a6b; --sf-green:#9de5c0; --sf-panel:#171827; }
@@ -146,7 +146,7 @@
       <span class="site-tabs-pill" aria-hidden="true"></span>
       <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
       <button type="button" class="site-tab" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
-      <button type="button" class="site-tab active" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>놀이</button>
+      <button type="button" class="site-tab active" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>시뮬레이터</button>
     </div>
     <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
       <a class="site-menu-item" href="trace_calc.html">
@@ -197,30 +197,30 @@
     <div class="site-menu" id="site-menu-play" data-group="play" hidden>
       <a class="site-menu-item" href="cube_play.html">
         <span class="site-menu-icon">🎮</span>
-        <span><span class="site-menu-name">큐브 놀이</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+        <span><span class="site-menu-name">큐브 시뮬레이터</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
       </a>
       <a class="site-menu-item active" href="starforce_play.html">
         <span class="site-menu-icon">🌟</span>
-        <span><span class="site-menu-name">스타포스 놀이</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
+        <span><span class="site-menu-name">스타포스 시뮬레이터</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
       </a>
       <a class="site-menu-item" href="boutique_gacha.html">
         <span class="site-menu-icon">🎁</span>
-        <span><span class="site-menu-name">부티크 기프트 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+        <span><span class="site-menu-name">부티크 기프트 시뮬레이터</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
       </a>
       <a class="site-menu-item" href="pet_gacha.html">
         <span class="site-menu-icon">🐾</span>
-        <span><span class="site-menu-name">펫 뽑기 놀이</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+        <span><span class="site-menu-name">펫 시뮬레이터</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
       </a>
       <a class="site-menu-item" href="seedring_gacha.html">
         <span class="site-menu-icon">💍</span>
-        <span><span class="site-menu-name">시드링 뽑기</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+        <span><span class="site-menu-name">시드링 시뮬레이터</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
       </a>
     </div>
   </nav>
 
   <header class="sf-hero">
     <div class="eyebrow">STARFORCE / PLAYGROUND</div>
-    <h1>🌟 스타포스 놀이</h1>
+    <h1>🌟 스타포스 시뮬레이터</h1>
     <p>공식 확률 그대로 목표 성까지 굴려봅니다. 파괴되면 12성으로 되돌아가고, 한 판이 끝날 때마다 실제 지출을 기대 지출과 나란히 비교해요.</p>
   </header>
 
@@ -255,7 +255,7 @@
       </div>
 
       <div data-ux-help="가상 강화·기록 비교 기준"><div class="sf-panel">
-        <h2>이 놀이가 굴리는 방식</h2>
+        <h2>시뮬레이션 진행 방식</h2>
         <p class="tiny">
           한 번의 강화를 <b>성공 · 유지 · 파괴</b> 세 갈래로만 봅니다. 하락과 찬스타임은 다루지 않아요.<br>
           파괴가 나면 <b>12성</b>으로 되돌아가고, 노작값을 넣어 두면 그 자리에서 지출에 더해집니다.<br>

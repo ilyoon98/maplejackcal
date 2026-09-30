@@ -539,3 +539,11 @@ button.primary:hover { filter: brightness(1.08); }
 .site-menu-category { min-width:0; }
 .site-menu-category h3 { font-size:.75rem; color:var(--text-dim); margin:4px 10px 8px; padding-bottom:8px; border-bottom:1px solid var(--border); }
 @media(max-width:520px) { .site-menu { grid-template-columns:1fr; } .site-menu-desc { display:none; } }
+
+/* Shared release badge: readable on the dark menu and home cards. */
+.site-new-badge { display:inline-block; margin-left:8px; padding:2px 6px; border:1px solid #507760; border-radius:5px; background:#203b2c; color:#a3edba; font-size:10px; font-weight:800; line-height:1.4; letter-spacing:.04em; vertical-align:middle; white-space:nowrap; }
+
+@media (max-width:480px) {
+  .site-groups .site-tab { flex:1 1 auto; padding:8px 5px; gap:3px; font-size:.75rem; }
+  .site-groups .site-tab-icon { display:none; }
+}

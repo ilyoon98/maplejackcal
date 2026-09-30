@@ -1,4 +1,17 @@
-// 상단 탭 한 줄. 분류(계산기·놀이)를 누르면 그 아래로 목록 패널이 펼쳐지고,
+// Shared ordering and release dates for navigation and home cards.
+// Add a new page's YYYY-MM-DD release date here: NEW expires after 30 days (KST).
+window.SiteNavigation = {
+  categories: [
+      ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','item_craft_calc.html','authentic_symbol_calc.html']],
+      ['보스', ['boss_income_calc.html','boss_buff_planner.html']],
+      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','coin_shop_calc.html']],
+      ['강화 시뮬레이터', ['cube_play.html','starforce_play.html']],
+      ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']]
+    ],
+  releases: { 'hunting_calc.html': '2026-09-30' },
+  newDays: 30
+};
+// 상단 탭 한 줄. 분류(계산기·시뮬레이터)를 누르면 그 아래로 목록 패널이 펼쳐지고,
 // 패널이 열려 있는 동안에는 pill이 그 분류로 옮겨간다. 닫으면 지금 보고 있는
 // 페이지의 분류로 되돌아온다. 탭 목록은 페이지마다 하드코딩돼 있다.
 (function () {
@@ -50,7 +63,7 @@
       historyTab.href = 'starforce_history.html';
       historyTab.className = 'site-tab';
       historyTab.dataset.group = 'history';
-      historyTab.textContent = '📋 로그보기';
+      historyTab.innerHTML = '<span class="site-tab-icon">📋</span>로그보기';
       if (location.pathname.endsWith('/starforce_history.html')) {
         track.querySelectorAll('.active').forEach(function (el) { el.classList.remove('active'); });
         historyTab.classList.add('active');
@@ -69,13 +82,7 @@
     var pill = track.querySelector('.site-tabs-pill');
     var tabs = [].slice.call(track.querySelectorAll('.site-tab'));
     var menus = [].slice.call(nav.querySelectorAll('.site-menu'));
-    var categories = [
-      ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','item_craft_calc.html']],
-      ['보스', ['boss_income_calc.html','boss_buff_planner.html']],
-      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','coin_shop_calc.html','authentic_symbol_calc.html']],
-      ['강화 놀이', ['cube_play.html','starforce_play.html']],
-      ['뽑기 놀이', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']]
-    ];
+    var categories = window.SiteNavigation.categories;
     menus.forEach(function (menu) {
       categories.forEach(function (category) {
         var links = category[1].map(function (href) { return menu.querySelector('a[href="' + href + '"]'); }).filter(Boolean);
@@ -84,6 +91,19 @@
         var heading = document.createElement('h3'); heading.textContent = category[0]; group.appendChild(heading);
         links.forEach(function (link) { group.appendChild(link); }); menu.appendChild(group);
       });
+    });
+
+    // One release list drives both surfaces, without moving new items out of their category.
+    var today = Date.parse(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) + 'T00:00:00+09:00');
+    document.querySelectorAll('a.site-menu-item, a.tool-card').forEach(function (link) {
+      var released = window.SiteNavigation.releases[link.getAttribute('href')];
+      var age = today - Date.parse(released + 'T00:00:00+09:00');
+      if (!released || !Number.isFinite(age) || age < 0 || age >= window.SiteNavigation.newDays * 86400000) return;
+      var label = link.querySelector('.site-menu-name, h2');
+      if (!label || label.querySelector('.site-new-badge')) return;
+      var badge = document.createElement('span'); badge.className = 'site-new-badge';
+      badge.textContent = 'NEW'; badge.setAttribute('aria-label', '새로 추가됨');
+      label.appendChild(badge);
     });
 
     function tabOf(group) {
