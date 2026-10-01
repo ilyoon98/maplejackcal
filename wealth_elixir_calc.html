@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<link rel="icon" type="image/png" href="favicon.png?v=2" />
+<meta name="description" content="쥬니퍼베리 씨앗·씨앗 오일·소형 재물 획득의 비약 시세로 씨앗부터 만들지, 오일을 살지, 비약을 살지와 만들어 팔 때 이득을 계산합니다" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="재물 비약 제작 계산기" />
+<meta property="og:description" content="쥬니퍼베리 씨앗·씨앗 오일·소형 재물 획득의 비약 시세로 씨앗부터 만들지, 오일을 살지, 비약을 살지와 만들어 팔 때 이득을 계산합니다" />
+<meta property="og:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>재물 비약 제작 계산기</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .mm-hero { margin:22px 0 14px; padding:26px 28px; border:1px solid #34345c; border-radius:18px;
+    background: radial-gradient(circle at 84% 10%, rgba(110,168,254,.2), transparent 36%), linear-gradient(135deg,#171c2b,#13141e 70%); }
+  .mm-hero .eyebrow { color:#6ea8fe; font-size:.72rem; letter-spacing:.16em; font-weight:800; text-transform:uppercase; }
+  .mm-hero h1 { margin:8px 0; font-size:clamp(1.7rem,4vw,2.6rem); letter-spacing:-.045em; }
+  .mm-hero p { max-width:780px; margin:0; color:var(--text-dim); font-size:.9rem; line-height:1.7; }
+
+  .mm-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,.9fr); gap:18px; align-items:start; }
+  @media (max-width:980px){ .mm-layout { grid-template-columns:minmax(0,1fr); } }
+  .mm-panel { background:#171827; border:1px solid #2d2e48; border-radius:14px; padding:18px; margin-top:16px; }
+  .mm-panel > h2 { display:flex; align-items:center; gap:10px; margin:0 0 4px; font-size:1rem; }
+  .mm-panel > .mm-kicker { margin:0 0 12px; color:var(--text-dim); font-size:.78rem; line-height:1.6; }
+
+  .mm-fields { display:flex; flex-wrap:wrap; gap:12px; }
+  .mm-field { flex:1 1 150px; min-width:0; }
+  .mm-field.wide { flex:1 1 100%; }
+  .mm-field label { display:block; color:var(--text-dim); font-size:.76rem; margin-bottom:5px; }
+  .mm-field label small { color:#6f7192; }
+  .mm-field input { width:100%; box-sizing:border-box; background:#11141a; border:1px solid var(--border);
+    color:var(--text); border-radius:8px; padding:9px 10px; font:inherit; font-size:.92rem; }
+  .mm-field input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .mm-field input.big { font-size:1.15rem; font-weight:800; letter-spacing:-.02em; }
+  .mm-unit { margin-top:4px; color:#6f7192; font-size:.72rem; min-height:1em; }
+
+  .mm-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .mm-chip { padding:6px 11px; border:1px solid #373854; background:#1d1e2e; color:var(--text-dim);
+    border-radius:999px; cursor:pointer; font:inherit; font-size:.78rem; }
+  .mm-chip:hover { border-color:#6ea8fe; }
+  .mm-chip.active { background:#6ea8fe; border-color:transparent; color:#0e1526; font-weight:800; }
+
+  .mm-result { position:sticky; top:16px; }
+  .mm-big { border:1px solid #3f6ba8; border-radius:14px; padding:18px 20px;
+    background:linear-gradient(135deg,#182234,#1b1c2d); }
+  .mm-big .mm-big-label { font-size:.76rem; color:var(--text-dim); font-weight:700; }
+  .mm-big .mm-big-value { margin-top:5px; font-size:clamp(1.5rem,4.6vw,2rem); font-weight:900;
+    letter-spacing:-.04em; color:#6ea8fe; }
+  .mm-big .mm-big-sub { margin-top:5px; color:#6f7192; font-size:.74rem; line-height:1.6; }
+  .mm-big.empty { border-color:#3a3b58; background:#1b1c2d; }
+  .mm-big.empty .mm-big-value { color:var(--text-dim); font-size:1.05rem; font-weight:700; }
+
+  .mm-even { margin-top:12px; border:1px solid #4c8f5f; border-radius:14px; padding:16px 18px;
+    background:linear-gradient(135deg,#17251d,#1b1c2d); }
+  .mm-even .mm-big-value { color:#6bd98a; font-size:clamp(1.3rem,4vw,1.7rem); }
+
+  .mm-verdict { margin-top:14px; border:1px solid #3a3b58; border-radius:14px; padding:16px 18px; background:#1b1c2d; }
+  .mm-verdict.good { border-color:var(--good); background:linear-gradient(135deg,#17251d,#1b1c2d); }
+  .mm-verdict.bad { border-color:var(--bad); background:linear-gradient(135deg,#261a17,#1b1c2d); }
+  .mm-verdict-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .mm-verdict-tag { padding:3px 10px; border-radius:999px; font-size:.74rem; font-weight:800; background:#2a2b44; color:var(--text-dim); }
+  .mm-verdict.good .mm-verdict-tag { background:rgba(76,175,125,.2); color:#6bd98a; }
+  .mm-verdict.bad .mm-verdict-tag { background:rgba(226,102,74,.2); color:#e2664a; }
+  .mm-verdict-value { font-size:1.45rem; font-weight:900; letter-spacing:-.03em; }
+  .mm-verdict.good .mm-verdict-value { color:#6bd98a; }
+  .mm-verdict.bad .mm-verdict-value { color:#e2664a; }
+  .mm-verdict-rate { color:var(--text-dim); font-size:.84rem; font-weight:700; }
+  .mm-lines { margin:12px 0 0; display:grid; gap:6px; }
+  .mm-line { display:flex; align-items:baseline; gap:8px; font-size:.82rem; }
+  .mm-line .k { color:var(--text-dim); flex:1 1 auto; }
+  .mm-line .v { font-weight:700; white-space:nowrap; }
+  .mm-line .v.dim { color:var(--text-dim); font-weight:400; }
+  .mm-line .v.fee { color:#e2a04a; }
+  .mm-line.total { border-top:1px solid #2d2e48; padding-top:7px; margin-top:2px; }
+
+  .we-group { margin:6px 0 2px; color:#6ea8fe; font-size:.72rem; font-weight:800; letter-spacing:.06em; }
+  .we-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #24253a; }
+  .we-row:last-child { border-bottom:none; }
+  .we-row input[type=checkbox] { width:17px; height:17px; accent-color:#6ea8fe; flex:0 0 auto; cursor:pointer; margin:0; }
+  .we-icon { width:28px; height:28px; flex:0 0 28px; object-fit:contain; }
+  .we-row.off .we-icon { opacity:.45; }
+  .we-ico-s { width:18px; height:18px; object-fit:contain; vertical-align:-4px; margin-right:3px; }
+  .we-recipe { display:flex; flex-wrap:wrap; gap:4px 18px; }
+  .we-label-ico { display:flex !important; align-items:center; gap:8px; }
+  .we-fail { display:flex; align-items:center; gap:8px; margin-top:10px; padding:8px 10px; border-radius:8px; background:#1d1e2e; color:var(--text-dim); font-size:.76rem; }
+  .we-fail b { color:#b48cff; }
+  .we-name { flex:1 1 auto; min-width:0; font-size:.86rem; cursor:pointer; }
+  .we-name small { display:block; color:#6f7192; font-size:.72rem; margin-top:2px; }
+  .we-row .mm-field { flex:0 0 160px; }
+  .we-row .mm-field input { text-align:right; }
+  .we-row .mm-unit { text-align:right; }
+  .we-row.off .we-name { color:var(--text-dim); }
+  .we-row.off .mm-field input { opacity:.4; }
+  @media (max-width:520px){ .we-row .mm-field { flex-basis:120px; } }
+  .we-sub { padding:12px 0; border-top:1px solid #24253a; }
+  .we-sub:first-of-type { border-top:none; padding-top:4px; }
+  .we-sub-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:8px; font-size:.84rem; font-weight:700; }
+  .we-sub-head small { color:#6f7192; font-size:.72rem; font-weight:400; }
+  .we-crafts { display:flex; align-items:center; gap:8px; }
+  .we-crafts input { width:110px; box-sizing:border-box; background:#11141a; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:9px 10px; font:inherit; font-size:1.15rem; font-weight:800; text-align:right; }
+  .we-crafts input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .we-suffix { font-weight:700; }
+  .we-crafts-eq { color:var(--text-dim); font-size:.8rem; }
+  .we-seg { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; border-radius:10px; background:#11141a; border:1px solid var(--border); }
+  .we-seg button { padding:9px 8px; border:none; border-radius:7px; background:none; color:var(--text-dim); font:inherit; font-size:.86rem; cursor:pointer; }
+  .we-seg button.active { background:#6ea8fe; color:#0e1526; font-weight:700; }
+  .we-seg button:not(.active):hover { color:var(--text); }
+  .we-reco { margin-top:16px; padding:18px 20px; border-radius:16px; border:1px solid #6bd98a;
+    background:radial-gradient(circle at 90% 0%, rgba(107,217,138,.22), transparent 55%), linear-gradient(135deg,#16271d,#171827); box-shadow:0 8px 28px rgba(0,0,0,.25); }
+  .we-reco.warn { border-color:#e2a04a; background:radial-gradient(circle at 90% 0%, rgba(226,160,74,.22), transparent 55%), linear-gradient(135deg,#2a2116,#171827); }
+  .we-reco-tag { display:inline-block; padding:3px 10px; border-radius:999px; background:rgba(107,217,138,.2); color:#6bd98a; font-size:.72rem; font-weight:800; letter-spacing:.06em; }
+  .we-reco.warn .we-reco-tag { background:rgba(226,160,74,.2); color:#e2a04a; }
+  .we-reco-title { margin-top:8px; font-size:clamp(1.35rem,4.2vw,1.75rem); font-weight:900; letter-spacing:-.04em; line-height:1.25; }
+  .we-reco-desc { margin-top:6px; font-size:.86rem; line-height:1.6; }
+  .we-reco-desc b { color:#6bd98a; }
+  .we-reco.warn .we-reco-desc b { color:#e2a04a; }
+  .we-reco-alt { margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.08); color:var(--text-dim); font-size:.78rem; }
+  .we-reco-alt:empty { display:none; }
+  .we-stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px; }
+  .we-stats .we-stat:only-child { grid-column:1 / -1; }
+  .we-stat { background:rgba(0,0,0,.18); border-radius:10px; padding:10px 12px; min-width:0; }
+  .we-stat .k { color:var(--text-dim); font-size:.72rem; font-weight:700; }
+  .we-stat .v { margin-top:3px; font-size:clamp(1.15rem,3.6vw,1.45rem); font-weight:900; letter-spacing:-.03em; color:#6bd98a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .we-stat .v.cost { color:#e2a04a; }
+  .we-stat .v.plus { color:#6ea8fe; }
+  .we-stat .s { margin-top:2px; color:#6f7192; font-size:.7rem; }
+  .mm-even.bad .mm-big-value { color:#e2664a; }
+  .we-fixed { margin-top:10px; padding:9px 12px; border-radius:8px; background:#1d1e2e; color:var(--text-dim); font-size:.78rem; }
+  .we-fixed b { color:var(--text); }
+  .mm-even.bad { border-color:var(--bad); background:linear-gradient(135deg,#261a17,#1b1c2d); }
+  .mm-even.bad .mm-big-value { color:#e2664a; }
+  #routeTable td.name { white-space:normal; }
+  #routeTable td.name small { display:block; margin-top:2px; color:#6f7192; font-size:.72rem; font-weight:400; }
+  .data-table tr.best td { color:#6bd98a; }
+  .data-table td.na { color:var(--text-dim); font-weight:400; }
+  .data-table { width:100%; border-collapse:collapse; }
+  .data-table th, .data-table td { padding:8px 6px; border-bottom:1px solid #2c2d46; text-align:right; font-size:.82rem; }
+  .data-table th { color:var(--text-dim); font-weight:500; font-size:.74rem; }
+  .data-table th:first-child, .data-table td:first-child { text-align:left; }
+  .data-table tr:last-child td { border-bottom:none; }
+  .data-table td.name { font-weight:700; white-space:nowrap; }
+  .data-table td.price { white-space:nowrap; font-weight:700; }
+  .data-table td.profit { white-space:nowrap; color:#6bd98a; }
+  .data-table tr.breakeven td, .data-table tr.breakeven td.profit { color:var(--text-dim); }
+  .data-table tr.here { background:rgba(110,168,254,.1); }
+  .mm-pick { background:none; border:none; padding:0; font:inherit; color:var(--accent); cursor:pointer; font-weight:700; }
+  .mm-pick:hover { text-decoration:underline; }
+
+  .mm-assume summary { cursor:pointer; color:var(--text-dim); font-size:.82rem; }
+  .mm-assume ul { margin:10px 0 0; padding-left:18px; color:var(--text-dim); font-size:.8rem; line-height:1.85; }
+  .mm-assume b { color:var(--text); }
+  .hidden { display:none !important; }
+</style>
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+  <nav class="site-nav">
+    <div class="site-tabs-track site-groups">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab active" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>시뮬레이터</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_calc.html">
+        <span class="site-menu-icon">⭐</span>
+        <span><span class="site-menu-name">스타포스 기댓값 계산기</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산 계산기</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_buff_planner.html">
+        <span class="site-menu-icon">⏱️</span>
+        <span><span class="site-menu-name">보스 버프 동선 계산기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">큐브 등급업 비용 계산기</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_option_calc.html">
+        <span class="site-menu-icon">🎯</span>
+        <span><span class="site-menu-name">큐브 옵션 확률 계산기</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="item_craft_calc.html">
+        <span class="site-menu-icon">🛠️</span>
+        <span><span class="site-menu-name">아이템 제작 비용 계산기</span><span class="site-menu-desc">대박·평균 제작 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="trade_margin_calc.html">
+        <span class="site-menu-icon">💱</span>
+        <span><span class="site-menu-name">되팔기 손익 계산기</span><span class="site-menu-desc">수수료 떼고 남는 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="meso_market_calc.html">
+        <span class="site-menu-icon">💎</span>
+        <span><span class="site-menu-name">메소마켓 시세 계산기</span><span class="site-menu-desc">1억 메소당 실수령 메포</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산기</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 시뮬레이터</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_play.html">
+        <span class="site-menu-icon">🌟</span>
+        <span><span class="site-menu-name">스타포스 시뮬레이터</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 시뮬레이터</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 시뮬레이터</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+      </a>
+      <a class="site-menu-item" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 시뮬레이터</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+      </a>
+    </div>
+  </nav>
+
+  <header class="mm-hero">
+    <div class="eyebrow">CRAFT / SMALL WEALTH ELIXIR</div>
+    <h1>🧪 재물 비약 제작 계산기</h1>
+    <p class="we-recipe"><span><img class="we-ico-s" src="icons/쥬니퍼베리씨앗.webp" alt="" />씨앗 6 + 허브 오일병 → <img class="we-ico-s" src="icons/쥬니퍼베리씨앗오일.png" alt="" /><b>씨앗 오일</b> (90%, 실패 시 <img class="we-ico-s" src="icons/보라색가루.png" alt="" />보라색 가루)</span><span><img class="we-ico-s" src="icons/쥬니퍼베리씨앗오일.png" alt="" />오일 5 + 포션 빈병 + <img class="we-ico-s" src="icons/최상급아이템결정.webp" alt="" />결정 2 + <img class="we-ico-s" src="icons/현자의돌.webp" alt="" />현자의 돌 → <img class="we-ico-s" src="icons/소형재물획득의비약.png" alt="" /><b>비약 6개</b></span></p>
+  </header>
+
+  <div class="mm-layout">
+    <div>
+      <section class="mm-panel">
+        <h2>01 · 재료 시세</h2>
+        <p class="mm-kicker">개당 메소 (350만처럼 적어도 됨) · 체크 끄면 <b>자체 수급</b> 0메소</p>
+        <div id="matRows"></div>
+      </section>
+
+      <section class="mm-panel">
+        <h2>02 · 비약 시세</h2>
+        <div class="mm-fields">
+          <div class="mm-field wide">
+            <label for="p_elixir" class="we-label-ico"><img class="we-icon" src="icons/소형재물획득의비약.png" alt="" width="28" height="28" />소형 재물 획득의 비약 <small>(1개)</small></label>
+            <input type="text" id="p_elixir" class="big" inputmode="numeric" autocomplete="off" placeholder="예: 300만" />
+            <div class="mm-unit" id="u_elixir"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mm-panel">
+        <h2>03 · 제작 횟수 · 수수료</h2>
+        <div class="we-sub">
+          <div class="we-sub-head"><label for="crafts">24시간 동안 만들 횟수</label><small>레시피는 24시간 무제한 제작</small></div>
+          <div class="we-crafts">
+            <input type="text" id="crafts" inputmode="numeric" autocomplete="off" placeholder="1" aria-label="만들 횟수" />
+            <span class="we-suffix">회</span>
+            <span class="we-crafts-eq" id="craftsUnit"></span>
+          </div>
+          <div class="mm-chips" id="craftChips"></div>
+        </div>
+        <div class="we-sub">
+          <div class="we-sub-head"><span>경매장 판매 수수료</span><small>비약을 팔 때 떼는 몫</small></div>
+          <div class="we-seg" role="group" aria-label="경매장 판매 수수료">
+            <button type="button" data-discount="0">기본 <b>5%</b></button>
+            <button type="button" data-discount="1">할인 <b>3%</b></button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="mm-result">
+      <section class="we-reco hidden" id="recoBox" aria-live="polite">
+        <div class="we-reco-tag">추천</div>
+        <div class="we-reco-title" id="recoTitle">-</div>
+        <div class="we-reco-desc" id="recoDesc"></div>
+        <div class="we-reco-alt" id="recoAlt"></div>
+      </section>
+      <section class="mm-panel">
+        <h2>비약 1개 구하는 값</h2>
+        <p class="mm-kicker">레시피 제외 재료 원가 · 오일 만들기는 실패 10% 포함 평균 · ✔ 가장 쌈</p>
+        <table class="data-table" id="routeTable">
+          <thead><tr><th>방법 <small>(메소)</small></th><th>비약 1개</th><th>1회 (6개)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="mm-kicker" id="routeMissing" style="margin:10px 0 0"></p>
+        <div class="we-fail"><img class="we-icon" src="icons/보라색가루.png" alt="" width="28" height="28" /><span>실패 10%면 <b>보라색 가루</b>가 나오고 재료는 사라집니다. 가루 값은 0으로 계산</span></div>
+        <div class="mm-even hidden" id="minBox">
+          <div class="mm-big-label">레시피 값 이상 벌려면</div>
+          <div class="we-stats" id="minStats"></div>
+          <div class="mm-big-sub" id="minSub"></div>
+        </div>
+      </section>
+
+      <section class="mm-panel hidden" id="capPanel">
+        <h2>구매 마지노선</h2>
+        <p class="mm-kicker">이 값보다 비싸게 사면 손해 · 레시피 제외</p>
+        <div class="we-stats" id="capStats" style="margin-top:0"></div>
+      </section>
+
+      <section class="mm-panel">
+        <h2>만들어서 팔면 <span id="verdictCrafts" style="color:var(--text-dim);font-weight:400;font-size:.8rem"></span></h2>
+        <p class="mm-kicker" id="verdictEmpty" style="margin:0">비약 시세와 재료 시세를 넣으면 계산합니다.</p>
+        <div class="mm-verdict hidden" id="verdictBox" style="margin-top:0">
+          <div class="mm-verdict-head">
+            <span class="mm-verdict-tag" id="verdictTag">-</span>
+            <span class="mm-verdict-value" id="verdictValue">-</span>
+            <span class="mm-verdict-rate" id="verdictRate"></span>
+          </div>
+          <div class="mm-lines" id="verdictLines"></div>
+        </div>
+      </section>
+
+      <div data-ux-help="계산 기준"><details class="mm-panel mm-assume">
+        <summary>계산 기준 보기</summary>
+        <ul>
+          <li>씨앗 오일 1개 평균 비용 = <b>(씨앗 × 6 + 허브 오일병 1,000) ÷ 0.9</b>. 실패해도 재료는 사라지므로 성공 1개에 평균 1.11번 시도합니다.</li>
+          <li>비약 1회(6개) 비용 = <b>오일 × 5 + 포션 빈병(800) + 아이템 결정 × 2 + 현자의 돌</b>. 레시피는 24시간 무제한이라 원가에 넣지 않고, 레시피 값을 넘기는 최소 판매 개수로 따로 냅니다. 재료가 6개 단위로 들어가서 필요한 제작 횟수를 먼저 구한 뒤 그 재료값 + 레시피를 넘기는 개수를 셉니다. 오일은 만들기·사기 중 싼 쪽으로 계산합니다.</li>
+          <li>판매 실수령 = <b>비약 시세 × 6 × (1 − 수수료)</b>. 수수료는 5% 고정이고 할인을 켜면 3%로 계산합니다. 비약을 살 때는 시세 그대로 냅니다.</li>
+          <li>체크를 끈 재료(자체 수급)는 0메소로 봅니다. 그 재료를 팔았으면 받았을 돈은 빠지므로, 경매장에 팔 수 있는 재료라면 켜 두는 쪽이 정확합니다.</li>
+          <li>오일 확률은 평균값입니다. 운이 나쁘면 오일 5개에 씨앗이 30개보다 훨씬 많이 들 수 있습니다.</li>
+          <li>입력값은 이 브라우저에만 저장됩니다.</li>
+        </ul>
+      </details></div>
+    </div>
+  </div>
+</div>
+
+<script src="site_nav.js"></script>
+<script src="wealth_elixir_calc.js"></script>
+</body>
+</html>

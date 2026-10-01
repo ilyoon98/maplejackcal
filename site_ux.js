@@ -190,6 +190,7 @@
       'boss_buff_planner.html':['.layout-right','#packResult','동선 확인'],
       'trade_margin_calc.html':['.tm-result','#breakEvenValue','본전 판매가'],
       'meso_market_calc.html':['.mm-result','#evenValue','손익분기 시세'],
+      'wealth_elixir_calc.html':['.mm-result','#recoTitle','추천'],
       'cube_play.html':['.cube-layout > aside','#simLabel','가상 큐브'],
       'starforce_play.html':['.sf-layout > aside','#stageStar','현재 성'],
       'boutique_gacha.html':['.bt-right','#spent','가상 지출'],
@@ -201,7 +202,7 @@
       const caption = make('span','ux-dock-caption',label); const val = make('strong'); const action = make('span','ux-dock-action','결과 보기 ↑'); go.append(caption,val,action); bar.append(go); document.body.append(bar); document.body.classList.add('ux-has-dock');
       const dest=q(target); if(!dest.id) dest.id='ux-result'; go.setAttribute('aria-controls',dest.id);
       go.addEventListener('click',()=>{ dest.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'}); dest.setAttribute('tabindex','-1'); dest.focus({preventScroll:true}); });
-      const update=()=> { let value=text(source); if(page==='boss_buff_planner.html') value='전체 동선 / 버프 한 번'; if(page==='starforce_play.html') value+='★'; if(q('#verdictBox') && !q('#verdictBox').classList.contains('hidden')) {value=text('#verdictValue');setText(caption,page==='trade_margin_calc.html'?'총 순이익':'실수령 차이');} else setText(caption,label); setText(val,value||'조건을 입력하세요'); };
+      const update=()=> { let value=text(source); if(page==='boss_buff_planner.html') value='전체 동선 / 버프 한 번'; if(page==='starforce_play.html') value+='★'; if(page!=='wealth_elixir_calc.html' && q('#verdictBox') && !q('#verdictBox').classList.contains('hidden')) {value=text('#verdictValue');setText(caption,page==='trade_margin_calc.html'?'총 순이익':'실수령 차이');} else setText(caption,label); setText(val,value||'조건을 입력하세요'); };
       const observed=q(source); if(observed)new MutationObserver(update).observe(dest,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']}); update();
     }
   }

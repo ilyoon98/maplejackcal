@@ -4,11 +4,11 @@ window.SiteNavigation = {
   categories: [
       ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','flame_calc.html','item_craft_calc.html','authentic_symbol_calc.html']],
       ['보스', ['boss_income_calc.html','boss_buff_planner.html']],
-      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','coin_shop_calc.html']],
+      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','wealth_elixir_calc.html','coin_shop_calc.html']],
       ['강화 시뮬레이터', ['cube_play.html','starforce_play.html']],
       ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']]
     ],
-  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30' },
+  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02' },
   newDays: 30
 };
 // 상단 탭 한 줄. 분류(계산기·시뮬레이터)를 누르면 그 아래로 목록 패널이 펼쳐지고,
@@ -86,6 +86,14 @@ window.SiteNavigation = {
       huntingLink.innerHTML = '<span class="site-menu-icon">🍁</span><span><span class="site-menu-name">아이템 획득량 계산기</span><span class="site-menu-desc">30분 사냥 조각·메소</span></span>';
       if (location.pathname.endsWith('/hunting_calc.html')) huntingLink.classList.add('active');
       calcMenu.appendChild(huntingLink);
+    }
+    if (calcMenu && !calcMenu.querySelector('a[href="wealth_elixir_calc.html"]')) {
+      var elixirLink = document.createElement('a');
+      elixirLink.href = 'wealth_elixir_calc.html';
+      elixirLink.className = 'site-menu-item';
+      elixirLink.innerHTML = '<span class="site-menu-icon">🧪</span><span><span class="site-menu-name">재물 비약 제작 계산기</span><span class="site-menu-desc">씨앗·오일·비약 뭘 살지</span></span>';
+      if (location.pathname.endsWith('/wealth_elixir_calc.html')) elixirLink.classList.add('active');
+      calcMenu.appendChild(elixirLink);
     }
     var pill = track.querySelector('.site-tabs-pill');
     var tabs = [].slice.call(track.querySelectorAll('.site-tab'));
