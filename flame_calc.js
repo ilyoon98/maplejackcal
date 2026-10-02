@@ -124,10 +124,10 @@
       '<div class="ic-sub">무엇으로 돌리나요</div>' +
       '<div class="fc-flames">' + [['abyss', '심연 불꽃', '심환불'], ['black', '검은 불꽃', '검환불'], ['burning', '타오르는 불꽃', '타환불']].map(([k, name, icon]) => {
         const active = state.flame === k || k === 'black' && state.flame === 'mesoReset';
-        return '<button type="button" class="ic-chip fc-flame' + (active ? ' active' : '') + '" data-flame="' + k + '" aria-pressed="' + active + '" title="' + F.FLAMES[k].name + '"><img src="icons/CoinShop/' + icon + '.webp" alt="" width="28" height="32"><span>' + name + '</span></button>';
+        return '<button type="button" class="ic-chip fc-flame' + (active ? ' active' : '') + '" data-flame="' + k + '" aria-pressed="' + active + '" title="' + F.FLAMES[k].name + '"><img src="icons/coin-shop/' + icon + '.webp" alt="" width="28" height="32"><span>' + name + '</span></button>';
       }).join('') + '</div>' +
       '<p class=\"ic-note\">1회 <b>300만 메소</b> 고정</p>' +
-      '<div class="ic-sub">목표 추가옵션 <span class="ic-count">' + used.length + '/' + MAX_GOALS + '</span></div>' +
+      '<div class="ic-sub fc-goal-heading">목표 추가옵션 <span class="ic-count">' + used.length + '/' + MAX_GOALS + '</span></div>' +
       (condHtml || '<p class="ic-empty">아래에서 원하는 추가옵션을 눌러 조건을 넣으세요. 설정한 조건을 모두 만족하는 확률을 계산합니다.</p>') +
       '<p class="ic-note">공·마와 올스탯을 선택하면 해당 옵션을 반드시 포함하면서 목표 급수도 만족해야 합니다.</p>' +
       '<div class="ic-picks">' + (weapon ? primary.map(pick).join('') + gradePick : gradePick + primary.map(pick).join('')) + '</div>' +

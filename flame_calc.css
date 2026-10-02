@@ -24,6 +24,8 @@ button:disabled { opacity:.4; cursor:default; }
 .ic-chip.active,.ic-tier.active { background:#f3c969; color:#15131e; border-color:#f3c969; font-weight:700; }
 .ic-sub { font-size:.84rem; color:var(--text-dim); margin:20px 0 9px; }
 .ic-count { color:#f3c969; margin-left:6px; }
+.fc-goal-heading { display:flex; align-items:center; gap:10px; margin:26px 0 14px; padding:10px 12px; border-left:3px solid #f3c969; border-radius:0 8px 8px 0; background:rgba(243,201,105,.07); color:#f3c969; font-size:.98rem; font-weight:700; }
+.fc-goal-heading .ic-count { margin-left:auto; padding:3px 8px; border:1px solid rgba(243,201,105,.25); border-radius:999px; font-size:.75rem; font-variant-numeric:tabular-nums; }
 .ic-note { color:var(--text-dim); font-size:.77rem; line-height:1.8; }
 .ic-row { display:flex; align-items:center; flex-wrap:wrap; gap:9px; padding:14px; border:1px solid #3c3d64; border-radius:10px; margin-bottom:10px; background:#20213a; }
 .ic-row-name { flex:1 1 130px; font-size:.92rem; font-weight:700; }

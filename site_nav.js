@@ -6,11 +6,23 @@ window.SiteNavigation = {
       ['보스', ['boss_income_calc.html','boss_buff_planner.html']],
       ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','wealth_elixir_calc.html','coin_shop_calc.html']],
       ['강화 시뮬레이터', ['cube_play.html','starforce_play.html']],
-      ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']]
+      ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']],
+      ['미니게임', ['herb_idle.html']]
     ],
-  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02' },
+  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02' },
   newDays: 30
 };
+
+// 모든 일반 페이지에서 금요일 10:30(KST) 이후 이번 주 썬데이 메이플을 확인한다.
+// 공통 내비게이션 파일에서 한 번만 불러와 페이지별 마크업을 반복하지 않는다.
+(function loadSundayMapleEvent() {
+  if (document.querySelector('script[data-sunday-maple-event]')) return;
+  var script = document.createElement('script');
+  script.src = 'sunday_event.js';
+  script.defer = true;
+  script.dataset.sundayMapleEvent = 'true';
+  document.head.appendChild(script);
+})();
 // 상단 탭 한 줄. 분류(계산기·시뮬레이터)를 누르면 그 아래로 목록 패널이 펼쳐지고,
 // 패널이 열려 있는 동안에는 pill이 그 분류로 옮겨간다. 닫으면 지금 보고 있는
 // 페이지의 분류로 되돌아온다. 탭 목록은 페이지마다 하드코딩돼 있다.
@@ -94,6 +106,15 @@ window.SiteNavigation = {
       elixirLink.innerHTML = '<span class="site-menu-icon">🧪</span><span><span class="site-menu-name">재물 비약 제작 계산기</span><span class="site-menu-desc">씨앗·오일·비약 뭘 살지</span></span>';
       if (location.pathname.endsWith('/wealth_elixir_calc.html')) elixirLink.classList.add('active');
       calcMenu.appendChild(elixirLink);
+    }
+    var playMenu = nav.querySelector('.site-menu[data-group="play"]');
+    if (playMenu && !playMenu.querySelector('a[href="herb_idle.html"]')) {
+      var herbLink = document.createElement('a');
+      herbLink.href = 'herb_idle.html';
+      herbLink.className = 'site-menu-item';
+      herbLink.innerHTML = '<span class="site-menu-icon">🌿</span><span><span class="site-menu-name">약초 방치 게임</span><span class="site-menu-desc">채집·가공해서 시세 보고 팔기</span></span>';
+      if (location.pathname.endsWith('/herb_idle.html')) herbLink.classList.add('active');
+      playMenu.appendChild(herbLink);
     }
     var pill = track.querySelector('.site-tabs-pill');
     var tabs = [].slice.call(track.querySelectorAll('.site-tab'));

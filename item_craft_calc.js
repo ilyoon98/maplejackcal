@@ -15,6 +15,7 @@
 // 잠재는 스타포스를 끝낸 뒤에 돌리는 것으로 본다(파괴로 날아가지 않는다).
 (function () {
   const F = window.FlameCore;
+  const W = window.FlameWeapons;
   const SF = window.StarforceCalc;
   const SFD = window.StarforceData;
 
@@ -48,12 +49,25 @@
   const partOf = key => PARTS.find(p => p.key === key);
   const defaultFlameConds = part => partOf(part).flame === 'weapon'
     ? [{ kind: 'opt', id: 'ATT', minTier: 6 }] : [];
-  const flameLabel = o => o.id === 'ATT' ? '공격력·마력' : o.label;
+  const selectedWeapon = () => state.part === '무기' ? W.resolve(state.weapon, state.weaponSeries) : null;
+  const attackId = () => selectedWeapon()?.stat || 'ATT';
+  const flameLabel = o => o.id === 'ATT' ? (selectedWeapon() ? (attackId() === 'MATT' ? '마력' : '공격력') : '공격력·마력') : o.label;
+  const availableFlameTiers = () => F.tiers(BOSS).filter((tier, i) => F.FLAMES.mesoReset.tiers[i] > 0);
+  function flameValue(o, tier) {
+    if (state.part === '무기' && o.weaponTierOnly) return selectedWeapon()?.values[7 - tier] ?? null;
+    return o.value(state.level, tier);
+  }
+  function flameValueText(o, tier) {
+    const value = flameValue(o, tier);
+    return value === null ? '무기·계열 확인' : (value > 0 ? '+' : '') + fmt(value) + (o.unit || '');
+  }
 
   const RANKS = ['레어', '에픽', '유니크', '레전드리'];
   const RANK_COLORS = ['#7cd4ff', '#b58cff', '#ffa94d', '#6bd98a'];
   const MVP_OPTIONS = [[0, '없음'], [0.03, '실버'], [0.05, '골드'], [0.10, '다이아']];
   const MAX_GOALS = 3;
+  const MAX_FLAME_GOALS = 4;
+  const FLAME_PRICE = 3000000;
   const MAX_SETS = 4;
   const SET_NAMES = ['A', 'B', 'C', 'D'];
   function potentialGoals(cur) {
@@ -69,6 +83,25 @@
         return [...sums];
       });
     }).filter(g => g.length);
+  }
+  function usablePotentialGoals(cur, bracket) {
+    const excluded = [], goals = [];
+    const keys = bracket ? keysOf(bracket) : new Map();
+    cur.sets.forEach((set, index) => {
+      const rows = set.rows.filter(row => {
+        if (!(Number(row.min) > 0)) return false;
+        const reason = !bracket ? '확률표 없음' : !keys.has(row.key) ? '해당 장비에 없는 옵션'
+          : Number(row.min) > maxTotal(bracket, row.key) ? '최대 수치 초과' : '';
+        if (reason) excluded.push('조건 ' + SET_NAMES[index] + ' · ' + potLabel(row.key) + ' ' + row.min + keyUnit(row.key) + ' (' + reason + ')');
+        return !reason;
+      });
+      // 전부 제외된 빈 조건은 OR의 무조건 성공으로 취급하지 않는다.
+      const variants = potentialGoals({ sets: [{ rows }] });
+      const possible = variants.filter(goal => successProb(bracket.lines, [goal]) > 0);
+      if (variants.length && !possible.length) excluded.push('조건 ' + SET_NAMES[index] + ' (동시에 달성할 수 없는 조합)');
+      goals.push(...possible);
+    });
+    return { goals, excluded };
   }
   // 추가옵션을 띄울 만한 장비(파프니르·앱솔랩스·아케인셰이드·에테르넬, 여명·칠흑 악세 등)는
   // 사실상 전부 보스 드롭이라 언제나 보스 규칙(옵션 4개 고정 · 3~7단계)으로 계산한다.
@@ -92,10 +125,11 @@
   const STORE_KEY = 'itemCraftCalc';
   const state = {
     level: 200, part: '무기', base: 0,
-    flame: 'mesoReset', flameConds: defaultFlameConds('무기'),
+    weapon: '', weaponSeries: 'genesis',
+    flameConds: defaultFlameConds('무기'),
     // 기본값은 샤이닝 스타포스가 열린 때 기준. 파괴방지는 노작값을 보고 자동으로 정한다.
     star: { start: 0, goal: 22, mvp: 0, pcRoom: false, discount30: true, destroyDown30: true, lucky5: true },
-    miracle: false,
+    miracle: { pot: false, addi: false },
     pot: { from: 2, to: 3, rows: [] },
     addi: { from: 0, to: 3, rows: [] },
     // 이미 되어 있는 걸 사서 나머지만 작할 수도 있어서 단계마다 계산에서 뺄 수 있게 한다
@@ -106,13 +140,16 @@
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
     for (const k of Object.keys(state)) {
       if (saved[k] === undefined) continue;
+      if (k === 'miracle' && typeof saved[k] === 'boolean') {
+        state.miracle = { pot: saved[k], addi: saved[k] };
+        continue;
+      }
       if (state[k] && typeof state[k] === 'object' && !Array.isArray(state[k])) Object.assign(state[k], saved[k]);
       else state[k] = saved[k];
     }
   } catch (e) {}
   if (!partOf(state.part)) state.part = '무기';
   if (!Array.isArray(state.flameConds)) state.flameConds = [];
-  if (!F.FLAMES[state.flame]) state.flame = 'mesoReset';
   // 스탯을 하나씩 걸던 옛 저장값은 급수 조건으로 바뀌었다
   state.flameConds = state.flameConds.filter(c => c && (c.kind === 'opt' || c.kind === 'grade'));
   function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
@@ -150,12 +187,14 @@
 
   function flameResult() {
     const part = partOf(state.part);
-    if (!state.on.flame || !part.flame || !state.flameConds.length) return null;
+    const conds = state.flameConds.filter(c => c.kind === 'opt' || c.min > 0);
+    if (!state.on.flame || !part.flame || !conds.length) return null;
+    if (selectedWeapon()?.special) return stage(0, FLAME_PRICE, 1);
     const p = F.probability({
       level: state.level, weapon: part.flame === 'weapon', boss: BOSS,
-      flame: state.flame, conds: state.flameConds
+      flame: 'mesoReset', conds: conds.map(c => c.id === 'ATT' ? { ...c, id: attackId() } : c), mainStat: 'STR'
     });
-    return stage(p, F.FLAMES[state.flame].meso, 1);
+    return stage(p, FLAME_PRICE, 1);
   }
 
   const starOpts = (spare, safeguard) => ({
@@ -197,7 +236,7 @@
 
   // 미라클 타임은 등급 상승 확률만 2배로 올린다. 원하는 옵션이 뜰 확률과 천장은 그대로다.
   // (잠재능력 큐브 연구소 cube_calc.js와 같은 규칙)
-  const miracleP = p => state.miracle ? Math.min(p * 2, 0.999) : p;
+  const miracleP = (p, short) => state.miracle[short] ? Math.min(p * 2, 0.999) : p;
 
   // 잠재 / 에디셔널: 메소 재설정으로 레전드리까지 등급을 올린 뒤, 원하는 옵션이 뜰 때까지 다시 돌린다.
   // 등급업에 성공한 그 재설정이 이미 레전드리 옵션을 한 번 굴려준 셈이라 옵션 단계에서 1회를 뺀다.
@@ -210,27 +249,29 @@
     const steps = [];
     let min = 0, avg = 0;
     for (let i = cur.from; i < cur.to; i++) {
-      const p = miracleP(grade.p[i]);
+      const p = miracleP(grade.p[i], cfg.short);
       const tries = cubeExpected(p, grade.cap[i]);
       steps.push({ label: RANKS[i] + ' → ' + RANKS[i + 1], p, cap: grade.cap[i], tries, price: prices[i] });
       min += prices[i];
       avg += tries * prices[i];
     }
-    const goals = potentialGoals(cur);
+    const b = bracketOf(cfg.dataKey, state.part, state.level, RANKS[cur.to]);
+    const { goals, excluded } = usablePotentialGoals(cur, b);
     let opt = null;
     if (goals.length) {
-      const b = bracketOf(cfg.dataKey, state.part, state.level, RANKS[cur.to]);
-      const p = b ? successProb(b.lines, goals) : 0;
+      const p = successProb(b.lines, goals);
       opt = stage(p, prices[cur.to], cur.from < cur.to ? 0 : 1);
       opt.missing = !b;
       min += opt.min;
       avg += opt.avg;
     }
-    return { label: cfg.label, icon: cfg.icon, min, avg, steps, opt };
+    return { label: cfg.label, icon: cfg.icon, min, avg, steps, opt, excluded };
   }
 
   function compute() {
-    const flame = flameResult();
+    const rawFlame = flameResult();
+    const flame = rawFlame && rawFlame.p > 0 ? rawFlame : null;
+    const flameExcluded = rawFlame && !flame ? ['현재 목표는 달성 불가하거나 확률 계산 미지원'] : [];
     // 파괴되면 노작을 다시 사고 추가옵션도 다시 띄워야 한다
     const flameAvg = flame && Number.isFinite(flame.avg) ? flame.avg : 0;
     const spare = state.base + flameAvg;
@@ -248,7 +289,7 @@
     ].filter(Boolean).filter(x => x.keep || x.min > 0 || x.avg > 0);
 
     return {
-      parts, flame, star, pot, addi, spare,
+      parts, flame, star, pot, addi, spare, flameExcluded,
       min: parts.reduce((s, x) => s + x.min, 0),
       avg: parts.reduce((s, x) => s + x.avg, 0)
     };
@@ -309,6 +350,38 @@
       (state.part === '보조무기(포스실드, 소울링 제외)' ? ' · 아스트라 등 스타포스가 가능한 보조무기는 스타포스를 포함하세요. 강화 불가 장비는 계산에 포함을 꺼 주세요.' : '');
   }
 
+  function renderFlameWeapon() {
+    return '<div class="ic-field"><label for="flameWeapon">무기 종류</label><select id="flameWeapon"><option value="">무기 종류 선택</option>' +
+      ['전사', '마법사', '궁수', '도적', '해적'].map(job => '<optgroup label="' + job + '">' + W.items.filter(w => w.job === job).map(w =>
+        '<option value="' + w.id + '"' + (state.weapon === w.id ? ' selected' : '') + '>' + esc(w.special ? w.name : w.type) + '</option>').join('') + '</optgroup>').join('') +
+      '</select></div><div class="ic-sub">무기 계열</div><div class="ic-chips">' + W.series.map(s =>
+        chip(s.name + ' · Lv.' + s.level, state.weaponSeries === s.id, 'data-flame-series="' + s.id + '"')).join('') + '</div>' +
+      '<p class="ic-note">계열을 선택하면 아이템 레벨도 함께 변경됩니다. ' +
+      (selectedWeapon() ? esc(selectedWeapon().name) : '무기 종류·계열을 고르면 실제 공·마 수치를 보여줍니다.') + '</p>';
+  }
+
+  function renderFlameTotal() {
+    const box = $('flameTotal');
+    if (!partOf(state.part).flame) { box.innerHTML = ''; return; }
+    if (selectedWeapon()?.special) { box.innerHTML = '<p class="ic-note">제로 무기는 수치표만 제공합니다.</p>'; return; }
+    const totals = new Map();
+    let included = 0;
+    for (const c of state.flameConds.filter(c => c.kind === 'opt')) {
+      const option = F.BY_ID[c.id], value = flameValue(option, c.minTier);
+      for (const id of option.stats || [c.id]) {
+        const prior = totals.get(id) || 0;
+        totals.set(id, value === null || prior === null ? null : prior + value);
+      }
+      included += F.gradeWeight(option, state.part === '무기', 'STR') * (value || 0);
+    }
+    const grade = state.flameConds.find(c => c.kind === 'grade' && c.min > 0);
+    box.innerHTML = '<div class="ic-sub">목표 추가옵션 최소 합계</div><div class="ic-option-badges">' + [...totals].map(([id, value]) =>
+      '<span class="ic-option-badge" data-flame-total="' + id + '">' + esc(flameLabel(F.BY_ID[id])) + ' ' +
+      (value === null ? '무기·계열 확인' : (value > 0 ? '+' : '') + fmt(value) + (F.BY_ID[id].unit || '')) + '</span>').join('') +
+      (grade ? '<span class="ic-option-badge">나머지 주스탯 환산 ' + fmt(Math.max(0, grade.min - included)) + '급 이상</span>' : '') + '</div>' +
+      (grade && included ? '<p class="ic-note">필수 옵션 최소 수치 기준: ' + grade.min + ' − ' + included + ' = ' + Math.max(0, grade.min - included) + '급</p>' : '');
+  }
+
   function renderFlame() {
     const part = partOf(state.part);
     if (!part.flame) {
@@ -318,9 +391,10 @@
     const weapon = part.flame === 'weapon';
     // 공·마 중 자신의 직업에 필요한 하나를 대표한다. 두 확률을 더하지 않는다.
     const list = F.candidates(state.level, weapon).filter(o => o.id !== 'MATT');
-    const tiers = F.tiers(BOSS);
+    const tiers = F.tiers(BOSS).slice().reverse();
+    const allowed = availableFlameTiers();
     const used = state.flameConds;
-    const full = used.length >= MAX_GOALS;
+    const full = used.length >= MAX_FLAME_GOALS;
 
     const condHtml = used.map((c, i) => {
       if (c.kind === 'grade') {
@@ -331,11 +405,13 @@
       }
       const o = F.BY_ID[c.id];
       const tierChips = tiers.map((t, k) =>
-        '<button type="button" class="ic-tier' + (Number(c.minTier) === t ? ' active' : '') + '" data-cond="' + i + '" data-tier="' + t + '">' +
-        (5 - k) + '추<small>' + t + '단계</small></button>').join('');
+        '<button type="button" class="ic-tier' + (Number(c.minTier) === t ? ' active' : '') + '" data-cond="' + i + '" data-tier="' + t + '"' + (allowed.includes(t) ? '' : ' disabled title="이 불꽃에서 나오지 않는 단계입니다"') + '>' +
+        (8 - t) + '추<small>' + flameValueText(o, t) + '</small></button>').join('');
       return '<div class="ic-row">' +
         '<span class="ic-row-name">' + esc(flameLabel(o)) + (o.unit || '') + '</span>' +
-        '<span class="ic-row-val">' + c.minTier + '단계 이상</span>' +
+        '<span class="ic-row-val">' + (!weapon && ['ATT', 'ALL_PCT'].includes(c.id)
+          ? '<input type="number" class="ic-num" min="' + Math.min(...allowed) + '" max="' + Math.max(...allowed) + '" data-required="' + i + '" value="' + c.minTier + '" aria-label="필수 옵션 최소 수치">' + (o.unit || '') + ' 이상'
+          : flameValueText(o, c.minTier) + ' 이상') + '</span>' +
         '<button type="button" class="ic-x" data-delcond="' + i + '">×</button>' +
         '<span class="ic-tiers">' + tierChips + '</span></div>';
     }).join('');
@@ -345,24 +421,23 @@
     // 주스탯·올스탯·HP 같은 건 급수 하나로 다 들어가므로, 따로 걸 만한 것만 앞에 둔다
     const pick = o => '<button type="button" class="ic-pick" data-addflame="' + o.id + '"' + (full ? ' disabled' : '') + '>' + esc(flameLabel(o)) + (o.unit || '') + '</button>';
     const free = list.filter(o => !used.some(c => c.kind === 'opt' && c.id === o.id));
-    const primary = free.filter(o => FLAME_PRIMARY.includes(o.id));
-    const others = free.filter(o => !FLAME_PRIMARY.includes(o.id));
-    const price = F.FLAMES[state.flame].meso;
+    const primaryIds = weapon ? FLAME_PRIMARY : ['ATT', 'ALL_PCT'];
+    const primary = free.filter(o => primaryIds.includes(o.id));
+    const others = free.filter(o => !primaryIds.includes(o.id));
 
     $('flameBody').innerHTML =
-      '<div class="ic-sub">무엇으로 돌리나요</div>' +
-      '<div class="ic-chips">' + Object.keys(F.FLAMES).map(k => chip(F.FLAMES[k].name, state.flame === k, 'data-flame="' + k + '"')).join('') + '</div>' +
-      '<p class="ic-note">' + (price
-        ? '1회 <b>' + fmt(price) + '</b> 메소. 확률은 검은 · 영원한 환생의 불꽃과 같습니다.'
-        : '불꽃은 아이템이라 메소가 들지 않습니다. 메소로 돌리려면 <b>추가옵션 재설정 (메소)</b>을 고르세요.') + '</p>' +
-      '<div class="ic-sub">목표 추가옵션 <span class="ic-count">' + used.length + '/' + MAX_GOALS + '</span></div>' +
+      (weapon ? renderFlameWeapon() : '') +
+      '<p class="ic-note">계산에 포함하면 <b>메소 재설정 1회 300만 메소</b> 기준입니다. 심연·타오르는 불꽃으로 작업할 때는 계산에 포함을 꺼 주세요.</p>' +
+      (selectedWeapon()?.special ? '<p class="ic-empty bad">제로 무기는 별도 규칙으로 확률 계산을 지원하지 않습니다. 수치표만 참고하세요. 비용을 계산하려면 다른 무기를 선택하거나 추가옵션 비용을 제외하세요.</p>' : '') +
+      '<div class="ic-sub">목표 추가옵션 <span class="ic-count">' + used.length + '/' + MAX_FLAME_GOALS + '</span></div>' +
       (condHtml || '<p class="ic-empty">아래에서 원하는 추가옵션을 눌러 조건을 넣으세요. 넣지 않으면 추가옵션 단계는 빼고 계산합니다.</p>') +
-      '<p class="ic-note">공격력·마력은 직업에 맞는 한 종류 기준으로 같은 확률을 사용합니다.</p>' +
+      '<p class="ic-note">공·마와 올스탯을 고르면 해당 옵션을 반드시 포함하며 목표 급수도 만족해야 합니다. 공·마는 직업에 맞는 한 종류 기준입니다.</p>' +
       '<div class="ic-picks">' + (weapon ? primary.map(pick).join('') + gradePick : gradePick + primary.map(pick).join('')) + '</div>' +
       (others.length ? '<button type="button" class="ic-more" data-more="flame">' +
-        (state.showAll.flame ? '다른 옵션 접기 ▴' : '다른 옵션 펼치기 (' + others.length + ') ▾') + '</button>' +
+        (state.showAll.flame ? '세부 조건 접기 ▴' : '세부 조건 추가 ▾') + '</button>' +
         '<div class="ic-picks' + (state.showAll.flame ? '' : ' hidden') + '">' + others.map(pick).join('') + '</div>' : '') +
-      '<details class="ic-assume"><summary>단계별로 붙는 수치 보기 (Lv.' + state.level + ' · 3~7단계)</summary>' +
+      (state.showAll.flame ? '<p class="ic-note">STR을 주스탯으로 대표 계산합니다. 복합 추옵은 급수에 STR 수치만 반영합니다.</p>' : '') +
+      '<details class="ic-assume"><summary>단계별로 붙는 수치 보기 (Lv.' + state.level + ' · 1~5추)</summary>' +
       '<div class="ic-scroll">' + tierTable(list, tiers, weapon) + '</div></details>';
   }
 
@@ -371,15 +446,13 @@
   const GRADE_HINT = weapon => '주스탯 1 · 올스탯 1% = 10' +
     (weapon ? ' · 무기는 공·마 수치를 몰라 제외' : ' · 공격력(마력) 1 = 4');
   // 스탯·HP·이속 같은 건 급수 하나에 다 녹아 있어서, 따로 걸 만한 것만 앞줄에 둔다
-  const FLAME_PRIMARY = ['ATT', 'MATT', 'BOSS_DMG', 'DMG'];
+  const FLAME_PRIMARY = ['ATT', 'ALL_PCT', 'BOSS_DMG', 'DMG'];
 
   function tierTable(list, tiers, weapon) {
-    const head = tiers.map((t, k) => '<th>' + (5 - k) + '추<small>' + t + '단계</small></th>').join('');
+    const head = tiers.map(t => '<th>' + (8 - t) + '추<small>' + t + '단계</small></th>').join('');
     const rows = list.map(o => {
       const cells = tiers.map(t => {
-        if (weapon && o.weaponTierOnly) return '<td class="dim">무기마다 다름</td>';
-        const v = o.value(state.level, t);
-        return '<td>' + (v > 0 ? '+' : '') + fmt(v) + (o.unit || '') + '</td>';
+        return '<td>' + flameValueText(o, t) + '</td>';
       }).join('');
       return '<tr><td class="ic-optname">' + esc(flameLabel(o)) + '</td>' + cells + '</tr>';
     }).join('');
@@ -452,7 +525,7 @@
         '<span class="ic-row-name">' + esc(potLabel(r.key)) +
           (info ? '<small>' + (MAIN_STATS.includes(r.key) ? '올스탯 포함 · ' : '') +
             '세 줄 합산 · 최대 ' + fmt(maxTotal(b, r.key)) + esc(keyUnit(r.key)) + '</small>' : '') +
-          (info ? '' : '<small class="bad">이 부위·레벨에는 없는 옵션</small>') + '</span>' +
+          (info ? '' : '<small class="bad">이 부위·레벨에는 없는 옵션 · 확률 계산에서 제외</small>') + '</span>' +
         (r.key === MAIN_STAT_KEY ? '<button type="button" class="ic-chip' + (r.any ? ' active' : '') + '"' + attrs + ' data-any="1">' +
           (r.any ? '아무 스탯이나' : '한 스탯으로') + '</button>' : '') +
         (isCount ? '<span class="ic-row-val">1줄 이상</span>'
@@ -483,14 +556,11 @@
       '<div class="ic-chips">' + goalsFor(cfg.short).map(i =>
         '<button type="button" class="ic-chip grade' + (cur.to === i ? ' active' : '') + (i < cur.from ? ' dim' : '') +
         '" style="--chip:' + RANK_COLORS[i] + '" data-goal="' + cfg.short + '" data-i="' + i + '">' + RANKS[i] + '</button>').join('') + '</div></div>' +
-      // 미라클 타임은 잠재·에디에 같이 걸리는 이벤트라 스위치는 잠재 쪽에만 두고, 에디에는 상태만 보여준다
-      (cfg.short === 'pot'
-        ? '<div class="ic-sub">이벤트</div>' +
-          '<div class="ic-chips">' + chip('✨ 미라클 타임', state.miracle, 'data-miracle="1"') + '</div>' +
-          '<p class="ic-note">등급 상승 확률이 2배가 됩니다. 에디셔널에도 같이 적용돼요. (옵션이 뜰 확률과 천장은 그대로)</p>'
-        : (state.miracle ? '<p class="ic-note">✨ 미라클 타임 적용 중 — 등급 상승 확률 2배</p>' : '')) +
+      '<div class="ic-sub">작업 시점</div>' +
+      '<div class="ic-chips">' + chip('✨ 미라클 타임에 작업', state.miracle[cfg.short], 'data-miracle="' + cfg.short + '" aria-pressed="' + !!state.miracle[cfg.short] + '"') + '</div>' +
+      '<p class="ic-note">이 파트의 등급 상승 확률만 2배로 계산합니다. 잠재와 에디를 모두 미라클 때 작업하면 각각 켜 주세요. 옵션 확률과 천장은 그대로입니다.</p>' +
       '<div class="ic-sub">목표 옵션 <small>' + RANKS[cur.to] + ' 옵션표 기준</small> <span class="ic-count">' + cur.rows.length + '/' + MAX_GOALS + '</span></div>' +
-      (b ? '' : '<p class="ic-empty bad">' + esc(state.part) + '은(는) ' + RANKS[cur.to] + ' 확률표에 없어 옵션 계산을 할 수 없습니다.</p>') +
+      (b ? '' : '<p class="ic-empty bad">' + esc(state.part) + '은(는) ' + RANKS[cur.to] + ' 확률표에 없어 옵션 목표를 제외하고 등급업만 계산합니다.</p>') +
       '<p class="ic-note">한 조건 안의 옵션은 모두 만족해야 하며, 조건 A·B 중 하나만 만족해도 성공입니다. 옵션이 없으면 등급업 비용만 계산합니다.</p>' +
       '<div class="ic-sub">' + (cur.sets.length > 1 ? '조건 ' + SET_NAMES[cur.active] + '에 추가' : '목표에 추가') + '</div>' +
       '<div class="ic-picks">' + primary.map(pick).join('') + '</div>' +
@@ -514,7 +584,15 @@
   }
 
   function renderResult(r) {
-    renderItemPreview();
+    renderItemPreview(r);
+    const excluded = [
+      ...r.flameExcluded.map(text => '추가옵션: ' + text),
+      ...(r.pot.excluded || []).map(text => '잠재: ' + text),
+      ...(r.addi.excluded || []).map(text => '에디: ' + text)
+    ];
+    $('excludedGoals').innerHTML = excluded.length ? '<strong>달성 불가 목표를 제외한 계산입니다</strong><ul>' +
+      excluded.map(text => '<li>' + esc(text) + '</li>').join('') + '</ul><p>남은 목표만 만족하는 확률과 비용입니다. 옵션 목표가 모두 제외되면 등급업 비용만 반영합니다.</p>' : '';
+    $('excludedGoals').hidden = !excluded.length;
     $('resAvg').actualPercentile = Number.isFinite(r.avg) ? recordPercentile(r) : null;
     $('resAvg').dataset.expectedUsage = r.avg;
     $('resMin').textContent = mesoText(r.min);
@@ -525,25 +603,31 @@
       ? '평균은 대박의 ' + (r.avg / r.min).toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + '배'
       : '';
 
-    const body = r.parts.map(p =>
-      '<tr><td>' + esc(p.label) + '</td>' +
-      '<td class="strong">' + mesoText(p.min) + '</td>' +
-      '<td class="strong">' + mesoText(p.avg) + '</td>' +
-      '<td class="ic-note">' + esc(detailOf(p)) + '</td></tr>').join('');
-    $('breakdown').innerHTML = '<table class="data-table">' +
-      '<thead><tr><th>단계</th><th>최소</th><th>평균</th><th>내용</th></tr></thead>' +
-      '<tbody>' + (body || '<tr><td colspan="4">값을 넣으면 계산합니다.</td></tr>') + '</tbody></table>';
+    const icons = { base: '📦', flame: '🔥', star: '⭐', pot: '🎲', addi: '✨' };
+    $('breakdown').innerHTML = r.parts.length ? '<div class="ic-cost-cards">' + r.parts.map(p => {
+      const facts = p.kind === 'base' ? ['장비 구입 비용']
+        : p.kind === 'flame' ? ['성공 확률 ' + pctText(p.data.p), '평균 ' + fmt(p.data.tries) + '회']
+        : p.kind === 'star' ? [state.star.start + '성 → ' + state.star.goal + '성', '평균 파괴 ' + p.data.destroys.toFixed(2) + '회', '평균 ' + fmt(p.data.tries) + '회']
+        : [...p.data.steps.map(s => s.label + ' · 평균 ' + fmt(s.tries) + '회'),
+          ...(p.data.opt ? ['옵션 확률 ' + pctText(p.data.opt.p), '옵션 평균 ' + fmt(p.data.opt.tries) + '회'] : [])];
+      return '<article class="ic-cost-card" data-cost-stage="' + p.kind + '">' +
+        '<h4><span aria-hidden="true">' + icons[p.kind] + '</span> ' + esc(p.label) + '</h4>' +
+        '<dl class="ic-cost-values"><div class="ic-cost-average"><dt>평균 비용</dt><dd>' +
+        (Number.isFinite(p.avg) ? mesoText(p.avg) + '<small> 메소</small>' : '달성 불가') + '</dd></div>' +
+        '<div class="ic-cost-minimum"><dt>최소 비용</dt><dd>' + mesoText(p.min) + ' 메소</dd></div></dl>' +
+        '<div class="ic-option-badges">' + facts.map(f => '<span class="ic-option-badge">' + esc(f) + '</span>').join('') + '</div></article>';
+    }).join('') + '</div>' : '<p class="ic-empty">계산에 포함할 단계와 목표를 설정해 주세요.</p>';
 
     $('stageDetail').innerHTML = [flameDetail(r.flame), starDetail(r.star), potDetail(r.pot), potDetail(r.addi)]
       .filter(Boolean).join('');
   }
 
-  function renderItemPreview() {
+  function renderItemPreview(result) {
     const badge = (text, kind = '') => '<span class="ic-option-badge ' + kind + '">' + esc(text) + '</span>';
     const part = partOf(state.part);
     const descriptions = {
       flame: state.flameConds.map(c => c.kind === 'grade' ? '주스탯 ' + c.min + '급 이상'
-        : flameLabel(F.BY_ID[c.id]) + ' ' + (8 - Number(c.minTier)) + '추 이상'),
+        : flameLabel(F.BY_ID[c.id]) + ' ' + (8 - Number(c.minTier)) + '추 이상' + (flameValue(F.BY_ID[c.id], c.minTier) !== null ? ' (' + flameValueText(F.BY_ID[c.id], c.minTier) + ')' : '')),
       star: [state.star.start + '성 → ' + state.star.goal + '성']
     };
     for (const key of ['pot', 'addi']) {
@@ -552,6 +636,7 @@
         potLabel(r.key) + (r.any && r.key === MAIN_STAT_KEY ? ' (아무 스탯)' : '') + ' ' + r.min + keyUnit(r.key) + ' 이상'))
         .filter(group => group.length);
       descriptions[key] = [RANKS[cur.from] + ' → ' + RANKS[cur.to]];
+      if (state.miracle[key]) descriptions[key].push('미라클 타임에 작업');
       groups.forEach((group, i) => {
         if (i) descriptions[key].push('또는');
         group.forEach((text, j) => { if (j) descriptions[key].push('그리고'); descriptions[key].push(text); });
@@ -563,12 +648,14 @@
     for (const key of Object.keys(titles)) {
       const available = key === 'flame' ? !!part.flame : key === 'star' ? part.star !== false : true;
       const items = descriptions[key].length ? descriptions[key] : ['목표 미설정'];
-      const markup = (state.on[key] ? '' : badge('비용 제외', 'excluded')) + items.map(text =>
+      const excluded = key === 'flame' ? result.flameExcluded : (result[key]?.excluded || []);
+      const markup = (state.on[key] ? '' : badge('비용 제외', 'excluded')) +
+        (excluded.length ? badge('달성 불가 목표 ' + excluded.length + '개 제외', 'excluded') : '') + items.map(text =>
         badge(text, text === '또는' || text === '그리고' ? 'connector' : '')).join('');
       $(key + 'Panel').dataset.optionSummary = markup;
       if (available) cards.push('<div class="ic-preview-stage"><strong>' + titles[key] + '</strong><div class="ic-option-badges">' + markup + '</div></div>');
     }
-    $('itemPreview').innerHTML = '<p class="ic-preview-name">Lv.' + state.level + ' · ' + esc(part.short || part.key) + '</p>' + cards.join('');
+    $('itemPreview').innerHTML = '<p class="ic-preview-name">Lv.' + state.level + ' · ' + esc(selectedWeapon()?.name || part.short || part.key) + '</p>' + cards.join('');
     if (document.dispatchEvent) document.dispatchEvent(new Event('item-craft-updated'));
   }
 
@@ -587,7 +674,7 @@
       ? '주스탯 환산 ' + c.min + '급 이상'
       : flameLabel(F.BY_ID[c.id]) + (F.BY_ID[c.id].unit || '') + ' ' + c.minTier + '단계 이상').join(' + ');
     return '<div class="ic-card"><h3>🔥 추가옵션</h3>' +
-      '<p class="ic-note">' + esc(F.FLAMES[state.flame].name) + ' · ' + esc(conds) + '</p>' +
+      '<p class="ic-note">' + esc(F.FLAMES.mesoReset.name) + ' · ' + esc(conds) + '</p>' +
       '<p class="ic-big">' + pctText(f.p) + '<small>한 번에 성공할 확률</small></p>' +
       '<p class="ic-note">평균 ' + fmt(f.tries) + '개 · ' +
       (f.price ? mesoText(f.avg) + ' 메소 (1회 ' + fmt(f.price) + ')' : '불꽃은 메소가 들지 않습니다') + '</p></div>';
@@ -617,6 +704,8 @@
 
   function clampState() {
     state.level = Math.min(250, Math.max(1, Math.round(Number(state.level) || 1)));
+    if (!W.items.some(w => w.id === state.weapon)) state.weapon = '';
+    state.weaponSeries = W.seriesForLevel(state.level, state.weaponSeries);
     if (state.part === '엠블렘') {
       const levels = Array.from({ length: 250 }, (_, i) => i + 1).filter(lv =>
         Object.entries(GOAL_RANKS).every(([short, ranks]) => ranks.every(rank =>
@@ -633,7 +722,7 @@
       if (previous) previous.minTier = Math.max(previous.minTier, c.minTier);
       else normalized.push(c);
     }
-    state.flameConds = normalized.slice(0, MAX_GOALS);
+    state.flameConds = normalized.filter(c => c.kind === 'grade' || F.BY_ID[c.id]).slice(0, MAX_FLAME_GOALS);
     [['pot', state.pot], ['addi', state.addi]].forEach(([short, c]) => {
       if (!goalsFor(short).includes(c.to)) c.to = 3;
       const froms = fromsFor(short);
@@ -663,6 +752,7 @@
   // 목표 수치를 고칠 때는 입력칸이 포커스를 잃지 않도록 결과만 다시 그린다.
   // 대신 그 줄의 수치 칩만 손으로 켜고 끈다.
   function refreshOutputs() {
+    renderFlameTotal();
     const r = compute();
     renderResult(r);
     renderSafeguard(r.star);
@@ -676,7 +766,7 @@
 
   document.addEventListener('click', e => {
     const t = e.target.closest('button');
-    if (!t) return;
+    if (!t || t.disabled) return;
     if (t.id === 'resetAll') {
       try { localStorage.removeItem(STORE_KEY); } catch (err) {}
       location.reload();
@@ -684,15 +774,19 @@
     }
     const d = t.dataset;
     if (d.levelStep) state.level += Number(d.levelStep);
-    else if (d.flame) state.flame = d.flame;
-    else if (d.addflame) { if (state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'opt', id: d.addflame, minTier: 6 }); }
-    else if (d.addgrade) { if (state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'grade', min: 0 }); }
+    else if (d.flameSeries) {
+      const series = W.series.find(s => s.id === d.flameSeries);
+      if (!series) return;
+      state.weaponSeries = series.id; state.level = series.level;
+    }
+    else if (d.addflame) { if (state.flameConds.length < MAX_FLAME_GOALS && !state.flameConds.some(c => c.id === d.addflame)) state.flameConds.push({ kind: 'opt', id: d.addflame, minTier: 6 }); }
+    else if (d.addgrade) { if (state.flameConds.length < MAX_FLAME_GOALS && !state.flameConds.some(c => c.kind === 'grade')) state.flameConds.push({ kind: 'grade', min: 100 }); }
     else if (d.delcond !== undefined) state.flameConds.splice(Number(d.delcond), 1);
     else if (d.tier !== undefined) state.flameConds[Number(d.cond)].minTier = Number(d.tier);
     else if (d.mvp !== undefined) state.star.mvp = Number(d.mvp);
     else if (d.sf) state.star[d.sf] = !state.star[d.sf];
     else if (d.shining) { const on = !SHINING.every(k => state.star[k]); SHINING.forEach(k => { state.star[k] = on; }); }
-    else if (d.miracle) state.miracle = !state.miracle;
+    else if (d.miracle === 'pot' || d.miracle === 'addi') state.miracle[d.miracle] = !state.miracle[d.miracle];
     else if (d.grade) { const c = cfgOf(d.grade); c.from = Number(d.i); if (c.to < c.from) c.to = 3; }
     else if (d.goal) { const c = cfgOf(d.goal); c.to = Number(d.i); if (c.from > c.to) c.from = c.to; }
     else if (d.addSet) {
@@ -762,6 +856,12 @@
   document.addEventListener('change', e => {
     if (e.target.id && e.target.id.startsWith('on-')) {
       state.on[e.target.id.slice(3)] = e.target.checked;
+      refresh();
+    }
+    else if (e.target.id === 'flameWeapon') { state.weapon = e.target.value; refresh(); }
+    else if (e.target.dataset?.required !== undefined) {
+      const allowed = availableFlameTiers();
+      state.flameConds[Number(e.target.dataset.required)].minTier = Math.max(Math.min(...allowed), Math.min(Math.max(...allowed), Math.ceil(Number(e.target.value) || Math.min(...allowed))));
       refresh();
     }
     else if (e.target.id === 'part') { state.part = e.target.value; state.flameConds = defaultFlameConds(state.part); refresh(); }

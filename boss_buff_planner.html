@@ -13,6 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>보스 버프 동선 계산기</title>
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="nexon_characters.css" />
 <style>
   .setting-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; }
   .setting { display:flex; flex-direction:column; gap:6px; }
@@ -27,6 +28,15 @@
   .tool-btn { background:none; border:1px solid var(--border); color:var(--text-dim); font-size:0.8rem; font-weight:700; padding:7px 12px; border-radius:999px; cursor:pointer; white-space:nowrap; }
   .tool-btn:hover { border-color:var(--accent); color:var(--text); }
   .tool-btn.on { background:var(--accent-strong); border-color:transparent; color:#0b0d12; }
+  .character-import-card.has-profile { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:22px; align-items:stretch; }
+  .character-import-main { min-width:0; }
+  .buff-character-showcase { position:relative; min-height:260px; overflow:hidden; border:1px solid rgba(132,176,255,.58); border-radius:16px; background:radial-gradient(circle at 50% 54%,rgba(106,167,255,.32),transparent 44%),linear-gradient(155deg,#182a4b 0%,#111927 58%,#0c111b 100%); box-shadow:inset 0 0 38px rgba(87,142,255,.12),0 14px 32px rgba(0,0,0,.22); }
+  .buff-character-showcase[hidden] { display:none; }
+  .buff-character-showcase::before { content:""; position:absolute; inset:0; background:linear-gradient(115deg,transparent 25%,rgba(255,255,255,.07) 47%,transparent 62%); pointer-events:none; }
+  .buff-character-showcase img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; image-rendering:pixelated; transform:scale(2.35); transform-origin:50% 55%; }
+  .buff-character-showcase-info { position:absolute; z-index:1; left:12px; right:12px; bottom:12px; padding:10px 12px; border:1px solid rgba(142,184,255,.35); border-radius:11px; background:rgba(8,13,23,.82); box-shadow:0 8px 24px rgba(0,0,0,.28); backdrop-filter:blur(8px); }
+  .buff-character-showcase-name { display:block; overflow:hidden; color:#fff; font-size:1.1rem; font-weight:900; text-overflow:ellipsis; white-space:nowrap; }
+  .buff-character-showcase-meta { display:block; margin-top:3px; overflow:hidden; color:#9cc2ff; font-size:.72rem; font-weight:750; text-overflow:ellipsis; white-space:nowrap; }
   .full-runs { display:inline-flex; align-items:center; gap:5px; font-size:0.8rem; color:var(--text-dim); }
   .full-runs input { width:46px; padding:6px 6px; border-radius:7px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.82rem; text-align:center; }
   .tag { font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:999px; }
@@ -101,6 +111,10 @@
     .boss-add .boss-add-name { grid-column:1 / -1; }
     .boss-add #addBoss { width:100%; }
     .boss-list-actions #resetBtn { margin-left:0; }
+  }
+  @media (max-width:760px) {
+    .character-import-card.has-profile { grid-template-columns:minmax(0,1fr); }
+    .buff-character-showcase { min-height:250px; }
   }
   .step-no { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#2a2e38; color:var(--text-dim); font-size:0.68rem; font-weight:800; flex:none; }
   .pack-head { margin-bottom:4px; }
@@ -228,15 +242,25 @@
         <div data-ux-help="배율·이동·여유 시간"><p class="note">배율 200%면 그 절반(10분), 400%면 5분으로 계산합니다. 배율 대신 오른쪽 '분' 칸에 실제 클리어 시간을 바로 적어도 됩니다. 이동 시간은 한 버프 안에서 보스를 옮길 때마다 더해집니다(3마리면 2번). 여유 시간은 모든 보스의 처치 시간을 그 비율만큼 늘려 잡습니다(10%면 10분 → 11분).</p></div>
       </section>
 
-      <section class="card">
-        <h2>캐릭터 불러오기</h2>
-        <p class="note api-key-state" id="apiKeyState" style="margin:-4px 0 10px"></p>
-        <div class="list-tools">
-          <input type="text" id="charName" placeholder="캐릭터 이름" maxlength="20" autocomplete="off">
-          <button type="button" class="tool-btn" id="fetchBtn">보스 불러오기</button>
+      <section class="card character-import-card" id="characterImportCard">
+        <div class="character-import-main">
+          <h2>캐릭터 불러오기</h2>
+          <p class="note api-key-state" id="apiKeyState" style="margin:-4px 0 10px"></p>
+          <div id="buffCharacterPicker"></div>
+          <div class="list-tools">
+            <input type="text" id="charName" placeholder="다른 캐릭터 이름" maxlength="20" autocomplete="off" hidden>
+            <button type="button" class="tool-btn" id="fetchBtn">보스 불러오기</button>
+          </div>
+          <p class="note fetch-status" id="fetchStatus"></p>
+          <p class="note">넥슨 스케줄러에 등록된 주간·월간 보스를 완료 여부와 관계없이 모두 가져옵니다. 완료한 보스는 목록의 ‘완료한 보스 제외하기’를 켜면 동선에서 제외됩니다. 배율은 이름이 같으면 쓰던 값을 유지합니다.</p>
         </div>
-        <p class="note fetch-status" id="fetchStatus"></p>
-        <p class="note">넥슨 스케줄러에 등록된 주간·월간 보스를 완료 여부와 관계없이 모두 가져옵니다. 완료한 보스는 목록의 ‘완료한 보스 제외하기’를 켜면 동선에서 제외됩니다. 배율은 이름이 같으면 쓰던 값을 유지합니다.</p>
+        <aside class="buff-character-showcase" id="buffCharacterShowcase" aria-label="불러온 캐릭터 외형" hidden>
+          <img id="buffCharacterShowcaseImage" alt="">
+          <div class="buff-character-showcase-info">
+            <strong class="buff-character-showcase-name" id="buffCharacterShowcaseName"></strong>
+            <span class="buff-character-showcase-meta" id="buffCharacterShowcaseMeta"></span>
+          </div>
+        </aside>
       </section>
 
       <section class="card">
@@ -290,6 +314,7 @@
 </div>
 <script src="site_nav.js"></script>
 <script src="nexon_key.js"></script>
+<script src="nexon_characters.js"></script>
 <script src="boss_buff_planner.js"></script>
 </body>
 </html>

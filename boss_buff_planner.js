@@ -521,6 +521,13 @@
   var fetchBtn = document.getElementById('fetchBtn');
   var fetchStatus = document.getElementById('fetchStatus');
   var keyState = document.getElementById('apiKeyState');
+  var characterImportCard = document.getElementById('characterImportCard');
+  var characterShowcase = document.getElementById('buffCharacterShowcase');
+  var characterShowcaseImage = document.getElementById('buffCharacterShowcaseImage');
+  var characterShowcaseName = document.getElementById('buffCharacterShowcaseName');
+  var characterShowcaseMeta = document.getElementById('buffCharacterShowcaseMeta');
+
+  if (window.NexonCharacters) NexonCharacters.mount({ host: '#buffCharacterPicker', input: charInput });
 
   function setStatus(msg, kind) {
     fetchStatus.textContent = msg || '';
@@ -561,6 +568,38 @@
   }
   function trueFlag(v) { return v === true || String(v).toLowerCase() === 'true'; }
 
+  function normalizeCharacterImage(value) {
+    var image = typeof value === 'string' ? value.trim() : '';
+    return /^https:\/\/open\.api\.nexon\.com\/static\/maplestory\/character\/look\/[A-Za-z0-9]+(?:\?[^\s"'<>]*)?$/.test(image) ? image : '';
+  }
+  function normalizeCharacterProfile(raw, fallbackName) {
+    if (!raw) return null;
+    var image = normalizeCharacterImage(raw.characterImage || raw.character_image);
+    var name = String(raw.name || raw.character_name || fallbackName || '').trim().slice(0, 20);
+    if (!image || !name) return null;
+    return {
+      name: name,
+      worldName: String(raw.worldName || raw.world_name || '').trim(),
+      characterClass: String(raw.characterClass || raw.character_class || '').trim(),
+      characterLevel: Number(raw.characterLevel || raw.character_level) || 0,
+      characterImage: image
+    };
+  }
+  function renderCharacterProfile(raw) {
+    var profile = normalizeCharacterProfile(raw);
+    characterShowcase.hidden = !profile;
+    characterImportCard.classList.toggle('has-profile', !!profile);
+    if (!profile) return;
+    characterShowcaseImage.src = profile.characterImage;
+    characterShowcaseImage.alt = profile.name + ' 캐릭터 외형';
+    characterShowcaseName.textContent = profile.name;
+    var details = [];
+    if (profile.characterLevel) details.push('Lv.' + profile.characterLevel);
+    if (profile.worldName) details.push(profile.worldName);
+    if (profile.characterClass) details.push(profile.characterClass);
+    characterShowcaseMeta.textContent = details.join(' · ');
+  }
+
   // 완료 여부와 무관하게 모두 선택하고, 완료 상태는 제외 토글에서만 사용한다.
   function bossesFromScheduler(data) {
     var prevMult = Object.create(null), prevRice = Object.create(null);
@@ -596,14 +635,22 @@
     if (!window.NexonKey || !NexonKey.has()) { setStatus('먼저 홈에서 넥슨 오픈 API 키를 등록하세요.', 'err'); return; }
     fetchBtn.disabled = true;
     setStatus('불러오는 중…');
-    apiGet('/id', { character_name: name })
+    renderCharacterProfile(null);
+    var selectedOcid = charInput.dataset.accountOcid || '';
+    (selectedOcid ? Promise.resolve({ ocid:selectedOcid }) : apiGet('/id', { character_name: name }))
       .then(null, function (e) { e.stage = 'id'; throw e; })
       .then(function (r) {
         if (!r || !r.ocid) throw new Error('캐릭터 식별자(OCID)를 받지 못했습니다.');
-        return apiGet('/scheduler/character-state', { ocid: r.ocid })
-          .then(null, function (e) { e.stage = 'scheduler'; throw e; });
+        return Promise.all([
+          apiGet('/scheduler/character-state', { ocid: r.ocid })
+            .then(null, function (e) { e.stage = 'scheduler'; throw e; }),
+          apiGet('/character/basic', { ocid: r.ocid }).then(null, function () { return null; })
+        ]);
       })
-      .then(function (data) {
+      .then(function (results) {
+        var data = results[0];
+        var characterProfile = normalizeCharacterProfile(results[1], name);
+        renderCharacterProfile(characterProfile);
         var savedProfile = profiles.find(function(p){ return p.name === name; });
         if (savedProfile) state = loadState(savedProfile.state);
         var parsed = bossesFromScheduler(data);
@@ -611,7 +658,7 @@
         state.bosses = parsed.bosses;
         syncProfileInputs();
         activeProfile = name;
-        rememberProfile(name);
+        rememberProfile(name, characterProfile);
         saveState(); renderAll();
         setStatus('보스 ' + parsed.bosses.length + '마리를 불러왔습니다.' +
           (parsed.skipped.length ? ' 아이콘 없는 보스: ' + parsed.skipped.join(', ') : ''), 'ok');
@@ -632,10 +679,11 @@
     moveInput.value = trim(state.moveMin); slackInput.value = trim(state.slackPct);
     document.dispatchEvent(new Event('buff-profile-loaded'));
   }
-  function rememberProfile(name) {
+  function rememberProfile(name, characterProfile) {
     var p = profiles.find(function(p){ return p.name === name; });
     if (!p) { p = {name:name}; profiles.push(p); }
     p.state = JSON.parse(JSON.stringify(state));
+    if (characterProfile) p.character = normalizeCharacterProfile(characterProfile, name);
     activeProfile = name;
     try { localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); }
     catch(e) { setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err'); }
@@ -649,6 +697,7 @@
       b.textContent = p.name; b.setAttribute('aria-pressed', String(p.name === activeProfile));
       b.addEventListener('click', function(){
         activeProfile = p.name; charInput.value = p.name; state = loadState(p.state);
+        renderCharacterProfile(p.character);
         syncProfileInputs(); saveState(); renderAll(); renderProfiles();
         setStatus('저장한 배율과 보스 선택을 불러왔습니다. 완료한 보스를 제외하려면 보스 불러오기로 최신 완료 상태를 갱신하세요.', 'ok');
       });
@@ -656,7 +705,7 @@
       del.setAttribute('aria-label', p.name + ' 저장 삭제');
       del.addEventListener('click', function(){
         profiles = profiles.filter(function(x){ return x !== p; });
-        if(activeProfile === p.name) activeProfile = '';
+        if(activeProfile === p.name) { activeProfile = ''; renderCharacterProfile(null); }
         try { localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); } catch(e) {}
         renderProfiles();
       });
@@ -664,6 +713,8 @@
     });
   }
   renderProfiles();
+  var initialProfile = profiles.find(function(p){ return p.name === charInput.value; });
+  if (initialProfile) { activeProfile = initialProfile.name; renderCharacterProfile(initialProfile.character); renderProfiles(); }
   refreshKeyState();
 
   renderAll();

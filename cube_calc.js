@@ -1,10 +1,10 @@
 const RANKS = ['레어', '에픽', '유니크', '레전드리'];
 const RANK_COLORS = ['#7cd4ff', '#b58cff', '#ffa94d', '#6bd98a'];
 const CUBE_ICON = {
-  potentialMeso:['잠재.png'], black:['블랙.webp'], red:['레드.webp'], meisterMax:['명장.webp','골드.webp'], meister:['장인.webp','실버.webp'], suspicious:['수상한.png'],
-  addReset:['에디잠재.png'], addWhite:['에디큐브.webp','화이트에디.webp'], addSuspicious:['수상한에디.webp','브론즈.webp']
+  potentialMeso:['잠재.webp'], black:['블랙.webp'], red:['레드.webp'], meisterMax:['명장.webp','골드.webp'], meister:['장인.webp','실버.webp'], suspicious:['수상한.webp'],
+  addReset:['에디잠재.webp'], addWhite:['에디큐브.webp','화이트에디.webp'], addSuspicious:['수상한에디.webp','브론즈.webp']
 };
-function iconImg(files){ return files.map(f=>`<img src="icons/Cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
+function iconImg(files){ return files.map(f=>`<img src="icons/cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
 // 화면에 쓰는 이름·분류. 확률과 천장은 cube_core.js의 CUBE_GRADE를 그대로 가져온다.
 const CUBES = {
   potentialMeso:{name:'잠재능력 재설정 (메소)', kind:'normal', official:'potential', ...CUBE_GRADE.potentialMeso},

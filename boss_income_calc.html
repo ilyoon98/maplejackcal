@@ -13,6 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>보스 수익 정산 계산기</title>
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="nexon_characters.css" />
 <style>
   :root{ --surface-2:#1d212b; }
   body{ padding-bottom:24px; }
@@ -20,6 +21,7 @@
   /* character chips */
   .char-chip-list{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-top:20px; }
   .char-chip{
+    position:relative;
     display:grid;
     grid-template-columns:1fr auto;
     align-content:start;
@@ -36,9 +38,55 @@
   }
   .char-chip:hover{ border-color:var(--accent); color:var(--text); }
   .char-chip.active{ border-color:var(--accent-strong); background:#1c2740; color:var(--text); }
+  .chip-identity{ display:flex; align-items:center; gap:11px; min-width:0; }
+  .chip-avatar{ position:relative; width:48px; height:48px; flex:0 0 48px; }
+  .chip-avatar-visual{ display:grid; place-items:center; width:48px; height:48px; overflow:hidden; border:1px solid #3a465b; border-radius:13px; background:radial-gradient(circle at 50% 30%,#293b5f 0,#182238 58%,#10151f 100%); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+  .chip-avatar-visual > *{ grid-area:1/1; }
+  .chip-avatar-image{ width:100%; height:100%; object-fit:contain; object-position:center; transform:scale(3.2); transform-origin:50% 45%; filter:drop-shadow(0 2px 2px rgba(0,0,0,.42)); }
+  .chip-avatar-fallback{ width:32px; height:32px; fill:#77859b; opacity:.72; }
+  .chip-avatar.has-image .chip-avatar-fallback{ display:none; }
+  .chip-avatar .chip-world-mark{ position:absolute; right:-5px; bottom:-4px; width:22px; height:22px; padding:2px; border:2px solid #1c2740; border-radius:7px; background:#111722; box-sizing:border-box; }
+  .chip-avatar .chip-world-mark:empty{ display:none; }
+  .chip-avatar .chip-world-icon{ width:16px; height:16px; }
+  .chip-world-mark{ display:grid; place-items:center; width:28px; height:28px; flex:0 0 28px; }
+  .chip-world-icon{ width:28px; height:28px; object-fit:contain; }
+  .chip-profile-copy{ display:grid; gap:5px; min-width:0; }
+  .chip-profile-meta{ overflow:hidden; color:var(--text-dim); font-size:.68rem; font-weight:650; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
   .char-chip .chip-meso{ grid-column:1/-1; font-size:1.5rem; color:var(--accent); font-weight:800; font-variant-numeric:tabular-nums; }
   .char-chip .chip-earned{ color:var(--good); font-size:1rem; }
-  .char-chip .chip-name{ min-width:0; color:var(--text); font-size:1.15rem; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .char-chip .chip-name{ min-width:0; padding:2px 0; border:0; background:transparent; color:var(--text); font:inherit; font-size:1.15rem; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; cursor:text; }
+  .char-chip .chip-name:hover{ color:var(--accent); text-decoration:underline; text-underline-offset:3px; }
+  .chip-card-actions{ display:flex; align-items:center; justify-content:flex-end; gap:7px; }
+  .chip-reorder{
+    position:absolute; z-index:2; left:-15px; top:22px;
+    display:grid; place-items:center;
+    width:24px; height:32px; padding:0;
+    border:1px solid #3b4b65; border-right-color:#263654; border-radius:8px 0 0 8px;
+    background:#151c28; color:#8291aa;
+    box-shadow:-4px 4px 10px rgba(0,0,0,.2);
+    cursor:grab; touch-action:none;
+  }
+  .chip-reorder:hover{ border-color:var(--accent); background:#1c2a43; color:#9ac2ff; }
+  .chip-reorder:active{ cursor:grabbing; }
+  .chip-reorder svg{ width:12px; height:18px; fill:currentColor; pointer-events:none; }
+  .char-chip.is-reordering{ opacity:.68; border-color:var(--accent); }
+  .char-chip.is-reorder-target{ box-shadow:inset 0 0 0 2px var(--accent); }
+  .char-chip-drag-ghost{
+    position:fixed; z-index:9999; box-sizing:border-box; margin:0;
+    max-width:calc(100vw - 24px);
+    pointer-events:none; cursor:grabbing; opacity:.94;
+    border-color:var(--accent-strong); background:#1c2740;
+    box-shadow:0 24px 52px rgba(0,0,0,.52), 0 0 0 1px rgba(102,157,255,.32);
+    transform:translate3d(var(--drag-x, 0), var(--drag-y, 0), 0) rotate(.7deg) scale(1.015);
+    transform-origin:center; will-change:transform;
+  }
+  .api-link-badge{ display:inline-flex; align-items:center; min-height:24px; box-sizing:border-box; padding:3px 7px; border:1px solid #4d5b72; border-radius:999px; background:#171c25; color:var(--text-dim); font-size:.64rem; font-weight:850; white-space:nowrap; }
+  .api-link-badge.is-linked{ border-color:#3f77c9; background:rgba(76,141,255,.13); color:#8db9ff; }
+  .chip-rename{ grid-column:1/-1; display:grid; grid-template-columns:28px minmax(0,1fr) auto auto; align-items:center; gap:8px; min-height:42px; }
+  .chip-rename[hidden]{ display:none; }
+  .char-chip.is-renaming .chip-identity,.char-chip.is-renaming .chip-card-actions{ display:none; }
+  .chip-rename input{ min-width:0; height:36px; box-sizing:border-box; padding:7px 9px; border:1px solid var(--accent); border-radius:8px; background:#0d121b; color:var(--text); font:inherit; font-size:.84rem; font-weight:700; }
+  .chip-rename button{ min-height:36px; padding:6px 9px; border-radius:8px; font-size:.72rem; font-weight:800; }
   .char-chip .chip-del{
     width:32px; height:32px;
     border-radius:50%;
@@ -241,20 +289,21 @@
   .scheduler-name{ width:100%; min-width:0; height:40px; box-sizing:border-box; padding:8px 11px; border:1px solid #52617a; border-radius:9px; background:#0d121b; color:var(--text); font:inherit; font-weight:700; }
   .scheduler-name:focus{ outline:2px solid var(--accent); outline-offset:2px; }
   .scheduler-import .fetch-btn{ min-height:46px; padding:10px 16px; white-space:nowrap; font-weight:800; }
-  .scheduler-batch-refresh{ width:100%; margin-top:8px; min-height:40px; }
+  .scheduler-batch-refresh{ display:grid; place-items:center; flex:0 0 auto; width:36px; height:36px; margin:0; padding:0; border-radius:50%; }
+  .scheduler-batch-refresh svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .scheduler-batch-refresh.is-refreshing svg{ animation:api-refresh-spin .8s linear infinite; }
+  @keyframes api-refresh-spin{ to{ transform:rotate(360deg); } }
   .api-key-state{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; color:var(--text-dim); font-size:.78rem; }
   .api-key-state a{ color:var(--accent); font-weight:700; }
   .fetch-status.ok{ color:var(--good); }
   .fetch-status.err{ color:var(--bad); }
-  .sync-meta{ grid-column:1/-1; display:flex; align-items:center; gap:6px; color:var(--text-dim); font-size:.72rem; font-weight:600; }
-  .sync-meta::before{ content:'API'; padding:2px 5px; border-radius:4px; background:rgba(76,141,255,.16); color:var(--accent); font-size:.62rem; font-weight:900; }
   @media(min-width:1101px){
     .summary-inner{ grid-template-columns:2fr 2fr 2fr 1fr; margin-bottom:0; }
     .summary-stat.primary .v{ font-size:clamp(1.7rem,2.1vw,2.5rem); }
   }
   @media(max-width:1100px){
     .workspace-layout{ grid-template-columns:minmax(0,1fr); gap:0; }
-    .characters-panel .char-chip-list{ display:flex; overflow-x:auto; padding:3px 3px 12px; scroll-snap-type:x proximity; }
+    .characters-panel .char-chip-list{ display:flex; overflow-x:auto; padding:3px 3px 12px 18px; scroll-snap-type:x proximity; }
     .characters-panel .char-chip{ flex:0 0 min(310px,100%); scroll-snap-align:start; }
   }
   @media(max-width:720px){
@@ -270,10 +319,10 @@
     .row-preview{ width:auto; }
   }
   .scheduler-label{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-  .character-add-actions{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .character-add-actions{ display:grid; grid-template-columns:1fr; gap:8px; }
   .character-add-actions button{ width:100%; text-align:left; padding:11px 13px; border-radius:9px; font-size:.88rem; font-weight:800; }
   .character-add-actions button span{ display:block; margin-top:4px; font-size:.7rem; font-weight:500; opacity:.85; white-space:normal; }
-  .scheduler-batch-refresh{ margin-top:16px; background:transparent; color:var(--text-dim); font-size:.75rem; }
+  .scheduler-batch-refresh{ background:transparent; color:var(--text-dim); }
   .summary-stat.primary .v{ font-size:clamp(.95rem,7.4cqi,2rem); line-height:1.35; letter-spacing:-.04em; }
   .char-chip{ gap:10px; container-type:inline-size; }
   .char-chip .chip-meso{ white-space:nowrap; max-width:100%; overflow-x:auto; font-size:clamp(.9rem,7.3cqi,1.4rem); letter-spacing:-.025em; }
@@ -283,7 +332,7 @@
   .chip-boss img{ width:38px; max-width:38px; }
   .chip-boss.is-complete img{ border-color:var(--good); }
   .chip-complete{ position:absolute; bottom:0; left:0; font-size:.53rem; line-height:1.4; color:#83e2ad; font-weight:800; }
-  @media(min-width:721px) and (max-width:1100px){ .character-add-actions{ grid-template-columns:1fr 1fr; } }
+  @media(max-width:420px){ .api-link-badge{ display:none; } }
   /* 난이도 색상과 완료 상태는 서로 독립된 표시다. */
   .difficulty-easy{ --difficulty:#96999d; }
   .difficulty-normal{ --difficulty:#20acc0; }
@@ -329,9 +378,19 @@
   .weekly-values.is-complete > :first-child{ color:#62cea0; }
   .income-slash{ color:var(--text-dim); font-weight:400; }
   .summary-stat.monthly-summary .v, .char-chip .chip-monthly{ color:#d6b0ff; }
-  .chip-weekly{ grid-column:1 / -1; min-width:0; }
-  .income-caption{ display:block; color:var(--text-dim); font-size:.73rem; margin-bottom:6px; }
-  .chip-weekly .weekly-values{ font-size:clamp(.78rem,4.2cqi,1rem); }
+  .chip-weekly{ grid-column:1 / -1; display:grid; gap:7px; min-width:0; padding:2px 1px 1px; }
+  .chip-weekly-top{ display:flex; align-items:center; gap:6px; color:var(--text-dim); font-size:.75rem; font-weight:700; }
+  .chip-weekly-top strong{ color:var(--text); font-size:.82rem; font-variant-numeric:tabular-nums; }
+  .chip-weekly-check{ color:#62cea0; font-size:.85rem; font-weight:900; }
+  .chip-weekly-money{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 12px; min-width:0; overflow:visible; font-size:clamp(.72rem,3.7cqi,.92rem); font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.025em; }
+  .chip-weekly-money strong{ font-size:1em; font-weight:850; }
+  .chip-weekly-earned{ color:var(--text-dim); white-space:nowrap; }
+  .chip-weekly-earned strong{ color:#62cea0; }
+  .chip-weekly-expected{ color:var(--text-dim); white-space:nowrap; }
+  .chip-weekly-expected strong{ color:var(--accent); }
+  .chip-weekly-progress{ height:4px; overflow:hidden; border-radius:999px; background:#283440; }
+  .chip-weekly-progress > span{ display:block; height:100%; border-radius:inherit; background:#4c8dff; }
+  .chip-weekly.is-complete .chip-weekly-progress > span{ background:#62cea0; }
   .weekly-progress{ height:5px; border-radius:5px; background:#283440; overflow:hidden; margin-top:5px; }
   .weekly-progress > span{ display:block; height:100%; background:#62cea0; }
   .weekly-status{ grid-column:1 / -1; font-size:.78rem; color:var(--text-dim); }
@@ -354,18 +413,13 @@
     .boss-row .diff-chip-row{ grid-column:1 / -1; grid-row:2; }
     .boss-row .row-preview{ grid-column:1 / -1; grid-row:3; }
   }
-  @media(prefers-reduced-motion:reduce){ .boss-row{ transition:none; } }
+  @media(prefers-reduced-motion:reduce){ .boss-row{ transition:none; } .scheduler-batch-refresh.is-refreshing svg{ animation:none; } .char-chip-drag-ghost{ transform:translate3d(var(--drag-x, 0), var(--drag-y, 0), 0); } }
   /* 왼쪽 패널은 추가 조작과 핵심 캐릭터 정보만 짧게 표시한다. */
   .scheduler-import .character-add-actions button{ min-height:36px; padding:8px 6px; font-size:.78rem; text-align:center; }
-  .scheduler-import .scheduler-batch-refresh{ min-height:32px; margin-top:8px; padding:6px 8px; }
   .scheduler-import .api-key-state{ margin-top:8px; font-size:.72rem; }
   .scheduler-import .fetch-status{ margin:6px 0 0; font-size:.72rem; }
   .characters-panel .char-chip-list{ gap:10px; margin-top:12px; }
   .characters-panel .char-chip{ padding:14px; gap:8px; }
-  .characters-panel .weekly-clear{ height:42px; padding:7px 9px; gap:8px; }
-  .characters-panel .weekly-clear small{ display:none; }
-  .characters-panel .weekly-clear strong{ font-size:.76rem; }
-  .characters-panel .clear-emblem{ width:24px; height:24px; font-size:1rem; }
   .characters-panel .chip-bosses{ gap:5px 4px; }
   .characters-panel .chip-boss{ width:38px; }
   .characters-panel .chip-boss img{ width:38px; max-width:38px; }
@@ -483,18 +537,20 @@
   <div class="workspace-layout">
   <section class="card characters-panel">
     <div class="character-heading">
-    <h2>내 캐릭터</h2>
+      <h2>내 캐릭터</h2>
+      <button type="button" class="tool-btn scheduler-batch-refresh" id="schedulerRefreshAllBtn" aria-label="API 갱신" title="API 갱신">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg>
+      </button>
     </div>
     <div class="scheduler-import">
       <label class="scheduler-label" for="schedulerCharacterName">캐릭터 닉네임</label>
+      <div id="incomeCharacterPicker"></div>
       <div class="scheduler-import-row">
-        <input class="scheduler-name" id="schedulerCharacterName" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="닉네임 (직접 추가 시 생략 가능)">
+        <input class="scheduler-name" id="schedulerCharacterName" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="다른 캐릭터 닉네임" hidden>
         <div class="character-add-actions">
-          <button type="button" class="fetch-btn" id="schedulerFetchBtn" title="등록된 보스와 완료 상태를 가져옵니다">스케줄러로 추가</button>
-          <button type="button" class="tool-btn" id="manualCharacterBtn" title="닉네임과 API 없이도 추가할 수 있습니다">직접 추가</button>
+          <button type="button" class="fetch-btn" id="schedulerFetchBtn" title="API 조회가 안 되면 연동 없이 추가합니다">스케줄러로 추가</button>
         </div>
       </div>
-      <button type="button" class="tool-btn scheduler-batch-refresh" id="schedulerRefreshAllBtn">전체 완료 상태 새로고침</button>
       <div class="api-key-state" id="schedulerApiKeyState"></div>
       <p class="note fetch-status" id="schedulerFetchStatus" role="status" aria-live="polite"></p>
     </div>
@@ -523,6 +579,7 @@
 
 <script src="site_nav.js"></script>
 <script src="nexon_key.js"></script>
+<script src="nexon_characters.js"></script>
 <script src="boss_db.js"></script>
 <script>
 (function(){
@@ -718,6 +775,10 @@
   function escapeHtml(value){
     return String(value).replace(/[&<>"']/g, function(c){ return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]; });
   }
+  function normalizeCharacterImage(value){
+    var image = typeof value === 'string' ? value.trim() : '';
+    return /^https:\/\/open\.api\.nexon\.com\/static\/maplestory\/character\/look\/[A-Za-z0-9]+(?:\?[^\s"'<>]*)?$/.test(image) ? image : '';
+  }
 
   // characters: [{ name, bosses: { [bossName]: { diffIdx, party } } }]
   // bosses is a map keyed by boss name — a boss can only be cleared at one
@@ -752,6 +813,7 @@
       worldName: raw && typeof raw.worldName === 'string' ? raw.worldName : '',
       characterClass: raw && typeof raw.characterClass === 'string' ? raw.characterClass : '',
       characterLevel: raw && Number.isFinite(+raw.characterLevel) ? +raw.characterLevel : 0,
+      characterImage: normalizeCharacterImage(raw && (raw.characterImage || raw.character_image)),
       lastSyncedAt: raw && typeof raw.lastSyncedAt === 'string' ? raw.lastSyncedAt : ''
     };
   }
@@ -848,6 +910,7 @@
   var schedulerRefreshAllBtn = document.getElementById('schedulerRefreshAllBtn');
   var schedulerFetchStatus = document.getElementById('schedulerFetchStatus');
   var schedulerApiKeyState = document.getElementById('schedulerApiKeyState');
+  if (window.NexonCharacters) NexonCharacters.mount({ host:'#incomeCharacterPicker', input:schedulerCharacterName });
   var API_ERROR_MSG = {
     OPENAPI00001:'API 서버 오류입니다. 잠시 후 다시 시도하세요.',
     OPENAPI00002:'이 API 키로 조회할 수 없는 캐릭터입니다. 본인 계정의 캐릭터인지 확인하세요.',
@@ -896,10 +959,12 @@
     if (error && error.name === 'TypeError') return '네트워크 오류로 넥슨 API에 연결하지 못했습니다.';
     return '불러오지 못했습니다: ' + (error && error.message ? error.message : error);
   }
-  function applySchedulerCharacter(data, ocid, requestedName){
+  function applySchedulerCharacter(data, ocid, requestedName, replaceIdx){
     var parsed = parseSchedulerBosses(data);
     var name = String(data && data.character_name || requestedName).trim().slice(0,20);
-    var existingIdx = characters.findIndex(function(ch){ return (ocid && ch.ocid === ocid) || ch.name === name; });
+    var existingIdx = Number.isInteger(replaceIdx) && characters[replaceIdx]
+      ? replaceIdx
+      : characters.findIndex(function(ch){ return (ocid && ch.ocid === ocid) || ch.name === name; });
     var existing = existingIdx >= 0 ? characters[existingIdx] : null;
     Object.keys(parsed.bosses).forEach(function(bossName){
       if (existing && existing.bosses[bossName]) parsed.bosses[bossName].party = validParty(existing.bosses[bossName].party, bossName, parsed.bosses[bossName].diffIdx);
@@ -911,6 +976,7 @@
       worldName:String(data && data.world_name || ''),
       characterClass:String(data && data.character_class || ''),
       characterLevel:Number(data && data.character_level) || 0,
+      characterImage:String(data && data.character_image || ''),
       lastSyncedAt:new Date().toISOString()
     });
     if (existingIdx >= 0) characters[existingIdx] = character;
@@ -919,6 +985,35 @@
     saveState();
     renderAll();
     return { character:character, parsed:parsed };
+  }
+  function fetchSchedulerCharacter(name, knownOcid){
+    var stage = 'id';
+    return (knownOcid ? Promise.resolve({ ocid:knownOcid }) : apiGet('/id', { character_name:name }))
+      .then(function(result){
+        if (!result || !result.ocid) throw new Error('캐릭터 식별자(OCID)를 받지 못했습니다.');
+        stage = 'scheduler';
+        return Promise.all([
+          apiGet('/scheduler/character-state', { ocid:result.ocid }),
+          apiGet('/character/basic', { ocid:result.ocid }).catch(function(){ return null; })
+        ]).then(function(results){
+          return { data:Object.assign({}, results[1] || {}, results[0] || {}), ocid:result.ocid };
+        });
+      })
+      .catch(function(error){ error.stage = error.stage || stage; throw error; });
+  }
+  function addLocalCharacter(name){
+    var found = characters.findIndex(function(ch){ return ch.name === name; });
+    if (found >= 0){
+      activeIdx = found;
+      renderAll();
+      return { character:characters[found], existed:true };
+    }
+    var character = normalizeCharacter({ name:name, bosses:{} });
+    characters.push(character);
+    activeIdx = characters.length - 1;
+    saveState();
+    renderAll();
+    return { character:character, existed:false };
   }
   // 캐릭터 카드의 새로고침은 스케줄러에서 "완료" 상태만 읽는다.
   // 보스 종류·난이도·N빵 인원은 클라이언트에서 저장한 값을 절대 교체하지 않는다.
@@ -931,13 +1026,24 @@
           return result.ocid;
         }, function(error){ error.stage = 'id'; throw error; });
     return ocidPromise.then(function(ocid){
-      return apiGet('/scheduler/character-state', { ocid:ocid }).then(null, function(error){ error.stage = 'scheduler'; throw error; });
-    }).then(function(data){
+      return Promise.all([
+        apiGet('/scheduler/character-state', { ocid:ocid }).then(null, function(error){ error.stage = 'scheduler'; throw error; }),
+        apiGet('/character/basic', { ocid:ocid }).catch(function(){ return null; })
+      ]);
+    }).then(function(results){
+      var data = results[0];
+      var profile = results[1];
       var parsed = parseSchedulerBosses(data);
       Object.keys(character.bosses).forEach(function(bossName){
         var schedulerEntry = parsed.bosses[bossName];
         character.bosses[bossName].complete = !!(schedulerEntry && schedulerEntry.complete);
       });
+      if (profile){
+        character.worldName = String(profile.world_name || character.worldName || '');
+        character.characterClass = String(profile.character_class || character.characterClass || '');
+        character.characterLevel = Number(profile.character_level) || character.characterLevel || 0;
+        character.characterImage = normalizeCharacterImage(profile.character_image) || character.characterImage || '';
+      }
       character.lastSyncedAt = new Date().toISOString();
       saveState();
       renderAll();
@@ -955,11 +1061,12 @@
       setSchedulerStatus('완료 상태를 확인할 등록 보스가 없습니다.', 'err');
       return;
     }
-    var originalText = schedulerRefreshAllBtn.textContent;
     var completed = 0, failed = [];
     schedulerRefreshAllBtn.disabled = true;
-    schedulerRefreshAllBtn.textContent = '완료 상태 갱신 중…';
-    setSchedulerStatus('등록 보스가 있는 ' + targets.length + '개 캐릭터의 완료 상태를 갱신하는 중…');
+    schedulerRefreshAllBtn.classList.toggle('is-refreshing', true);
+    schedulerRefreshAllBtn.setAttribute('aria-busy', 'true');
+    schedulerRefreshAllBtn.title = 'API 갱신 중';
+    setSchedulerStatus('');
     var sequence = Promise.resolve();
     targets.forEach(function(character){
       sequence = sequence.then(function(){
@@ -970,35 +1077,53 @@
     });
     sequence.then(function(){
       if (failed.length){
-        setSchedulerStatus('완료 상태 갱신 ' + completed + '명 성공 · ' + failed.length + '명 실패 (' + failed.map(function(item){ return item.split(':')[0]; }).join(', ') + ')', 'err');
+        setSchedulerStatus('API 갱신 ' + completed + '명 성공 · ' + failed.length + '명 실패 (' + failed.map(function(item){ return item.split(':')[0]; }).join(', ') + ')', 'err');
       } else {
-        setSchedulerStatus('✓ ' + completed + '개 캐릭터의 완료 상태를 갱신했습니다. 보스·난이도·N빵 설정은 유지했습니다.', 'ok');
+        setSchedulerStatus('');
       }
     }).then(function(){
       schedulerRefreshAllBtn.disabled = false;
-      schedulerRefreshAllBtn.textContent = originalText;
+      schedulerRefreshAllBtn.classList.toggle('is-refreshing', false);
+      schedulerRefreshAllBtn.removeAttribute('aria-busy');
+      schedulerRefreshAllBtn.title = 'API 갱신';
     });
+  }
+  function autoRefreshCharacterCompletions(){
+    // 화면 진입 시에는 조회할 대상이 있을 때만 조용히 자동 갱신한다.
+    // API 키가 없거나 직접 추가한 캐릭터뿐인 경우 기존 화면 상태를 그대로 둔다.
+    if (!NexonKey.has()) return;
+    var hasSchedulerTargets = characters.some(function(character){
+      return character.ocid && Object.keys(character.bosses).length;
+    });
+    if (hasSchedulerTargets) refreshAllCharacterCompletions();
+  }
+  function hydrateMissingCharacterProfiles(){
+    if (!NexonKey.has()) return;
+    var targets = characters.filter(function(character){
+      return character.ocid && !character.characterImage && !Object.keys(character.bosses).length;
+    });
+    if (!targets.length) return;
+    Promise.all(targets.map(function(character){
+      return apiGet('/character/basic', { ocid:character.ocid }).then(function(profile){
+        character.worldName = String(profile && profile.world_name || character.worldName || '');
+        character.characterClass = String(profile && profile.character_class || character.characterClass || '');
+        character.characterLevel = Number(profile && profile.character_level) || character.characterLevel || 0;
+        character.characterImage = normalizeCharacterImage(profile && profile.character_image) || character.characterImage || '';
+      }).catch(function(){ return null; });
+    })).then(function(){ saveState(); renderAll(); });
   }
   schedulerFetchBtn.addEventListener('click', function(){
     var name = schedulerCharacterName.value.trim();
-    if (!NexonKey.has()){
-      refreshSchedulerKeyState();
-      setSchedulerStatus('홈에서 API 키를 먼저 등록하세요.', 'err');
-      return;
-    }
     if (!name){ setSchedulerStatus('캐릭터 닉네임을 입력하세요.', 'err'); schedulerCharacterName.focus(); return; }
     var originalHtml = schedulerFetchBtn.innerHTML;
-    var stage = 'id';
     schedulerFetchBtn.disabled = true;
     schedulerFetchBtn.textContent = '조회 중…';
-    setSchedulerStatus(name + '의 보스 스케줄러를 조회하는 중…');
-    apiGet('/id', { character_name:name })
-      .then(function(result){
-        if (!result || !result.ocid) throw new Error('캐릭터 식별자(OCID)를 받지 못했습니다.');
-        stage = 'scheduler';
-        setSchedulerStatus(name + ' 캐릭터 확인됨 · 본인 계정 스케줄러 조회 중…');
-        return apiGet('/scheduler/character-state', { ocid:result.ocid }).then(function(data){ return { data:data, ocid:result.ocid }; });
-      })
+    setSchedulerStatus(name + '의 API 연동 정보를 확인하는 중…');
+    var selectedOcid = schedulerCharacterName.dataset.accountOcid || '';
+    var request = NexonKey.has()
+      ? fetchSchedulerCharacter(name, selectedOcid)
+      : Promise.reject(Object.assign(new Error('API_KEY_REQUIRED'), { stage:'id' }));
+    request
       .then(function(result){
         var applied = applySchedulerCharacter(result.data, result.ocid, name);
         lsSet(LS_LAST_SCHEDULER_CHAR, name);
@@ -1009,27 +1134,18 @@
         if (applied.parsed.skipped.length) message += ' · 수익표에 없는 ' + applied.parsed.skipped.length + '개 제외';
         setSchedulerStatus(message, 'ok');
       })
-      .catch(function(error){ setSchedulerStatus(describeApiError(error, stage), 'err'); })
+      .catch(function(){
+        var added = addLocalCharacter(name);
+        lsSet(LS_LAST_SCHEDULER_CHAR, name);
+        setSchedulerStatus(added.existed
+          ? '이미 등록된 ' + name + ' 캐릭터를 선택했습니다.'
+          : '✓ ' + name + ' 캐릭터를 API 연동 없이 추가했습니다. 이름을 눌러 다시 연동할 수 있습니다.', 'ok');
+      })
       .then(function(){ schedulerFetchBtn.disabled = false; schedulerFetchBtn.innerHTML = originalHtml; });
   });
 
   schedulerRefreshAllBtn.addEventListener('click', refreshAllCharacterCompletions);
-  function nextCharacterName(){
-    var n = 1;
-    while (characters.some(function(ch){ return ch.name === '캐릭터 ' + n; })) n++;
-    return '캐릭터 ' + n;
-  }
-  document.getElementById('manualCharacterBtn').addEventListener('click', function(){
-    var name = schedulerCharacterName.value.trim();
-    if (!name) name = nextCharacterName();
-    var found = characters.findIndex(function(ch){ return ch.name === name; });
-    if (found >= 0) { activeIdx = found; renderAll(); setSchedulerStatus('이미 등록한 캐릭터를 선택했습니다.', 'ok'); return; }
-    characters.push(normalizeCharacter({ name:name, bosses:{} }));
-    activeIdx = characters.length - 1;
-    saveState(); renderAll();
-    setSchedulerStatus('캐릭터를 추가했습니다.', 'ok');
-  });
-  schedulerCharacterName.addEventListener('keydown', function(event){ if (event.key === 'Enter' && !event.isComposing) { if (NexonKey.has()) schedulerFetchBtn.click(); else document.getElementById('manualCharacterBtn').click(); } });
+  schedulerCharacterName.addEventListener('keydown', function(event){ if (event.key === 'Enter' && !event.isComposing) schedulerFetchBtn.click(); });
   schedulerCharacterName.value = lsGet(LS_LAST_SCHEDULER_CHAR);
   refreshSchedulerKeyState();
   window.addEventListener('storage', function(event){ if (event.key === NexonKey.STORAGE_KEY) refreshSchedulerKeyState(); });
@@ -1038,6 +1154,29 @@
   var charChipList = document.getElementById('charChipList');
   var bossPanel = document.getElementById('bossPanel');
   var bossPanelTitle = document.getElementById('bossPanelTitle');
+
+  function apiLinkBadgeHtml(character){
+    if (!character.ocid) return '<span class="api-link-badge" title="API 없이 저장된 캐릭터">API 미연동</span>';
+    var synced = character.lastSyncedAt ? new Date(character.lastSyncedAt) : null;
+    var syncedText = synced && !Number.isNaN(synced.getTime())
+      ? '최근 갱신 ' + synced.toLocaleString('ko-KR')
+      : '아직 갱신 전';
+    return '<span class="api-link-badge is-linked" title="' + escapeHtml('API 연동 · ' + syncedText) + '">API 연동</span>';
+  }
+  function renameCharacterFromApi(index, requestedName){
+    var character = characters[index];
+    var name = String(requestedName || '').trim().slice(0,20);
+    if (!character || !name) return Promise.reject(new Error('캐릭터 닉네임을 입력하세요.'));
+    if (!NexonKey.has()) return Promise.reject(new Error('API 키가 없어 이름을 확인할 수 없습니다.'));
+    var knownOcid = name === character.name ? character.ocid : '';
+    return fetchSchedulerCharacter(name, knownOcid).then(function(result){
+      var duplicate = characters.findIndex(function(ch, otherIndex){
+        return otherIndex !== index && ((result.ocid && ch.ocid === result.ocid) || ch.name === name);
+      });
+      if (duplicate >= 0) throw new Error('이미 등록된 캐릭터입니다.');
+      return applySchedulerCharacter(result.data, result.ocid, name, index);
+    });
+  }
 
   function characterBossIcon(boss, entry){
     var difficulty = boss.diffs[entry.diffIdx].label;
@@ -1059,9 +1198,56 @@
   }
   function characterWeeklyIncomeHtml(t){
     var complete = allWeeklyComplete(t.weeklyCompletedCount, WEEKLY_CAP);
-    return '<div class="chip-weekly"><span class="income-caption">' + (complete ? '주간 완료 수익' : '주간 완료 / 예상') +
-      '</span><div class="weekly-values' + (complete ? ' is-complete' : '') + '"><span>' + won(t.earnedMeso) +
-      '</span><span class="income-slash">/</span><span class="income-expected">' + won(t.weeklyMeso) + '</span></div></div>';
+    var progress = Math.min(100, Math.max(0, Math.round(t.weeklyCompletedCount / WEEKLY_CAP * 100)));
+    return '<div class="chip-weekly' + (complete ? ' is-complete' : '') + '">' +
+      '<div class="chip-weekly-top"><span>주간 보스</span><strong>' + t.weeklyCompletedCount + '/' + WEEKLY_CAP + '</strong>' + (complete ? '<span class="chip-weekly-check" aria-label="완료">✓</span>' : '') + '</div>' +
+      '<div class="chip-weekly-money"><span class="chip-weekly-earned">완료 <strong>' + won(t.earnedMeso) + '</strong></span>' +
+      (complete ? '' : '<span class="chip-weekly-expected">예상 <strong>' + won(t.weeklyMeso) + '</strong></span>') + '</div>' +
+      '<div class="chip-weekly-progress" role="progressbar" aria-label="주간 보스 완료율" aria-valuemin="0" aria-valuemax="' + WEEKLY_CAP + '" aria-valuenow="' + t.weeklyCompletedCount + '"><span style="width:' + progress + '%"></span></div></div>';
+  }
+  function characterWorldMarkHtml(character){
+    var worldIcon = window.NexonCharacters && typeof window.NexonCharacters.worldIconPath === 'function'
+      ? window.NexonCharacters.worldIconPath(character.worldName)
+      : '';
+    return '<span class="chip-world-mark">' +
+      (worldIcon ? '<img class="chip-world-icon" src="' + escapeHtml(worldIcon) + '" alt="" title="' + escapeHtml(character.worldName) + '">' : '') +
+      '</span>';
+  }
+  function characterPortraitHtml(character){
+    var image = normalizeCharacterImage(character.characterImage);
+    var fallback = '<svg class="chip-avatar-fallback" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6c-7.2 0-13 5.8-13 13v4.3c0 3.8-1.4 7.5-4 10.4V38h34v-4.3c-2.6-2.9-4-6.6-4-10.4V19c0-7.2-5.8-13-13-13Zm0 8a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm-9.8 20c2.6-3.4 6-5 9.8-5s7.2 1.6 9.8 5H14.2Z"/></svg>';
+    return '<span class="chip-avatar' + (image ? ' has-image' : '') + '"><span class="chip-avatar-visual">' + fallback +
+      (image ? '<img class="chip-avatar-image" src="' + escapeHtml(image) + '" alt="" loading="lazy">' : '') +
+      '</span>' + characterWorldMarkHtml(character) + '</span>';
+  }
+  function characterProfileHtml(character){
+    var name = escapeHtml(character.name);
+    var details = [];
+    if (character.characterLevel) details.push('Lv.' + character.characterLevel);
+    if (character.characterClass) details.push(character.characterClass);
+    return '<span class="chip-identity">' + characterPortraitHtml(character) +
+      '<span class="chip-profile-copy"><button type="button" class="chip-name" title="이름 수정" aria-label="' + name + ' 이름 수정">' + name + '</button>' +
+      (details.length ? '<span class="chip-profile-meta">' + escapeHtml(details.join(' · ')) + '</span>' : '') + '</span></span>';
+  }
+  function reorderCharacters(list, fromIndex, toIndex){
+    if (!Array.isArray(list) || fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) return list;
+    var moved = list.splice(fromIndex, 1)[0];
+    list.splice(toIndex, 0, moved);
+    return list;
+  }
+  function moveCharacter(fromIndex, toIndex, restoreHandleFocus){
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= characters.length || toIndex >= characters.length) return;
+    var activeCharacter = characters[activeIdx];
+    var movedCharacter = characters[fromIndex];
+    reorderCharacters(characters, fromIndex, toIndex);
+    activeIdx = activeCharacter ? characters.indexOf(activeCharacter) : -1;
+    saveState();
+    renderAll();
+    if (restoreHandleFocus){
+      var movedIndex = characters.indexOf(movedCharacter);
+      var movedHandle = charChipList.querySelector('.char-chip[data-character-index="' + movedIndex + '"] .chip-reorder');
+      if (movedHandle) movedHandle.focus();
+    }
   }
   function renderCharChips(){
     charChipList.innerHTML = '';
@@ -1069,6 +1255,7 @@
       var t = charTotals(ch);
       var chip = document.createElement('div');
       chip.className = 'char-chip' + (idx === activeIdx ? ' active' : '');
+      chip.dataset.characterIndex = String(idx);
       chip.tabIndex = 0;
       chip.setAttribute('role', 'group');
       chip.setAttribute('aria-label', ch.name + ' 선택' + (idx === activeIdx ? ' (선택됨)' : ''));
@@ -1078,19 +1265,135 @@
         }
       });
       chip.innerHTML =
-        '<span class="chip-name">' + escapeHtml(ch.name) + '</span>' +
-        '<button type="button" class="chip-del" aria-label="' + escapeHtml(ch.name) + ' 삭제">×</button>' +
+        characterProfileHtml(ch) +
+        '<span class="chip-card-actions"><button type="button" class="chip-reorder" aria-label="' + escapeHtml(ch.name) + ' 순서 변경" title="드래그하거나 방향키로 순서 변경"><svg viewBox="0 0 12 18" aria-hidden="true"><circle cx="3" cy="3" r="1.3"/><circle cx="9" cy="3" r="1.3"/><circle cx="3" cy="9" r="1.3"/><circle cx="9" cy="9" r="1.3"/><circle cx="3" cy="15" r="1.3"/><circle cx="9" cy="15" r="1.3"/></svg></button>' + apiLinkBadgeHtml(ch) + '<button type="button" class="chip-del" aria-label="' + escapeHtml(ch.name) + ' 삭제">×</button></span>' +
+        '<form class="chip-rename" hidden>' + characterWorldMarkHtml(ch) + '<input type="text" maxlength="20" autocomplete="off" spellcheck="false" aria-label="새 캐릭터 닉네임" value="' + escapeHtml(ch.name) + '"><button type="submit" class="fetch-btn">확인</button><button type="button" class="tool-btn rename-cancel">취소</button></form>' +
         characterWeeklyIncomeHtml(t) +
-        weeklyCompletionHtml(t) +
         '<span class="chip-meso chip-monthly">월 ' + won(t.monthlyMeso) + '</span>' +
-        (ch.lastSyncedAt ? '<span class="sync-meta">갱신 ' + escapeHtml(new Date(ch.lastSyncedAt).toLocaleString('ko-KR')) + '</span>' : '') +
         '<span class="chip-bosses">' + DISPLAY_BOSSES.filter(function(b){ return ch.bosses[b.name]; }).map(function(b){
           return characterBossIcon(b, ch.bosses[b.name]);
         }).join('') + '</span>';
+      var avatarImage = chip.querySelector('.chip-avatar-image');
+      if (avatarImage) avatarImage.addEventListener('error', function(){
+        avatarImage.hidden = true;
+        var avatar = avatarImage.closest('.chip-avatar');
+        if (avatar) avatar.classList.remove('has-image');
+      });
       chip.addEventListener('click', function(e){
-        if (e.target.closest('.chip-del')) return;
+        if (e.target.closest('.chip-name, .chip-rename, .chip-del, .chip-reorder')) return;
         activeIdx = idx;
         renderAll();
+      });
+      var reorderHandle = chip.querySelector('.chip-reorder');
+      var reorderTarget = idx;
+      var reorderGhost = null;
+      var dragStartX = 0;
+      var dragStartY = 0;
+      function createReorderGhost(event){
+        var rect = chip.getBoundingClientRect();
+        dragStartX = event.clientX;
+        dragStartY = event.clientY;
+        reorderGhost = chip.cloneNode(true);
+        reorderGhost.classList.remove('active', 'is-reordering', 'is-reorder-target');
+        reorderGhost.classList.add('char-chip-drag-ghost');
+        reorderGhost.removeAttribute('tabindex');
+        reorderGhost.setAttribute('aria-hidden', 'true');
+        reorderGhost.style.left = rect.left + 'px';
+        reorderGhost.style.top = rect.top + 'px';
+        reorderGhost.style.width = rect.width + 'px';
+        document.body.appendChild(reorderGhost);
+      }
+      function moveReorderGhost(event){
+        if (!reorderGhost) return;
+        reorderGhost.style.setProperty('--drag-x', (event.clientX - dragStartX) + 'px');
+        reorderGhost.style.setProperty('--drag-y', (event.clientY - dragStartY) + 'px');
+      }
+      function clearReorderState(){
+        chip.classList.remove('is-reordering');
+        var targetChip = charChipList.querySelector('.char-chip.is-reorder-target');
+        if (targetChip) targetChip.classList.remove('is-reorder-target');
+        if (reorderGhost){
+          reorderGhost.remove();
+          reorderGhost = null;
+        }
+      }
+      reorderHandle.addEventListener('pointerdown', function(event){
+        if (event.button !== undefined && event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        reorderTarget = idx;
+        chip.classList.add('is-reordering');
+        createReorderGhost(event);
+        if (reorderHandle.setPointerCapture) reorderHandle.setPointerCapture(event.pointerId);
+      });
+      reorderHandle.addEventListener('pointermove', function(event){
+        if (!chip.classList.contains('is-reordering')) return;
+        event.preventDefault();
+        moveReorderGhost(event);
+        var pointTarget = document.elementFromPoint(event.clientX, event.clientY);
+        var targetChip = pointTarget && pointTarget.closest('.char-chip[data-character-index]');
+        if (!targetChip) return;
+        var nextTarget = Number(targetChip.dataset.characterIndex);
+        if (!Number.isInteger(nextTarget)) return;
+        var previousTarget = charChipList.querySelector('.char-chip.is-reorder-target');
+        if (previousTarget) previousTarget.classList.remove('is-reorder-target');
+        reorderTarget = nextTarget;
+        if (targetChip !== chip) targetChip.classList.add('is-reorder-target');
+      });
+      reorderHandle.addEventListener('pointerup', function(event){
+        if (!chip.classList.contains('is-reordering')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        clearReorderState();
+        moveCharacter(idx, reorderTarget);
+      });
+      reorderHandle.addEventListener('pointercancel', clearReorderState);
+      reorderHandle.addEventListener('keydown', function(event){
+        var offset = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : 0;
+        if (!offset) return;
+        event.preventDefault();
+        event.stopPropagation();
+        moveCharacter(idx, idx + offset, true);
+      });
+      var nameButton = chip.querySelector('.chip-name');
+      var renameForm = chip.querySelector('.chip-rename');
+      var renameInput = renameForm.querySelector('input');
+      var renameConfirm = renameForm.querySelector('button[type="submit"]');
+      nameButton.addEventListener('click', function(event){
+        event.stopPropagation();
+        chip.classList.toggle('is-renaming', true);
+        renameForm.hidden = false;
+        renameInput.focus();
+        renameInput.select();
+      });
+      renameForm.addEventListener('click', function(event){ event.stopPropagation(); });
+      renameForm.querySelector('.rename-cancel').addEventListener('click', function(){
+        renameForm.hidden = true;
+        chip.classList.toggle('is-renaming', false);
+        renameInput.value = ch.name;
+        renameInput.removeAttribute('aria-invalid');
+        nameButton.focus();
+      });
+      renameForm.addEventListener('submit', function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        var nextName = renameInput.value.trim();
+        if (!nextName){ renameInput.setAttribute('aria-invalid', 'true'); renameInput.focus(); return; }
+        renameInput.removeAttribute('aria-invalid');
+        renameInput.disabled = true;
+        renameConfirm.disabled = true;
+        renameConfirm.textContent = '조회 중…';
+        setSchedulerStatus(nextName + '의 API 연동 정보를 확인하는 중…');
+        renameCharacterFromApi(idx, nextName).then(function(result){
+          setSchedulerStatus('✓ ' + result.character.name + '으로 변경하고 API 스케줄러를 적용했습니다.', 'ok');
+        }).catch(function(error){
+          renameInput.disabled = false;
+          renameConfirm.disabled = false;
+          renameConfirm.textContent = '확인';
+          renameInput.setAttribute('aria-invalid', 'true');
+          setSchedulerStatus('이름을 변경하지 않았습니다. ' + describeApiError(error, error.stage || 'id'), 'err');
+          renameInput.focus();
+        });
       });
       chip.querySelector('.chip-del').addEventListener('click', function(){
 
@@ -1105,7 +1408,7 @@
     if (!characters.length){
       var empty = document.createElement('div');
       empty.className = 'empty-note';
-      empty.textContent = '닉네임을 입력해 직접 추가하거나 스케줄러를 불러오세요.';
+      empty.textContent = '캐릭터를 선택하거나 닉네임을 입력해 추가하세요. API 조회가 안 되면 연동 없이 저장됩니다.';
       charChipList.appendChild(empty);
     }
   }
@@ -1272,6 +1575,8 @@
   });
 
   renderAll();
+  autoRefreshCharacterCompletions();
+  hydrateMissingCharacterProfiles();
 })();
 </script>
 </body>

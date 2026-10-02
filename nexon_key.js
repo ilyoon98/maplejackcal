@@ -12,6 +12,7 @@ window.NexonKey = (function(){
     try {
       if (v) localStorage.setItem(STORAGE_KEY, v);
       else localStorage.removeItem(STORAGE_KEY);
+      window.dispatchEvent(new CustomEvent('nexon-key-changed'));
     } catch(e){}
   }
   function has(){ return !!get(); }

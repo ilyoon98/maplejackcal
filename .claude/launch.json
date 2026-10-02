@@ -4,7 +4,7 @@
     {
       "name": "static",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["C:/Users/choic/AppData/Local/Temp/claude/D--ilyoon-Git-maplejackcal/6817004b-eef2-4e81-a2af-5b6ff2ba9c6c/scratchpad/static.js"],
+      "runtimeArgs": ["tools/static_server.cjs"],
       "port": 8765,
       "autoPort": true
     }

@@ -15,7 +15,7 @@ function app(saved = {}) {
     localStorage: { getItem: () => JSON.stringify(saved), setItem() {} },
     document: { getElementById: get, querySelectorAll: () => [], addEventListener: (name, fn) => { handlers[name] = fn; } }
   });
-  for (const file of ['cube_option_data.js', 'cube_core.js', 'flame_core.js', 'starforce_data.js', 'starforce_calc.js', 'item_craft_calc.js']) {
+  for (const file of ['cube_option_data.js', 'cube_core.js', 'flame_core.js', 'flame_weapon_data.js', 'starforce_data.js', 'starforce_calc.js', 'item_craft_calc.js']) {
     let source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
     if (file === 'item_craft_calc.js') source = source.replace(/\}\)\(\);\s*$/, 'window.test = { state, compute, refresh };})();');
     vm.runInContext(source, context);
@@ -108,7 +108,9 @@ test('기존 목표를 보존하고 세 줄 합계와 직접 입력 성공 기�
   assert.match(a.get('hit-pot-0-0').innerHTML, /21%/);
   a.input({ pot: 'pot', set: '0', row: '0' }, '100');
   assert.match(a.get('hit-pot-0-0').innerHTML, /만들 수 없는/);
-  assert.equal(a.compute().pot.opt.p, 0);
+  assert.equal(a.compute().pot.opt, null);
+  assert.equal(a.compute().pot.avg, 0);
+  assert.match(a.get('excludedGoals').innerHTML, /최대 수치 초과/);
 });
 
 test('잠재·에디 OR 조건은 중복 확률을 더하지 않고 빈 조건을 무시한다', () => {
@@ -160,4 +162,110 @@ test('비용 제외 옵션도 배지와 최종 목표 아이템에 유지한다'
   a.change('엠블렘');
   assert.doesNotMatch(a.get('itemPreview').innerHTML, /<strong>스타포스/);
   assert.doesNotMatch(a.get('itemPreview').innerHTML, /<strong>추가옵션/);
+});
+
+test('추옵 무기 계열의 실제 수치와 마력 확률을 제작 비용에 반영한다', () => {
+  const a = app({ weapon: 'staff', weaponSeries: 'genesis' });
+  assert.match(a.get('flameTotal').innerHTML, /마력 \+195/);
+  const expected = a.context.window.FlameCore.probability({ level: 200, weapon: true, boss: true,
+    flame: 'mesoReset', conds: [{ kind: 'opt', id: 'MATT', minTier: 6 }], mainStat: 'STR' });
+  assert.equal(a.compute().flame.p, expected);
+  a.click({ flameSeries: 'destiny' });
+  assert.equal(a.state.level, 250);
+  assert.match(a.get('flameTotal').innerHTML, /마력 \+249/);
+  assert.match(a.get('itemPreview').innerHTML, /데스티니/);
+  for (const flame of ['abyss', 'black', 'burning']) {
+    const restored = app({ ...JSON.parse(JSON.stringify(a.state)), flame });
+    const r = restored.compute();
+    assert.equal(r.flame.p, a.compute().flame.p);
+    assert.doesNotMatch(restored.get('flameBody').innerHTML, /data-flame="/);
+    assert.equal(r.flame.price, 3000000);
+    assert.ok(Math.abs(r.flame.avg - 3000000 / r.flame.p) < 0.0001);
+    assert.equal(r.star.spare, a.state.base + r.flame.avg);
+  }
+});
+
+test('추옵 4개 조건과 필수 옵션·급수 조합은 독립 계산기 엔진과 일치한다', () => {
+  const conds = [{ kind: 'grade', min: 100 }, { kind: 'opt', id: 'ATT', minTier: 6 },
+    { kind: 'opt', id: 'ALL_PCT', minTier: 6 }, { kind: 'opt', id: 'STR', minTier: 5 }];
+  const a = app({ part: '모자', flameConds: conds });
+  assert.equal(a.state.flameConds.length, 4);
+  assert.equal(a.compute().flame.p, a.context.window.FlameCore.probability({
+    level: 200, weapon: false, boss: true, flame: 'mesoReset', conds, mainStat: 'STR' }));
+  assert.match(a.get('flameTotal').innerHTML, /공격력·마력 \+6/);
+  assert.match(a.get('flameTotal').innerHTML, /올스탯 \+6%/);
+  assert.match(a.get('flameTotal').innerHTML, /나머지 주스탯 환산 0급/);
+  assert.match(a.get('flameBody').innerHTML, /data-required=/);
+  assert.match(a.get('flameBody').innerHTML, /data-tier="3" disabled/);
+  assert.doesNotMatch(a.get('flameBody').innerHTML, /data-tier="7" disabled/);
+});
+
+test('제로 무기는 일반 무기 확률을 적용하지 않는다', () => {
+  const a = app({ weapon: 'lazuli', weaponSeries: 'genesis' });
+  assert.match(a.get('flameBody').innerHTML, /확률 계산을 지원하지 않습니다/);
+  assert.equal(a.compute().flame, null);
+  assert.ok(Number.isFinite(a.compute().avg));
+  assert.match(a.get('excludedGoals').innerHTML, /확률 계산 미지원/);
+});
+
+test('미라클 작업 시점을 잠재와 에디에 독립 적용하고 옵션 확률은 유지한다', () => {
+  const a = app({ pot: { from: 2, to: 3, rows: [{ key: '공격력|%', min: 21 }] },
+    addi: { from: 2, to: 3, rows: [{ key: '공격력|%', min: 21 }] } });
+  const before = a.compute();
+  a.click({ miracle: 'pot' });
+  const potOnly = a.compute();
+  assert.equal(potOnly.pot.steps[0].p, before.pot.steps[0].p * 2);
+  assert.equal(potOnly.addi.avg, before.addi.avg);
+  assert.equal(potOnly.pot.opt.p, before.pot.opt.p);
+  assert.match(a.get('potPanel').dataset.optionSummary, /미라클/);
+  assert.doesNotMatch(a.get('addiPanel').dataset.optionSummary, /미라클/);
+  a.click({ miracle: 'addi' });
+  a.click({ miracle: 'pot' });
+  const addiOnly = a.compute();
+  assert.equal(addiOnly.pot.avg, before.pot.avg);
+  assert.equal(addiOnly.addi.steps[0].p, before.addi.steps[0].p * 2);
+  assert.equal(addiOnly.addi.opt.p, before.addi.opt.p);
+  const restored = app(JSON.parse(JSON.stringify(a.state)));
+  assert.equal(restored.state.miracle.pot, false);
+  assert.equal(restored.state.miracle.addi, true);
+});
+
+test('기존 공통 미라클 저장값은 잠재와 에디 모두에 복원한다', () => {
+  for (const enabled of [true, false]) {
+    const a = app({ miracle: enabled });
+    assert.equal(a.state.miracle.pot, enabled);
+    assert.equal(a.state.miracle.addi, enabled);
+  }
+});
+
+test('엠블렘에 없는 보공을 제외하고 공격력 조건만으로 확률을 계산한다', () => {
+  const a = app({ part: '엠블렘', pot: { from: 3, to: 3, rows: [
+    { key: '보스 몬스터 데미지|%', min: 70 }, { key: '공격력|%', min: 21 }
+  ] } });
+  const expected = vm.runInContext(`successProb(bracketOf('black', '엠블렘', 200, '레전드리').lines, [[['공격력|%', 21]]])`, a.context);
+  assert.equal(a.compute().pot.opt.p, expected);
+  assert.ok(Number.isFinite(a.compute().avg));
+  assert.equal(a.state.pot.rows.length, 2);
+  assert.match(a.get('excludedGoals').innerHTML, /보스 데미지 %.*해당 장비에 없는 옵션/);
+});
+
+test('옵션 전체 제외 시 등급업만 계산하고 빈 OR 조건으로 확률을 높이지 않는다', () => {
+  const onlyMissing = app({ part: '엠블렘', pot: { from: 2, to: 3, rows: [{ key: '보스 몬스터 데미지|%', min: 70 }] } });
+  const gradeOnly = app({ part: '엠블렘', pot: { from: 2, to: 3, rows: [] } });
+  assert.equal(onlyMissing.compute().pot.avg, gradeOnly.compute().pot.avg);
+  assert.equal(onlyMissing.compute().pot.opt, null);
+  const mixed = app({ part: '엠블렘', addi: { from: 3, to: 3, sets: [
+    { rows: [{ key: '보스 몬스터 데미지|%', min: 70 }] },
+    { rows: [{ key: '공격력|%', min: 21 }] }
+  ] } });
+  const expected = vm.runInContext(`successProb(bracketOf('addi', '엠블렘', 200, '레전드리').lines, [[['공격력|%', 21]]])`, mixed.context);
+  assert.equal(mixed.compute().addi.opt.p, expected);
+  assert.ok(expected < 1);
+});
+
+test('각각은 가능해도 동시에 불가능한 조건은 조합 단위로 제외한다', () => {
+  const a = app({ pot: { from: 3, to: 3, rows: [{ key: '공격력|%', min: 36 }, { key: '마력|%', min: 36 }] } });
+  assert.equal(a.compute().pot.opt, null);
+  assert.match(a.get('excludedGoals').innerHTML, /동시에 달성할 수 없는 조합/);
+  assert.ok(Number.isFinite(a.compute().avg));
 });

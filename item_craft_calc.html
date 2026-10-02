@@ -83,6 +83,23 @@
   .ic-preview-name { color:#f3c969; font-weight:700; }
   .ic-preview-stage { padding:12px 0; border-top:1px solid #30344d; }
   .ic-preview-stage > strong { display:block; margin-bottom:8px; font-size:.82rem; }
+  .ic-tier:disabled { opacity:.35; cursor:not-allowed; }
+  .ic-cost-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); gap:12px; }
+  .ic-cost-card { min-width:0; padding:16px; border:1px solid #373d58; border-radius:12px;
+    background:linear-gradient(135deg,#22283c,#191d2d); overflow-wrap:anywhere; }
+  .ic-cost-card h4 { display:flex; align-items:center; gap:7px; margin:0 0 16px; font-size:.9rem; color:#e3e9f8; }
+  .ic-cost-values { margin:0 0 14px; font-variant-numeric:tabular-nums; }
+  .ic-cost-values dt { color:var(--text-dim); font-size:.74rem; }
+  .ic-cost-values dd { margin:0; }
+  .ic-cost-average dd { color:#a9ceff; font-size:1.45rem; font-weight:800; line-height:1.4; margin-top:5px; }
+  .ic-cost-average small { color:var(--text-dim); font-size:.73rem; font-weight:400; white-space:nowrap; }
+  .ic-cost-minimum { display:flex; flex-wrap:wrap; align-items:baseline; gap:5px 10px; margin-top:8px; }
+  .ic-cost-minimum dd { color:#bec7dc; font-size:.8rem; }
+  .ic-cost-card .ic-option-badge { font-size:.71rem; background:#171d2e; border-color:#343e58; }
+  .ic-excluded-goals { margin:12px 0; padding:12px 14px; border:1px solid #786440; border-radius:10px;
+    background:#30291e; color:#edd6a6; font-size:.78rem; line-height:1.7; }
+  .ic-excluded-goals ul { margin:6px 0; padding-left:18px; }
+  .ic-excluded-goals p { margin:6px 0 0; }
   .ic-row-name { flex:1 1 140px; font-weight:800; font-size:.9rem; }
   .ic-row-name small { display:block; font-weight:400; color:#8d8fb5; font-size:.7rem; }
   .ic-row-name small.bad { color:var(--bad); }
@@ -260,6 +277,7 @@
         <h2>02 · 🔥 추가옵션
           <label class="ic-toggle"><input type="checkbox" id="on-flame"><span>계산에 포함</span></label></h2>
         <div id="flameBody"></div>
+        <div id="flameTotal"></div>
       </div>
 
       <div class="ic-panel" id="starPanel">
@@ -314,6 +332,7 @@
         <p class="ic-ratio" id="resRatio"></p>
         <div class="ic-sub">단계별로 나눠 보기</div>
         <div id="breakdown"></div>
+        <div id="excludedGoals" class="ic-excluded-goals" role="status" hidden></div>
         <h3>최종 목표 아이템</h3>
         <p class="ic-note">설정한 옵션을 모아 보여줍니다. ‘비용 제외’ 항목도 표시되며, 제작 비용에는 합산하지 않습니다.</p>
         <div id="itemPreview"></div>
@@ -333,14 +352,15 @@
                 옵션 맞추기 기대 횟수에서 1회를 뺐습니다.</li>
             <li>추가옵션 단계·개수 확률은 <a href="https://maplestory.nexon.com/Guide/OtherProbability/game/gameAddOption" target="_blank" rel="noopener">넥슨 공식 확률 공개</a> 그대로이고,
                 단계별 수치 공식은 공개돼 있지 않아 커뮤니티에서 역산한 표를 따릅니다.
-                무기의 공격력·마력은 무기 종류마다 수치가 달라 <b>단계(추)</b>로만 다룹니다.</li>
+                무기의 공격력·마력은 선택한 무기 종류와 계열의 <b>단계별 실제 수치</b>를 표시합니다.
+                자료가 없는 레벨은 단계로 계산하며, 제로 무기는 수치표만 제공합니다.</li>
             <li>같은 종류의 추가옵션이 한 장비에 두 번 붙지는 않는 것으로 봅니다.</li>
             <li><b>주스탯 환산 급수</b>는 주스탯 1 = 1급, 올스탯 1% = 10급, 공격력(마력) 1 = 4급으로 셉니다.
                 복합 스탯은 주스탯 쪽 수치만 세고, 무기는 공격력·마력 수치가 무기마다 달라 급수에서 뺍니다.
                 STR·DEX·INT·LUK은 확률이 완전히 같아서 어느 스탯인지 고를 필요가 없습니다 —
                 잠재능력의 <b>주스탯 %</b>도 같은 이유로 하나로 묶었습니다.</li>
-            <li>불꽃은 아이템이라 메소가 들지 않습니다. <b>추가옵션 재설정 (메소)</b>만 1회 300만 메소가 나가고,
-                확률은 검은 · 영원한 환생의 불꽃과 같습니다.</li>
+            <li>추가옵션을 계산에 포함하면 <b>메소 재설정 1회 300만 메소</b>와 해당 확률을 사용합니다.
+                심연·타오르는 불꽃으로 작업한다면 추가옵션을 계산에서 제외하세요.</li>
           </ul>
         </details></div>
       </div>
@@ -351,6 +371,7 @@
 <script src="cube_option_data.js"></script>
 <script src="cube_core.js"></script>
 <script src="flame_core.js"></script>
+<script src="flame_weapon_data.js"></script>
 <script src="starforce_data.js"></script>
 <script src="starforce_calc.js"></script>
 <script src="item_craft_calc.js"></script>

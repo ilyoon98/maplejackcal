@@ -13,6 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>어센틱 심볼 계산기</title>
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="nexon_characters.css" />
 <style>
   :root{ --surface-2:#1d212b; }
   body{ padding-bottom:96px; }
@@ -237,6 +238,13 @@
     padding:18px 20px;
     margin-top:16px;
   }
+  .char-search-hero.has-profile{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 290px;
+    gap:22px;
+    align-items:stretch;
+  }
+  .char-search-main{ min-width:0; }
   .char-search-hero h2{
     font-size:0.85rem;
     font-weight:700;
@@ -321,6 +329,50 @@
   .char-chip-x:hover{ color:var(--bad); }
 
   .char-search-hero .note{ margin:10px 0 0; }
+  .character-showcase{
+    position:relative;
+    min-height:260px;
+    overflow:hidden;
+    border:1px solid rgba(132,176,255,.58);
+    border-radius:16px;
+    background:
+      radial-gradient(circle at 50% 54%,rgba(106,167,255,.32),transparent 44%),
+      linear-gradient(155deg,#182a4b 0%,#111927 58%,#0c111b 100%);
+    box-shadow:inset 0 0 38px rgba(87,142,255,.12),0 14px 32px rgba(0,0,0,.22);
+  }
+  .character-showcase[hidden]{ display:none; }
+  .character-showcase::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(115deg,transparent 25%,rgba(255,255,255,.07) 47%,transparent 62%);
+    pointer-events:none;
+  }
+  .character-showcase img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    image-rendering:pixelated;
+    transform:scale(2.35);
+    transform-origin:50% 55%;
+  }
+  .character-showcase-info{
+    position:absolute;
+    z-index:1;
+    left:12px;
+    right:12px;
+    bottom:12px;
+    padding:10px 12px;
+    border:1px solid rgba(142,184,255,.35);
+    border-radius:11px;
+    background:rgba(8,13,23,.82);
+    box-shadow:0 8px 24px rgba(0,0,0,.28);
+    backdrop-filter:blur(8px);
+  }
+  .character-showcase-name{ display:block; overflow:hidden; color:#fff; font-size:1.1rem; font-weight:900; text-overflow:ellipsis; white-space:nowrap; }
+  .character-showcase-meta{ display:block; margin-top:3px; overflow:hidden; color:#9cc2ff; font-size:.72rem; font-weight:750; text-overflow:ellipsis; white-space:nowrap; }
   .char-search-hero.needs-key{
     border-color:var(--bad);
     background:rgba(226,102,74,.1);
@@ -360,6 +412,11 @@
     flex-shrink:0;
   }
   .go-register-btn:hover{ filter:brightness(1.1); }
+
+  @media (max-width:760px){
+    .char-search-hero.has-profile{ grid-template-columns:minmax(0,1fr); }
+    .character-showcase{ min-height:250px; }
+  }
 
   .reach-toggle{
     margin-left:auto;
@@ -768,14 +825,24 @@
   </header>
 
   <section class="char-search-hero" id="charSearchHero">
-    <h2>캐릭터 검색</h2>
-    <div class="char-search-row">
-      <input type="text" id="charNameInput" placeholder="캐릭터 이름" autocomplete="off" spellcheck="false" maxlength="20" aria-label="캐릭터 이름">
-      <button type="button" class="fetch-btn" id="fetchBtn">캐릭터 검색</button>
+    <div class="char-search-main">
+      <h2>캐릭터 검색</h2>
+      <div id="authenticCharacterPicker"></div>
+      <div class="char-search-row">
+        <input type="text" id="charNameInput" placeholder="다른 캐릭터 이름" autocomplete="off" spellcheck="false" maxlength="20" aria-label="캐릭터 이름" hidden>
+        <button type="button" class="fetch-btn" id="fetchBtn" hidden>캐릭터 검색</button>
+      </div>
+      <div class="char-recent" id="charRecent" hidden></div>
+      <div id="apiKeyLine"></div>
+      <p class="note fetch-status" id="fetchStatus" aria-live="polite"></p>
     </div>
-    <div class="char-recent" id="charRecent" hidden></div>
-    <div id="apiKeyLine"></div>
-    <p class="note fetch-status" id="fetchStatus" aria-live="polite"></p>
+    <aside class="character-showcase" id="characterShowcase" aria-label="불러온 캐릭터 외형" hidden>
+      <img id="characterShowcaseImage" alt="">
+      <div class="character-showcase-info">
+        <strong class="character-showcase-name" id="characterShowcaseName"></strong>
+        <span class="character-showcase-meta" id="characterShowcaseMeta"></span>
+      </div>
+    </aside>
   </section>
 
   <!-- 포스 입력을 한 카드에 모은다: 현재 포스(결과)와 그걸 움직이는 세 입력(목표·외부·보스 프리셋)이
@@ -899,17 +966,18 @@
 
 <script src="site_nav.js"></script>
 <script src="nexon_key.js"></script>
+<script src="nexon_characters.js"></script>
 <script>
 (function(){
   var SYMBOLS = [
-    { name:"세르니움",  icon:"icons/Authentic/cernium.png",   costs:[36500000,91200000,160700000,241900000,331500000,426200000,522900000,618200000,709000000,792000000] },
-    { name:"아르크스",  icon:"icons/Authentic/arcus.png",     costs:[41700000,104800000,186100000,282200000,390000000,506100000,627400000,750700000,872600000,990000000] },
-    { name:"오디움",    icon:"icons/Authentic/odium.png",     costs:[46900000,118500000,211500000,322500000,448500000,586000000,732000000,883200000,1036200000,1188000000] },
-    { name:"도원경",    icon:"icons/Authentic/dowon.png",     costs:[52200000,132200000,236800000,362800000,507000000,666000000,836600000,1015600000,1199800000,1386000000] },
-    { name:"아르테리아", icon:"icons/Authentic/arteria.png",   costs:[57400000,145900000,262200000,403200000,565500000,745900000,941200000,1148100000,1363500000,1584000000] },
-    { name:"카르시온",  icon:"icons/Authentic/carcion.png",   costs:[62600000,159600000,287600000,443500000,624000000,825800000,1045800000,1280600000,1527100000,1782000000] },
-    { name:"탈라하트",  icon:"icons/Authentic/tallahart.png", costs:[113600000,293300000,535800000,837700000,1196000000,1607200000,2068300000,2576000000,3126900000,3718000000] },
-    { name:"기어드락",  icon:"icons/Authentic/gierdrak.png",  costs:[139700000,361700000,662700000,1039300000,1488500000,2006800000,2591200000,3238400000,3945000000,4708000000] }
+    { name:"세르니움",  icon:"icons/authentic/cernium.webp",   costs:[36500000,91200000,160700000,241900000,331500000,426200000,522900000,618200000,709000000,792000000] },
+    { name:"아르크스",  icon:"icons/authentic/arcus.webp",     costs:[41700000,104800000,186100000,282200000,390000000,506100000,627400000,750700000,872600000,990000000] },
+    { name:"오디움",    icon:"icons/authentic/odium.webp",     costs:[46900000,118500000,211500000,322500000,448500000,586000000,732000000,883200000,1036200000,1188000000] },
+    { name:"도원경",    icon:"icons/authentic/dowon.webp",     costs:[52200000,132200000,236800000,362800000,507000000,666000000,836600000,1015600000,1199800000,1386000000] },
+    { name:"아르테리아", icon:"icons/authentic/arteria.webp",   costs:[57400000,145900000,262200000,403200000,565500000,745900000,941200000,1148100000,1363500000,1584000000] },
+    { name:"카르시온",  icon:"icons/authentic/carcion.webp",   costs:[62600000,159600000,287600000,443500000,624000000,825800000,1045800000,1280600000,1527100000,1782000000] },
+    { name:"탈라하트",  icon:"icons/authentic/tallahart.webp", costs:[113600000,293300000,535800000,837700000,1196000000,1607200000,2068300000,2576000000,3126900000,3718000000] },
+    { name:"기어드락",  icon:"icons/authentic/gierdrak.webp",  costs:[139700000,361700000,662700000,1039300000,1488500000,2006800000,2591200000,3238400000,3945000000,4708000000] }
   ];
 
   // levelCum[L] = meso cost from level 0 to reach level L (L=0..11).
@@ -1456,6 +1524,7 @@
   var API_BASE = 'https://open.api.nexon.com/maplestory/v1';
   var LS_LAST_CHAR = 'authentic_last_char';
   var LS_RECENT_CHARS = 'authentic_recent_chars';
+  var LS_CHARACTER_PROFILE = 'authentic_character_profile';
   var RECENT_MAX = 10;
 
   var charNameInput = document.getElementById('charNameInput');
@@ -1464,9 +1533,67 @@
   var apiKeyLine = document.getElementById('apiKeyLine');
   var charSearchHero = document.getElementById('charSearchHero');
   var charRecent = document.getElementById('charRecent');
+  var characterShowcase = document.getElementById('characterShowcase');
+  var characterShowcaseImage = document.getElementById('characterShowcaseImage');
+  var characterShowcaseName = document.getElementById('characterShowcaseName');
+  var characterShowcaseMeta = document.getElementById('characterShowcaseMeta');
+
+  if (window.NexonCharacters) {
+    NexonCharacters.mount({
+      host: '#authenticCharacterPicker',
+      input: charNameInput,
+      onSelect: function(){ doFetch(); },
+      onModeChange: function(manual){ fetchBtn.hidden = !manual; }
+    });
+  } else {
+    charNameInput.hidden = false;
+    fetchBtn.hidden = false;
+  }
 
   function lsGet(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
   function lsSet(k, v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
+
+  function normalizeCharacterImage(value){
+    var image = typeof value === 'string' ? value.trim() : '';
+    return /^https:\/\/open\.api\.nexon\.com\/static\/maplestory\/character\/look\/[A-Za-z0-9]+(?:\?[^\s"'<>]*)?$/.test(image) ? image : '';
+  }
+  function normalizeCharacterProfile(raw){
+    if (!raw) return null;
+    var image = normalizeCharacterImage(raw.characterImage || raw.character_image);
+    var name = String(raw.name || raw.character_name || '').trim().slice(0,20);
+    if (!image || !name) return null;
+    return {
+      name:name,
+      worldName:String(raw.worldName || raw.world_name || '').trim(),
+      characterClass:String(raw.characterClass || raw.character_class || '').trim(),
+      characterLevel:Number(raw.characterLevel || raw.character_level) || 0,
+      characterImage:image
+    };
+  }
+  function renderCharacterProfile(raw){
+    var profile = normalizeCharacterProfile(raw);
+    characterShowcase.hidden = !profile;
+    charSearchHero.classList.toggle('has-profile', !!profile);
+    if (!profile) return;
+    characterShowcaseImage.src = profile.characterImage;
+    characterShowcaseImage.alt = profile.name + ' 캐릭터 외형';
+    characterShowcaseName.textContent = profile.name;
+    var details = [];
+    if (profile.characterLevel) details.push('Lv.' + profile.characterLevel);
+    if (profile.worldName) details.push(profile.worldName);
+    if (profile.characterClass) details.push(profile.characterClass);
+    characterShowcaseMeta.textContent = details.join(' · ');
+  }
+  function saveCharacterProfile(raw){
+    var profile = normalizeCharacterProfile(raw);
+    if (!profile) return;
+    lsSet(LS_CHARACTER_PROFILE, JSON.stringify(profile));
+    renderCharacterProfile(profile);
+  }
+  function restoreCharacterProfile(){
+    try { renderCharacterProfile(JSON.parse(lsGet(LS_CHARACTER_PROFILE) || 'null')); }
+    catch(e){ renderCharacterProfile(null); }
+  }
 
   function refreshApiKeyLine(){
     var has = NexonKey.has();
@@ -1483,7 +1610,7 @@
     fetchStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
   }
 
-  // 최근 검색 캐릭터 목록: 성공한 조회만 최신순으로 쌓는다(대소문자 구분 없이 중복 제거).
+  // 최근 검색 캐릭터 목록: 기존 칩은 위치를 유지하고 신규 검색만 오른쪽에 붙인다.
   function loadRecent(){
     try {
       var arr = JSON.parse(localStorage.getItem(LS_RECENT_CHARS) || '[]');
@@ -1495,9 +1622,13 @@
     try { localStorage.setItem(LS_RECENT_CHARS, JSON.stringify(list)); } catch(e){}
   }
   function addRecent(name){
-    var list = loadRecent().filter(function(n){ return n.toLowerCase() !== name.toLowerCase(); });
-    list.unshift(name);
-    saveRecent(list.slice(0, RECENT_MAX));
+    var list = loadRecent();
+    var exists = list.some(function(n){ return n.toLowerCase() === name.toLowerCase(); });
+    if (!exists) {
+      list.push(name);
+      list = list.slice(-RECENT_MAX);
+      saveRecent(list);
+    }
     renderRecent();
   }
   function removeRecent(name){
@@ -1633,21 +1764,29 @@
     fetchBtn.disabled = true;
     fetchBtn.textContent = '불러오는 중…';
     setStatus(name + ' 캐릭터 정보를 조회하는 중…');
+    renderCharacterProfile(null);
     var stage = 'id';
 
-    apiGet('/id', { character_name: name })
+    var selectedOcid = charNameInput.dataset.accountOcid || '';
+    (selectedOcid ? Promise.resolve({ ocid:selectedOcid }) : apiGet('/id', { character_name: name }))
       .then(function(r){
         if (!r || !r.ocid) throw new Error('캐릭터 식별자(ocid)를 받지 못했습니다.');
         stage = 'symbol';
-        return apiGet('/character/symbol-equipment', { ocid: r.ocid });
+        return Promise.all([
+          apiGet('/character/symbol-equipment', { ocid: r.ocid }),
+          apiGet('/character/basic', { ocid: r.ocid }).catch(function(){ return null; })
+        ]);
       })
-      .then(function(data){
+      .then(function(results){
+        var data = results[0];
+        var profile = normalizeCharacterProfile(results[1]);
         var result = applySymbolData(data);
         lsSet(LS_LAST_CHAR, name);
         addRecent(name);
+        saveCharacterProfile(profile);
         // 불러오기에 성공하면 현재 레벨은 '확인용'이 되므로 접어서 목표·결과에 자리를 내준다.
         if (levelCard && result.found.length) levelCard.open = false;
-        var parts = ['✓ ' + name + (data.character_class ? ' (' + data.character_class + ')' : '')];
+        var parts = ['✓ ' + name + (profile && profile.characterClass ? ' (' + profile.characterClass + ')' : '')];
         if (data.date) parts.push(String(data.date).slice(0, 10) + ' 기준');
         parts.push('어센틱 심볼 ' + result.found.length + '개 불러옴');
         var msg = parts.join(' · ');
@@ -1670,6 +1809,7 @@
   fetchBtn.addEventListener('click', doFetch);
 
   charNameInput.value = lsGet(LS_LAST_CHAR);
+  restoreCharacterProfile();
   renderRecent();
   refreshApiKeyLine();
   window.addEventListener('storage', function(e){

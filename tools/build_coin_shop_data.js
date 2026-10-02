@@ -9,7 +9,7 @@
 // 시트 구조 (첫 줄은 열 이름, 열 순서는 상관없고 이름으로 찾는다)
 //   Event: EventID, Name, StartTime(날짜), EndTime(날짜), Weeks(코인 받는 주 수), WeekCoin(주당 코인)
 //   Shop:  EventID, ItemID, Type(TypeID), Coin(가격), Value(구매 제한 수량), Limit(M=ID당, W=월드당)
-//   Item:  ItemID, String(이름), Icon(icons/CoinShop/ 파일명. 둘이면 | 로 구분. 비우면 기본 아이콘)
+//   Item:  ItemID, String(이름), Icon(icons/coin-shop/ 파일명. 둘이면 | 로 구분. 비우면 기본 아이콘)
 //   Type:  TypeID, Name(탭 이름)
 
 'use strict';

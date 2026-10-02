@@ -25,10 +25,10 @@
     { group: '씨앗 오일 재료 (1회 시도)' },
     { k: 'seed', name: '쥬니퍼베리 씨앗', icon: '쥬니퍼베리씨앗.webp', note: '오일 1회 시도에 6개' },
     { group: '비약 재료 (1회 = 6개)' },
-    { k: 'oil', name: '쥬니퍼베리 씨앗 오일', icon: '쥬니퍼베리씨앗오일.png', note: '5개 · 끄면 보유 오일' },
+    { k: 'oil', name: '쥬니퍼베리 씨앗 오일', icon: '쥬니퍼베리씨앗오일.webp', note: '5개 · 끄면 보유 오일' },
     { k: 'crystal', name: '최상급 아이템 결정', icon: '최상급아이템결정.webp', note: '2개' },
     { k: 'stone', name: '현자의 돌', icon: '현자의돌.webp', note: '1개' },
-    { k: 'recipe', name: '소형 재물 획득의 비약 레시피', icon: '소형재물획득의비약레시피.png', note: '끄면 이미 산 걸로' }
+    { k: 'recipe', name: '소형 재물 획득의 비약 레시피', icon: '소형재물획득의비약레시피.webp', note: '끄면 이미 산 걸로' }
   ];
   const KEYS = MATS.filter(m => m.k).map(m => m.k);
   const NAME = {};
@@ -175,7 +175,7 @@
       ? '<div class="we-group">' + esc(m.group) + '</div>'
       : '<div class="we-row" id="row_' + m.k + '">' +
           '<input type="checkbox" id="on_' + m.k + '" data-on="' + m.k + '" title="끄면 자체 수급 (0메소)" />' +
-          (m.icon ? '<img class="we-icon" src="icons/' + m.icon + '" alt="" width="28" height="28" />' : '<span class="we-icon"></span>') +
+          (m.icon ? '<img class="we-icon" src="icons/craft/' + m.icon + '" alt="" width="28" height="28" />' : '<span class="we-icon"></span>') +
           '<label class="we-name" for="on_' + m.k + '">' + esc(m.name) + '<small id="note_' + m.k + '">' + esc(m.note) + '</small></label>' +
           '<div class="mm-field"><input type="text" id="p_' + m.k + '" data-price="' + m.k + '" inputmode="numeric" autocomplete="off" placeholder="시세" aria-label="' + esc(m.name) + ' 가격" />' +
           '<div class="mm-unit" id="u_' + m.k + '"></div></div>' +

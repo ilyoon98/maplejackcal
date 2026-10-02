@@ -19,7 +19,7 @@
     const head = make('div', 'ux-help-head'); const title = make('h2', '', '사용법 · 계산 기준'); title.id = 'uxHelpTitle'; title.textContent = '사용법 · 계산 기준';
     const close = make('button', 'ux-button', '닫기 ✕'); close.type = 'button'; close.setAttribute('aria-label', '도움말 닫기');
     head.append(title, close); help.append(head);
-    const intro = make('p', 'ux-hint', page === 'starforce_history.html' ? '본인 API 키로 기록을 조회한 뒤 장비를 선택하세요. 강화 조건을 확인하고 선택 구간 분석을 누르면 결과가 갱신됩니다.' : /play|gacha/.test(page) ? '가상으로 진행한 결과와 기록을 확인할 수 있어요. 실제 게임의 아이템이나 재화는 사용하지 않습니다.' : '입력값을 바꾸면 결과가 자동으로 갱신됩니다. 상세 내역은 결과 아래에서 펼쳐볼 수 있어요.'); help.append(intro);
+    const intro = make('p', 'ux-hint', page === 'starforce_history.html' ? '본인 API 키로 기록을 조회한 뒤 장비를 선택하세요. 강화 조건을 확인하고 선택 구간 분석을 누르면 결과가 갱신됩니다.' : /play|gacha|idle/.test(page) ? '가상으로 진행한 결과와 기록을 확인할 수 있어요. 실제 게임의 아이템이나 재화는 사용하지 않습니다.' : '입력값을 바꾸면 결과가 자동으로 갱신됩니다. 상세 내역은 결과 아래에서 펼쳐볼 수 있어요.'); help.append(intro);
     qa('[data-ux-help]').forEach(n => {
       const section = make('section', 'ux-help-section'); section.append(make('h3', '', n.dataset.uxHelp));
       const detail = q('details', n); if (detail) { q('summary', detail)?.remove(); section.append(...detail.childNodes); }
@@ -37,6 +37,7 @@
       'pet_gacha.html': '원더블랙 2개 또는 원더블랙과 루나 스윗을 합성합니다. 자동 뽑기는 블랙＋스윗을 우선 사용합니다. 보관함의 확률은 원더베리·합성 등 해당 단계 기준이며 서로 더하지 않습니다.',
       'boutique_gacha.html': '자동 뽑기의 목표는 한 번에 얻는 티켓 수입니다. 피버는 10번째 뽑기마다 적용됩니다. 성적표의 상위 비율은 정규근사 추정치이며 적은 횟수에서는 참고용입니다.',
       'seedring_gacha.html': '오늘의 뽑기는 지정 상자를 한 번, 무한 뽑기는 선택한 상자를 반복해서 엽니다. 확률은 커뮤니티 자료로 재구성한 추정치입니다. 전체 확률은 화면의 확률표를 펼쳐 확인하세요.',
+      'herb_idle.html': '약초 캐기·오일 만들기·연금술 버튼을 누르면 캐릭터가 그 자리로 가서 알아서 진행합니다. 가공 재료가 떨어지면 약초 캐기로 돌아옵니다. 시세는 3초마다 바뀌니 평소보다 오를 때 파세요. 창을 닫아도 최대 8시간까지 이어서 캡니다.',
       'coin_shop_calc.html': '현재까지 사용 가능은 선택 주차까지의 누적 획득 계획에서 구매 기록을 뺀 값입니다. 이번 주 잔액은 장바구니까지 반영합니다. 종료 예상 잔액에는 앞으로 받을 코인이 포함됩니다. 전부 구매 처리는 이 계산기의 기록만 갱신합니다.'
     };
     if (guides[page]) { const section = make('section', 'ux-help-section'); section.append(make('h3', '', '사용 방법'), make('p', '', guides[page])); help.append(section); }

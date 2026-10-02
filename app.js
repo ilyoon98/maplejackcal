@@ -5,10 +5,10 @@ const TIERS = [
   { key: 'eternel', name: '에테르넬', level: 250 },
 ];
 
-const ICON_BASE = 'icons/Trace'; // maplestory.io(KMS 389)에서 받아 둔 아이템 아이콘, 파일명은 아이템 ID
+const ICON_BASE = 'icons/trace'; // maplestory.io(KMS 389)에서 받아 둔 아이템 아이콘, 파일명은 아이템 ID
 
 // 서버 없이 동작하도록 티어별 부위 대표 아이템(아이콘/이름/레벨)을 하드코딩.
-// 아이콘은 icons/Trace/<아이템 ID>.webp 로컬 파일을 사용.
+// 아이콘은 icons/trace/<아이템 ID>.webp 로컬 파일을 사용.
 const PART_LABELS = { weapon: '무기', hat: '모자', armor: '방어구', glove: '장갑' };
 const BUCKET_ORDER = ['weapon', 'hat', 'armor', 'glove'];
 const TIER_ITEMS = {

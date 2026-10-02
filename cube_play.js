@@ -8,10 +8,10 @@ const POTENTIAL_COST = { 1:[4000000,16000000,34000000,40000000], 160:[4250000,17
 const ADDITIONAL_COST = { 1:[9750000,27300000,66300000,78000000], 160:[10375000,29050000,70550000,83000000], 200:[11000000,30800000,74800000,88000000], 250:[12250000,34300000,83300000,98000000] };
 const PRICE_TABLES = { potential:POTENTIAL_COST, additional:ADDITIONAL_COST };
 const CUBE_ICON = {
-  potentialMeso:['잠재.png'], black:['블랙.webp'], red:['레드.webp'], meisterMax:['명장.webp'], meister:['장인.webp'], suspicious:['수상한.png'],
-  addReset:['에디잠재.png'], addWhite:['에디큐브.webp','화이트에디.webp'], addSuspicious:['수상한에디.webp','브론즈.webp']
+  potentialMeso:['잠재.webp'], black:['블랙.webp'], red:['레드.webp'], meisterMax:['명장.webp'], meister:['장인.webp'], suspicious:['수상한.webp'],
+  addReset:['에디잠재.webp'], addWhite:['에디큐브.webp','화이트에디.webp'], addSuspicious:['수상한에디.webp','브론즈.webp']
 };
-function iconImg(files){ return files.map(f=>`<img src="icons/Cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
+function iconImg(files){ return files.map(f=>`<img src="icons/cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
 const CUBES = {
   potentialMeso:{name:'잠재능력 재설정 (메소)', kind:'normal', p:[.15,.035,.014], cap:[10,42,107], official:'potential'},
   black:{name:'블랙 큐브', kind:'normal', p:[.15,.035,.014], cap:[10,42,107]},

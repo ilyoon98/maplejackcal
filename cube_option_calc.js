@@ -6,11 +6,11 @@ const TABS = [['potential','잠재능력'],['additional','에디셔널 잠재능
 // official: 큐브 없이 메소로만 재설정하는 모드. 등급·레벨 구간별 비용표를 쓴다.
 // 나머지(큐브)는 아이템 레벨로만 정해지는 재설정 비용을 쓴다.
 const CUBES = {
-  potentialMeso:{ name:'잠재능력 재설정 (메소)', icon:['잠재.png'], tab:'potential', data:'black', official:'potential' },
+  potentialMeso:{ name:'잠재능력 재설정 (메소)', icon:['잠재.webp'], tab:'potential', data:'black', official:'potential' },
   black:{ name:'블랙 큐브', icon:['블랙.webp'], tab:'potential', data:'black' },
   red:{ name:'레드 큐브', icon:['레드.webp'], tab:'potential' },
   artisan:{ name:'명장의 큐브 / 골드 큐브', icon:['명장.webp','골드.webp'], tab:'potential' },
-  addiMeso:{ name:'에디셔널 잠재능력 재설정 (메소)', icon:['에디잠재.png'], tab:'additional', data:'addi', official:'additional' },
+  addiMeso:{ name:'에디셔널 잠재능력 재설정 (메소)', icon:['에디잠재.webp'], tab:'additional', data:'addi', official:'additional' },
   addi:{ name:'에디셔널 큐브 / 화이트 에디셔널 큐브', icon:['에디큐브.webp','화이트에디.webp'], tab:'additional' }
 };
 const dataKey = cube => CUBES[cube].data || cube;
@@ -66,7 +66,7 @@ function mesoText(n){
   if(eok) return man ? `${fmt(eok)}억 ${fmt(man)}만` : `${fmt(eok)}억`;
   return `${fmt(man)}만`;
 }
-function iconImg(files){ return files.map(f => `<img src="icons/Cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
+function iconImg(files){ return files.map(f => `<img src="icons/cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 // 큐브 없이 메소만으로 재설정할 때 값. 레벨 구간과 현재 등급(레전드리)으로 정해진다
 function mesoResetPrice(cube){

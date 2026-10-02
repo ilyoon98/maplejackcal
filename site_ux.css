@@ -177,3 +177,67 @@ body[data-ux-page="trace_calc.html"] .ux-expected-card .summary-grid { grid-temp
 body[data-ux-page="trace_calc.html"] .ux-expected-card .summary-item:first-child { grid-column:1 / -1; padding:14px; background:#222940; border-radius:10px; }
 body[data-ux-page="trace_calc.html"] .ux-expected-card .summary-item:first-child .value { font-size:1.5rem; color:var(--ux-accent,#83b7ff); font-weight:800; }
 body[data-ux-page="trace_calc.html"] .ux-expected-card h2 { color:var(--ux-text); font-size:1.1rem; }
+
+/* 금요일 10:30(KST)부터 해당 주 이벤트 종료까지 표시되는 공식 썬데이 공지. */
+.sunday-event-fab {
+  position:fixed;
+  right:max(18px,env(safe-area-inset-right));
+  bottom:max(18px,env(safe-area-inset-bottom));
+  z-index:1200;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:56px;
+  padding:8px 15px 8px 9px;
+  border:1px solid rgba(255,255,255,.32);
+  border-radius:999px;
+  background:linear-gradient(135deg,#13c6dc,#3887ff);
+  color:#fff;
+  font:inherit;
+  cursor:pointer;
+  box-shadow:0 12px 34px rgba(7,20,42,.38);
+  text-decoration:none;
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+.sunday-event-fab[hidden] { display:none; }
+.sunday-event-fab:hover { transform:translateY(-2px); box-shadow:0 16px 40px rgba(7,20,42,.48); }
+.sunday-event-fab:focus-visible { outline:3px solid #fff; outline-offset:3px; }
+.sunday-event-icon { display:grid; place-items:center; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.2); font-size:1.35rem; }
+.sunday-event-copy { display:flex; flex-direction:column; gap:2px; line-height:1.2; }
+.sunday-event-copy strong { font-size:.86rem; white-space:nowrap; }
+.sunday-event-copy small { color:rgba(255,255,255,.84); font-size:.68rem; white-space:nowrap; }
+@media(max-width:700px) {
+  body.ux-has-dock .sunday-event-fab { bottom:calc(88px + env(safe-area-inset-bottom)); }
+  .sunday-event-fab { right:12px; padding:7px; min-height:52px; }
+  .sunday-event-icon { width:38px; height:38px; }
+  .sunday-event-copy { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+}
+.sunday-event-dialog {
+  width:min(920px,calc(100vw - 32px));
+  height:min(90dvh,920px);
+  max-height:90dvh;
+  padding:0;
+  border:1px solid var(--ux-line,#364050);
+  border-radius:18px;
+  background:#10151e;
+  color:var(--ux-text,#edf2ff);
+  box-shadow:0 28px 90px rgba(0,0,0,.62);
+  overflow:hidden;
+}
+.sunday-event-dialog[open] { display:grid; grid-template-rows:auto minmax(0,1fr) auto; }
+.sunday-event-dialog::backdrop { background:rgba(3,7,14,.78); backdrop-filter:blur(5px); }
+.sunday-event-dialog > header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding:20px 22px 16px; border-bottom:1px solid var(--ux-line,#364050); background:linear-gradient(135deg,rgba(19,198,220,.15),rgba(56,135,255,.09)); }
+.sunday-event-dialog header span { color:#70dce9; font-size:.68rem; font-weight:800; letter-spacing:.12em; }
+.sunday-event-dialog h2 { margin:4px 0 3px; font-size:1.35rem; }
+.sunday-event-dialog header p { margin:0; color:var(--ux-muted,#a9b1c1); font-size:.82rem; }
+.sunday-dialog-close { width:38px; height:38px; flex:0 0 auto; border:1px solid var(--ux-line,#364050); border-radius:10px; background:#18202c; color:#fff; font:inherit; cursor:pointer; }
+.sunday-dialog-images { min-height:0; overflow:auto; background:#fff; }
+.sunday-dialog-images img { display:block; width:min(100%,876px); height:auto; margin:0 auto; }
+.sunday-dialog-empty { margin:0; padding:48px 24px; color:#303846; text-align:center; }
+.sunday-event-dialog > footer { display:flex; justify-content:flex-end; gap:8px; padding:12px 18px; border-top:1px solid var(--ux-line,#364050); background:#10151e; }
+.sunday-event-dialog footer button { padding:9px 13px; border:1px solid var(--ux-line,#364050); border-radius:9px; background:#18202c; color:#dce5f5; font:inherit; font-size:.82rem; font-weight:700; cursor:pointer; }
+.sunday-event-dialog footer .sunday-dialog-dismiss { border-color:#2679ee; background:#2679ee; color:#fff; }
+@media(max-width:700px) {
+  .sunday-event-dialog { width:100vw; max-width:none; height:92dvh; max-height:92dvh; margin:auto 0 0; border-radius:18px 18px 0 0; }
+  .sunday-event-dialog > header { padding:16px; }
+}

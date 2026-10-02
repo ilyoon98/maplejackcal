@@ -10,6 +10,7 @@ const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 function fakeElement(){
   return {
     addEventListener(){}, classList:{toggle(){}}, focus(){}, click(){},
+    setAttribute(){}, removeAttribute(){},
     textContent:'', innerHTML:'', className:'', value:'', disabled:false,
   };
 }
@@ -21,34 +22,78 @@ const context = {
   window: {addEventListener(){}},
 };
 vm.createContext(context);
-vm.runInContext(script.replace(/  renderAll\(\);\s*\}\)\(\);\s*$/, `
+vm.runInContext(script.replace(/  renderAll\(\);\s*autoRefreshCharacterCompletions\(\);\s*hydrateMissingCharacterProfiles\(\);\s*\}\)\(\);\s*$/, `
   globalThis.engine = {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag, describeApiError, BOSS_DATA, validParty, escapeHtml, characterBossIcon, weeklyCompletionHtml,
-    partyControlsHtml, characterWeeklyIncomeHtml, allWeeklyComplete,
+    partyControlsHtml, characterWeeklyIncomeHtml, allWeeklyComplete, apiLinkBadgeHtml, characterProfileHtml, reorderCharacters, normalizeCharacterImage,
     changeDifficulty(ch, name, diff) {
       var original = renderAll;
       renderAll = function(){};
       try { toggleDiff(ch, name, diff); } finally { renderAll = original; }
-    },
-    generatedName(names) {
-      var original = characters;
-      characters = names.map(function(name){ return {name:name}; });
-      try { return nextCharacterName(); } finally { characters = original; }
     }
   };
 })();`), context);
 const {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag, describeApiError, BOSS_DATA, validParty, escapeHtml} = context.engine;
+
+test('캐릭터 카드는 외형 썸네일에 월드 아이콘을 겹쳐 표시한다', () => {
+  context.window.NexonCharacters = {worldIconPath: world => 'icons/server/' + world + '.webp'};
+  const image = 'https://open.api.nexon.com/static/maplestory/character/look/ABC123';
+  const character = normalizeCharacter({name:'테스터', characterLevel:290, worldName:'베라', characterClass:'렌', characterImage:image});
+  const profile = context.engine.characterProfileHtml(character);
+  assert.match(profile, /class="chip-avatar-image"[^>]*src="https:\/\/open\.api\.nexon\.com\/static\/maplestory\/character\/look\/ABC123"/);
+  assert.match(profile, /class="chip-world-icon"[^>]*src="icons\/server\/베라\.webp"/);
+  assert.match(profile, /chip-avatar[\s\S]*chip-world-icon[\s\S]*chip-name[\s\S]*>테스터<\/button>/);
+  assert.match(profile, /Lv\.290 · 렌/);
+  assert.doesNotMatch(profile, /Lv\.290 · 베라/);
+  assert.match(html, /\.chip-avatar-image\{[^}]*transform:scale\(3\.2\);[^}]*transform-origin:50% 45%/);
+  assert.equal(context.engine.normalizeCharacterImage('javascript:alert(1)'), '');
+  assert.match(context.engine.characterProfileHtml(normalizeCharacter({name:'직접추가'})), /chip-avatar-fallback/);
+});
+
+test('이름 편집은 기존 머리글을 같은 높이의 입력 줄로 교체한다', () => {
+  assert.match(script, /<form class="chip-rename" hidden>' \+ characterWorldMarkHtml\(ch\) \+ '<input/);
+  assert.match(script, /chip\.classList\.toggle\('is-renaming', true\);\s*renameForm\.hidden = false;/);
+  assert.match(script, /renameForm\.hidden = true;\s*chip\.classList\.toggle\('is-renaming', false\);/);
+  assert.match(html, /\.char-chip\.is-renaming \.chip-identity,\.char-chip\.is-renaming \.chip-card-actions\{ display:none; \}/);
+});
+
+test('캐릭터 카드는 전용 손잡이로 순서를 옮기고 저장한다', () => {
+  const characters = [{name:'첫째'}, {name:'둘째'}, {name:'셋째'}];
+  const selected = characters[1];
+  context.engine.reorderCharacters(characters, 0, 2);
+  assert.deepEqual(Array.from(characters, character => character.name), ['둘째', '셋째', '첫째']);
+  assert.equal(characters.indexOf(selected), 0);
+  context.engine.reorderCharacters(characters, -1, 1);
+  assert.deepEqual(Array.from(characters, character => character.name), ['둘째', '셋째', '첫째']);
+  assert.match(script, /class="chip-reorder"[^>]*title="드래그하거나 방향키로 순서 변경"/);
+  assert.match(html, /\.char-chip\{\s*position:relative;/);
+  assert.match(html, /\.chip-reorder\{[\s\S]*?position:absolute;[^}]*left:-15px;[^}]*border-radius:8px 0 0 8px;/);
+  assert.match(script, /addEventListener\('pointerdown',[\s\S]*addEventListener\('pointermove',[\s\S]*addEventListener\('pointerup'/);
+  assert.match(script, /cloneNode\(true\)[\s\S]*classList\.add\('char-chip-drag-ghost'\)[\s\S]*document\.body\.appendChild\(reorderGhost\)/);
+  assert.match(script, /moveReorderGhost\(event\)[\s\S]*document\.elementFromPoint/);
+  assert.match(html, /\.char-chip-drag-ghost\{[\s\S]*position:fixed;[\s\S]*box-shadow:/);
+  assert.match(script, /ArrowUp[\s\S]*ArrowLeft[\s\S]*ArrowDown[\s\S]*ArrowRight/);
+  assert.match(script, /moveCharacter\(idx, idx \+ offset, true\)/);
+  assert.match(script, /reorderCharacters\(characters, fromIndex, toIndex\);[\s\S]*saveState\(\);[\s\S]*renderAll\(\);/);
+});
 
 test('ALL CLEAR에서는 완료 수익만 표시하고 완료 취소 시 완료/예상 표시로 돌아간다', () => {
   const ch = {name:'테스트', bosses:{}};
   applyPreset(ch);
   Object.values(ch.bosses).forEach(entry => { entry.complete = true; });
   const full = context.engine.characterWeeklyIncomeHtml(charTotals(ch));
-  assert.match(full, /주간 완료 수익/);
-  assert.match(full, /weekly-values is-complete/);
+  assert.match(full, /chip-weekly is-complete/);
+  assert.match(full, /주간 보스<\/span><strong>12\/12/);
+  assert.match(full, /완료 <strong>/);
+  assert.doesNotMatch(full, /예상 <strong>/);
   ch.bosses['스우'].complete = false;
   const partial = context.engine.characterWeeklyIncomeHtml(charTotals(ch));
-  assert.match(partial, /주간 완료 \/ 예상/);
-  assert.doesNotMatch(partial, /is-complete/);
+  assert.match(partial, /주간 보스<\/span><strong>11\/12/);
+  assert.match(partial, /완료 <strong>[\s\S]*예상 <strong>/);
+  assert.match(partial, /aria-valuenow="11"/);
+  assert.doesNotMatch(partial, /chip-weekly is-complete/);
+  assert.match(html, /\.chip-weekly-money\{[^}]*flex-wrap:wrap;[^}]*overflow:visible;/);
+  assert.doesNotMatch(html, /\.chip-weekly-money\{[^}]*overflow-x:auto;/);
+  assert.doesNotMatch(script, /characterWeeklyIncomeHtml\(t\) \+\s*weeklyCompletionHtml\(t\)/);
 });
 
 test('전체 합계 완료 판정은 등록된 주간 보스 수를 기준으로 하며 빈 목록은 제외한다', () => {
@@ -82,9 +127,19 @@ test('난이도를 바꿔도 완료 상태와 파티 인원이 유지된다', ()
   assert.equal(ch.bosses['스우'].complete, false);
 });
 
-test('닉네임 없이 추가할 이름은 기존 이름과 겹치지 않는다', () => {
-  assert.equal(context.engine.generatedName([]), '캐릭터 1');
-  assert.equal(context.engine.generatedName(['캐릭터 1','캐릭터 3']), '캐릭터 2');
+test('캐릭터 카드는 API 연동 여부를 구분해 표시한다', () => {
+  assert.match(context.engine.apiLinkBadgeHtml({ocid:'linked'}), /is-linked[^>]*title="API 연동 · 아직 갱신 전"[^>]*>API 연동/);
+  assert.match(context.engine.apiLinkBadgeHtml({ocid:'linked', lastSyncedAt:'2026-10-02T01:23:45.000Z'}), /title="API 연동 · 최근 갱신 [^"]+"/);
+  assert.match(context.engine.apiLinkBadgeHtml({ocid:''}), /title="API 없이 저장된 캐릭터"[^>]*>API 미연동/);
+  assert.doesNotMatch(html, /class="sync-meta"/);
+});
+
+test('전체 API 갱신은 아이콘 버튼을 사용하고 성공 문구를 남기지 않는다', () => {
+  assert.match(html, /<div class="character-heading">[\s\S]*?id="schedulerRefreshAllBtn"[\s\S]*?<\/div>/);
+  assert.match(html, /id="schedulerRefreshAllBtn"[^>]*aria-label="API 갱신"[^>]*title="API 갱신"/);
+  assert.match(html, /id="schedulerRefreshAllBtn"[\s\S]*?<svg[^>]*aria-hidden="true"/);
+  assert.doesNotMatch(script, /개 캐릭터의 완료 상태를 갱신했습니다/);
+  assert.doesNotMatch(html, />전체 완료 상태 새로고침</);
 });
 
 test('3인 보스는 직접 입력·저장 복원·수익 계산·인원 목록에 최대 3인을 적용한다', () => {
@@ -287,4 +342,20 @@ test('스케줄러 권한 오류는 본인 계정과 접속 조건을 안내한�
   const message = describeApiError({code:'OPENAPI00003', message:'not found'}, 'scheduler');
   assert.match(message, /본인 계정/);
   assert.match(message, /2026년 6월 25일 이후 접속/);
+});
+
+test('계산기 진입 시 저장된 스케줄러 캐릭터의 완료 상태를 자동 갱신한다', () => {
+  assert.match(script, /renderAll\(\);\s*autoRefreshCharacterCompletions\(\);\s*hydrateMissingCharacterProfiles\(\);\s*\}\)\(\);\s*$/);
+  assert.match(script, /function autoRefreshCharacterCompletions\(\)[\s\S]*?if \(!NexonKey\.has\(\)\) return;[\s\S]*?refreshAllCharacterCompletions\(\);/);
+});
+
+test('직접 추가 버튼 없이 API 실패 시 연동 없는 캐릭터로 추가한다', () => {
+  assert.doesNotMatch(html, /manualCharacterBtn|>직접 추가</);
+  assert.match(script, /\.catch\(function\(\)\{\s*var added = addLocalCharacter\(name\);/);
+  assert.match(html, /API 조회가 안 되면 연동 없이 추가합니다/);
+});
+
+test('카드 이름 확인은 API 성공 때만 기존 카드를 교체한다', () => {
+  assert.match(script, /function renameCharacterFromApi\(index, requestedName\)[\s\S]*?fetchSchedulerCharacter\(name, knownOcid\)\.then[\s\S]*?applySchedulerCharacter\(result\.data, result\.ocid, name, index\)/);
+  assert.match(script, /renameCharacterFromApi\(idx, nextName\)\.then[\s\S]*?\.catch\(function\(error\)[\s\S]*?이름을 변경하지 않았습니다/);
 });

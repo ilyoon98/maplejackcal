@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<link rel="icon" type="image/png" href="favicon.png?v=2" />
+<meta name="description" content="캐릭터가 보라 약초를 알아서 캐서 쥬니퍼베리 씨앗을 모으고, 씨앗 오일·소형 재물 획득의 비약으로 만들어 시세가 좋을 때 파는 방치형 미니게임" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="약초 방치 게임" />
+<meta property="og:description" content="캐릭터가 보라 약초를 알아서 캐서 쥬니퍼베리 씨앗을 모으고, 씨앗 오일·소형 재물 획득의 비약으로 만들어 시세가 좋을 때 파는 방치형 미니게임" />
+<meta property="og:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://maplejackcal.vercel.app/og-image.png" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>약초 방치 게임</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="nexon_characters.css" />
+<link rel="stylesheet" href="herb_idle.css" />
+<link rel="stylesheet" href="site_ux.css">
+<script src="site_ux.js" defer></script>
+</head>
+<body>
+<div class="wrap hi-page">
+  <nav class="site-nav">
+    <div class="site-tabs-track site-groups">
+      <span class="site-tabs-pill" aria-hidden="true"></span>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
+      <button type="button" class="site-tab" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
+      <button type="button" class="site-tab active" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>시뮬레이터</button>
+    </div>
+    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
+      <a class="site-menu-item" href="trace_calc.html">
+        <span class="site-menu-icon">📜</span>
+        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_calc.html">
+        <span class="site-menu-icon">⭐</span>
+        <span><span class="site-menu-name">스타포스 기댓값 계산기</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
+      </a>
+      <a class="site-menu-item" href="authentic_symbol_calc.html">
+        <span class="site-menu-icon">🔮</span>
+        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_income_calc.html">
+        <span class="site-menu-icon">💰</span>
+        <span><span class="site-menu-name">보스 수익 정산 계산기</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
+      </a>
+      <a class="site-menu-item" href="boss_buff_planner.html">
+        <span class="site-menu-icon">⏱️</span>
+        <span><span class="site-menu-name">보스 버프 동선 계산기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_calc.html">
+        <span class="site-menu-icon">🎲</span>
+        <span><span class="site-menu-name">큐브 등급업 비용 계산기</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
+      </a>
+      <a class="site-menu-item" href="cube_option_calc.html">
+        <span class="site-menu-icon">🎯</span>
+        <span><span class="site-menu-name">큐브 옵션 확률 계산기</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="item_craft_calc.html">
+        <span class="site-menu-icon">🛠️</span>
+        <span><span class="site-menu-name">아이템 제작 비용 계산기</span><span class="site-menu-desc">대박·평균 제작 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="trade_margin_calc.html">
+        <span class="site-menu-icon">💱</span>
+        <span><span class="site-menu-name">되팔기 손익 계산기</span><span class="site-menu-desc">수수료 떼고 남는 메소</span></span>
+      </a>
+      <a class="site-menu-item" href="meso_market_calc.html">
+        <span class="site-menu-icon">💎</span>
+        <span><span class="site-menu-name">메소마켓 시세 계산기</span><span class="site-menu-desc">1억 메소당 실수령 메포</span></span>
+      </a>
+      <a class="site-menu-item" href="coin_shop_calc.html">
+        <span class="site-menu-icon">🪙</span>
+        <span><span class="site-menu-name">이벤트 코인샵 계산기</span><span class="site-menu-desc">주차별 구매 계획</span></span>
+      </a>
+    </div>
+    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
+      <a class="site-menu-item" href="cube_play.html">
+        <span class="site-menu-icon">🎮</span>
+        <span><span class="site-menu-name">큐브 시뮬레이터</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
+      </a>
+      <a class="site-menu-item" href="starforce_play.html">
+        <span class="site-menu-icon">🌟</span>
+        <span><span class="site-menu-name">스타포스 시뮬레이터</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
+      </a>
+      <a class="site-menu-item" href="boutique_gacha.html">
+        <span class="site-menu-icon">🎁</span>
+        <span><span class="site-menu-name">부티크 기프트 시뮬레이터</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
+      </a>
+      <a class="site-menu-item" href="pet_gacha.html">
+        <span class="site-menu-icon">🐾</span>
+        <span><span class="site-menu-name">펫 시뮬레이터</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
+      </a>
+      <a class="site-menu-item" href="seedring_gacha.html">
+        <span class="site-menu-icon">💍</span>
+        <span><span class="site-menu-name">시드링 시뮬레이터</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
+      </a>
+      <a class="site-menu-item active" href="herb_idle.html">
+        <span class="site-menu-icon">🌿</span>
+        <span><span class="site-menu-name">약초 방치 게임</span><span class="site-menu-desc">채집·가공해서 시세 보고 팔기</span></span>
+      </a>
+    </div>
+  </nav>
+
+  <header class="hi-hero">
+    <div class="eyebrow">NIGHT HERB ROUTE / BETA</div>
+    <h1><span>🌿</span> 달빛 약초 채집소</h1>
+    <p>내 캐릭터가 층을 오가며 보라 약초를 캡니다. 재료를 가공하고, 구매가와 판매가를 비교해 메소를 불려 보세요.</p>
+    <div class="hi-hero-meta"><span>최대 8시간 방치</span><span>3초 시세 갱신</span><span>API 캐릭터 동작</span></div>
+  </header>
+
+  <div class="hi-layout">
+    <div class="hi-main">
+      <section class="hi-stage hi-order-stage" id="stage" aria-label="약초 밭">
+        <canvas id="scene" role="img" aria-label="보라 약초 밭에서 캐릭터가 약초를 캐고, 왼쪽 제련대와 오른쪽 연금술 작업대가 있는 장면"></canvas>
+        <div class="hi-hud">
+          <div class="hi-chip hi-meso" title="보유 메소"><span class="hi-coin" aria-hidden="true"></span><b id="mesoValue">-</b></div>
+          <div class="hi-chip hi-status" id="statusText">-</div>
+        </div>
+        <div class="hi-toast" id="toast" role="status" aria-live="polite"></div>
+        <div class="hi-overlay hidden" id="awayBox" role="dialog" aria-modal="false" aria-labelledby="awayTitle">
+          <div class="hi-overlay-card">
+            <div class="hi-overlay-title" id="awayTitle">-</div>
+            <ul class="hi-away-list" id="awayList"></ul>
+            <div class="hi-away-market" id="awayMarket"></div>
+            <p class="hi-away-note" id="awayNote"></p>
+            <button type="button" class="hi-btn primary" id="awayOk">확인</button>
+          </div>
+        </div>
+        <div class="hi-overlay hidden" id="pausedBox" role="dialog" aria-modal="false" aria-labelledby="pausedTitle">
+          <div class="hi-overlay-card">
+            <div class="hi-overlay-title" id="pausedTitle">다른 탭에서 게임이 진행 중이에요</div>
+            <p class="hi-away-note">같은 게임을 두 탭에서 동시에 돌리면 기록이 꼬여서 이 탭은 멈춰 두었어요.</p>
+            <button type="button" class="hi-btn primary" id="resumeBtn">이 탭에서 이어 하기</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="hi-actions hi-order-actions" role="group" aria-label="할 일 고르기">
+        <button type="button" class="hi-act" data-mode="gather" aria-pressed="true">
+          <span class="hi-act-icon" aria-hidden="true">🌿</span>
+          <span class="hi-act-name">약초 캐기</span>
+          <small id="act_gather">보라 약초 → 씨앗</small>
+        </button>
+        <button type="button" class="hi-act" data-mode="oil" aria-pressed="false">
+          <img class="pix hi-act-icon" src="icons/craft/쥬니퍼베리씨앗오일.webp" alt="" width="30" height="30" />
+          <span class="hi-act-name">오일 만들기</span>
+          <small id="act_oil">씨앗 6 → 오일 1</small>
+        </button>
+        <button type="button" class="hi-act" data-mode="alchemy" aria-pressed="false">
+          <img class="pix hi-act-icon" src="icons/craft/소형재물획득의비약.webp" alt="" width="30" height="30" />
+          <span class="hi-act-name">연금술</span>
+          <small id="act_alchemy">오일 5 → 재물비 6</small>
+        </button>
+      </div>
+
+      <div class="hi-inv hi-order-inv" aria-label="가방">
+        <div class="hi-inv-item" title="쥬니퍼베리 씨앗"><img class="pix" src="icons/craft/쥬니퍼베리씨앗.webp" alt="" width="30" height="30" /><span><small>씨앗</small><b id="inv_seed">0</b></span></div>
+        <div class="hi-inv-item" title="쥬니퍼베리 씨앗 오일"><img class="pix" src="icons/craft/쥬니퍼베리씨앗오일.webp" alt="" width="30" height="30" /><span><small>오일</small><b id="inv_oil">0</b></span></div>
+        <div class="hi-inv-item" title="소형 재물 획득의 비약"><img class="pix" src="icons/craft/소형재물획득의비약.webp" alt="" width="30" height="30" /><span><small>재물비</small><b id="inv_elixir">0</b></span></div>
+        <div class="hi-inv-item mat" title="최상급 아이템 결정 · 연금술 1회에 2개"><img class="pix" src="icons/craft/최상급아이템결정.webp" alt="" width="30" height="30" /><span><small>최상결</small><b id="inv_crystal">0</b></span></div>
+        <div class="hi-inv-item mat" title="현자의 돌 · 연금술 1회에 1개"><img class="pix" src="icons/craft/현자의돌.webp" alt="" width="30" height="30" /><span><small>현자의 돌</small><b id="inv_stone">0</b></span></div>
+      </div>
+
+      <details class="hi-panel hi-me hi-order-me" id="mePanel">
+        <summary>
+          <span class="hi-me-thumb" id="meThumb" aria-hidden="true">🧑‍🌾</span>
+          <span class="hi-me-info"><b id="meName">기본 심마니</b><small id="meSub">내 메이플 캐릭터를 불러와서 할 수 있어요</small></span>
+          <span class="hi-me-open">캐릭터 바꾸기</span>
+        </summary>
+        <div class="hi-me-body">
+          <p class="hi-me-key" id="meKey" hidden>넥슨 오픈 API 키가 필요해요. <a href="index.html#apiKey">홈에서 등록하기 →</a></p>
+          <div id="mePicker"></div>
+          <div class="hi-me-form">
+            <input type="text" id="meNameInput" placeholder="캐릭터 이름" maxlength="20" autocomplete="off" spellcheck="false" aria-label="캐릭터 이름" />
+            <button type="button" class="hi-btn primary" id="meLoad">불러오기</button>
+            <button type="button" class="hi-btn" id="meReset" hidden>기본 심마니로</button>
+          </div>
+          <p class="hi-me-status" id="meStatus" role="status" aria-live="polite"></p>
+        </div>
+      </details>
+
+      <section class="hi-panel hi-order-log">
+        <div class="hi-panel-head"><h2>기록</h2><small>판매·구매·시세 소식</small></div>
+        <ol class="hi-log" id="log"></ol>
+      </section>
+    </div>
+
+    <aside class="hi-side">
+      <section class="hi-panel hi-market hi-order-market">
+        <div class="hi-panel-head"><h2>경매 단말기</h2><small>3초마다 호가 갱신</small></div>
+        <div class="hi-news" id="news"></div>
+        <div id="marketCards"></div>
+      </section>
+
+      <section class="hi-panel hi-order-assets">
+        <div class="hi-panel-head"><h2>내 자산</h2><small id="playTime"></small></div>
+        <div class="hi-worth" id="worth"></div>
+        <p class="hi-worth-note">가방에 있는 씨앗·오일·재물비는 팔아야 자산이 돼요.</p>
+        <dl class="hi-stats" id="stats"></dl>
+        <button type="button" class="hi-btn ghost" id="hiReset">처음부터 다시</button>
+      </section>
+    </aside>
+  </div>
+
+  <div data-ux-help="게임 규칙"><details class="hi-panel hi-rules">
+    <summary>게임 규칙 보기</summary>
+    <ul>
+      <li><b>약초 캐기</b> — 캐릭터가 가까운 보라 약초부터 알아서 캡니다. 1번 캐는 데 2초, 캔 약초는 10~16초 뒤 다시 자랍니다. 같은 층은 걷고, 층 사이는 장면에 보이는 사다리까지 걸어가서 수직으로 오르내립니다.</li>
+      <li>씨앗은 <b>3번 중 1번꼴로 1~5개</b>가 나옵니다. 평균은 1회 1개입니다.</li>
+      <li><b>오일 만들기</b> — 왼쪽 제련대로 가서 <b>씨앗 6개 + 최고급 허브 오일병(1,000메소)</b>으로 1.6초마다 씨앗 오일을 만듭니다. <b>90%</b> 확률로 오일이 나오고, 나머지 10%는 보라색 가루가 나오는 <b>꽝</b>입니다. 꽝이면 재료는 사라지고 가루가 터져 <b>3초 동안 기절</b>합니다. 기절 중에는 다른 일을 눌러도 깨어난 뒤에 움직입니다.</li>
+      <li><b>연금술</b> — 오른쪽 작업대로 가서 <b>오일 5개 + 최상급 아이템 결정 2개 + 현자의 돌 1개 + 최고급 포션 빈병(800)</b>으로 3초마다 소형 재물 획득의 비약 6개를 만듭니다. 결정과 돌은 경매장에서 시세 보고 직접 사 둬야 하고, 빈병은 메소로 자동 구매합니다. 레시피는 이미 있다고 봅니다.</li>
+      <li>가공할 재료나 메소가 떨어지면 약초 캐기로 돌아옵니다. 가공 도중 다른 일을 누르면 넣은 재료는 돌려받습니다.</li>
+      <li><b>시세</b> — 3초마다 바뀌고, 평소 가격 근처를 오르내리다 가끔 뜨는 소식에 크게 움직였다가 천천히 돌아옵니다. 원재료인 <b>씨앗이 가장 크게</b>, 오일은 중간, 사냥 때마다 쓰는 <b>재물비는 가장 작게</b> 움직입니다. 빨간색 ▲는 오름, 파란색 ▼는 내림입니다.</li>
+      <li><b>팔기·사기</b> — 모든 품목에 내가 팔 때 받는 <b>판매가</b>와 살 때 내는 <b>구매가</b>가 따로 있습니다. 판매에는 수수료 5%가 붙고 구매 수수료는 없습니다. 결정과 돌의 "필요량"은 지금 있는 오일을 전부 재물비로 만들 만큼만 삽니다.</li>
+      <li><b>내 캐릭터</b> — "캐릭터 바꾸기"에서 서버·캐릭터를 고르거나 이름을 적고 불러오면 넥슨 오픈 API의 캐릭터 이미지로 밭을 돌아다닙니다. 걷기·사다리·두손무기 공격을 차례로 시험하고, 장비가 지원하지 않는 동작은 안전한 서기 동작으로 대신합니다.</li>
+      <li>창을 닫거나 다른 탭에 가 있어도 <b>최대 8시간</b>까지 그대로 진행되고, 돌아오면 그동안 얻은 것을 보여줍니다. 진행 상황은 이 브라우저에만 저장됩니다.</li>
+      <li><b>자산</b>은 팔아서 받은 메소만 셉니다. 가방에 있는 씨앗·오일·재물비는 시세에 따라 값이 바뀌니 팔기 전에는 자산에 넣지 않아요.</li>
+      <li>시작 메소 100만으로 시작합니다. 경매장 구매와 오일병·포션 빈병에 사용합니다.</li>
+    </ul>
+  </details></div>
+
+  <div data-ux-help="수치 출처"><details class="hi-panel hi-rules">
+    <summary>수치 출처</summary>
+    <ul>
+      <li>씨앗 채집량: <a href="https://www.fmkorea.com/9640646044" target="_blank" rel="noopener">에펨코리아 「쥬니퍼베리 씨앗 채집량 통계」</a>(2026-03-27, 날렵한 갈퀴, 65캐릭) — 500회 채집당 평균 <b>497.6개</b>, 표준편차 36.8. 글에는 500회 합계만 있어서 1회 분포(3번 중 1번 1~5개)는 이 평균·편차에 맞춘 가정입니다. 이 규칙이면 500회 평균 500개, 표준편차 36.5개입니다.</li>
+      <li>평소 시세: 같은 작성자의 <a href="https://www.fmkorea.com/9472643295" target="_blank" rel="noopener">「채집 뉴비들을 위한 간단한 공략」</a>에 실린 2026년 2월 크로아 경매장 가격 — 씨앗 74만, 오일 554만, 재물비 475만, 최상급 아이템 결정 29만(3월 글은 33만이라 30만으로 둠). 현자의 돌 30만은 확인한 시세가 아니라 가정입니다.</li>
+      <li>제작 재료·확률은 <a href="wealth_elixir_calc.html">재물 비약 제작 계산기</a>와 같습니다. 채집 속도는 실제 게임(500회에 60~90분)보다 3~4배 빠르게 잡았습니다.</li>
+      <li>시세 변동·소식은 게임용으로 만든 가상 값입니다.</li>
+    </ul>
+  </details></div>
+</div>
+
+<script src="site_nav.js"></script>
+<script src="nexon_key.js"></script>
+<script src="nexon_characters.js"></script>
+<script src="herb_idle_core.js"></script>
+<script src="herb_idle.js"></script>
+</body>
+</html>
