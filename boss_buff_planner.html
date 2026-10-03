@@ -99,13 +99,13 @@
   .boss-list-actions #resetBtn { margin-left:auto; }
   .boss-add { display:grid; grid-template-columns:minmax(0,1fr) 112px auto; align-items:end; gap:12px; padding:14px; margin-bottom:16px; background:#11141a; border:1px solid var(--border); border-radius:12px; }
   .boss-add-field { display:flex; flex-direction:column; gap:7px; min-width:0; color:var(--text-dim); font-size:0.75rem; font-weight:600; }
-  .boss-add input { box-sizing:border-box; width:100%; min-width:0; height:40px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); color:var(--text); font:inherit; font-size:0.88rem; }
+  .boss-add input, .boss-add select { box-sizing:border-box; width:100%; min-width:0; height:40px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); color:var(--text); font:inherit; font-size:0.88rem; }
   .boss-add .new-mult { display:flex; align-items:center; height:40px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); }
   .boss-add .new-mult input { flex:1; width:0; height:38px; border:0; background:transparent; padding-right:4px; font-variant-numeric:tabular-nums; }
   .boss-add .unit { padding-right:11px; font-weight:400; }
   .boss-add #addBoss { min-height:40px; padding:9px 16px; border-radius:8px; background:var(--accent-strong); border-color:transparent; color:#0b0d12; }
   .boss-add #addBoss:hover { filter:brightness(1.12); }
-  .boss-add input:focus-visible, .boss-add button:focus-visible, .boss-list-actions button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  .boss-add input:focus-visible, .boss-add select:focus-visible, .boss-add button:focus-visible, .boss-list-actions button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
   @media (max-width:520px) {
     .boss-add { grid-template-columns:minmax(0,1fr) 112px; gap:12px; }
     .boss-add .boss-add-name { grid-column:1 / -1; }
@@ -273,7 +273,7 @@
         </div>
         <div class="boss-add" role="group" aria-label="보스 직접 추가">
           <label class="boss-add-field boss-add-name" for="newName">보스 이름
-            <input type="text" id="newName" placeholder="추가할 보스 이름" maxlength="20">
+            <select id="newName"></select>
           </label>
           <label class="boss-add-field" for="newMult">배율
             <span class="new-mult"><input type="number" id="newMult" min="1" step="10" value="100"><span class="unit">%</span></span>
@@ -284,7 +284,7 @@
           <span></span><span></span><span class="name-col">보스</span><span>배율</span><span>소요</span><span>도핑</span><span></span>
         </div>
         <div id="bossList"></div>
-        <p class="note">보스별 도핑 버튼을 누르면 풀도핑 ↔ 쌀도핑으로 바뀝니다. 같은 도핑의 보스끼리만 묶습니다. 입력 시간은 풀도핑 기준이며, 쌀도핑은 배율의 97%로 동선을 계산합니다.</p>
+        <p class="note">보스별 도핑 버튼을 누르면 풀도핑 ↔ 쌀도핑으로 바뀝니다. 한 버프에는 같은 도핑만 묶되, 쌀도핑 보스를 풀도핑 버프에 넣어 버프 개수가 줄어들면 풀도핑으로 자동 계산합니다. 입력 시간은 풀도핑 기준이며, 쌀도핑은 배율의 97%로 동선을 계산합니다.</p>
         <p class="note">윌은 페이즈 이동 때문에 처치 시간에 +4분이 자동으로 붙습니다. 입력한 값은 이 브라우저에 저장됩니다.</p>
       </section>
 
@@ -294,7 +294,7 @@
           <b>소요 시간 = 기준 시간 ÷ (배율 ÷ 100) × (1 + 여유%)</b>, 한 버프에 n마리를 넣으면 <b>이동 시간 × (n−1)</b>이 더 붙습니다. 그걸로<br>
           ① 켜둔 보스를 전부 도는 <b>최소 버프 개수</b>와 각 버프에 넣을 보스·순서를 짭니다. 도핑별 보스 15마리까지는 정확한 최적해, 그보다 많으면 근사값입니다.<br>
           ② 버프를 한 번만 쓸 때 <b>남는 시간이 가장 적은</b> 조합도 따로 보여줍니다. 같은 시간이면 보스를 더 많이 잡는 쪽이 위로 옵니다.<br>
-          ③ 보스별로 <b>풀도핑 / 쌀도핑</b>을 선택합니다. 쌀도핑은 배율 ×0.97(상대 3% 감소)로 계산하며, 전체 동선과 한 버프 조합 모두 같은 도핑의 보스끼리만 묶습니다.
+          ③ 보스별로 <b>풀도핑 / 쌀도핑</b>을 선택합니다. 쌀도핑은 배율 ×0.97(상대 3% 감소)로 계산하며, 한 버프에는 같은 도핑의 보스만 묶습니다. 단, 전체 동선에서는 쌀도핑 보스를 풀도핑 버프에 넣어 버프 개수가 줄어들 때 풀도핑으로 바꿔 계산합니다.
         </p>
       </section></div>
     </div>

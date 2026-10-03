@@ -4,7 +4,7 @@
 //  ② 버프를 한 번만 쓸 때 가장 알찬 조합
 // 을 계산한다. 시간은 전부 초 단위 정수로 다뤄 부동소수 오차를 없앤다.
 //
-// 보스별 도핑 선택에 따라 풀도핑/쌀도핑 그룹을 따로 최적화한다.
+// 보스별 도핑 선택에 따라 풀도핑/쌀도핑 판을 나눠 묶되, 쌀도핑 보스는 버프가 줄어들면 풀도핑 판에도 넣는다.
 (function () {
   var STORE_KEY = 'bossBuffPlanner.v1';
 
@@ -23,6 +23,35 @@
     { name: '블러디 퀸',          diff: '카오스', icon: 'icons/boss/bloody_queen.webp' },
     { name: '파풀라투스',         diff: '카오스', icon: 'icons/boss/papulatus.webp' },
     { name: '매그너스',           diff: '하드',   icon: 'icons/boss/magnus.webp' }
+  ];
+
+  // 보스 추가 목록. 보스 수익 정산과 같은 순서·난이도.
+  var BOSS_CATALOG = [
+    ['유피테르', 'jupiter', ['하드', '노멀']],
+    ['발드릭스', 'baldrix', ['하드', '노멀']],
+    ['림보', 'limbo', ['하드', '노멀']],
+    ['벨로나', 'vellona', ['하드', '노멀', '이지']],
+    ['찬란한 흉성', 'radiant', ['하드', '노멀']],
+    ['카링', 'kaling', ['익스트림', '하드', '노멀', '이지']],
+    ['최초의 대적자', 'first_challenger', ['익스트림', '하드', '노멀', '이지']],
+    ['감시자 칼로스', 'watcher_kalos', ['익스트림', '카오스', '노멀', '이지']],
+    ['선택받은 세렌', 'seren', ['익스트림', '하드', '노멀']],
+    ['듄켈', 'dunkel', ['하드', '노멀']],
+    ['진 힐라', 'jin_hilla', ['하드', '노멀']],
+    ['더스크', 'dusk', ['카오스', '노멀']],
+    ['윌', 'will', ['하드', '노멀', '이지']],
+    ['루시드', 'lucid', ['하드', '노멀', '이지']],
+    ['가디언 엔젤 슬라임', 'guardian_angel_slime', ['카오스', '노멀']],
+    ['데미안', 'damien', ['하드', '노멀']],
+    ['스우', 'suu', ['익스트림', '하드', '노멀']],
+    ['파풀라투스', 'papulatus', ['카오스']],
+    ['벨룸', 'vellum', ['카오스']],
+    ['블러디 퀸', 'bloody_queen', ['카오스']],
+    ['반반', 'banban', ['카오스']],
+    ['피에르', 'pierre', ['카오스']],
+    ['매그너스', 'magnus', ['하드']],
+    ['자쿰', 'zakum', ['카오스']],
+    ['검은 마법사', 'black_mage', ['익스트림', '하드']]
   ];
 
   // 배율과 무관하게 그 보스에서 더 걸리는 시간(분). 젠 대기·컷신·페이즈 이동 같은 것들.
@@ -149,20 +178,79 @@
     if (top.length > topN) top.length = topN;
   }
 
-  // 도핑별로 따로 묶어 같은 버프에 서로 다른 도핑이 섞이지 않게 한다.
+  // 한 버프 안에서는 도핑을 섞지 않는다. 쌀도핑 보스는 풀도핑 판에 넣어 버프 개수가
+  // 줄어들 때만 풀도핑 시간으로 계산해 풀도핑 판에 넣는다.
   function packAll(items, cap) {
-    var bins = [], over = [], exact = true;
-    [true, false].forEach(function (full) {
-      var fit = [];
-      items.forEach(function (it, i) {
-        if ((!it.rice) !== full) return;
-        (secIn(it, full) <= cap ? fit : over).push(i);
-      });
-      var groupExact = fit.length <= MAX_EXACT_1;
-      exact = exact && groupExact;
-      bins = bins.concat(groupExact ? packExactSingle(fit, items, cap, full) : packGreedy(fit, items, cap, full));
+    var over = [], fixedFull = [], flex = [];
+    items.forEach(function (it, i) {
+      // 쌀도핑으로도 버프 시간을 넘는 보스는 버프를 하나 더 쓰게 되므로 풀도핑으로 돌리지 않는다.
+      if (it.rice) (it.riceSec <= cap ? flex : over).push(i);
+      else (it.full <= cap ? fixedFull : over).push(i);
     });
-    return { bins: bins, over: over, exact: exact };
+    if (fixedFull.length + flex.length <= MAX_EXACT_1) {
+      return { bins: packExactMixed(fixedFull.concat(flex), items, cap), over: over, exact: true };
+    }
+    // 보스가 많으면 도핑별로 따로 묶은 결과와, 풀도핑 판의 빈 시간에 쌀도핑 보스를 채운 결과 중 버프가 적은 쪽.
+    var fullBins = packGroup(fixedFull, items, cap, true);
+    var base = fullBins.concat(packGroup(flex, items, cap, false));
+    var filled = fullBins.map(function (bin) { return { idx: bin.idx.slice(), full: true }; });
+    var used = filled.map(function (bin) { return binSec(bin, items); });
+    var rest = [];
+    flex.slice().sort(function (a, b) { return items[b].full - items[a].full; }).forEach(function (i) {
+      for (var b = 0; b < filled.length; b++) {
+        if (costOf(used[b] + items[i].full, filled[b].idx.length + 1) <= cap) {
+          filled[b].idx.push(i); used[b] += items[i].full; return;
+        }
+      }
+      rest.push(i);
+    });
+    var alt = filled.concat(packGroup(rest, items, cap, false));
+    return { bins: alt.length < base.length ? alt : base, over: over, exact: false };
+  }
+  function packGroup(idxList, items, cap, full) {
+    return idxList.length <= MAX_EXACT_1 ? packExactSingle(idxList, items, cap, full) : packGreedy(idxList, items, cap, full);
+  }
+
+  // 풀도핑 보스와 쌀도핑 보스를 함께 놓고 최소 버프 개수를 계산한다.
+  // 점수 = 버프 개수 → 풀도핑으로 돌린 쌀도핑 보스 수 → 실제 사용 시간 순으로 작은 쪽.
+  function packExactMixed(idxList, items, cap) {
+    var n = idxList.length;
+    if (!n) return [];
+    var total = 1 << n;
+    var fullSums = subsetSums(idxList, items, true);
+    var riceSums = subsetSums(idxList, items, false);
+    var bits = popcounts(total);
+    var riceMask = 0;
+    idxList.forEach(function (k, j) { if (items[k].rice) riceMask |= 1 << j; });
+    var PROMO_W = 1e7, MIX_BIN_W = 1e12;
+    var binScore = new Float64Array(total);
+    var isFull = new Uint8Array(total);
+    for (var s = 1; s < total; s++) {
+      var promo = bits[s & riceMask];
+      var rc = costOf(riceSums[s], bits[s]);
+      var fc = costOf(fullSums[s], bits[s]);
+      if (promo === bits[s] && rc <= cap) binScore[s] = rc;          // 전부 쌀도핑 보스면 쌀도핑 판이 우선
+      else if (fc <= cap) { binScore[s] = promo * PROMO_W + fc; isFull[s] = 1; }
+      else binScore[s] = Infinity;
+    }
+    var dp = new Float64Array(total);
+    var pick = new Int32Array(total);
+    for (var mask = 1; mask < total; mask++) {
+      dp[mask] = Infinity;
+      var lowbit = mask & -mask;
+      for (var sub = mask; sub > 0; sub = (sub - 1) & mask) {
+        if (!(sub & lowbit) || binScore[sub] === Infinity) continue;
+        var cand = dp[mask ^ sub] + MIX_BIN_W + binScore[sub];
+        if (cand < dp[mask]) { dp[mask] = cand; pick[mask] = sub; }
+      }
+    }
+    var bins = [], cur = total - 1;
+    while (cur) {
+      var sub = pick[cur];
+      bins.push({ idx: subToIdx(sub, idxList), full: isFull[sub] === 1 });
+      cur ^= sub;
+    }
+    return bins;
   }
 
   // 부분집합 합/개수 미리 계산. sums는 판 종류별로 따로 필요하다.
@@ -315,12 +403,17 @@
     var fullCnt = bins.filter(function (b) { return b.full; }).length;
 
     var bossCnt = bins.reduce(function (a, bin) { return a + bin.idx.length; }, 0);
+    var promoted = [];
+    bins.forEach(function (bin) {
+      if (bin.full) bin.idx.forEach(function (k) { if (items[k].rice) promoted.push(items[k].name); });
+    });
     var html = '<div class="pack-head">' +
       '<div class="pack-title">버프 <span class="big">' + bins.length + '</span>개 · 보스 ' + bossCnt + '마리</div>' +
       ('<div class="tag-row"><span class="tag full">풀도핑 ' + fullCnt + '판</span>' +
           '<span class="tag rice">쌀도핑 ' + (bins.length - fullCnt) + '판</span></div>') +
       '<p class="note">처치 ' + fmt(clearSec) + ' + 이동 ' + moveCnt + '회 ' + fmt(moveCnt * moveSec()) +
       ' = <b>' + fmt(usedSec) + '</b> 사용 · 남는 시간 ' + fmt(waste) + '</p>' +
+      (promoted.length ? '<p class="note">버프를 줄이려고 쌀도핑 보스를 풀도핑으로 넣었습니다: ' + promoted.map(esc).join(', ') + '</p>' : '') +
       (res.exact ? '' : '<p class="note warn">보스가 많아 근사 계산으로 묶었습니다.</p>') +
       '</div>';
 
@@ -338,7 +431,7 @@
           return (j ? '<li class="hop"><span>↓ 이동 ' + fmtMin(moveSec()) + '분</span></li>' : '') +
             '<li class="stop"><span class="step-no">' + (j + 1) + '</span>' +
             (it.icon ? '<img src="' + it.icon + '" alt="" loading="lazy">' : '') +
-            '<span class="nm">' + esc(it.name) + '</span>' +
+            '<span class="nm">' + esc(it.name) + (bin.full && it.rice ? ' <span class="tag full">풀도핑 전환</span>' : '') + '</span>' +
             '<span class="tm">' + fmtMin(secIn(it, bin.full)) + '분</span></li>';
         }).join('') + '</ol>' +
         '</div>';
@@ -455,10 +548,18 @@
   });
   var newName = document.getElementById('newName');
   var newMult = document.getElementById('newMult');
+  newName.innerHTML = '<option value="">보스 선택</option>' + BOSS_CATALOG.map(function (b, i) {
+    return '<optgroup label="' + esc(b[0]) + '">' + b[2].map(function (diff) {
+      return '<option value="' + i + '|' + diff + '">' + esc(b[0]) + ' (' + diff + ')</option>';
+    }).join('') + '</optgroup>';
+  }).join('');
   function addBoss() {
-    var name = (newName.value || '').trim() || '새 보스';
+    var pick = String(newName.value || '').split('|');
+    var boss = BOSS_CATALOG[pick[0]];
+    if (!boss) { newName.focus(); return; }
+    var name = boss[0];
     state.bosses.push({
-      id: 'c' + Date.now(), name: name, diff: '', icon: '',
+      id: 'c' + Date.now(), name: name, diff: pick[1], icon: 'icons/boss/' + boss[1] + '.webp',
       mult: Math.max(1, num(newMult.value, 100)), extra: DEFAULT_EXTRA[name] || 0, on: true
     });
     newName.value = '';
