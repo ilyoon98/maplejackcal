@@ -87,8 +87,9 @@
       if (!raw) return defaultState();
       var s = JSON.parse(raw);
       if (!s || !Array.isArray(s.bosses) || !s.bosses.length) return defaultState();
-      s.buffMin = num(s.buffMin, 30);
-      s.baseMin = num(s.baseMin, 20);
+      // 버프 지속 30분 · 배율 100% 기준 20분은 고정값이다(화면에서 바꾸지 않는다).
+      s.buffMin = 30;
+      s.baseMin = 20;
       s.moveMin = Math.max(0, num(s.moveMin, 1));
       s.slackPct = Math.max(0, num(s.slackPct, 0));
       s.excludeCompleted = s.excludeCompleted === true;
@@ -328,8 +329,6 @@
   var listEl = document.getElementById('bossList');
   var comboEl = document.getElementById('comboResult');
   var packEl = document.getElementById('packResult');
-  var buffInput = document.getElementById('buffMin');
-  var baseInput = document.getElementById('baseMin');
   var moveInput = document.getElementById('moveMin');
   var slackInput = document.getElementById('slackPct');
   var excludeCompletedBtn = document.getElementById('excludeCompletedBtn');
@@ -357,8 +356,10 @@
         '<label class="row-check"><input type="checkbox" tabindex="-1" data-act="on" data-i="' + i + '"' + (b.on && !excluded ? ' checked' : '') + (excluded ? ' disabled' : '') + '></label>' +
         (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="" loading="lazy">' : '<span class="row-icon blank"></span>') +
         // 이름 옆에 난이도 배지, 아래 줄에는 추가 시간·제외 같은 부가 정보만.
-        '<div class="row-name"><strong><span class="nm">' + esc(b.name) + '</span>' + (b.diff ? ' ' + diffBadge(b.diff) : '') + '</strong>' +
-        (function (note) { return note ? '<small>' + esc(note) + '</small>' : ''; })([b.extra ? '+' + trim(b.extra) + '분' : '', excluded ? '완료 보스 제외 중' : ''].filter(Boolean).join(' · ')) + '</div>' +
+        // 이름 · 난이도 배지 · 꼬리표(+4분, 완료)를 한 줄에 둬서 행 높이가 늘지 않게 한다.
+        '<div class="row-name"><strong><span class="nm" title="' + esc(b.name) + '">' + esc(b.name) + '</span>' + (b.diff ? diffBadge(b.diff) : '') +
+        (b.extra ? '<span class="row-tag" title="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') +
+        (excluded ? '<span class="row-tag done" title="이번 주 완료해서 동선에서 뺐습니다">완료</span>' : '') + '</strong></div>' +
         '<div class="row-input"><input type="number" min="1" step="10" value="' + trim(b.mult) + '" data-act="mult" data-i="' + i + '"><span class="unit">%</span></div>' +
         '<div class="row-input"><input type="number" tabindex="-1" min="0.1" step="0.5" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '"><span class="unit">분</span></div>' +
         '<button type="button" class="tool-btn row-doping' + (b.rice ? ' on' : '') + '" data-act="rice" data-i="' + i + '" aria-label="' + esc(b.name) + ' 쌀도핑" aria-pressed="' + !!b.rice + '">' + (b.rice ? '쌀도핑 −3%' : '풀도핑') + '</button>' +
@@ -528,17 +529,7 @@
     saveState(); renderAll();
   });
 
-  buffInput.value = trim(state.buffMin);
-  baseInput.value = trim(state.baseMin);
   moveInput.value = trim(state.moveMin);
-  buffInput.addEventListener('input', function () {
-    state.buffMin = Math.max(1, num(buffInput.value, 30));
-    saveState(); renderResults();
-  });
-  baseInput.addEventListener('input', function () {
-    state.baseMin = Math.max(1, num(baseInput.value, 20));
-    saveState(); renderAll();
-  });
   moveInput.addEventListener('input', function () {
     state.moveMin = Math.max(0, num(moveInput.value, 1));
     saveState(); renderResults();
@@ -626,8 +617,6 @@
   document.getElementById('resetBtn').addEventListener('click', function () {
     if (!confirm('입력한 배율을 모두 초기값으로 되돌릴까요?')) return;
     state = defaultState();
-    buffInput.value = trim(state.buffMin);
-    baseInput.value = trim(state.baseMin);
     moveInput.value = trim(state.moveMin);
     slackInput.value = trim(state.slackPct);
     saveState(); renderAll();
@@ -1026,7 +1015,6 @@
   profileBar.setAttribute('aria-label', '저장한 캐릭터');
   fetchStatus.after(profileBar);
   function syncProfileInputs() {
-    buffInput.value = trim(state.buffMin); baseInput.value = trim(state.baseMin);
     moveInput.value = trim(state.moveMin); slackInput.value = trim(state.slackPct);
     document.dispatchEvent(new Event('buff-profile-loaded'));
   }
