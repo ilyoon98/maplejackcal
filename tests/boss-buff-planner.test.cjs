@@ -11,6 +11,7 @@ function loadPlanner() {
       value:'', innerHTML:'', textContent:'', classList:{toggle(){}},
       addEventListener(){}, setAttribute(){}, after(){}, append(){},
       appendChild(){}, replaceChildren(){},
+      parentNode:{appendChild(){}},
     };
   }
   const context = vm.createContext({
@@ -21,6 +22,7 @@ function loadPlanner() {
       },
       createElement:element,
       addEventListener(){},
+      querySelector(){ return null; },
     },
     localStorage:{getItem:() => null, setItem(){}},
     window:{},

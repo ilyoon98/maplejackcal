@@ -671,7 +671,21 @@
   var characterShowcaseName = document.getElementById('buffCharacterShowcaseName');
   var characterShowcaseMeta = document.getElementById('buffCharacterShowcaseMeta');
 
-  if (window.NexonCharacters) NexonCharacters.mount({ host: '#buffCharacterPicker', input: charInput });
+  // 내 캐릭터 고르기 모드에서는 '보스 불러오기'를 서버·캐릭터 칸과 한 줄에 두고,
+  // 직접 검색 모드에서는 이름 입력칸 옆으로 돌려놓는다.
+  var fetchHome = fetchBtn.parentNode;
+  function placeFetchBtn(manual) {
+    var fields = document.querySelector('#buffCharacterPicker .nx-character-fields');
+    if (!manual && fields) fields.appendChild(fetchBtn); else fetchHome.appendChild(fetchBtn);
+    fetchHome.hidden = !manual && !!fields;
+  }
+  if (window.NexonCharacters) NexonCharacters.mount({ host: '#buffCharacterPicker', input: charInput, onModeChange: placeFetchBtn });
+  placeFetchBtn(!charInput.hidden);
+  // 드롭다운에서 캐릭터(또는 서버)를 직접 바꾸면 바로 보스를 불러온다.
+  // 페이지를 열 때의 자동 선택은 change 이벤트가 없어서 API를 부르지 않는다.
+  document.getElementById('buffCharacterPicker').addEventListener('change', function (e) {
+    if (e.target.matches('.nx-character-select, .nx-world-select') && charInput.value.trim()) importCharacter();
+  });
 
   function setStatus(msg, kind) {
     fetchStatus.textContent = msg || '';
@@ -774,6 +788,7 @@
   }
 
   function importCharacter() {
+    if (fetchBtn.disabled) return; // 불러오는 중이면 겹쳐 부르지 않는다.
     var name = (charInput.value || '').trim();
     if (!name) { setStatus('캐릭터 이름을 입력하세요.', 'err'); charInput.focus(); return; }
     if (!window.NexonKey || !NexonKey.has()) { setStatus('먼저 홈에서 넥슨 오픈 API 키를 등록하세요.', 'err'); return; }
