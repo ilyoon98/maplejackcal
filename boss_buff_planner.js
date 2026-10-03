@@ -354,7 +354,7 @@
       row.innerHTML =
         // 탭 키가 배율 칸만 따라 내려가도록 나머지 조작부는 탭 순서에서 뺀다.
         '<label class="row-check"><input type="checkbox" tabindex="-1" data-act="on" data-i="' + i + '"' + (b.on && !excluded ? ' checked' : '') + (excluded ? ' disabled' : '') + '></label>' +
-        (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="" loading="lazy">' : '<span class="row-icon blank"></span>') +
+        (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="">' : '<span class="row-icon blank"></span>') +
         // 이름 옆에 난이도 배지, 아래 줄에는 추가 시간·제외 같은 부가 정보만.
         // 이름 · 난이도 배지 · 꼬리표(+4분, 완료)를 한 줄에 둬서 행 높이가 늘지 않게 한다.
         '<div class="row-name"><strong><span class="nm" title="' + esc(b.name) + '">' + esc(b.name) + '</span>' + (b.diff ? diffBadge(b.diff) : '') +
@@ -433,7 +433,7 @@
           var it = items[k];
           return (j ? '<li class="hop"><span>↓ 이동 ' + fmtMin(moveSec()) + '분</span></li>' : '') +
             '<li class="stop"><span class="step-no">' + (j + 1) + '</span>' +
-            (it.icon ? '<img src="' + it.icon + '" alt="" loading="lazy">' : '') +
+            (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
             '<span class="nm">' + esc(it.name) + (bin.full && it.rice ? ' <span class="tag full">풀도핑 전환</span>' : '') + '</span>' +
             '<span class="tm">' + fmtMin(secIn(it, bin.full)) + '분</span></li>';
         }).join('') + '</ol>' +
@@ -483,7 +483,7 @@
       '</div>';
   }
   function chip(it, full) {
-    return '<span class="chip">' + (it.icon ? '<img src="' + it.icon + '" alt="" loading="lazy">' : '') +
+    return '<span class="chip">' + (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
       esc(it.name) + '<small>' + fmtMin(secIn(it, full)) + '분</small></span>';
   }
   function bar(sec, cap) {
@@ -562,7 +562,7 @@
       return b[2].map(function (diff) {
         var v = i + '|' + diff;
         return '<button type="button" role="option" class="picker-row" data-pick="' + v + '" aria-selected="' + (newName.value === v) + '">' +
-          '<img class="shot-face" src="icons/boss/' + b[1] + '.webp" alt="" loading="lazy">' +
+          '<img class="shot-face" src="icons/boss/' + b[1] + '.webp" alt="">' +
           '<span class="shot-bname">' + esc(b[0]) + '</span>' + diffBadge(diff) + '</button>';
       }).join('');
     }).join('');
