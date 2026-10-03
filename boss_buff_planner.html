@@ -100,6 +100,18 @@
   .boss-add { display:grid; grid-template-columns:minmax(0,1fr) 112px auto; align-items:end; gap:12px; padding:14px; margin-bottom:16px; background:#11141a; border:1px solid var(--border); border-radius:12px; }
   .boss-add-field { display:flex; flex-direction:column; gap:7px; min-width:0; color:var(--text-dim); font-size:0.75rem; font-weight:600; }
   .boss-add input, .boss-add select { box-sizing:border-box; width:100%; min-width:0; height:40px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); color:var(--text); font:inherit; font-size:0.88rem; }
+  .boss-picker { position:relative; }
+  .boss-picker-btn { display:flex; align-items:center; gap:8px; width:100%; height:40px; box-sizing:border-box; padding:0 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); color:var(--text); font:inherit; font-size:0.88rem; cursor:pointer; text-align:left; }
+  .boss-picker-btn:hover, .boss-picker-btn[aria-expanded="true"] { border-color:var(--accent); }
+  .boss-picker-btn .dim { color:var(--text-dim); font-weight:400; }
+  .boss-picker-btn .caret { margin-left:auto; color:var(--text-dim); font-size:0.75rem; }
+  .boss-picker-btn .diff-badge { margin-left:auto; }
+  .boss-picker-btn .diff-badge + .caret { margin-left:0; }
+  .boss-picker-menu { position:absolute; z-index:30; left:0; width:max(100%, 300px); max-width:calc(100vw - 48px); box-sizing:border-box; overflow-x:hidden; top:calc(100% + 4px); max-height:320px; overflow-y:auto; padding:4px; border:1px solid var(--border); border-radius:10px; background:#1b1f27; box-shadow:0 10px 28px rgba(0,0,0,0.5); }
+  .picker-row { display:flex; align-items:center; gap:8px; width:100%; padding:6px 8px; border:0; border-radius:7px; background:none; color:var(--text); font:inherit; text-align:left; cursor:pointer; }
+  .picker-row:hover, .picker-row:focus-visible { background:#232833; outline:none; }
+  .picker-row[aria-selected="true"] { background:#2b4366; }
+  .picker-row .shot-bname { flex:1 1 auto; min-width:0; }
   .boss-add .new-mult { display:flex; align-items:center; height:40px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); }
   .boss-add .new-mult input { flex:1; width:0; height:38px; border:0; background:transparent; padding-right:4px; font-variant-numeric:tabular-nums; }
   .boss-add .unit { padding-right:11px; font-weight:400; }
@@ -115,6 +127,58 @@
   @media (max-width:760px) {
     .character-import-card.has-profile { grid-template-columns:minmax(0,1fr); }
     .buff-character-showcase { min-height:250px; }
+  }
+  .shot-box { margin-bottom:16px; }
+  .shot-drop { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:14px; border:1px dashed #3a3f4b; border-radius:12px; background:#11141a; cursor:pointer; font-size:0.82rem; color:var(--text-dim); }
+  .shot-drop strong { color:var(--text); font-size:0.88rem; }
+  .shot-drop .shot-pick { margin-left:auto; border:1px solid var(--border); border-radius:999px; padding:5px 11px; font-weight:700; font-size:0.78rem; white-space:nowrap; }
+  .shot-drop:hover, .shot-drop.over { border-color:var(--accent); }
+  .shot-drop:hover .shot-pick, .shot-drop.over .shot-pick { border-color:var(--accent); color:var(--text); }
+  .shot-steps { flex-basis:100%; margin:2px 0 0; padding-left:20px; line-height:1.75; }
+  .shot-steps b { color:var(--text); }
+  .shot-foot { flex-basis:100%; font-size:0.74rem; }
+  .shot-drop:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  .shot-box .fetch-status { margin:10px 0 0; }
+  #shotResult { margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:12px; background:#11141a; }
+  .shot-summary { font-size:0.8rem; color:var(--text-dim); margin-bottom:8px; }
+  .shot-row { display:grid; grid-template-columns:20px 30px minmax(0,1fr) 92px; gap:8px; align-items:center; padding:6px 0; border-top:1px solid var(--border); }
+  .shot-row input[type="checkbox"] { width:16px; height:16px; accent-color:var(--accent-strong); cursor:pointer; }
+  .shot-row > img { width:30px; height:30px; border-radius:6px; object-fit:cover; }
+  .shot-row input[type="number"] { width:100%; min-width:0; box-sizing:border-box; padding:5px 6px; border-radius:7px; border:1px solid var(--border); background:var(--card); color:var(--text); font:inherit; font-size:0.82rem; }
+  .shot-row input[type="number"] { font-variant-numeric:tabular-nums; }
+  .shot-row .shot-name { display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .shot-row small { font-size:0.72rem; color:var(--text-dim); }
+  .shot-row small.warn { color:#e5b454; }
+  /* 메뉴까지 흐려지지 않게 줄 전체가 아니라 안쪽 요소만 흐린다. */
+  .shot-row.off > img, .shot-row.off .shot-pct, .shot-row.off small, .shot-row.off .shot-fixed, .shot-row.off .shot-pick-btn { opacity:0.55; }
+  .shot-fixed, .shot-pick-btn, .shot-opt { display:flex; align-items:center; gap:7px; min-width:0; }
+  .shot-face { width:24px; height:24px; border-radius:6px; object-fit:contain; flex:none; }
+  .shot-face.blank { display:inline-block; background:#22262f; }
+  .shot-bname { font-size:0.86rem; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .shot-bname.dim { color:var(--text-dim); font-weight:400; }
+  .diff-badge { margin-left:auto; flex:none; font-size:0.66rem; font-weight:800; letter-spacing:0.02em; padding:2px 7px; border-radius:5px; background:#2a2e38; color:var(--text-dim); }
+  .diff-badge.easy { background:#666; color:#fff; }
+  .diff-badge.normal { background:#16aebe; color:#fff; }
+  .diff-badge.hard { background:#a52c4b; color:#fff; }
+  .diff-badge.chaos { background:#0b0b0b; color:#d9bc9b; border:1px solid #3a3226; }
+  .diff-badge.extreme { background:#0b0b0b; color:#e2465a; border:1px solid #4a1f26; }
+  .shot-pick-boss { position:relative; }
+  .shot-pick-btn { width:100%; box-sizing:border-box; padding:5px 8px; border-radius:7px; border:1px solid var(--border); background:var(--card); cursor:pointer; font:inherit; text-align:left; }
+  .shot-pick-btn:hover, .shot-pick-btn[aria-expanded="true"] { border-color:var(--accent); }
+  .shot-pick-btn .diff-badge { margin-left:auto; }
+  .shot-caret { color:var(--text-dim); font-size:0.75rem; flex:none; }
+  .shot-pick-btn .diff-badge + .shot-caret { margin-left:0; }
+  .shot-pick-btn .shot-bname.dim + .shot-caret { margin-left:auto; }
+  .shot-menu { position:absolute; z-index:20; left:0; right:0; top:calc(100% + 4px); max-height:260px; overflow-y:auto; padding:4px; border:1px solid var(--border); border-radius:9px; background:#1b1f27; box-shadow:0 8px 24px rgba(0,0,0,0.45); }
+  .shot-opt { width:100%; padding:6px 8px; border:0; border-radius:6px; background:none; cursor:pointer; font:inherit; text-align:left; }
+  .shot-opt:hover, .shot-opt[aria-selected="true"] { background:#2a2e38; }
+  .shot-skip { margin-top:8px; font-size:0.78rem; color:var(--text-dim); }
+  .shot-skip summary { cursor:pointer; }
+  .shot-skip p { margin:6px 0 0; line-height:1.7; }
+  .shot-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+  .shot-actions #shotApply { background:var(--accent-strong); border-color:transparent; color:#0b0d12; }
+  @media (max-width:520px) {
+    .shot-row { grid-template-columns:20px 30px minmax(0,1fr) 84px; }
   }
   .step-no { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#2a2e38; color:var(--text-dim); font-size:0.68rem; font-weight:800; flex:none; }
   .pack-head { margin-bottom:4px; }
@@ -272,13 +336,35 @@
           <button type="button" class="tool-btn" id="resetBtn">초기화</button>
         </div>
         <div class="boss-add" role="group" aria-label="보스 직접 추가">
-          <label class="boss-add-field boss-add-name" for="newName">보스 이름
-            <select id="newName"></select>
-          </label>
+          <div class="boss-add-field boss-add-name"><span id="newNameLabel">보스 이름</span>
+            <div class="boss-picker" id="bossPicker">
+              <input type="hidden" id="newName">
+              <button type="button" class="boss-picker-btn" id="bossPickerBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="newNameLabel bossPickerBtn"></button>
+              <div class="boss-picker-menu" id="bossPickerMenu" role="listbox" aria-labelledby="newNameLabel" hidden></div>
+            </div>
+          </div>
           <label class="boss-add-field" for="newMult">배율
             <span class="new-mult"><input type="number" id="newMult" min="1" step="10" value="100"><span class="unit">%</span></span>
           </label>
           <button type="button" class="tool-btn" id="addBoss">+ 보스 추가</button>
+        </div>
+        <div class="shot-box">
+          <div class="shot-drop" id="shotDrop" role="button" tabindex="0" aria-describedby="shotHelp">
+            <strong>📷 스크린샷으로 배율 채우기</strong>
+            <span class="shot-pick">이미지 고르기</span>
+            <ol class="shot-steps" id="shotHelp">
+              <li>환산주스탯에서 닉네임 검색</li>
+              <li>분석 최적화 → 효율 · 보스컷</li>
+              <li>보스 배율 왼쪽 위 <b>전체보기</b> 누르고, 데스티니/유챔 확인은 끄기</li>
+              <li><b>Win + Shift + S</b>로 보스 배율 부분 캡처</li>
+              <li>이 페이지에서 <b>Ctrl + V</b></li>
+              <li>아래에서 확인 후 <b>선택한 배율 넣기</b></li>
+            </ol>
+            <span class="shot-foot">목록에 있는 보스만 넣고, 이미지는 이 브라우저 안에서만 처리합니다.</span>
+          </div>
+          <input type="file" id="shotFile" accept="image/*" hidden>
+          <p class="note fetch-status" id="shotStatus"></p>
+          <div id="shotResult" hidden></div>
         </div>
         <p class="ux-hint">배율 또는 실제 클리어 시간(분)을 입력하세요. 두 값은 함께 반영됩니다.</p><div class="boss-head">
           <span></span><span></span><span class="name-col">보스</span><span>배율</span><span>소요</span><span>도핑</span><span></span>
@@ -315,6 +401,7 @@
 <script src="site_nav.js"></script>
 <script src="nexon_key.js"></script>
 <script src="nexon_characters.js"></script>
+<script src="boss_shot_reader.js"></script>
 <script src="boss_buff_planner.js"></script>
 </body>
 </html>

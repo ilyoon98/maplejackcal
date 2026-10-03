@@ -53,6 +53,8 @@
     ['자쿰', 'zakum', ['카오스']],
     ['검은 마법사', 'black_mage', ['익스트림', '하드']]
   ];
+  // 난이도 배지 색(스크린샷 사이트와 같은 색).
+  var DIFF_CLASS = { '이지': 'easy', '노멀': 'normal', '하드': 'hard', '카오스': 'chaos', '익스트림': 'extreme' };
 
   // 배율과 무관하게 그 보스에서 더 걸리는 시간(분). 젠 대기·컷신·페이즈 이동 같은 것들.
   var DEFAULT_EXTRA = { '윌': 4 };
@@ -548,27 +550,77 @@
   });
   var newName = document.getElementById('newName');
   var newMult = document.getElementById('newMult');
-  newName.innerHTML = '<option value="">보스 선택</option>' + BOSS_CATALOG.map(function (b, i) {
-    return '<optgroup label="' + esc(b[0]) + '">' + b[2].map(function (diff) {
-      return '<option value="' + i + '|' + diff + '">' + esc(b[0]) + ' (' + diff + ')</option>';
-    }).join('') + '</optgroup>';
-  }).join('');
+  // 보스 고르기: <select>에는 그림을 넣을 수 없어 직접 만든 목록을 쓴다.
+  // 한 줄에 얼굴 · 이름, 오른쪽에 난이도 배지. 배지를 누르면 그 난이도로 고른다.
+  // 고른 값은 숨긴 #newName에 '번호|난이도'로 담는다.
+  var pickerBtn = document.getElementById('bossPickerBtn');
+  var pickerMenu = document.getElementById('bossPickerMenu');
+  function diffBadge(diff, attrs) {
+    return '<span class="diff-badge ' + (DIFF_CLASS[diff] || '') + '"' + (attrs || '') + '>' + esc(diff) + '</span>';
+  }
+  function pickBoss(value) {
+    newName.value = value;
+    var pick = String(value || '').split('|'), boss = BOSS_CATALOG[pick[0]];
+    pickerBtn.innerHTML = boss
+      ? '<img class="shot-face" src="icons/boss/' + boss[1] + '.webp" alt=""><span class="shot-bname">' + esc(boss[0]) + '</span>' + diffBadge(pick[1]) + '<span class="caret">▾</span>'
+      : '<span class="dim">보스 선택</span><span class="caret">▾</span>';
+  }
+  function renderPicker() {
+    // 보스·난이도마다 한 줄. 줄 전체가 고르는 버튼이다.
+    pickerMenu.innerHTML = BOSS_CATALOG.map(function (b, i) {
+      return b[2].map(function (diff) {
+        var v = i + '|' + diff;
+        return '<button type="button" role="option" class="picker-row" data-pick="' + v + '" aria-selected="' + (newName.value === v) + '">' +
+          '<img class="shot-face" src="icons/boss/' + b[1] + '.webp" alt="" loading="lazy">' +
+          '<span class="shot-bname">' + esc(b[0]) + '</span>' + diffBadge(diff) + '</button>';
+      }).join('');
+    }).join('');
+  }
+  function openPicker(open) {
+    if (open) renderPicker();
+    pickerMenu.hidden = !open;
+    pickerBtn.setAttribute('aria-expanded', String(!!open));
+    if (open) {
+      var sel = pickerMenu.querySelector('[aria-selected="true"]') || pickerMenu.querySelector('[data-pick]');
+      if (sel) sel.focus();
+    }
+  }
+  pickBoss('');
+  pickerBtn.addEventListener('click', function () { openPicker(pickerMenu.hidden); });
+  pickerMenu.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-pick]');
+    if (!t) return;
+    pickBoss(t.dataset.pick);
+    openPicker(false);
+    newMult.focus(); newMult.select();
+  });
+  pickerMenu.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { openPicker(false); pickerBtn.focus(); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    var rows = Array.prototype.slice.call(pickerMenu.querySelectorAll('[data-pick]'));
+    var at = rows.indexOf(document.activeElement) + (e.key === 'ArrowDown' ? 1 : -1);
+    if (rows[at]) rows[at].focus();
+  });
+  document.addEventListener('click', function (e) {
+    if (!pickerMenu.hidden && !e.target.closest('#bossPicker')) openPicker(false);
+  });
   function addBoss() {
     var pick = String(newName.value || '').split('|');
     var boss = BOSS_CATALOG[pick[0]];
-    if (!boss) { newName.focus(); return; }
+    if (!boss) { openPicker(true); return; }
     var name = boss[0];
     state.bosses.push({
       id: 'c' + Date.now(), name: name, diff: pick[1], icon: 'icons/boss/' + boss[1] + '.webp',
       mult: Math.max(1, num(newMult.value, 100)), extra: DEFAULT_EXTRA[name] || 0, on: true
     });
-    newName.value = '';
+    pickBoss('');
     newMult.value = '100';
     saveState(); renderAll();
-    newName.focus();
+    pickerBtn.focus();
   }
   document.getElementById('addBoss').addEventListener('click', addBoss);
-  [newName, newMult].forEach(function (el) {
+  [newMult].forEach(function (el) {
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter') addBoss(); });
   });
   document.getElementById('resetBtn').addEventListener('click', function () {
@@ -771,6 +823,174 @@
   fetchBtn.addEventListener('click', importCharacter);
   charInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') importCharacter(); });
   try { charInput.value = localStorage.getItem('bossBuffPlanner.lastChar') || ''; } catch (err) {}
+
+  // ── 스크린샷에서 배율 읽기 ──────────────────────────────────
+  // 다른 사이트의 보스 카드 캡처를 boss_shot_reader.js로 읽고, 목록에 있는 보스(같은 이름·난이도)만
+  // 골라 배율을 넣는다. 목록은 사용자가 고른 보스라 100% 미만이어도 그대로 넣는다.
+  var shotDrop = document.getElementById('shotDrop');
+  var shotFile = document.getElementById('shotFile');
+  var shotStatus = document.getElementById('shotStatus');
+  var shotResult = document.getElementById('shotResult');
+  var shotRows = [], shotUnknown = [], shotOutside = 0, shotBusy = false, shotOpen = -1;
+
+  function setShotStatus(msg, kind) {
+    shotStatus.textContent = msg || '';
+    shotStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
+  }
+  function findBossIndex(name, diff) {
+    for (var i = 0; i < state.bosses.length; i++) {
+      if (state.bosses[i].name === name && state.bosses[i].diff === diff) return i;
+    }
+    return -1;
+  }
+  // 얼굴 · 이름 · 난이도 배지.
+  function bossChip(b) {
+    return (b.icon ? '<img class="shot-face" src="' + b.icon + '" alt="">' : '<span class="shot-face blank"></span>') +
+      '<span class="shot-bname">' + esc(b.name) + '</span>' +
+      (b.diff ? '<span class="diff-badge ' + (DIFF_CLASS[b.diff] || '') + '">' + esc(b.diff) + '</span>' : '');
+  }
+  function readShot(file) {
+    if (!file || !/^image\//.test(file.type || '') || shotBusy) return;
+    if (!window.BossShotReader) { setShotStatus('스크린샷 읽기 모듈을 불러오지 못했습니다.', 'err'); return; }
+    shotBusy = true;
+    setShotStatus('스크린샷을 읽는 중…');
+    var icons = Object.keys(BOSS_ICON).map(function (name) { return { name: name, icon: 'icons/boss/' + BOSS_ICON[name] + '.webp' }; });
+    BossShotReader.readBlob(file, icons).then(function (list) {
+      if (!list.length) {
+        shotResult.hidden = true;
+        setShotStatus('보스 카드를 찾지 못했습니다. 카드 격자가 보이게 캡처했는지 확인하세요.', 'err');
+        return;
+      }
+      shotRows = []; shotUnknown = []; shotOutside = 0; shotOpen = -1;
+      var taken = Object.create(null);
+      // 덜 닮은 카드가 같은 보스를 차지하지 않게 확실한 것부터 배정한다.
+      list.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (r) {
+        var row = { thumb: r.thumb, value: r.value, idx: -1, on: false };
+        if (!r.name || !r.diff) { shotUnknown.push(row); return; }
+        var idx = findBossIndex(r.name, r.diff);
+        if (idx < 0) { shotOutside++; return; }
+        if (taken[idx]) { shotUnknown.push(row); return; }
+        taken[idx] = true;
+        row.idx = idx;
+        row.on = r.value != null;
+        shotRows.push(row);
+      });
+      shotRows.sort(function (a, b) { return a.idx - b.idx; }); // 목록 순서대로.
+      var odd = list.some(function (r) { return r.scale > 1.03 && r.scale < 1.4; });
+      setShotStatus('카드 ' + list.length + '장을 읽었습니다. 확인 후 ‘선택한 배율 넣기’를 누르세요.' +
+        (odd ? ' 화면 배율이 125%처럼 애매하면 숫자를 잘못 읽을 수 있어 100%·150%·200%로 캡처하는 편이 정확합니다.' : ''), 'ok');
+      renderShot();
+    }).catch(function (err) {
+      setShotStatus('스크린샷을 읽지 못했습니다: ' + (err && err.message ? err.message : err), 'err');
+    }).then(function () { shotBusy = false; shotFile.value = ''; });
+  }
+  function shotRowHtml(row, i, group) {
+    var b = state.bosses[row.idx], note, warn = false;
+    if (!b) { note = '목록의 어느 보스인지 고르세요.'; warn = true; }
+    else if (row.value == null) { note = '배율 숫자를 읽지 못했습니다. 직접 적으세요.'; warn = true; }
+    else note = '지금 ' + trim(b.mult) + '% → ' + trim(row.value) + '%';
+    var name;
+    if (group === 'unknown') {
+      // 얼굴과 난이도 배지를 보여주려고 <select> 대신 직접 만든 목록을 쓴다.
+      var open = shotOpen === i;
+      name = '<div class="shot-pick-boss">' +
+        '<button type="button" class="shot-pick-btn" data-shot="pick" data-i="' + i + '" aria-haspopup="listbox" aria-expanded="' + open + '">' +
+          (b ? bossChip(b) : '<span class="shot-bname dim">보스 선택</span>') + '<span class="shot-caret">▾</span></button>' +
+        (open ? '<div class="shot-menu" role="listbox">' + state.bosses.map(function (x, k) {
+          return '<button type="button" role="option" class="shot-opt" data-shot="choose" data-i="' + i + '" data-k="' + k + '" aria-selected="' + (k === row.idx) + '">' + bossChip(x) + '</button>';
+        }).join('') + '</div>' : '') +
+        '</div>';
+    } else name = '<div class="shot-fixed">' + bossChip(b) + '</div>';
+    return '<div class="shot-row' + (row.on ? '' : ' off') + '">' +
+      '<input type="checkbox" data-shot="on" data-g="' + group + '" data-i="' + i + '"' + (row.on ? ' checked' : '') + ' aria-label="이 배율 넣기">' +
+      '<img src="' + row.thumb + '" alt="" title="스크린샷의 카드">' +
+      '<div class="shot-name">' + name + '<small' + (warn ? ' class="warn"' : '') + '>' + esc(note) + '</small></div>' +
+      '<div class="row-input shot-pct"><input type="number" min="1" step="0.1" data-shot="value" data-g="' + group + '" data-i="' + i + '" value="' + (row.value != null ? trim(row.value) : '') + '" aria-label="배율"><span class="unit">%</span></div>' +
+      '</div>';
+  }
+  function renderShot() {
+    var found = Object.create(null);
+    shotRows.concat(shotUnknown).forEach(function (r) { if (r.idx >= 0) found[r.idx] = true; });
+    var missing = state.bosses.filter(function (b, k) { return !found[k]; }).map(function (b) { return b.name + ' ' + b.diff; });
+    var html = '<div class="shot-summary">목록 보스 ' + shotRows.length + '개를 찾았습니다' +
+      (shotOutside ? ' · 목록에 없는 보스 ' + shotOutside + '개는 뺐습니다' : '') + '</div>';
+    html += shotRows.map(function (row, i) { return shotRowHtml(row, i, 'list'); }).join('');
+    if (!shotRows.length) html += '<p class="empty">스크린샷에서 목록에 있는 보스를 찾지 못했습니다.</p>';
+    if (missing.length) html += '<p class="shot-skip">스크린샷에 없는 목록 보스: ' + esc(missing.join(' · ')) + '</p>';
+    if (shotUnknown.length) {
+      html += '<details class="shot-skip" id="shotUnknown"' + (shotRows.length && shotOpen < 0 && !shotUnknownOpen ? '' : ' open') + '><summary>알아보지 못한 카드 ' + shotUnknown.length + '장 (직접 고르기)</summary>' +
+        shotUnknown.map(function (row, i) { return shotRowHtml(row, i, 'unknown'); }).join('') + '</details>';
+    }
+    html += '<div class="shot-actions"><button type="button" class="tool-btn" id="shotCancel">닫기</button>' +
+      '<button type="button" class="tool-btn" id="shotApply">선택한 배율 넣기</button></div>';
+    shotResult.innerHTML = html;
+    shotResult.hidden = false;
+  }
+  var shotUnknownOpen = false;
+  function applyShot() {
+    var set = 0;
+    shotRows.concat(shotUnknown).forEach(function (row) {
+      var b = state.bosses[row.idx];
+      if (!row.on || !b || !(row.value > 0)) return;
+      b.mult = Math.max(1, row.value); // 배율 칸 최솟값과 맞춘다(0.42% → 1%).
+      set++;
+    });
+    saveState(); renderAll();
+    shotResult.hidden = true;
+    setShotStatus(set ? '배율 ' + set + '개를 넣었습니다.' : '넣을 배율을 고르지 않았습니다.', set ? 'ok' : 'err');
+  }
+  shotResult.addEventListener('change', function (e) {
+    var t = e.target, row = (t.dataset.g === 'unknown' ? shotUnknown : shotRows)[parseInt(t.dataset.i, 10)];
+    if (!row) return;
+    if (t.dataset.shot === 'on') row.on = t.checked;
+    else if (t.dataset.shot === 'value') { row.value = t.value === '' ? null : Math.max(0, num(t.value, 0)); row.on = row.value > 0 && row.idx >= 0; }
+    else return;
+    renderShot();
+  });
+  shotResult.addEventListener('toggle', function (e) {
+    if (e.target.id === 'shotUnknown') shotUnknownOpen = e.target.open;
+  }, true);
+  shotResult.addEventListener('click', function (e) {
+    var t = e.target.closest('button');
+    if (!t) return;
+    var i = parseInt(t.dataset.i, 10);
+    if (t.dataset.shot === 'pick') { shotOpen = shotOpen === i ? -1 : i; renderShot(); }
+    else if (t.dataset.shot === 'choose') {
+      var row = shotUnknown[i];
+      row.idx = parseInt(t.dataset.k, 10);
+      row.on = row.value > 0;
+      shotOpen = -1; renderShot();
+    }
+    else if (t.id === 'shotApply') applyShot();
+    else if (t.id === 'shotCancel') { shotResult.hidden = true; setShotStatus(''); }
+  });
+  // 보스 고르기 메뉴는 바깥을 누르거나 Esc를 누르면 닫는다.
+  document.addEventListener('click', function (e) {
+    if (shotOpen >= 0 && !e.target.closest('.shot-pick-boss')) { shotOpen = -1; renderShot(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && shotOpen >= 0) { shotOpen = -1; renderShot(); }
+  });
+  shotDrop.addEventListener('click', function () { shotFile.click(); });
+  shotDrop.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); shotFile.click(); }
+  });
+  shotFile.addEventListener('change', function () { readShot(shotFile.files && shotFile.files[0]); });
+  shotDrop.addEventListener('dragover', function (e) { e.preventDefault(); shotDrop.classList.add('over'); });
+  shotDrop.addEventListener('dragleave', function () { shotDrop.classList.remove('over'); });
+  shotDrop.addEventListener('drop', function (e) {
+    e.preventDefault(); shotDrop.classList.remove('over');
+    readShot(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+  });
+  // 페이지 어디서든 이미지를 붙여넣으면 읽는다(글자 붙여넣기는 그대로 둔다).
+  document.addEventListener('paste', function (e) {
+    var items = e.clipboardData ? Array.prototype.slice.call(e.clipboardData.items || []) : [];
+    var img = items.filter(function (it) { return it.kind === 'file' && /^image\//.test(it.type); })[0];
+    if (!img) return;
+    e.preventDefault();
+    shotDrop.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    readShot(img.getAsFile());
+  });
 
   var profileBar = document.createElement('div'); profileBar.className = 'ux-profile-list';
   profileBar.setAttribute('aria-label', '저장한 캐릭터');

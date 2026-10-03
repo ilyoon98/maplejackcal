@@ -20,6 +20,7 @@ function loadPlanner() {
         return elements.get(id);
       },
       createElement:element,
+      addEventListener(){},
     },
     localStorage:{getItem:() => null, setItem(){}},
     window:{},
