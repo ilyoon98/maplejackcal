@@ -46,7 +46,7 @@
   .pack-head .tag-row { display:flex; gap:5px; margin:5px 0 3px; }
   .pack-bin.rice { border-style:dashed; }
 
-  .boss-head, .boss-row { display:grid; grid-template-columns:24px 30px minmax(0,1fr) 76px 76px 86px 30px; gap:8px; align-items:center; }
+  .boss-head, .boss-row { display:grid; grid-template-columns:24px 30px minmax(0,1fr) 92px 76px 86px 30px; gap:8px; align-items:center; }
   .row-doping { padding:6px 4px; font-size:0.75rem; white-space:nowrap; }
   .boss-head { padding:0 2px 6px; font-size:0.74rem; color:var(--text-dim); text-align:center; }
   .boss-head .name-col { text-align:left; }
@@ -56,7 +56,9 @@
   .row-check input { width:16px; height:16px; accent-color:var(--accent-strong); cursor:pointer; }
   .row-icon { width:28px; height:28px; object-fit:contain; }
   .row-icon.blank { display:inline-block; }
-  .row-name strong { display:block; font-size:0.88rem; font-weight:600; }
+  .row-name strong { display:flex; flex-wrap:wrap; align-items:center; gap:3px 6px; font-size:0.88rem; font-weight:600; }
+  .row-name strong .nm { white-space:nowrap; }
+  .row-name strong .diff-badge { margin-left:0; }
   .row-name small { color:var(--text-dim); font-size:0.72rem; }
   .row-input { display:flex; align-items:center; gap:4px; }
   .row-input input { width:100%; min-width:0; padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.85rem; font-variant-numeric:tabular-nums; }

@@ -356,9 +356,9 @@
         // 탭 키가 배율 칸만 따라 내려가도록 나머지 조작부는 탭 순서에서 뺀다.
         '<label class="row-check"><input type="checkbox" tabindex="-1" data-act="on" data-i="' + i + '"' + (b.on && !excluded ? ' checked' : '') + (excluded ? ' disabled' : '') + '></label>' +
         (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="" loading="lazy">' : '<span class="row-icon blank"></span>') +
-        '<div class="row-name"><strong>' + esc(b.name) + '</strong><small>' + esc(b.diff || '') +
-        (b.extra ? (b.diff ? ' · ' : '') + '+' + trim(b.extra) + '분' : '') +
-        (excluded ? ' · 완료 보스 제외 중' : '') + '</small></div>' +
+        // 이름 옆에 난이도 배지, 아래 줄에는 추가 시간·제외 같은 부가 정보만.
+        '<div class="row-name"><strong><span class="nm">' + esc(b.name) + '</span>' + (b.diff ? ' ' + diffBadge(b.diff) : '') + '</strong>' +
+        (function (note) { return note ? '<small>' + esc(note) + '</small>' : ''; })([b.extra ? '+' + trim(b.extra) + '분' : '', excluded ? '완료 보스 제외 중' : ''].filter(Boolean).join(' · ')) + '</div>' +
         '<div class="row-input"><input type="number" min="1" step="10" value="' + trim(b.mult) + '" data-act="mult" data-i="' + i + '"><span class="unit">%</span></div>' +
         '<div class="row-input"><input type="number" tabindex="-1" min="0.1" step="0.5" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '"><span class="unit">분</span></div>' +
         '<button type="button" class="tool-btn row-doping' + (b.rice ? ' on' : '') + '" data-act="rice" data-i="' + i + '" aria-label="' + esc(b.name) + ' 쌀도핑" aria-pressed="' + !!b.rice + '">' + (b.rice ? '쌀도핑 −3%' : '풀도핑') + '</button>' +
@@ -643,6 +643,8 @@
   excludeCompletedBtn.addEventListener('click', function () {
     state.excludeCompleted = !state.excludeCompleted;
     saveState(); renderAll();
+    // 저장해 둔 완료 표시는 지난 불러오기 때 것이라, 켤 때마다 스케줄러에서 새로 받아온다.
+    if (state.excludeCompleted) refreshCompleted();
   });
 
   // ── 넥슨 스케줄러에서 보스 목록 불러오기 ──────────────────
@@ -819,6 +821,34 @@
       })
       .catch(function (err) { setStatus(describeApiError(err, err && err.stage), 'err'); })
       .then(function () { fetchBtn.disabled = false; });
+  }
+  // 목록·배율은 그대로 두고 완료 여부만 스케줄러에서 다시 받아 같은 보스·난이도에 반영한다.
+  function refreshCompleted() {
+    var name = (charInput.value || '').trim();
+    if (!name || !window.NexonKey || !NexonKey.has()) {
+      setStatus('완료 여부는 넥슨 스케줄러에서 가져옵니다. 캐릭터를 고르고 API 키를 등록하세요.', 'err');
+      return;
+    }
+    setStatus('완료한 보스를 확인하는 중…');
+    var selectedOcid = charInput.dataset.accountOcid || '';
+    (selectedOcid ? Promise.resolve({ ocid: selectedOcid }) : apiGet('/id', { character_name: name }))
+      .then(null, function (e) { e.stage = 'id'; throw e; })
+      .then(function (r) {
+        if (!r || !r.ocid) throw new Error('캐릭터 식별자(OCID)를 받지 못했습니다.');
+        return apiGet('/scheduler/character-state', { ocid: r.ocid }).then(null, function (e) { e.stage = 'scheduler'; throw e; });
+      })
+      .then(function (data) {
+        var done = Object.create(null);
+        bossesFromScheduler(data).bosses.forEach(function (b) { if (b.completed) done[b.name + '|' + b.diff] = true; });
+        var n = 0;
+        state.bosses.forEach(function (b) {
+          b.completed = done[b.name + '|' + b.diff] === true;
+          if (b.completed) n++;
+        });
+        saveState(); renderAll();
+        setStatus(n ? '이번 주 완료한 보스 ' + n + '마리를 동선에서 뺐습니다.' : '목록에서 이번 주 완료한 보스가 없습니다.', 'ok');
+      })
+      .catch(function (err) { setStatus(describeApiError(err, err && err.stage), 'err'); });
   }
   fetchBtn.addEventListener('click', importCharacter);
   charInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') importCharacter(); });
@@ -1018,9 +1048,12 @@
       b.textContent = p.name; b.setAttribute('aria-pressed', String(p.name === activeProfile));
       b.addEventListener('click', function(){
         activeProfile = p.name; charInput.value = p.name; state = loadState(p.state);
+        // 위 선택 칸에서 고른 다른 캐릭터의 OCID가 남지 않게 지운다(이름으로 다시 찾는다).
+        charInput.removeAttribute('data-account-ocid');
         renderCharacterProfile(p.character);
         syncProfileInputs(); saveState(); renderAll(); renderProfiles();
-        setStatus('저장한 배율과 보스 선택을 불러왔습니다. 완료한 보스를 제외하려면 보스 불러오기로 최신 완료 상태를 갱신하세요.', 'ok');
+        if (state.excludeCompleted) refreshCompleted();
+        else setStatus('저장한 배율과 보스 선택을 불러왔습니다.', 'ok');
       });
       var del = document.createElement('button'); del.type = 'button'; del.className = 'ux-button'; del.textContent = '×';
       del.setAttribute('aria-label', p.name + ' 저장 삭제');
