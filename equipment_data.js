@@ -2,7 +2,7 @@
 (function(root){
   const data = {
   "schemaVersion": 1,
-  "description": "장비 이름으로 조회하는 기본 정보. 전체 장비 목록이 아닌 공식 자료 확인분부터 확장하는 초기 데이터입니다. level은 기본 착용 레벨이며 실제 소비 메소, 세트 효과 수치, 아이템 개체 ID는 포함하지 않습니다.",
+  "description": "장비 이름으로 조회하는 기본 정보. 공식 자료와 사용자 지정 정보를 출처별로 보관합니다. level은 기본 착용 레벨이며 실제 소비 메소, 세트 효과 수치, 아이템 개체 ID는 포함하지 않습니다.",
   "items": [
     {
       "name": "루즈 컨트롤 머신 마크",
@@ -610,6 +610,480 @@
       "sources": [
         "https://maplestory.nexon.com/News/Update/435"
       ]
+    },
+    {
+      "name": "마이스터 링",
+      "level": 140,
+      "slot": "반지",
+      "set": "제작 장비",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "트와일라이트 마크",
+      "level": 140,
+      "slot": "얼굴장식",
+      "set": "여명의 보스",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "분노한 자쿰의 벨트",
+      "level": 150,
+      "slot": "벨트",
+      "set": "보스 장신구",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "블랙빈 마크",
+      "level": 135,
+      "slot": "눈장식",
+      "set": "보스 장신구",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "데이브레이크 펜던트",
+      "level": 140,
+      "slot": "펜던트",
+      "set": "여명의 보스",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "여명의 가디언 엔젤 링",
+      "level": 160,
+      "slot": "반지",
+      "set": "여명의 보스",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "가디언 엔젤 링",
+      "level": 160,
+      "slot": "반지",
+      "set": "보스 장신구",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "메커네이터 펜던트",
+      "level": 120,
+      "slot": "펜던트",
+      "set": "보스 장신구",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "플라즈마 하트",
+      "level": 130,
+      "slot": "기계심장",
+      "set": "일반 장비",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "페어리 하트",
+      "level": 100,
+      "slot": "기계심장",
+      "set": "일반 장비",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "에스텔라 이어링",
+      "level": 160,
+      "slot": "귀고리",
+      "set": "여명의 보스",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "블랙 햇",
+      "level": 100,
+      "slot": "모자",
+      "set": "블랙",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "블랙 슈트",
+      "level": 100,
+      "slot": "한벌옷",
+      "set": "블랙",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "블랙 케이프",
+      "level": 100,
+      "slot": "망토",
+      "set": "블랙",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 나이트햇",
+      "level": 200,
+      "slot": "모자",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 나이트슈트",
+      "level": 200,
+      "slot": "한벌옷",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 나이트슈즈",
+      "level": 200,
+      "slot": "신발",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 나이트글러브",
+      "level": 200,
+      "slot": "장갑",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 나이트케이프",
+      "level": 200,
+      "slot": "망토",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 나이트숄더",
+      "level": 200,
+      "slot": "어깨장식",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 메이지햇",
+      "level": 200,
+      "slot": "모자",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 메이지슈트",
+      "level": 200,
+      "slot": "한벌옷",
+      "set": "아케인셰이드",
+      "aliases": [
+        "아케인셰이드 메이지로브"
+      ],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 메이지슈즈",
+      "level": 200,
+      "slot": "신발",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 메이지글러브",
+      "level": 200,
+      "slot": "장갑",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 메이지케이프",
+      "level": 200,
+      "slot": "망토",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 메이지숄더",
+      "level": 200,
+      "slot": "어깨장식",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 아처햇",
+      "level": 200,
+      "slot": "모자",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 아처슈트",
+      "level": 200,
+      "slot": "한벌옷",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 아처슈즈",
+      "level": 200,
+      "slot": "신발",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 아처글러브",
+      "level": 200,
+      "slot": "장갑",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 아처케이프",
+      "level": 200,
+      "slot": "망토",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 아처숄더",
+      "level": 200,
+      "slot": "어깨장식",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 시프햇",
+      "level": 200,
+      "slot": "모자",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 시프슈트",
+      "level": 200,
+      "slot": "한벌옷",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 시프슈즈",
+      "level": 200,
+      "slot": "신발",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 시프글러브",
+      "level": 200,
+      "slot": "장갑",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 시프케이프",
+      "level": 200,
+      "slot": "망토",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 시프숄더",
+      "level": 200,
+      "slot": "어깨장식",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 파이렛햇",
+      "level": 200,
+      "slot": "모자",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 파이렛슈트",
+      "level": 200,
+      "slot": "한벌옷",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 파이렛슈즈",
+      "level": 200,
+      "slot": "신발",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 파이렛글러브",
+      "level": 200,
+      "slot": "장갑",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 파이렛케이프",
+      "level": 200,
+      "slot": "망토",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "아케인셰이드 파이렛숄더",
+      "level": 200,
+      "slot": "어깨장식",
+      "set": "아케인셰이드",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "도미네이터 펜던트",
+      "level": 140,
+      "slot": "펜던트",
+      "set": "보스 장신구",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    },
+    {
+      "name": "골든 클로버 벨트",
+      "level": 140,
+      "slot": "벨트",
+      "set": "보스 장신구",
+      "aliases": [],
+      "sources": [
+        "user-provided:2026-10-08"
+      ]
+    }
+  ],
+  "families": [
+    {
+      "prefix": "블랙 ",
+      "level": 100,
+      "set": "블랙",
+      "slot": "무기·보조무기",
+      "sources": [
+        "user-provided:2026-10-08"
+      ],
+      "description": "블랙 방어구는 개별 항목으로 분류하며, 나머지 블랙 장비는 무기 또는 보조무기로 표시합니다."
     }
   ]
 };

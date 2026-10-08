@@ -20,7 +20,7 @@
   function buildSteps(opts) {
     var steps = [];
     for (var s = 0; s < MAX; s++) {
-      var r = D.RATES[s];
+      var r = opts.starcatch === false ? D.BASE_RATES[s] : D.RATES[s];
       var p = r.success, d = r.destroy;
 
       // 5·10·15성 100% 성공 이벤트
@@ -28,11 +28,19 @@
 
       // 21성 이하 파괴확률 30% 감소
       if (opts.destroyDown30 && s <= 21) d *= 0.7;
+      var recorded = opts.eventModifiers && opts.eventModifiers[s];
+      if (recorded) {
+        p = recorded.success === 1 ? 1 : r.success;
+        d = recorded.success === 1 ? 0 : r.destroy * (1-recorded.destroyDown);
+      }
 
       var base = D.baseCost(s, opts.level);
       var rate = 1;
       if (s < 17) rate -= (opts.mvp || 0) + (opts.pcRoom ? 0.05 : 0); // 할인은 17성 미만만
       if (opts.discount30) rate -= 0.3;
+      if (recorded) {
+        rate = 1 - (s < 17 ? (opts.mvp || 0) + (opts.pcRoom ? 0.05 : 0) : 0) - recorded.discount;
+      }
       var cost = base * Math.max(rate, 0);
 
       var guarded = opts.safeguard && opts.safeguard[s] && D.PROTECT_STARS.indexOf(s) >= 0;

@@ -60,7 +60,8 @@
   }
 
   function worldIconPath(world) {
-    var file = WORLD_ICON_FILES[text(world)];
+    var name = text(world).replace(/^챌린저스\s*[1-4]$/, '챌린저스');
+    var file = WORLD_ICON_FILES[name];
     return file ? 'icons/server/' + file : '';
   }
 
@@ -84,9 +85,10 @@
     return error;
   }
 
-  function fetchCharacters() {
+  function fetchCharacters(options) {
+    options = options || {};
     if (!root.NexonKey || !root.NexonKey.has()) return Promise.reject(new Error('API_KEY_REQUIRED'));
-    return fetch(API_URL, { headers: { 'x-nxopen-api-key': root.NexonKey.get() } })
+    return fetch(API_URL, { headers: { 'x-nxopen-api-key': options.key || root.NexonKey.get() }, signal: options.signal })
       .then(function (response) {
         return response.json().catch(function () { return null; }).then(function (body) {
           if (!response.ok) throw apiError(response, body);

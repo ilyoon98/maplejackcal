@@ -13,6 +13,7 @@
 <script src="site_ux.js" defer></script>
 <script src="site_nav.js" defer></script>
 <script src="nexon_key.js" defer></script>
+<script src="nexon_characters.js" defer></script>
 <script src="starforce_data.js" defer></script>
 <script src="starforce_calc.js" defer></script>
 <script src="equipment_data.js" defer></script>
@@ -110,32 +111,50 @@
       <button type="button" data-days="30" aria-pressed="false">최근 30일</button>
       <button type="button" data-days="365" aria-pressed="false">최근 1년</button>
       <button type="button" data-days="all" aria-pressed="false">전체 · 최근 2년</button>
-    </div><div class="history-fields">
-      <label>캐릭터 이름 · 선택<input id="historyName" list="historyCharacters" maxlength="20" placeholder="비워두면 계정 전체" autocomplete="off"><datalist id="historyCharacters"></datalist></label>
+    </div><div class="history-fields history-account-fields">
+      <div class="history-filter-field"><span>서버</span><details id="historyWorld" class="history-multi-filter"><summary id="historyWorldSummary">전체 서버</summary><div class="history-filter-menu"><label class="history-filter-all"><input id="historyWorldAll" type="checkbox" data-select-all checked>전체 서버</label><div id="historyWorldOptions"></div></div></details></div>
+      <div class="history-filter-field"><span>내 캐릭터</span><details id="historyCharacterSelect" class="history-multi-filter"><summary id="historyCharacterSummary">전체 캐릭터</summary><div class="history-filter-menu"><label class="history-filter-all"><input id="historyCharacterAll" type="checkbox" data-select-all checked>전체 캐릭터</label><div id="historyCharacterOptions"></div></div></details></div>
+      <button id="historyCharactersRefresh" type="button">캐릭터 목록 새로고침</button>
+    </div><p id="historyCharactersStatus" class="history-note" role="status"></p><div class="history-fields">
       <label>시작일<input type="date" id="historyFrom" required></label>
       <label>종료일<input type="date" id="historyTo" required></label>
-      <button class="primary" id="historyFetch" type="submit">기록 불러오기</button><button id="historyCancel" type="button" hidden>조회 중단</button>
+      <button class="primary" id="historyFetch" type="submit">기록 새로고침</button><button id="historyCancel" type="button" hidden>조회 중단</button>
     </div></form>
-    <p class="history-note">처음에는 날짜별 조회로 시간이 걸립니다. 완료한 날짜는 이 브라우저에 저장하며 다음에는 빠진 날짜와 최근 기록만 갱신합니다. 닉네임은 저장된 계정 기록의 필터입니다. 최신 기록은 최대 5분 뒤 반영됩니다.</p>
-    <button id="historyCacheClear" type="button">저장된 기록 삭제</button>
+    <p class="history-note">입장하면 최근 2년 기록을 자동으로 불러옵니다. 저장된 기록은 먼저 표시하고, 빠진 날짜와 최신 기록만 갱신합니다.</p>
     <p id="historyStatus" class="history-status" role="status" aria-live="polite"></p>
   </section>
   <div id="historyResults" hidden>
-    <p id="historyCoverage" class="history-note" role="status"></p>
-    <div class="history-summary" aria-label="선택 캐릭터 전체 집계"><div><span>총 강화 횟수</span><strong id="totalTries">—</strong></div><div><span>파괴 횟수</span><strong id="totalDestroy">—</strong></div><div><span>장비 이름별 묶음</span><strong id="totalItems">—</strong></div></div>
-    <p id="costSummary" class="history-note"></p>
+    <section class="history-finance history-panel" aria-label="강화 요약">
+      <p id="totalCostScope" class="history-note history-finance-scope"></p>
+      <div class="history-finance-totals">
+        <div><h2 id="totalCostLabel">총 사용 메소</h2><strong id="totalCost">—</strong><small id="costStatus"></small></div>
+        <div><h2 id="totalProfitTitle">종합 손익</h2><strong id="totalProfit">—</strong><small id="profitStatus"></small></div>
+      </div>
+      <p class="history-finance-meta"><span>강화 <b id="totalTries">—</b></span><span>파괴 <b id="totalDestroy">—</b></span><span>현재 단가 추정</span></p>
+      <details id="financeDetails"><summary>계산 상세</summary>
+        <p id="historyCoverage" class="history-note" role="status"></p><p id="totalCostExact" class="history-note"></p>
+        <div class="history-spending-breakdown"><div><span>강화비</span><strong id="enhanceCost">—</strong></div><div><span>대체 장비비</span><strong id="spareCost">—</strong></div></div>
+        <p id="accountCost" class="history-note"></p><p id="costSummary" class="history-note"></p><ul id="costMissing" class="history-cost-missing" hidden></ul>
+        <p id="profitCoverage" class="history-note"></p><ul id="profitExcluded" class="history-cost-missing" hidden></ul>
+        <div class="history-profit-totals"><div><span>이득 시도 합계</span><strong id="totalGains">—</strong></div><div><span>손해 시도 합계</span><strong id="totalLosses">—</strong></div><div><span>비교한 시도의 사용 메소</span><strong id="profitActual">—</strong></div><div><span>강화 결과의 기준금액</span><strong id="profitExpected">—</strong></div></div>
+        <p class="history-note">손익은 각 시도의 강화 결과를 기대비용으로 환산한 값에서 사용 메소를 뺀 합계입니다. 파괴는 12성부터 잃은 별까지의 기대비용과 입력한 대체 장비값을 반영합니다. 기대비용은 기록의 이벤트·현재 별의 파괴방지 기준이며, 다른 별의 복귀 구간은 파괴방지 미사용을 가정합니다. 특수 재화는 집계에서 제외합니다. 복구 메소·과거 단가 차이·실제 거래 손익은 포함하지 않습니다.</p>
+        <div class="history-table-wrap"><table class="history-table"><thead><tr><th>장비 · 캐릭터 · 서버</th><th>비교 횟수</th><th>사용 메소</th><th>결과 기준금액</th><th>손익</th></tr></thead><tbody id="profitRows"></tbody></table></div>
+      </details>
+    </section>
     <div class="history-layout"><section aria-labelledby="itemsTitle"><h2 id="itemsTitle">장비별 기록</h2><div id="historyItems" class="history-items"></div></section>
       <dialog id="historyDetail" class="history-panel history-detail-dialog" aria-labelledby="itemTitle">
         <div class="history-detail-heading"><h2 id="itemTitle"></h2><button id="detailClose" type="button" aria-label="상세보기 닫기">✕</button></div><p id="itemSubtitle" class="history-note"></p>
         <div id="itemOverview" class="history-verdict"></div>
+        <div id="itemComparison" class="history-comparison" role="status">목표 달성 분석 후 기대비용 대비 이득·손해를 표시합니다.</div>
         <div id="itemEvents" class="history-event-badges"></div>
+        <div class="history-session"><label for="sessionSelect">연속 강화 구간 선택</label><select id="sessionSelect"></select><p class="history-note">별 흐름·이벤트·강화 조건으로 나눈 후보입니다. 같은 장비인지 확인하세요. 구간 선택은 목표 분석에만 적용하며 상단 총합은 전체 기록을 유지합니다.</p></div>
         <details id="rangeSettings"><summary>고급 · 같은 이름의 장비 기록 나누기</summary>
         <p class="history-note">같은 이름의 장비 여러 개가 섞였을 때만 사용하세요. 기본은 전체 기록입니다. 기록은 오래된 순입니다.</p>
         <div class="history-tools"><label>시작 순번 <input id="rangeFrom" type="number" min="1" value="1"></label><label>종료 순번 <input id="rangeTo" type="number" min="1" value="1"></label><button id="rangeApply" type="button">구간 적용</button></div>
         </details>
         <p id="rangeSummary" class="history-note"></p>
         <details id="analysisSettings"><summary>레벨·개인 할인 수정 / 목표 달성 분석</summary>
-          <p class="history-note">이벤트 할인과 파괴방지는 기록에서 자동 반영합니다. 알려진 장비는 이름으로 레벨을 채웁니다. 비용은 현재 단가 환산이며 복구·재구입비는 기본 제외합니다. MVP·PC방 할인은 필요할 때만 수정하세요.</p>
+          <p class="history-note">이벤트 할인과 파괴방지는 기록에서 자동 반영합니다. 수정한 레벨·할인·대체 장비값은 같은 이름 장비의 전체 기록에 적용하고 이 브라우저에 저장합니다. 대체 장비값은 파괴 횟수만큼 상단 총합에 더하며 복구 메소는 제외합니다.</p>
           <form id="analysisForm">
             <div class="history-fields">
               <label>장비 레벨<input id="itemLevel" type="number" min="1" max="300" required placeholder="예: 200"></label>
@@ -146,14 +165,14 @@
             <div class="history-checks"><label><input type="checkbox" id="itemPc">PC방 할인</label></div>
             <button id="costUpdate" type="button">비용 수정 반영</button>
             <div class="history-checks"><label><input type="checkbox" id="analysisConfirmed" required>목표 분석할 기록은 같은 장비의 연속 강화입니다.</label></div>
-            <p class="history-note">기대값과 상위 확률은 현재 계산기의 스타캐치 적용 확률 기준입니다. 과거 규칙과 다른 기록은 현재 조건으로 환산한 참고 비교입니다.</p>
+            <p class="history-note">2026-03-19 개편 이후 스타캐치 null 기록은 확률 보정이 자동 적용됩니다. 개편 이전 기록은 스타캐치 성공을 확인해야 합니다. 기대값과 상위 확률은 현재 계산기의 확률 기준이며, 과거 규칙과 다른 기록은 현재 조건으로 환산한 참고 비교입니다.</p>
             <button class="primary" type="submit">선택 구간 분석</button>
           </form>
         <div id="analysisResult" class="history-verdict" role="status" aria-live="polite">장비 레벨과 강화 조건을 확인하면 비용과 기대값을 비교할 수 있습니다.</div>
         </details>
-        <details open><summary>강화 상세 기록</summary><div class="history-table-wrap"><table class="history-table"><thead><tr><th>순번</th><th>시간</th><th>별 변화</th><th>결과</th><th>추정 비용</th></tr></thead><tbody id="historyRows"></tbody></table></div><div class="history-tools"><button id="rowsPrev" type="button">이전</button><span id="rowsPage"></span><button id="rowsNext" type="button">다음</button></div></details>
+        <details open><summary>강화 상세 기록</summary><div class="history-table-wrap"><table class="history-table"><thead><tr><th>순번</th><th>시간</th><th>별 변화</th><th>결과</th><th>추정 강화비 / 누락 사유</th><th>시도별 기대비용 · 손익</th><th>기록된 강화 조건</th></tr></thead><tbody id="historyRows"></tbody></table></div><div class="history-tools"><button id="rowsPrev" type="button">이전</button><span id="rowsPage"></span><button id="rowsNext" type="button">다음</button></div></details>
       </dialog>
     </div>
   </div>
-  <p class="history-note"><a href="https://openapi.nexon.com/ko/game/maplestory/?id=17" target="_blank" rel="noopener">넥슨 공식 스타포스 기록 API</a> · 기록은 현재 브라우저에 저장됩니다. 상위 확률은 유저 순위가 아닌 동일 조건의 이론적 확률입니다.</p>
+  <p class="history-note"><a href="https://openapi.nexon.com/ko/game/maplestory/?id=17" target="_blank" rel="noopener">넥슨 스타포스 기록 API</a></p>
 </main></div></body></html>

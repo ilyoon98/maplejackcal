@@ -25,6 +25,8 @@
     return {
       get:date=>transaction('readonly',store=>store.get([account,date])),
       set:(date,rows)=>transaction('readwrite',store=>store.put({rows,savedAt:Date.now()},[account,date])),
+      getSettings:()=>transaction('readonly',store=>store.get([account,'settings'])),
+      setSettings:settings=>transaction('readwrite',store=>store.put(settings,[account,'settings'])),
       clear:()=>transaction('readwrite',store=>store.delete(IDBKeyRange.bound([account,''],[account,'\uffff']))),
       close:()=>db.close()
     };

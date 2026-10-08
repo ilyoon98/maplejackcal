@@ -4,6 +4,9 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const data = JSON.parse(fs.readFileSync(path.join(root, 'equipment_data.json'), 'utf8'));
 const names = new Set();
+for(const family of data.families||[]){
+  if(!family.prefix||!Number.isInteger(family.level)||family.level<1||family.level>300||!family.slot||!family.set||!family.sources?.length)throw new Error('Invalid equipment family: '+family.prefix);
+}
 for (const item of data.items) {
   if (!item.name || !Number.isInteger(item.level) || item.level < 1 || item.level > 300 || !item.slot || !item.set || !Array.isArray(item.aliases) || !item.sources?.length) throw new Error('Invalid equipment: ' + item.name);
   for (const name of [item.name, ...item.aliases]) {

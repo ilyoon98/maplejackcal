@@ -39,6 +39,7 @@
     PROTECT_STARS: [15, 16, 17],
     PROTECT_COST_MULTIPLIER: 3, // 파괴방지는 강화비용 3배(200% 추가)
     RATES: RATES,
+    BASE_RATES: BASE_SUCCESS.map(function (success, star) { return {success:success/100,destroy:BASE_DESTROY[star]/100}; }),
     baseCost: baseCost,
     // Compare every allowed combination using the caller's existing cost model.
     bestSafeguard: function (opts, costOf) {
