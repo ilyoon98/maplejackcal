@@ -27,8 +27,32 @@
   .list-tools input[type="text"] { flex:1 1 140px; min-width:0; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.88rem; }
   .tool-btn { background:none; border:1px solid var(--border); color:var(--text-dim); font-size:0.8rem; font-weight:700; padding:7px 12px; border-radius:999px; cursor:pointer; white-space:nowrap; }
   .tool-btn:hover { border-color:var(--accent); color:var(--text); }
+  /* 보스 불러오기는 이 카드의 주 동작이라 채운 버튼으로 눈에 띄게 한다. */
+  #fetchBtn { background:var(--accent-strong); border-color:transparent; color:#0b0d12; padding:9px 18px; }
+  #fetchBtn:hover { filter:brightness(1.12); color:#0b0d12; }
+  #fetchBtn:disabled { opacity:0.6; cursor:wait; }
+  /* 서버 칸은 가장 긴 서버(스카니아 · 12명)가 여유 있게 들어가는 폭으로 고정한다. */
+  #buffCharacterPicker .nx-character-fields { grid-template-columns:184px minmax(0,1fr) auto; }
+  /* 카드가 좁으면 버튼만 아랫줄 전체 폭으로 내린다. */
+  @container (max-width:480px) {
+    #buffCharacterPicker .nx-character-fields { grid-template-columns:184px minmax(0,1fr); }
+    #buffCharacterPicker .nx-character-fields #fetchBtn { grid-column:1 / -1; }
+  }
+  @container (max-width:380px) {
+    #buffCharacterPicker .nx-character-fields { grid-template-columns:minmax(0,1fr); }
+  }
+  #buffCharacterPicker .nx-character-fields #fetchBtn { height:42px; white-space:nowrap; }
+  /* 기본 화살표가 오른쪽 여백 밖에 따로 자리를 잡아서, 여백을 줄여 글자 자리를 넓힌다. */
+  #buffCharacterPicker .nx-character-field select { padding-right:12px; }
+  @media (max-width:520px) {
+    #buffCharacterPicker .nx-character-fields { grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); }
+    #buffCharacterPicker .nx-character-fields #fetchBtn { grid-column:1 / -1; }
+  }
+  @media (max-width:420px) {
+    #buffCharacterPicker .nx-character-fields { grid-template-columns:minmax(0,1fr); }
+  }
   .tool-btn.on { background:var(--accent-strong); border-color:transparent; color:#0b0d12; }
-  .character-import-card.has-profile { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:22px; align-items:stretch; }
+  .character-import-card.has-profile { display:grid; grid-template-columns:minmax(0,1fr) 220px; gap:20px; align-items:stretch; }
   .character-import-main { min-width:0; }
   .buff-character-showcase { position:relative; min-height:260px; overflow:hidden; border:1px solid rgba(132,176,255,.58); border-radius:16px; background:radial-gradient(circle at 50% 54%,rgba(106,167,255,.32),transparent 44%),linear-gradient(155deg,#182a4b 0%,#111927 58%,#0c111b 100%); box-shadow:inset 0 0 38px rgba(87,142,255,.12),0 14px 32px rgba(0,0,0,.22); }
   .buff-character-showcase[hidden] { display:none; }
@@ -46,7 +70,7 @@
   .pack-head .tag-row { display:flex; gap:5px; margin:5px 0 3px; }
   .pack-bin.rice { border-style:dashed; }
 
-  .boss-head, .boss-row { display:grid; grid-template-columns:24px 30px minmax(0,1fr) 76px 76px 86px 30px; gap:8px; align-items:center; }
+  .boss-head, .boss-row { display:grid; grid-template-columns:24px 30px minmax(0,1fr) 92px 76px 86px 30px; gap:8px; align-items:center; }
   .row-doping { padding:6px 4px; font-size:0.75rem; white-space:nowrap; }
   .boss-head { padding:0 2px 6px; font-size:0.74rem; color:var(--text-dim); text-align:center; }
   .boss-head .name-col { text-align:left; }
@@ -56,7 +80,18 @@
   .row-check input { width:16px; height:16px; accent-color:var(--accent-strong); cursor:pointer; }
   .row-icon { width:28px; height:28px; object-fit:contain; }
   .row-icon.blank { display:inline-block; }
-  .row-name strong { display:block; font-size:0.88rem; font-weight:600; }
+  .row-name { min-width:0; }
+  .row-name strong { display:flex; align-items:center; gap:6px; min-width:0; font-size:0.88rem; font-weight:600; }
+  .row-name strong .nm { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row-name .diff-badge { flex:none; }
+  .row-tag { flex:none; font-size:0.68rem; font-weight:700; color:var(--text-dim); padding:1px 6px; border:1px solid var(--border); border-radius:5px; }
+  .row-tag.done { color:var(--good); border-color:rgba(76,175,125,.45); }
+  .route-settings { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:0 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card); font-size:0.8rem; color:var(--text-dim); }
+  .route-settings .route-item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+  .route-settings input { width:64px; padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.88rem; font-variant-numeric:tabular-nums; }
+  .route-settings input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .route-settings .route-fixed { margin-left:auto; font-size:0.74rem; }
+  .row-name strong .diff-badge { margin-left:0; }
   .row-name small { color:var(--text-dim); font-size:0.72rem; }
   .row-input { display:flex; align-items:center; gap:4px; }
   .row-input input { width:100%; min-width:0; padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.85rem; font-variant-numeric:tabular-nums; }
@@ -99,13 +134,25 @@
   .boss-list-actions #resetBtn { margin-left:auto; }
   .boss-add { display:grid; grid-template-columns:minmax(0,1fr) 112px auto; align-items:end; gap:12px; padding:14px; margin-bottom:16px; background:#11141a; border:1px solid var(--border); border-radius:12px; }
   .boss-add-field { display:flex; flex-direction:column; gap:7px; min-width:0; color:var(--text-dim); font-size:0.75rem; font-weight:600; }
-  .boss-add input { box-sizing:border-box; width:100%; min-width:0; height:40px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); color:var(--text); font:inherit; font-size:0.88rem; }
+  .boss-add input, .boss-add select { box-sizing:border-box; width:100%; min-width:0; height:40px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); color:var(--text); font:inherit; font-size:0.88rem; }
+  .boss-picker { position:relative; }
+  .boss-picker-btn { display:flex; align-items:center; gap:8px; width:100%; height:40px; box-sizing:border-box; padding:0 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); color:var(--text); font:inherit; font-size:0.88rem; cursor:pointer; text-align:left; }
+  .boss-picker-btn:hover, .boss-picker-btn[aria-expanded="true"] { border-color:var(--accent); }
+  .boss-picker-btn .dim { color:var(--text-dim); font-weight:400; }
+  .boss-picker-btn .caret { margin-left:auto; color:var(--text-dim); font-size:0.75rem; }
+  .boss-picker-btn .diff-badge { margin-left:auto; }
+  .boss-picker-btn .diff-badge + .caret { margin-left:0; }
+  .boss-picker-menu { position:absolute; z-index:30; left:0; width:max(100%, 300px); max-width:calc(100vw - 48px); box-sizing:border-box; overflow-x:hidden; top:calc(100% + 4px); max-height:320px; overflow-y:auto; padding:4px; border:1px solid var(--border); border-radius:10px; background:#1b1f27; box-shadow:0 10px 28px rgba(0,0,0,0.5); }
+  .picker-row { display:flex; align-items:center; gap:8px; width:100%; padding:6px 8px; border:0; border-radius:7px; background:none; color:var(--text); font:inherit; text-align:left; cursor:pointer; }
+  .picker-row:hover, .picker-row:focus-visible { background:#232833; outline:none; }
+  .picker-row[aria-selected="true"] { background:#2b4366; }
+  .picker-row .shot-bname { flex:1 1 auto; min-width:0; }
   .boss-add .new-mult { display:flex; align-items:center; height:40px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); }
   .boss-add .new-mult input { flex:1; width:0; height:38px; border:0; background:transparent; padding-right:4px; font-variant-numeric:tabular-nums; }
   .boss-add .unit { padding-right:11px; font-weight:400; }
   .boss-add #addBoss { min-height:40px; padding:9px 16px; border-radius:8px; background:var(--accent-strong); border-color:transparent; color:#0b0d12; }
   .boss-add #addBoss:hover { filter:brightness(1.12); }
-  .boss-add input:focus-visible, .boss-add button:focus-visible, .boss-list-actions button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  .boss-add input:focus-visible, .boss-add select:focus-visible, .boss-add button:focus-visible, .boss-list-actions button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
   @media (max-width:520px) {
     .boss-add { grid-template-columns:minmax(0,1fr) 112px; gap:12px; }
     .boss-add .boss-add-name { grid-column:1 / -1; }
@@ -115,6 +162,58 @@
   @media (max-width:760px) {
     .character-import-card.has-profile { grid-template-columns:minmax(0,1fr); }
     .buff-character-showcase { min-height:250px; }
+  }
+  .shot-box { margin-bottom:16px; }
+  .shot-drop { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:14px; border:1px dashed #3a3f4b; border-radius:12px; background:#11141a; cursor:pointer; font-size:0.82rem; color:var(--text-dim); }
+  .shot-drop strong { color:var(--text); font-size:0.88rem; }
+  .shot-drop .shot-pick { margin-left:auto; border:1px solid var(--border); border-radius:999px; padding:5px 11px; font-weight:700; font-size:0.78rem; white-space:nowrap; }
+  .shot-drop:hover, .shot-drop.over { border-color:var(--accent); }
+  .shot-drop:hover .shot-pick, .shot-drop.over .shot-pick { border-color:var(--accent); color:var(--text); }
+  .shot-steps { flex-basis:100%; margin:2px 0 0; padding-left:20px; line-height:1.75; }
+  .shot-steps b { color:var(--text); }
+  .shot-foot { flex-basis:100%; font-size:0.74rem; }
+  .shot-drop:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  .shot-box .fetch-status { margin:10px 0 0; }
+  #shotResult { margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:12px; background:#11141a; }
+  .shot-summary { font-size:0.8rem; color:var(--text-dim); margin-bottom:8px; }
+  .shot-row { display:grid; grid-template-columns:20px 30px minmax(0,1fr) 92px; gap:8px; align-items:center; padding:6px 0; border-top:1px solid var(--border); }
+  .shot-row input[type="checkbox"] { width:16px; height:16px; accent-color:var(--accent-strong); cursor:pointer; }
+  .shot-row > img { width:30px; height:30px; border-radius:6px; object-fit:cover; }
+  .shot-row input[type="number"] { width:100%; min-width:0; box-sizing:border-box; padding:5px 6px; border-radius:7px; border:1px solid var(--border); background:var(--card); color:var(--text); font:inherit; font-size:0.82rem; }
+  .shot-row input[type="number"] { font-variant-numeric:tabular-nums; }
+  .shot-row .shot-name { display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .shot-row small { font-size:0.72rem; color:var(--text-dim); }
+  .shot-row small.warn { color:#e5b454; }
+  /* 메뉴까지 흐려지지 않게 줄 전체가 아니라 안쪽 요소만 흐린다. */
+  .shot-row.off > img, .shot-row.off .shot-pct, .shot-row.off small, .shot-row.off .shot-fixed, .shot-row.off .shot-pick-btn { opacity:0.55; }
+  .shot-fixed, .shot-pick-btn, .shot-opt { display:flex; align-items:center; gap:7px; min-width:0; }
+  .shot-face { width:24px; height:24px; border-radius:6px; object-fit:contain; flex:none; }
+  .shot-face.blank { display:inline-block; background:#22262f; }
+  .shot-bname { font-size:0.86rem; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .shot-bname.dim { color:var(--text-dim); font-weight:400; }
+  .diff-badge { margin-left:auto; flex:none; font-size:0.66rem; font-weight:800; letter-spacing:0.02em; padding:2px 7px; border-radius:5px; background:#2a2e38; color:var(--text-dim); }
+  .diff-badge.easy { background:#666; color:#fff; }
+  .diff-badge.normal { background:#16aebe; color:#fff; }
+  .diff-badge.hard { background:#a52c4b; color:#fff; }
+  .diff-badge.chaos { background:#0b0b0b; color:#d9bc9b; border:1px solid #3a3226; }
+  .diff-badge.extreme { background:#0b0b0b; color:#e2465a; border:1px solid #4a1f26; }
+  .shot-pick-boss { position:relative; }
+  .shot-pick-btn { width:100%; box-sizing:border-box; padding:5px 8px; border-radius:7px; border:1px solid var(--border); background:var(--card); cursor:pointer; font:inherit; text-align:left; }
+  .shot-pick-btn:hover, .shot-pick-btn[aria-expanded="true"] { border-color:var(--accent); }
+  .shot-pick-btn .diff-badge { margin-left:auto; }
+  .shot-caret { color:var(--text-dim); font-size:0.75rem; flex:none; }
+  .shot-pick-btn .diff-badge + .shot-caret { margin-left:0; }
+  .shot-pick-btn .shot-bname.dim + .shot-caret { margin-left:auto; }
+  .shot-menu { position:absolute; z-index:20; left:0; right:0; top:calc(100% + 4px); max-height:260px; overflow-y:auto; padding:4px; border:1px solid var(--border); border-radius:9px; background:#1b1f27; box-shadow:0 8px 24px rgba(0,0,0,0.45); }
+  .shot-opt { width:100%; padding:6px 8px; border:0; border-radius:6px; background:none; cursor:pointer; font:inherit; text-align:left; }
+  .shot-opt:hover, .shot-opt[aria-selected="true"] { background:#2a2e38; }
+  .shot-skip { margin-top:8px; font-size:0.78rem; color:var(--text-dim); }
+  .shot-skip summary { cursor:pointer; }
+  .shot-skip p { margin:6px 0 0; line-height:1.7; }
+  .shot-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+  .shot-actions #shotApply { background:var(--accent-strong); border-color:transparent; color:#0b0d12; }
+  @media (max-width:520px) {
+    .shot-row { grid-template-columns:20px 30px minmax(0,1fr) 84px; }
   }
   .step-no { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#2a2e38; color:var(--text-dim); font-size:0.68rem; font-weight:800; flex:none; }
   .pack-head { margin-bottom:4px; }
@@ -219,29 +318,6 @@
 
   <div class="layout">
     <div class="layout-left">
-      <section class="card">
-        <h2>버프 설정</h2>
-        <div class="setting-row">
-          <div class="setting">
-            <label for="buffMin">버프 지속 시간</label>
-            <div class="with-unit"><input type="number" id="buffMin" min="1" step="1" value="30"><span class="unit">분</span></div>
-          </div>
-          <div class="setting">
-            <label for="baseMin">배율 100%일 때 걸리는 시간</label>
-            <div class="with-unit"><input type="number" id="baseMin" min="1" step="1" value="20"><span class="unit">분</span></div>
-          </div>
-          <div class="setting">
-            <label for="moveMin">보스 간 이동 시간</label>
-            <div class="with-unit"><input type="number" id="moveMin" min="0" step="0.5" value="1"><span class="unit">분</span></div>
-          </div>
-          <div class="setting">
-            <label for="slackPct">여유 시간 +</label>
-            <div class="with-unit"><input type="number" id="slackPct" min="0" step="5" value="0"><span class="unit">%</span></div>
-          </div>
-        </div>
-        <div data-ux-help="배율·이동·여유 시간"><p class="note">배율 200%면 그 절반(10분), 400%면 5분으로 계산합니다. 배율 대신 오른쪽 '분' 칸에 실제 클리어 시간을 바로 적어도 됩니다. 이동 시간은 한 버프 안에서 보스를 옮길 때마다 더해집니다(3마리면 2번). 여유 시간은 모든 보스의 처치 시간을 그 비율만큼 늘려 잡습니다(10%면 10분 → 11분).</p></div>
-      </section>
-
       <section class="card character-import-card" id="characterImportCard">
         <div class="character-import-main">
           <h2>캐릭터 불러오기</h2>
@@ -252,7 +328,7 @@
             <button type="button" class="tool-btn" id="fetchBtn">보스 불러오기</button>
           </div>
           <p class="note fetch-status" id="fetchStatus"></p>
-          <p class="note">넥슨 스케줄러에 등록된 주간·월간 보스를 완료 여부와 관계없이 모두 가져옵니다. 완료한 보스는 목록의 ‘완료한 보스 제외하기’를 켜면 동선에서 제외됩니다. 배율은 이름이 같으면 쓰던 값을 유지합니다.</p>
+          <p class="note">스케줄러의 주간·월간 보스를 가져오고, 쓰던 배율은 그대로 둡니다.</p>
         </div>
         <aside class="buff-character-showcase" id="buffCharacterShowcase" aria-label="불러온 캐릭터 외형" hidden>
           <img id="buffCharacterShowcaseImage" alt="">
@@ -272,34 +348,62 @@
           <button type="button" class="tool-btn" id="resetBtn">초기화</button>
         </div>
         <div class="boss-add" role="group" aria-label="보스 직접 추가">
-          <label class="boss-add-field boss-add-name" for="newName">보스 이름
-            <input type="text" id="newName" placeholder="추가할 보스 이름" maxlength="20">
-          </label>
+          <div class="boss-add-field boss-add-name"><span id="newNameLabel">보스 이름</span>
+            <div class="boss-picker" id="bossPicker">
+              <input type="hidden" id="newName">
+              <button type="button" class="boss-picker-btn" id="bossPickerBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="newNameLabel bossPickerBtn"></button>
+              <div class="boss-picker-menu" id="bossPickerMenu" role="listbox" aria-labelledby="newNameLabel" hidden></div>
+            </div>
+          </div>
           <label class="boss-add-field" for="newMult">배율
             <span class="new-mult"><input type="number" id="newMult" min="1" step="10" value="100"><span class="unit">%</span></span>
           </label>
           <button type="button" class="tool-btn" id="addBoss">+ 보스 추가</button>
         </div>
+        <div class="shot-box">
+          <div class="shot-drop" id="shotDrop" role="button" tabindex="0" aria-describedby="shotHelp">
+            <strong>📷 스크린샷으로 배율 채우기</strong>
+            <span class="shot-pick">이미지 고르기</span>
+            <ol class="shot-steps" id="shotHelp">
+              <li>환산주스탯에서 닉네임 검색</li>
+              <li>분석 최적화 → 효율 · 보스컷</li>
+              <li>보스 배율 왼쪽 위 <b>전체보기</b> 누르고, 데스티니/유챔 확인은 끄기</li>
+              <li><b>Win + Shift + S</b>로 보스 배율 부분 캡처</li>
+              <li>이 페이지에서 <b>Ctrl + V</b></li>
+              <li>아래에서 확인 후 <b>선택한 배율 넣기</b></li>
+            </ol>
+            <span class="shot-foot">목록에 있는 보스만 넣고, 이미지는 이 브라우저 안에서만 처리합니다.</span>
+          </div>
+          <input type="file" id="shotFile" accept="image/*" hidden>
+          <p class="note fetch-status" id="shotStatus"></p>
+          <div id="shotResult" hidden></div>
+        </div>
         <p class="ux-hint">배율 또는 실제 클리어 시간(분)을 입력하세요. 두 값은 함께 반영됩니다.</p><div class="boss-head">
           <span></span><span></span><span class="name-col">보스</span><span>배율</span><span>소요</span><span>도핑</span><span></span>
         </div>
         <div id="bossList"></div>
-        <p class="note">보스별 도핑 버튼을 누르면 풀도핑 ↔ 쌀도핑으로 바뀝니다. 같은 도핑의 보스끼리만 묶습니다. 입력 시간은 풀도핑 기준이며, 쌀도핑은 배율의 97%로 동선을 계산합니다.</p>
+        <p class="note">보스별 도핑 버튼을 누르면 풀도핑 ↔ 쌀도핑으로 바뀝니다. 한 버프에는 같은 도핑만 묶되, 쌀도핑 보스를 풀도핑 버프에 넣어 버프 개수가 줄어들면 풀도핑으로 자동 계산합니다. 입력 시간은 풀도핑 기준이며, 쌀도핑은 배율의 97%로 동선을 계산합니다.</p>
         <p class="note">윌은 페이즈 이동 때문에 처치 시간에 +4분이 자동으로 붙습니다. 입력한 값은 이 브라우저에 저장됩니다.</p>
       </section>
 
       <div data-ux-help="동선 계산 방식"><section class="card card-secondary">
         <h2>어떻게 계산하나요</h2>
         <p class="how">
+          버프는 30분, 배율 100%면 한 마리에 20분으로 봅니다(200%면 10분, 400%면 5분). 배율 대신 보스 목록의 '분' 칸에 실제 클리어 시간을 바로 적어도 됩니다. 이동 시간은 한 버프 안에서 보스를 옮길 때마다 더해지고(3마리면 2번), 여유 시간은 모든 보스의 처치 시간을 그 비율만큼 늘려 잡습니다(10%면 10분 → 11분).<br>
           <b>소요 시간 = 기준 시간 ÷ (배율 ÷ 100) × (1 + 여유%)</b>, 한 버프에 n마리를 넣으면 <b>이동 시간 × (n−1)</b>이 더 붙습니다. 그걸로<br>
           ① 켜둔 보스를 전부 도는 <b>최소 버프 개수</b>와 각 버프에 넣을 보스·순서를 짭니다. 도핑별 보스 15마리까지는 정확한 최적해, 그보다 많으면 근사값입니다.<br>
           ② 버프를 한 번만 쓸 때 <b>남는 시간이 가장 적은</b> 조합도 따로 보여줍니다. 같은 시간이면 보스를 더 많이 잡는 쪽이 위로 옵니다.<br>
-          ③ 보스별로 <b>풀도핑 / 쌀도핑</b>을 선택합니다. 쌀도핑은 배율 ×0.97(상대 3% 감소)로 계산하며, 전체 동선과 한 버프 조합 모두 같은 도핑의 보스끼리만 묶습니다.
+          ③ 보스별로 <b>풀도핑 / 쌀도핑</b>을 선택합니다. 쌀도핑은 배율 ×0.97(상대 3% 감소)로 계산하며, 한 버프에는 같은 도핑의 보스만 묶습니다. 단, 전체 동선에서는 쌀도핑 보스를 풀도핑 버프에 넣어 버프 개수가 줄어들 때 풀도핑으로 바꿔 계산합니다.
         </p>
       </section></div>
     </div>
 
     <div class="layout-right">
+      <div class="route-settings" role="group" aria-label="동선 설정">
+        <span class="route-item"><label for="moveMin">보스 간 이동</label><input type="number" id="moveMin" min="0" step="0.5" value="1"><span class="unit">분</span></span>
+        <span class="route-item"><label for="slackPct">여유 시간 +</label><input type="number" id="slackPct" min="0" step="5" value="0"><span class="unit">%</span></span>
+        <span class="route-fixed" title="버프 지속 30분, 배율 100%일 때 20분으로 계산합니다">버프 30분 · 100% = 20분</span>
+      </div>
       <section class="card card-primary">
         <h2>전체 보스 도는 순서</h2>
         <div id="packResult"></div>
@@ -315,6 +419,7 @@
 <script src="site_nav.js"></script>
 <script src="nexon_key.js"></script>
 <script src="nexon_characters.js"></script>
+<script src="boss_shot_reader.js"></script>
 <script src="boss_buff_planner.js"></script>
 </body>
 </html>

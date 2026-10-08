@@ -11,6 +11,7 @@ function loadPlanner() {
       value:'', innerHTML:'', textContent:'', classList:{toggle(){}},
       addEventListener(){}, setAttribute(){}, after(){}, append(){},
       appendChild(){}, replaceChildren(){},
+      parentNode:{appendChild(){}},
     };
   }
   const context = vm.createContext({
@@ -20,6 +21,8 @@ function loadPlanner() {
         return elements.get(id);
       },
       createElement:element,
+      addEventListener(){},
+      querySelector(){ return null; },
     },
     localStorage:{getItem:() => null, setItem(){}},
     window:{},
@@ -30,6 +33,7 @@ function loadPlanner() {
       importBosses(data) { state.bosses = bossesFromScheduler(data).bosses; return state.bosses; },
       activeItems,
       exclude(value) { state.excludeCompleted = value; },
+      setSlack(value) { state.slackPct = value; },
       reload() { state = loadState(state); },
       setBosses(bosses) { state.bosses = bosses; },
       packAll,
@@ -79,13 +83,13 @@ test('주간·월간 완료 필드를 모두 지원하며 명시적인 false를 
   }
 });
 
-test('시간이 남아도 풀도핑과 쌀도핑 보스는 별도 버프에 묶는다', () => {
+test('풀도핑으로 돌려도 버프가 줄지 않으면 쌀도핑 보스는 쌀도핑 판에 둔다', () => {
   const engine = loadPlanner();
   const items = [
-    {full:200, riceSec:210, rice:false},
-    {full:200, riceSec:210, rice:true},
-    {full:200, riceSec:210, rice:false},
-    {full:200, riceSec:210, rice:true},
+    {full:800, riceSec:820, rice:false},
+    {full:780, riceSec:800, rice:true},
+    {full:800, riceSec:820, rice:false},
+    {full:780, riceSec:800, rice:true},
   ];
   const result = engine.packAll(items, 1800);
   assert.equal(result.bins.length, 2);
@@ -93,7 +97,33 @@ test('시간이 남아도 풀도핑과 쌀도핑 보스는 별도 버프에 묶�
   for (const bin of result.bins) {
     assert.equal(bin.idx.length, 2);
     assert.ok(bin.idx.every(i => items[i].rice === !bin.full));
-    assert.equal(engine.binCost(bin, items), bin.full ? 460 : 480);
+    assert.equal(engine.binCost(bin, items), 1660);
+  }
+});
+
+test('쌀도핑 보스를 풀도핑 판에 넣어 버프가 줄면 풀도핑으로 계산한다', () => {
+  const engine = loadPlanner();
+  const items = [{full:900, riceSec:930, rice:false}, {full:800, riceSec:830, rice:true}];
+  const result = engine.packAll(items, 1800);
+  assert.equal(result.bins.length, 1);
+  assert.equal(result.bins[0].full, true);
+  assert.equal(engine.binCost(result.bins[0], items), 1760);
+});
+
+test('듄켈을 쌀도핑으로 두어도 풀도핑 판에 넣어 버프 3개로 돈다', () => {
+  const engine = loadPlanner();
+  engine.setBosses([
+    ['스우',2477,true],['데미안',1855,true],['루시드',455,true],['윌',964,true],
+    ['더스크',812,true],['진 힐라',674,true],['듄켈',770,true],
+    ['검은 마법사',344,false],['선택받은 세렌',392,false],['감시자 칼로스',275,false],['최초의 대적자',223,false],
+  ].map(([name, mult, rice]) => ({name, mult, rice, on:true, extra:name === '윌' ? 4 : 0})));
+  engine.setSlack(30);
+  const items = engine.activeItems();
+  const result = engine.packAll(items, 1800);
+  assert.equal(result.bins.length, 3);
+  for (const bin of result.bins) {
+    assert.ok(bin.full || bin.idx.every(i => items[i].rice));
+    assert.ok(engine.binCost(bin, items) <= 1800);
   }
 });
 
@@ -112,7 +142,7 @@ test('보스가 많아 근사 계산을 해도 같은 도핑만 묶고 제한 �
   const placed = result.bins.flatMap(bin => Array.from(bin.idx));
   assert.equal(new Set(placed).size, items.length);
   for (const bin of result.bins) {
-    assert.ok(bin.idx.every(i => items[i].rice === !bin.full));
+    assert.ok(bin.full || bin.idx.every(i => items[i].rice));
     assert.ok(engine.binCost(bin, items) <= 900);
   }
 });
@@ -132,8 +162,10 @@ test('도핑 선택은 저장 복원과 재조회 후에도 유지되고 조합�
   assert.equal(bosses[0].mult, 400);
   engine.renderAll();
   const {pack, combos} = engine.results();
+  // 둘 다 5분이라 한 버프에 들어가므로 스우를 풀도핑으로 돌린다.
   assert.match(pack, /풀도핑 1판/);
-  assert.match(pack, /쌀도핑 1판/);
+  assert.match(pack, /쌀도핑 0판/);
+  assert.match(pack, /풀도핑으로 넣었습니다: 스우/);
   const [full, rice] = combos.split('<p class="note">쌀도핑 −3% 보스 조합</p>');
   assert.match(full, /데미안/);
   assert.doesNotMatch(full, /스우/);

@@ -4,7 +4,7 @@
 //  ② 버프를 한 번만 쓸 때 가장 알찬 조합
 // 을 계산한다. 시간은 전부 초 단위 정수로 다뤄 부동소수 오차를 없앤다.
 //
-// 보스별 도핑 선택에 따라 풀도핑/쌀도핑 그룹을 따로 최적화한다.
+// 보스별 도핑 선택에 따라 풀도핑/쌀도핑 판을 나눠 묶되, 쌀도핑 보스는 버프가 줄어들면 풀도핑 판에도 넣는다.
 (function () {
   var STORE_KEY = 'bossBuffPlanner.v1';
 
@@ -24,6 +24,37 @@
     { name: '파풀라투스',         diff: '카오스', icon: 'icons/boss/papulatus.webp' },
     { name: '매그너스',           diff: '하드',   icon: 'icons/boss/magnus.webp' }
   ];
+
+  // 보스 추가 목록. 보스 수익 정산과 같은 순서·난이도.
+  var BOSS_CATALOG = [
+    ['유피테르', 'jupiter', ['하드', '노멀']],
+    ['발드릭스', 'baldrix', ['하드', '노멀']],
+    ['림보', 'limbo', ['하드', '노멀']],
+    ['벨로나', 'vellona', ['하드', '노멀', '이지']],
+    ['찬란한 흉성', 'radiant', ['하드', '노멀']],
+    ['카링', 'kaling', ['익스트림', '하드', '노멀', '이지']],
+    ['최초의 대적자', 'first_challenger', ['익스트림', '하드', '노멀', '이지']],
+    ['감시자 칼로스', 'watcher_kalos', ['익스트림', '카오스', '노멀', '이지']],
+    ['선택받은 세렌', 'seren', ['익스트림', '하드', '노멀']],
+    ['듄켈', 'dunkel', ['하드', '노멀']],
+    ['진 힐라', 'jin_hilla', ['하드', '노멀']],
+    ['더스크', 'dusk', ['카오스', '노멀']],
+    ['윌', 'will', ['하드', '노멀', '이지']],
+    ['루시드', 'lucid', ['하드', '노멀', '이지']],
+    ['가디언 엔젤 슬라임', 'guardian_angel_slime', ['카오스', '노멀']],
+    ['데미안', 'damien', ['하드', '노멀']],
+    ['스우', 'suu', ['익스트림', '하드', '노멀']],
+    ['파풀라투스', 'papulatus', ['카오스']],
+    ['벨룸', 'vellum', ['카오스']],
+    ['블러디 퀸', 'bloody_queen', ['카오스']],
+    ['반반', 'banban', ['카오스']],
+    ['피에르', 'pierre', ['카오스']],
+    ['매그너스', 'magnus', ['하드']],
+    ['자쿰', 'zakum', ['카오스']],
+    ['검은 마법사', 'black_mage', ['익스트림', '하드']]
+  ];
+  // 난이도 배지 색(스크린샷 사이트와 같은 색).
+  var DIFF_CLASS = { '이지': 'easy', '노멀': 'normal', '하드': 'hard', '카오스': 'chaos', '익스트림': 'extreme' };
 
   // 배율과 무관하게 그 보스에서 더 걸리는 시간(분). 젠 대기·컷신·페이즈 이동 같은 것들.
   var DEFAULT_EXTRA = { '윌': 4 };
@@ -56,8 +87,9 @@
       if (!raw) return defaultState();
       var s = JSON.parse(raw);
       if (!s || !Array.isArray(s.bosses) || !s.bosses.length) return defaultState();
-      s.buffMin = num(s.buffMin, 30);
-      s.baseMin = num(s.baseMin, 20);
+      // 버프 지속 30분 · 배율 100% 기준 20분은 고정값이다(화면에서 바꾸지 않는다).
+      s.buffMin = 30;
+      s.baseMin = 20;
       s.moveMin = Math.max(0, num(s.moveMin, 1));
       s.slackPct = Math.max(0, num(s.slackPct, 0));
       s.excludeCompleted = s.excludeCompleted === true;
@@ -149,20 +181,79 @@
     if (top.length > topN) top.length = topN;
   }
 
-  // 도핑별로 따로 묶어 같은 버프에 서로 다른 도핑이 섞이지 않게 한다.
+  // 한 버프 안에서는 도핑을 섞지 않는다. 쌀도핑 보스는 풀도핑 판에 넣어 버프 개수가
+  // 줄어들 때만 풀도핑 시간으로 계산해 풀도핑 판에 넣는다.
   function packAll(items, cap) {
-    var bins = [], over = [], exact = true;
-    [true, false].forEach(function (full) {
-      var fit = [];
-      items.forEach(function (it, i) {
-        if ((!it.rice) !== full) return;
-        (secIn(it, full) <= cap ? fit : over).push(i);
-      });
-      var groupExact = fit.length <= MAX_EXACT_1;
-      exact = exact && groupExact;
-      bins = bins.concat(groupExact ? packExactSingle(fit, items, cap, full) : packGreedy(fit, items, cap, full));
+    var over = [], fixedFull = [], flex = [];
+    items.forEach(function (it, i) {
+      // 쌀도핑으로도 버프 시간을 넘는 보스는 버프를 하나 더 쓰게 되므로 풀도핑으로 돌리지 않는다.
+      if (it.rice) (it.riceSec <= cap ? flex : over).push(i);
+      else (it.full <= cap ? fixedFull : over).push(i);
     });
-    return { bins: bins, over: over, exact: exact };
+    if (fixedFull.length + flex.length <= MAX_EXACT_1) {
+      return { bins: packExactMixed(fixedFull.concat(flex), items, cap), over: over, exact: true };
+    }
+    // 보스가 많으면 도핑별로 따로 묶은 결과와, 풀도핑 판의 빈 시간에 쌀도핑 보스를 채운 결과 중 버프가 적은 쪽.
+    var fullBins = packGroup(fixedFull, items, cap, true);
+    var base = fullBins.concat(packGroup(flex, items, cap, false));
+    var filled = fullBins.map(function (bin) { return { idx: bin.idx.slice(), full: true }; });
+    var used = filled.map(function (bin) { return binSec(bin, items); });
+    var rest = [];
+    flex.slice().sort(function (a, b) { return items[b].full - items[a].full; }).forEach(function (i) {
+      for (var b = 0; b < filled.length; b++) {
+        if (costOf(used[b] + items[i].full, filled[b].idx.length + 1) <= cap) {
+          filled[b].idx.push(i); used[b] += items[i].full; return;
+        }
+      }
+      rest.push(i);
+    });
+    var alt = filled.concat(packGroup(rest, items, cap, false));
+    return { bins: alt.length < base.length ? alt : base, over: over, exact: false };
+  }
+  function packGroup(idxList, items, cap, full) {
+    return idxList.length <= MAX_EXACT_1 ? packExactSingle(idxList, items, cap, full) : packGreedy(idxList, items, cap, full);
+  }
+
+  // 풀도핑 보스와 쌀도핑 보스를 함께 놓고 최소 버프 개수를 계산한다.
+  // 점수 = 버프 개수 → 풀도핑으로 돌린 쌀도핑 보스 수 → 실제 사용 시간 순으로 작은 쪽.
+  function packExactMixed(idxList, items, cap) {
+    var n = idxList.length;
+    if (!n) return [];
+    var total = 1 << n;
+    var fullSums = subsetSums(idxList, items, true);
+    var riceSums = subsetSums(idxList, items, false);
+    var bits = popcounts(total);
+    var riceMask = 0;
+    idxList.forEach(function (k, j) { if (items[k].rice) riceMask |= 1 << j; });
+    var PROMO_W = 1e7, MIX_BIN_W = 1e12;
+    var binScore = new Float64Array(total);
+    var isFull = new Uint8Array(total);
+    for (var s = 1; s < total; s++) {
+      var promo = bits[s & riceMask];
+      var rc = costOf(riceSums[s], bits[s]);
+      var fc = costOf(fullSums[s], bits[s]);
+      if (promo === bits[s] && rc <= cap) binScore[s] = rc;          // 전부 쌀도핑 보스면 쌀도핑 판이 우선
+      else if (fc <= cap) { binScore[s] = promo * PROMO_W + fc; isFull[s] = 1; }
+      else binScore[s] = Infinity;
+    }
+    var dp = new Float64Array(total);
+    var pick = new Int32Array(total);
+    for (var mask = 1; mask < total; mask++) {
+      dp[mask] = Infinity;
+      var lowbit = mask & -mask;
+      for (var sub = mask; sub > 0; sub = (sub - 1) & mask) {
+        if (!(sub & lowbit) || binScore[sub] === Infinity) continue;
+        var cand = dp[mask ^ sub] + MIX_BIN_W + binScore[sub];
+        if (cand < dp[mask]) { dp[mask] = cand; pick[mask] = sub; }
+      }
+    }
+    var bins = [], cur = total - 1;
+    while (cur) {
+      var sub = pick[cur];
+      bins.push({ idx: subToIdx(sub, idxList), full: isFull[sub] === 1 });
+      cur ^= sub;
+    }
+    return bins;
   }
 
   // 부분집합 합/개수 미리 계산. sums는 판 종류별로 따로 필요하다.
@@ -238,8 +329,6 @@
   var listEl = document.getElementById('bossList');
   var comboEl = document.getElementById('comboResult');
   var packEl = document.getElementById('packResult');
-  var buffInput = document.getElementById('buffMin');
-  var baseInput = document.getElementById('baseMin');
   var moveInput = document.getElementById('moveMin');
   var slackInput = document.getElementById('slackPct');
   var excludeCompletedBtn = document.getElementById('excludeCompletedBtn');
@@ -265,10 +354,12 @@
       row.innerHTML =
         // 탭 키가 배율 칸만 따라 내려가도록 나머지 조작부는 탭 순서에서 뺀다.
         '<label class="row-check"><input type="checkbox" tabindex="-1" data-act="on" data-i="' + i + '"' + (b.on && !excluded ? ' checked' : '') + (excluded ? ' disabled' : '') + '></label>' +
-        (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="" loading="lazy">' : '<span class="row-icon blank"></span>') +
-        '<div class="row-name"><strong>' + esc(b.name) + '</strong><small>' + esc(b.diff || '') +
-        (b.extra ? (b.diff ? ' · ' : '') + '+' + trim(b.extra) + '분' : '') +
-        (excluded ? ' · 완료 보스 제외 중' : '') + '</small></div>' +
+        (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="">' : '<span class="row-icon blank"></span>') +
+        // 이름 옆에 난이도 배지, 아래 줄에는 추가 시간·제외 같은 부가 정보만.
+        // 이름 · 난이도 배지 · 꼬리표(+4분, 완료)를 한 줄에 둬서 행 높이가 늘지 않게 한다.
+        '<div class="row-name"><strong><span class="nm" title="' + esc(b.name) + '">' + esc(b.name) + '</span>' + (b.diff ? diffBadge(b.diff) : '') +
+        (b.extra ? '<span class="row-tag" title="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') +
+        (excluded ? '<span class="row-tag done" title="이번 주 완료해서 동선에서 뺐습니다">완료</span>' : '') + '</strong></div>' +
         '<div class="row-input"><input type="number" min="1" step="10" value="' + trim(b.mult) + '" data-act="mult" data-i="' + i + '"><span class="unit">%</span></div>' +
         '<div class="row-input"><input type="number" tabindex="-1" min="0.1" step="0.5" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '"><span class="unit">분</span></div>' +
         '<button type="button" class="tool-btn row-doping' + (b.rice ? ' on' : '') + '" data-act="rice" data-i="' + i + '" aria-label="' + esc(b.name) + ' 쌀도핑" aria-pressed="' + !!b.rice + '">' + (b.rice ? '쌀도핑 −3%' : '풀도핑') + '</button>' +
@@ -315,12 +406,17 @@
     var fullCnt = bins.filter(function (b) { return b.full; }).length;
 
     var bossCnt = bins.reduce(function (a, bin) { return a + bin.idx.length; }, 0);
+    var promoted = [];
+    bins.forEach(function (bin) {
+      if (bin.full) bin.idx.forEach(function (k) { if (items[k].rice) promoted.push(items[k].name); });
+    });
     var html = '<div class="pack-head">' +
       '<div class="pack-title">버프 <span class="big">' + bins.length + '</span>개 · 보스 ' + bossCnt + '마리</div>' +
       ('<div class="tag-row"><span class="tag full">풀도핑 ' + fullCnt + '판</span>' +
           '<span class="tag rice">쌀도핑 ' + (bins.length - fullCnt) + '판</span></div>') +
       '<p class="note">처치 ' + fmt(clearSec) + ' + 이동 ' + moveCnt + '회 ' + fmt(moveCnt * moveSec()) +
       ' = <b>' + fmt(usedSec) + '</b> 사용 · 남는 시간 ' + fmt(waste) + '</p>' +
+      (promoted.length ? '<p class="note">버프를 줄이려고 쌀도핑 보스를 풀도핑으로 넣었습니다: ' + promoted.map(esc).join(', ') + '</p>' : '') +
       (res.exact ? '' : '<p class="note warn">보스가 많아 근사 계산으로 묶었습니다.</p>') +
       '</div>';
 
@@ -337,8 +433,8 @@
           var it = items[k];
           return (j ? '<li class="hop"><span>↓ 이동 ' + fmtMin(moveSec()) + '분</span></li>' : '') +
             '<li class="stop"><span class="step-no">' + (j + 1) + '</span>' +
-            (it.icon ? '<img src="' + it.icon + '" alt="" loading="lazy">' : '') +
-            '<span class="nm">' + esc(it.name) + '</span>' +
+            (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
+            '<span class="nm">' + esc(it.name) + (bin.full && it.rice ? ' <span class="tag full">풀도핑 전환</span>' : '') + '</span>' +
             '<span class="tm">' + fmtMin(secIn(it, bin.full)) + '분</span></li>';
         }).join('') + '</ol>' +
         '</div>';
@@ -387,7 +483,7 @@
       '</div>';
   }
   function chip(it, full) {
-    return '<span class="chip">' + (it.icon ? '<img src="' + it.icon + '" alt="" loading="lazy">' : '') +
+    return '<span class="chip">' + (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
       esc(it.name) + '<small>' + fmtMin(secIn(it, full)) + '분</small></span>';
   }
   function bar(sec, cap) {
@@ -433,17 +529,7 @@
     saveState(); renderAll();
   });
 
-  buffInput.value = trim(state.buffMin);
-  baseInput.value = trim(state.baseMin);
   moveInput.value = trim(state.moveMin);
-  buffInput.addEventListener('input', function () {
-    state.buffMin = Math.max(1, num(buffInput.value, 30));
-    saveState(); renderResults();
-  });
-  baseInput.addEventListener('input', function () {
-    state.baseMin = Math.max(1, num(baseInput.value, 20));
-    saveState(); renderAll();
-  });
   moveInput.addEventListener('input', function () {
     state.moveMin = Math.max(0, num(moveInput.value, 1));
     saveState(); renderResults();
@@ -455,26 +541,82 @@
   });
   var newName = document.getElementById('newName');
   var newMult = document.getElementById('newMult');
+  // 보스 고르기: <select>에는 그림을 넣을 수 없어 직접 만든 목록을 쓴다.
+  // 한 줄에 얼굴 · 이름, 오른쪽에 난이도 배지. 배지를 누르면 그 난이도로 고른다.
+  // 고른 값은 숨긴 #newName에 '번호|난이도'로 담는다.
+  var pickerBtn = document.getElementById('bossPickerBtn');
+  var pickerMenu = document.getElementById('bossPickerMenu');
+  function diffBadge(diff, attrs) {
+    return '<span class="diff-badge ' + (DIFF_CLASS[diff] || '') + '"' + (attrs || '') + '>' + esc(diff) + '</span>';
+  }
+  function pickBoss(value) {
+    newName.value = value;
+    var pick = String(value || '').split('|'), boss = BOSS_CATALOG[pick[0]];
+    pickerBtn.innerHTML = boss
+      ? '<img class="shot-face" src="icons/boss/' + boss[1] + '.webp" alt=""><span class="shot-bname">' + esc(boss[0]) + '</span>' + diffBadge(pick[1]) + '<span class="caret">▾</span>'
+      : '<span class="dim">보스 선택</span><span class="caret">▾</span>';
+  }
+  function renderPicker() {
+    // 보스·난이도마다 한 줄. 줄 전체가 고르는 버튼이다.
+    pickerMenu.innerHTML = BOSS_CATALOG.map(function (b, i) {
+      return b[2].map(function (diff) {
+        var v = i + '|' + diff;
+        return '<button type="button" role="option" class="picker-row" data-pick="' + v + '" aria-selected="' + (newName.value === v) + '">' +
+          '<img class="shot-face" src="icons/boss/' + b[1] + '.webp" alt="">' +
+          '<span class="shot-bname">' + esc(b[0]) + '</span>' + diffBadge(diff) + '</button>';
+      }).join('');
+    }).join('');
+  }
+  function openPicker(open) {
+    if (open) renderPicker();
+    pickerMenu.hidden = !open;
+    pickerBtn.setAttribute('aria-expanded', String(!!open));
+    if (open) {
+      var sel = pickerMenu.querySelector('[aria-selected="true"]') || pickerMenu.querySelector('[data-pick]');
+      if (sel) sel.focus();
+    }
+  }
+  pickBoss('');
+  pickerBtn.addEventListener('click', function () { openPicker(pickerMenu.hidden); });
+  pickerMenu.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-pick]');
+    if (!t) return;
+    pickBoss(t.dataset.pick);
+    openPicker(false);
+    newMult.focus(); newMult.select();
+  });
+  pickerMenu.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { openPicker(false); pickerBtn.focus(); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    var rows = Array.prototype.slice.call(pickerMenu.querySelectorAll('[data-pick]'));
+    var at = rows.indexOf(document.activeElement) + (e.key === 'ArrowDown' ? 1 : -1);
+    if (rows[at]) rows[at].focus();
+  });
+  document.addEventListener('click', function (e) {
+    if (!pickerMenu.hidden && !e.target.closest('#bossPicker')) openPicker(false);
+  });
   function addBoss() {
-    var name = (newName.value || '').trim() || '새 보스';
+    var pick = String(newName.value || '').split('|');
+    var boss = BOSS_CATALOG[pick[0]];
+    if (!boss) { openPicker(true); return; }
+    var name = boss[0];
     state.bosses.push({
-      id: 'c' + Date.now(), name: name, diff: '', icon: '',
+      id: 'c' + Date.now(), name: name, diff: pick[1], icon: 'icons/boss/' + boss[1] + '.webp',
       mult: Math.max(1, num(newMult.value, 100)), extra: DEFAULT_EXTRA[name] || 0, on: true
     });
-    newName.value = '';
+    pickBoss('');
     newMult.value = '100';
     saveState(); renderAll();
-    newName.focus();
+    pickerBtn.focus();
   }
   document.getElementById('addBoss').addEventListener('click', addBoss);
-  [newName, newMult].forEach(function (el) {
+  [newMult].forEach(function (el) {
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter') addBoss(); });
   });
   document.getElementById('resetBtn').addEventListener('click', function () {
     if (!confirm('입력한 배율을 모두 초기값으로 되돌릴까요?')) return;
     state = defaultState();
-    buffInput.value = trim(state.buffMin);
-    baseInput.value = trim(state.baseMin);
     moveInput.value = trim(state.moveMin);
     slackInput.value = trim(state.slackPct);
     saveState(); renderAll();
@@ -490,6 +632,8 @@
   excludeCompletedBtn.addEventListener('click', function () {
     state.excludeCompleted = !state.excludeCompleted;
     saveState(); renderAll();
+    // 저장해 둔 완료 표시는 지난 불러오기 때 것이라, 켤 때마다 스케줄러에서 새로 받아온다.
+    if (state.excludeCompleted) refreshCompleted();
   });
 
   // ── 넥슨 스케줄러에서 보스 목록 불러오기 ──────────────────
@@ -527,7 +671,21 @@
   var characterShowcaseName = document.getElementById('buffCharacterShowcaseName');
   var characterShowcaseMeta = document.getElementById('buffCharacterShowcaseMeta');
 
-  if (window.NexonCharacters) NexonCharacters.mount({ host: '#buffCharacterPicker', input: charInput });
+  // 내 캐릭터 고르기 모드에서는 '보스 불러오기'를 서버·캐릭터 칸과 한 줄에 두고,
+  // 직접 검색 모드에서는 이름 입력칸 옆으로 돌려놓는다.
+  var fetchHome = fetchBtn.parentNode;
+  function placeFetchBtn(manual) {
+    var fields = document.querySelector('#buffCharacterPicker .nx-character-fields');
+    if (!manual && fields) fields.appendChild(fetchBtn); else fetchHome.appendChild(fetchBtn);
+    fetchHome.hidden = !manual && !!fields;
+  }
+  if (window.NexonCharacters) NexonCharacters.mount({ host: '#buffCharacterPicker', input: charInput, onModeChange: placeFetchBtn });
+  placeFetchBtn(!charInput.hidden);
+  // 드롭다운에서 캐릭터(또는 서버)를 직접 바꾸면 바로 보스를 불러온다.
+  // 페이지를 열 때의 자동 선택은 change 이벤트가 없어서 API를 부르지 않는다.
+  document.getElementById('buffCharacterPicker').addEventListener('change', function (e) {
+    if (e.target.matches('.nx-character-select, .nx-world-select') && charInput.value.trim()) importCharacter();
+  });
 
   function setStatus(msg, kind) {
     fetchStatus.textContent = msg || '';
@@ -630,6 +788,7 @@
   }
 
   function importCharacter() {
+    if (fetchBtn.disabled) return; // 불러오는 중이면 겹쳐 부르지 않는다.
     var name = (charInput.value || '').trim();
     if (!name) { setStatus('캐릭터 이름을 입력하세요.', 'err'); charInput.focus(); return; }
     if (!window.NexonKey || !NexonKey.has()) { setStatus('먼저 홈에서 넥슨 오픈 API 키를 등록하세요.', 'err'); return; }
@@ -667,15 +826,210 @@
       .catch(function (err) { setStatus(describeApiError(err, err && err.stage), 'err'); })
       .then(function () { fetchBtn.disabled = false; });
   }
+  // 목록·배율은 그대로 두고 완료 여부만 스케줄러에서 다시 받아 같은 보스·난이도에 반영한다.
+  function refreshCompleted() {
+    var name = (charInput.value || '').trim();
+    if (!name || !window.NexonKey || !NexonKey.has()) {
+      setStatus('완료 여부는 넥슨 스케줄러에서 가져옵니다. 캐릭터를 고르고 API 키를 등록하세요.', 'err');
+      return;
+    }
+    setStatus('완료한 보스를 확인하는 중…');
+    var selectedOcid = charInput.dataset.accountOcid || '';
+    (selectedOcid ? Promise.resolve({ ocid: selectedOcid }) : apiGet('/id', { character_name: name }))
+      .then(null, function (e) { e.stage = 'id'; throw e; })
+      .then(function (r) {
+        if (!r || !r.ocid) throw new Error('캐릭터 식별자(OCID)를 받지 못했습니다.');
+        return apiGet('/scheduler/character-state', { ocid: r.ocid }).then(null, function (e) { e.stage = 'scheduler'; throw e; });
+      })
+      .then(function (data) {
+        var done = Object.create(null);
+        bossesFromScheduler(data).bosses.forEach(function (b) { if (b.completed) done[b.name + '|' + b.diff] = true; });
+        var n = 0;
+        state.bosses.forEach(function (b) {
+          b.completed = done[b.name + '|' + b.diff] === true;
+          if (b.completed) n++;
+        });
+        saveState(); renderAll();
+        setStatus(n ? '이번 주 완료한 보스 ' + n + '마리를 동선에서 뺐습니다.' : '목록에서 이번 주 완료한 보스가 없습니다.', 'ok');
+      })
+      .catch(function (err) { setStatus(describeApiError(err, err && err.stage), 'err'); });
+  }
   fetchBtn.addEventListener('click', importCharacter);
   charInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') importCharacter(); });
   try { charInput.value = localStorage.getItem('bossBuffPlanner.lastChar') || ''; } catch (err) {}
+
+  // ── 스크린샷에서 배율 읽기 ──────────────────────────────────
+  // 다른 사이트의 보스 카드 캡처를 boss_shot_reader.js로 읽고, 목록에 있는 보스(같은 이름·난이도)만
+  // 골라 배율을 넣는다. 목록은 사용자가 고른 보스라 100% 미만이어도 그대로 넣는다.
+  var shotDrop = document.getElementById('shotDrop');
+  var shotFile = document.getElementById('shotFile');
+  var shotStatus = document.getElementById('shotStatus');
+  var shotResult = document.getElementById('shotResult');
+  var shotRows = [], shotUnknown = [], shotOutside = 0, shotBusy = false, shotOpen = -1;
+
+  function setShotStatus(msg, kind) {
+    shotStatus.textContent = msg || '';
+    shotStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
+  }
+  function findBossIndex(name, diff) {
+    for (var i = 0; i < state.bosses.length; i++) {
+      if (state.bosses[i].name === name && state.bosses[i].diff === diff) return i;
+    }
+    return -1;
+  }
+  // 얼굴 · 이름 · 난이도 배지.
+  function bossChip(b) {
+    return (b.icon ? '<img class="shot-face" src="' + b.icon + '" alt="">' : '<span class="shot-face blank"></span>') +
+      '<span class="shot-bname">' + esc(b.name) + '</span>' +
+      (b.diff ? '<span class="diff-badge ' + (DIFF_CLASS[b.diff] || '') + '">' + esc(b.diff) + '</span>' : '');
+  }
+  function readShot(file) {
+    if (!file || !/^image\//.test(file.type || '') || shotBusy) return;
+    if (!window.BossShotReader) { setShotStatus('스크린샷 읽기 모듈을 불러오지 못했습니다.', 'err'); return; }
+    shotBusy = true;
+    setShotStatus('스크린샷을 읽는 중…');
+    var icons = Object.keys(BOSS_ICON).map(function (name) { return { name: name, icon: 'icons/boss/' + BOSS_ICON[name] + '.webp' }; });
+    BossShotReader.readBlob(file, icons).then(function (list) {
+      if (!list.length) {
+        shotResult.hidden = true;
+        setShotStatus('보스 카드를 찾지 못했습니다. 카드 격자가 보이게 캡처했는지 확인하세요.', 'err');
+        return;
+      }
+      shotRows = []; shotUnknown = []; shotOutside = 0; shotOpen = -1;
+      var taken = Object.create(null);
+      // 덜 닮은 카드가 같은 보스를 차지하지 않게 확실한 것부터 배정한다.
+      list.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (r) {
+        var row = { thumb: r.thumb, value: r.value, idx: -1, on: false };
+        if (!r.name || !r.diff) { shotUnknown.push(row); return; }
+        var idx = findBossIndex(r.name, r.diff);
+        if (idx < 0) { shotOutside++; return; }
+        if (taken[idx]) { shotUnknown.push(row); return; }
+        taken[idx] = true;
+        row.idx = idx;
+        row.on = r.value != null;
+        shotRows.push(row);
+      });
+      shotRows.sort(function (a, b) { return a.idx - b.idx; }); // 목록 순서대로.
+      var odd = list.some(function (r) { return r.scale > 1.03 && r.scale < 1.4; });
+      setShotStatus('카드 ' + list.length + '장을 읽었습니다. 확인 후 ‘선택한 배율 넣기’를 누르세요.' +
+        (odd ? ' 화면 배율이 125%처럼 애매하면 숫자를 잘못 읽을 수 있어 100%·150%·200%로 캡처하는 편이 정확합니다.' : ''), 'ok');
+      renderShot();
+    }).catch(function (err) {
+      setShotStatus('스크린샷을 읽지 못했습니다: ' + (err && err.message ? err.message : err), 'err');
+    }).then(function () { shotBusy = false; shotFile.value = ''; });
+  }
+  function shotRowHtml(row, i, group) {
+    var b = state.bosses[row.idx], note, warn = false;
+    if (!b) { note = '목록의 어느 보스인지 고르세요.'; warn = true; }
+    else if (row.value == null) { note = '배율 숫자를 읽지 못했습니다. 직접 적으세요.'; warn = true; }
+    else note = '지금 ' + trim(b.mult) + '% → ' + trim(row.value) + '%';
+    var name;
+    if (group === 'unknown') {
+      // 얼굴과 난이도 배지를 보여주려고 <select> 대신 직접 만든 목록을 쓴다.
+      var open = shotOpen === i;
+      name = '<div class="shot-pick-boss">' +
+        '<button type="button" class="shot-pick-btn" data-shot="pick" data-i="' + i + '" aria-haspopup="listbox" aria-expanded="' + open + '">' +
+          (b ? bossChip(b) : '<span class="shot-bname dim">보스 선택</span>') + '<span class="shot-caret">▾</span></button>' +
+        (open ? '<div class="shot-menu" role="listbox">' + state.bosses.map(function (x, k) {
+          return '<button type="button" role="option" class="shot-opt" data-shot="choose" data-i="' + i + '" data-k="' + k + '" aria-selected="' + (k === row.idx) + '">' + bossChip(x) + '</button>';
+        }).join('') + '</div>' : '') +
+        '</div>';
+    } else name = '<div class="shot-fixed">' + bossChip(b) + '</div>';
+    return '<div class="shot-row' + (row.on ? '' : ' off') + '">' +
+      '<input type="checkbox" data-shot="on" data-g="' + group + '" data-i="' + i + '"' + (row.on ? ' checked' : '') + ' aria-label="이 배율 넣기">' +
+      '<img src="' + row.thumb + '" alt="" title="스크린샷의 카드">' +
+      '<div class="shot-name">' + name + '<small' + (warn ? ' class="warn"' : '') + '>' + esc(note) + '</small></div>' +
+      '<div class="row-input shot-pct"><input type="number" min="1" step="0.1" data-shot="value" data-g="' + group + '" data-i="' + i + '" value="' + (row.value != null ? trim(row.value) : '') + '" aria-label="배율"><span class="unit">%</span></div>' +
+      '</div>';
+  }
+  function renderShot() {
+    var found = Object.create(null);
+    shotRows.concat(shotUnknown).forEach(function (r) { if (r.idx >= 0) found[r.idx] = true; });
+    var missing = state.bosses.filter(function (b, k) { return !found[k]; }).map(function (b) { return b.name + ' ' + b.diff; });
+    var html = '<div class="shot-summary">목록 보스 ' + shotRows.length + '개를 찾았습니다' +
+      (shotOutside ? ' · 목록에 없는 보스 ' + shotOutside + '개는 뺐습니다' : '') + '</div>';
+    html += shotRows.map(function (row, i) { return shotRowHtml(row, i, 'list'); }).join('');
+    if (!shotRows.length) html += '<p class="empty">스크린샷에서 목록에 있는 보스를 찾지 못했습니다.</p>';
+    if (missing.length) html += '<p class="shot-skip">스크린샷에 없는 목록 보스: ' + esc(missing.join(' · ')) + '</p>';
+    if (shotUnknown.length) {
+      html += '<details class="shot-skip" id="shotUnknown"' + (shotRows.length && shotOpen < 0 && !shotUnknownOpen ? '' : ' open') + '><summary>알아보지 못한 카드 ' + shotUnknown.length + '장 (직접 고르기)</summary>' +
+        shotUnknown.map(function (row, i) { return shotRowHtml(row, i, 'unknown'); }).join('') + '</details>';
+    }
+    html += '<div class="shot-actions"><button type="button" class="tool-btn" id="shotCancel">닫기</button>' +
+      '<button type="button" class="tool-btn" id="shotApply">선택한 배율 넣기</button></div>';
+    shotResult.innerHTML = html;
+    shotResult.hidden = false;
+  }
+  var shotUnknownOpen = false;
+  function applyShot() {
+    var set = 0;
+    shotRows.concat(shotUnknown).forEach(function (row) {
+      var b = state.bosses[row.idx];
+      if (!row.on || !b || !(row.value > 0)) return;
+      b.mult = Math.max(1, row.value); // 배율 칸 최솟값과 맞춘다(0.42% → 1%).
+      set++;
+    });
+    saveState(); renderAll();
+    shotResult.hidden = true;
+    setShotStatus(set ? '배율 ' + set + '개를 넣었습니다.' : '넣을 배율을 고르지 않았습니다.', set ? 'ok' : 'err');
+  }
+  shotResult.addEventListener('change', function (e) {
+    var t = e.target, row = (t.dataset.g === 'unknown' ? shotUnknown : shotRows)[parseInt(t.dataset.i, 10)];
+    if (!row) return;
+    if (t.dataset.shot === 'on') row.on = t.checked;
+    else if (t.dataset.shot === 'value') { row.value = t.value === '' ? null : Math.max(0, num(t.value, 0)); row.on = row.value > 0 && row.idx >= 0; }
+    else return;
+    renderShot();
+  });
+  shotResult.addEventListener('toggle', function (e) {
+    if (e.target.id === 'shotUnknown') shotUnknownOpen = e.target.open;
+  }, true);
+  shotResult.addEventListener('click', function (e) {
+    var t = e.target.closest('button');
+    if (!t) return;
+    var i = parseInt(t.dataset.i, 10);
+    if (t.dataset.shot === 'pick') { shotOpen = shotOpen === i ? -1 : i; renderShot(); }
+    else if (t.dataset.shot === 'choose') {
+      var row = shotUnknown[i];
+      row.idx = parseInt(t.dataset.k, 10);
+      row.on = row.value > 0;
+      shotOpen = -1; renderShot();
+    }
+    else if (t.id === 'shotApply') applyShot();
+    else if (t.id === 'shotCancel') { shotResult.hidden = true; setShotStatus(''); }
+  });
+  // 보스 고르기 메뉴는 바깥을 누르거나 Esc를 누르면 닫는다.
+  document.addEventListener('click', function (e) {
+    if (shotOpen >= 0 && !e.target.closest('.shot-pick-boss')) { shotOpen = -1; renderShot(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && shotOpen >= 0) { shotOpen = -1; renderShot(); }
+  });
+  shotDrop.addEventListener('click', function () { shotFile.click(); });
+  shotDrop.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); shotFile.click(); }
+  });
+  shotFile.addEventListener('change', function () { readShot(shotFile.files && shotFile.files[0]); });
+  shotDrop.addEventListener('dragover', function (e) { e.preventDefault(); shotDrop.classList.add('over'); });
+  shotDrop.addEventListener('dragleave', function () { shotDrop.classList.remove('over'); });
+  shotDrop.addEventListener('drop', function (e) {
+    e.preventDefault(); shotDrop.classList.remove('over');
+    readShot(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+  });
+  // 페이지 어디서든 이미지를 붙여넣으면 읽는다(글자 붙여넣기는 그대로 둔다).
+  document.addEventListener('paste', function (e) {
+    var items = e.clipboardData ? Array.prototype.slice.call(e.clipboardData.items || []) : [];
+    var img = items.filter(function (it) { return it.kind === 'file' && /^image\//.test(it.type); })[0];
+    if (!img) return;
+    e.preventDefault();
+    shotDrop.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    readShot(img.getAsFile());
+  });
 
   var profileBar = document.createElement('div'); profileBar.className = 'ux-profile-list';
   profileBar.setAttribute('aria-label', '저장한 캐릭터');
   fetchStatus.after(profileBar);
   function syncProfileInputs() {
-    buffInput.value = trim(state.buffMin); baseInput.value = trim(state.baseMin);
     moveInput.value = trim(state.moveMin); slackInput.value = trim(state.slackPct);
     document.dispatchEvent(new Event('buff-profile-loaded'));
   }
@@ -697,9 +1051,12 @@
       b.textContent = p.name; b.setAttribute('aria-pressed', String(p.name === activeProfile));
       b.addEventListener('click', function(){
         activeProfile = p.name; charInput.value = p.name; state = loadState(p.state);
+        // 위 선택 칸에서 고른 다른 캐릭터의 OCID가 남지 않게 지운다(이름으로 다시 찾는다).
+        charInput.removeAttribute('data-account-ocid');
         renderCharacterProfile(p.character);
         syncProfileInputs(); saveState(); renderAll(); renderProfiles();
-        setStatus('저장한 배율과 보스 선택을 불러왔습니다. 완료한 보스를 제외하려면 보스 불러오기로 최신 완료 상태를 갱신하세요.', 'ok');
+        if (state.excludeCompleted) refreshCompleted();
+        else setStatus('저장한 배율과 보스 선택을 불러왔습니다.', 'ok');
       });
       var del = document.createElement('button'); del.type = 'button'; del.className = 'ux-button'; del.textContent = '×';
       del.setAttribute('aria-label', p.name + ' 저장 삭제');

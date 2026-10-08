@@ -126,7 +126,6 @@ body[data-ux-page="index.html"] .ux-help-open { position:static; margin:0; flex-
 .ux-score-caption { font-size:.75rem; color:var(--ux-muted); }
 #uxScoreRank { font-size:1.65rem; color:var(--ux-accent); }
 #uxScoreCost { font-size:.85rem; line-height:1.5; overflow-wrap:anywhere; }
-.ux-fixed-setting { font-size:1.1rem; padding:8px 0; }
 .ux-profile-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
 .ux-profile { display:inline-flex; }
 .ux-profile .ux-button { border-radius:0 8px 8px 0; }

@@ -107,14 +107,6 @@
       document.addEventListener('input', scopeUpdate); document.addEventListener('change', scopeUpdate); new MutationObserver(scopeUpdate).observe(q('#breakdown'), {childList:true, subtree:true}); scopeUpdate();
     }
     if (page === 'boss_buff_planner.html') {
-      ['buffMin','baseMin'].forEach(id => {
-        const input=q('#'+id); const value=make('strong','ux-fixed-setting');
-        input.hidden=true; input.after(value);
-        const update=()=>setText(value, input.value);
-        document.addEventListener('buff-profile-loaded',update);
-        q('#resetBtn').addEventListener('click',update);
-        update();
-      });
       const result = q('.layout-right'); const sections = qa(':scope > section', result); const switcher = make('div', 'ux-switch'); switcher.setAttribute('role','group'); switcher.setAttribute('aria-label','동선 목적');
       sections.forEach((s, i) => { s.id = 'ux-buff-result-' + i; const b = make('button', 'ux-button', i ? '버프 한 번만 쓰기' : '전체 보스 돌기'); b.type = 'button'; b.setAttribute('aria-controls',s.id); b.setAttribute('aria-pressed',String(i===0)); s.hidden = i!==0; switcher.append(b); b.addEventListener('click', () => { sections.forEach((other,j) => { other.hidden=i!==j; switcher.children[j].setAttribute('aria-pressed',String(i===j)); }); }); }); result.prepend(switcher);
     }
