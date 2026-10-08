@@ -382,7 +382,35 @@ test('캐릭터 모션 URL은 기본 서기 파라미터를 중복 추가하지 
   assert.doesNotMatch(body, /['"]action=['"]\s*\+/);
 });
 
-test('MapleStory.io는 장비를 조립해 모션을 받고 누락 시 넥슨 이미지로 복귀한다', () => {
+test('넥슨 character_image 공식 코드를 걷기·사다리·점프·두손 공격에 사용한다', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
+  assert.match(ui, /actions: \['A02\.0', 'A02\.1', 'A02\.2', 'A02\.3'\]/);
+  assert.match(ui, /actions: \['A08\.0', 'A08\.1'\]/);
+  assert.match(ui, /motion: 'W02', actions: \['A23\.0', 'A23\.1', 'A23\.2', 'A23\.3'\]/);
+  assert.match(ui, /actions: \['A06\.0'\]/);
+  assert.match(ui, /넥슨 API에서 걷기·사다리·점프·공격 모션을 받는 중/);
+  assert.match(ui, /return loadLook\(info\)\.then\(ready =>/);
+  assert.match(ui, /source: 'nexon-api'/);
+});
+
+test('같은 정지 그림만 반복되면 모션 성공으로 처리하지 않는다', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
+  const body = ui.match(/function loadPose\([\s\S]*?\n  }/)[0];
+  assert.match(body, /new Set\(good\.map\(im => im\._hiSignature\)\)\.size/);
+  assert.match(body, /!animated \|\| distinct > 1/);
+});
+
+test('저장한 캐릭터는 basic 정보를 갱신하고 empty_img를 프레임으로 쓰지 않는다', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
+  assert.match(ui, /apiGet\('\/character\/basic', \{ ocid: me\.ocid \}\)/);
+  assert.match(ui, /me\.image = image/);
+  assert.match(ui, /imageAt: Date\.now\(\)/);
+  assert.match(ui, /Date\.now\(\) - me\.imageAt < 30 \* 60 \* 1000/);
+  assert.match(ui, /static\\\/empty_img/);
+  assert.match(ui, /im\.currentSrc \|\| im\.src/);
+});
+
+test('MapleStory.io 조립은 넥슨 공식 모션이 누락된 경우에만 보조한다', () => {
   const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
   assert.match(ui, /const IO_BASE = 'https:\/\/maplestory\.io\/api\/KMS\/latest'/);
   assert.match(ui, /apiGet\('\/character\/item-equipment'/);
@@ -391,8 +419,8 @@ test('MapleStory.io는 장비를 조립해 모션을 받고 누락 시 넥슨 �
   assert.match(ui, /action: 'walk1'/);
   assert.match(ui, /action: 'ladder'/);
   assert.match(ui, /action: 'swingOF'/);
-  assert.match(ui, /MapleStory\.io 조립에 실패해 넥슨 기본 이미지로 되돌렸어요/);
-  assert.match(ui, /buildIoAppearance\(ocid\).*loadIoLook\(config\)/s);
+  assert.match(ui, /if \(!missingApi\.length\) return \{ ready, config: null, warning: '' \}/);
+  assert.match(ui, /buildIoAppearance\(ocid\)\.then\(config => loadIoLook\(config\)/);
 });
 
 test('캐릭터 선택기는 주간 보스 계획표와 같은 260레벨 기본 필터를 쓴다', () => {

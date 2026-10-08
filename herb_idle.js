@@ -1074,13 +1074,16 @@
     ladder: [{ action: 'ladder', frames: [0, 1] }],
     stun: [{ action: 'alert', frames: [0] }, { action: 'stand1', frames: [0] }]
   };
-  // 지원하지 않는 무기·동작 조합은 no-image를 돌려주므로 후보군을 순서대로 시험한다.
+  // 넥슨 character_image 문서의 액션 코드. W00은 장착 무기의 기본 모션을 유지하고,
+  // 채집 공격만 두손 모션(W02)을 우선 사용한다. 지원하지 않는 조합이 no-image를
+  // 돌려줄 수 있으므로 같은 동작의 공식 후보를 순서대로 시험한다.
   const POSES = {
-    stand: [{ motion: 'W00', actions: ['A00.0', 'A00.1', 'A00.2'] }],
-    walk: [{ motion: 'W00', actions: ['A02.0', 'A02.1', 'A02.2', 'A02.3'] }, { motion: 'W02', actions: ['A02.0', 'A02.1', 'A02.2', 'A02.3'] }, { motion: 'W01', actions: ['A02.0', 'A02.1', 'A02.2', 'A02.3'] }, { motion: 'W00', actions: ['A03.0', 'A03.1', 'A03.2', 'A03.3'] }],
-    swing: [{ motion: 'W02', actions: ['A16.0', 'A16.1', 'A16.2', 'A16.3'] }, { motion: 'W02', actions: ['A23.0', 'A23.1', 'A23.2', 'A23.3'] }, { motion: 'W00', actions: ['A16.0', 'A16.1', 'A16.2', 'A16.3'] }],
+    stand: [{ motion: 'W00', actions: ['A00.0', 'A00.1', 'A00.2'] }, { motion: 'W00', actions: ['A01.0', 'A01.1', 'A01.2'] }],
+    walk: [{ motion: 'W00', actions: ['A02.0', 'A02.1', 'A02.2', 'A02.3'] }, { motion: 'W00', actions: ['A03.0', 'A03.1', 'A03.2', 'A03.3'] }, { motion: 'W04', actions: ['A02.0', 'A02.1', 'A02.2', 'A02.3'] }],
+    swing: [{ motion: 'W02', actions: ['A23.0', 'A23.1', 'A23.2', 'A23.3'] }, { motion: 'W02', actions: ['A16.0', 'A16.1', 'A16.2', 'A16.3'] }, { motion: 'W00', actions: ['A16.0', 'A16.1', 'A16.2', 'A16.3'] }, { motion: 'W01', actions: ['A16.0', 'A16.1', 'A16.2', 'A16.3'] }],
     ladder: [{ motion: 'W04', actions: ['A08.0', 'A08.1'] }, { motion: 'W00', actions: ['A08.0', 'A08.1'] }],
-    stun: [{ motion: 'W00', actions: ['A00.0'] }]
+    jump: [{ motion: 'W00', actions: ['A06.0'] }, { motion: 'W04', actions: ['A06.0'] }],
+    stun: [{ motion: 'W00', actions: ['A11.0', 'A11.1', 'A11.2'] }]
   };
   const API_ERROR = {
     OPENAPI00001: 'API 서버 내부 오류예요. 잠시 후 다시 해 주세요.',
@@ -1219,7 +1222,8 @@
     return new Promise(resolve => {
       const im = new Image();
       im.crossOrigin = 'anonymous';   // 넥슨 이미지 서버가 CORS를 허용해서 픽셀을 읽을 수 있다
-      im.onload = () => resolve(im);
+      // 만료됐거나 지원하지 않는 조합은 HTTP 오류 대신 static/empty_img.png로 이동한다.
+      im.onload = () => resolve(/\/static\/empty_img\.[a-z]+(?:\?|$)/i.test(im.currentSrc || im.src) ? null : im);
       im.onerror = () => resolve(null);
       im.src = url;
     });
@@ -1230,19 +1234,28 @@
     const g = c.getContext('2d', { willReadFrequently: true });
     g.drawImage(im, 0, 0);
     const data = g.getImageData(0, 0, c.width, c.height).data, a = new Uint8Array(c.width * c.height);
+    let signature = 2166136261;
+    // 자세 변화가 외곽선보다 옷·무기 내부 픽셀에만 나타나는 캐릭터도 있어 RGBA 전체를 비교한다.
+    for (let i = 0; i < data.length; i++) {
+      signature ^= data[i];
+      signature = Math.imul(signature, 16777619);
+    }
     for (let i = 0; i < a.length; i++) a[i] = data[i * 4 + 3];
-    return a;
+    return { alpha: a, signature: signature >>> 0 };
   }
 
   // 넥슨 이미지 서버는 지원하지 않는 동작 프레임에도 HTTP 오류 대신 300×300짜리
   // "no image" 그림을 돌려줄 때가 있다. onload만으로는 구분할 수 없으므로 정상 서기
   // 프레임과 발 위치·실루엣 높이가 크게 다른 그림은 사용할 수 없는 프레임으로 본다.
   function spriteShape(im) {
-    const alpha = alphaOf(im), anchor = Core.spriteAnchor(alpha, im.naturalWidth, im.naturalHeight);
+    const pixels = alphaOf(im), alpha = pixels.alpha;
+    const anchor = Core.spriteAnchor(alpha, im.naturalWidth, im.naturalHeight);
     if (!anchor.ok) return null;
     let ink = 0;
-    for (let i = 0; i < alpha.length; i++) if (alpha[i] > 16) ink++;
-    return { anchor, ink };
+    for (let i = 0; i < alpha.length; i++) {
+      if (alpha[i] > 16) ink++;
+    }
+    return { anchor, ink, signature: pixels.signature };
   }
   function usableFrame(im, base) {
     if (!im) return false;
@@ -1251,7 +1264,7 @@
       if (!shape) return false;
       const heightRatio = shape.anchor.height / base.anchor.height;
       const ok = heightRatio >= 0.5 && heightRatio <= 1.8 && shape.ink <= base.ink * 5;
-      if (ok) im._hiAnchor = shape.anchor;
+      if (ok) { im._hiAnchor = shape.anchor; im._hiSignature = shape.signature; }
       return ok;
     } catch (e) { return false; }
   }
@@ -1265,7 +1278,9 @@
     return Promise.all(group.actions.map(action => loadImage(frameUrl(image, action, emotion, group.motion)))).then(images => {
       if (token !== lookToken) return [];
       const good = images.filter(im => usableFrame(im, base));
-      return good.length ? good : loadPose(image, groups, emotion, base, token, at + 1);
+      const distinct = new Set(good.map(im => im._hiSignature)).size;
+      const animated = group.actions.length > 1;
+      return good.length && (!animated || distinct > 1) ? good : loadPose(image, groups, emotion, base, token, at + 1);
     });
   }
   function loadIoPose(config, groups, base, token, at) {
@@ -1317,13 +1332,18 @@
       if (done === null || token !== lookToken) return null;
       const first = frames.stand[0];
       const base = spriteShape(first);
-      look = { frames, fallback, anchor: base.anchor, headTop: base.anchor.height * LOOK_SCALE, source: 'nexon' };
+      look = { frames, fallback, anchor: base.anchor, headTop: base.anchor.height * LOOK_SCALE, source: 'nexon-api' };
       $('stage').dataset.motionWalk = fallback.walk ? 'fallback' : String(frames.walk.length);
       $('stage').dataset.motionLadder = fallback.ladder ? 'fallback' : String(frames.ladder.length);
       $('stage').dataset.motionSwing = fallback.swing ? 'fallback' : String(frames.swing.length);
+      $('stage').dataset.motionJump = fallback.jump ? 'fallback' : String(frames.jump.length);
       renderMe();
       return look;
     });
+  }
+
+  function missingEssentialMotions(ready) {
+    return ['walk', 'ladder', 'swing'].filter(pose => !ready || !ready.frames || !ready.frames[pose] || ready.fallback[pose]);
   }
 
   function readMe() {
@@ -1332,7 +1352,8 @@
       if (!d || typeof d.name !== 'string' || !safeImage(d.image)) return null;
       const io = d.io && Number.isSafeInteger(Number(d.io.skinId)) && Array.isArray(d.io.itemIds)
         ? { skinId: Number(d.io.skinId), itemIds: d.io.itemIds.map(Number).filter(Number.isSafeInteger) } : null;
-      return { name: d.name.slice(0, 20), world: String(d.world || ''), level: Number(d.level) || 0, cls: String(d.cls || ''), image: safeImage(d.image), ocid: String(d.ocid || ''), io };
+      return { name: d.name.slice(0, 20), world: String(d.world || ''), level: Number(d.level) || 0, cls: String(d.cls || ''), image: safeImage(d.image),
+        imageAt: Math.max(0, Number(d.imageAt) || 0), ocid: String(d.ocid || ''), io };
     } catch (e) { return null; }
   }
   function writeMe() {
@@ -1360,7 +1381,9 @@
     }
     setText('meName', me ? me.name : '기본 심마니');
     const motionMissing = me && look && look.fallback && look.fallback.walk && look.fallback.ladder && look.fallback.swing;
-    const source = look && look.source === 'maplestory.io' ? 'IO 모션' : (motionMissing ? '기본 이미지 · 모션 없음' : '기본 이미지');
+    const source = look && look.source === 'maplestory.io' ? 'IO 모션'
+      : look && look.source === 'nexon-api' ? (motionMissing ? '넥슨 API · 모션 없음' : '넥슨 API 모션')
+        : (motionMissing ? '기본 이미지 · 모션 없음' : '기본 이미지');
     setText('meSub', me ? [me.world, me.level ? 'Lv.' + me.level : '', me.cls, source].filter(Boolean).join(' · ') : '내 메이플 캐릭터를 불러와서 할 수 있어요');
     $('meReset').hidden = !me;
     $('meKey').hidden = !!(window.NexonKey && window.NexonKey.has());
@@ -1388,20 +1411,32 @@
       })
       .then(b => {
         const info = { name: String(b.character_name || name).slice(0, 20), world: String(b.world_name || ''),
-          level: Number(b.character_level) || 0, cls: String(b.character_class || ''), image: safeImage(b.character_image), ocid };
+          level: Number(b.character_level) || 0, cls: String(b.character_class || ''), image: safeImage(b.character_image), imageAt: Date.now(), ocid };
         if (!info.image) throw new Error('IMAGE');
-        stage = 'maplestory.io';
-        setMeStatus('장비를 MapleStory.io 모션으로 조립하는 중…');
-        return buildIoAppearance(ocid).then(config => loadIoLook(config).then(ready => ({ ready, config, warning: '' })))
-          .catch(ioFailure => {
+        // 2025-11-20부터 character_image가 무기 모션까지 공식 지원하므로 넥슨 API를 우선한다.
+        stage = 'nexon-motion';
+        setMeStatus('넥슨 API에서 걷기·사다리·점프·공격 모션을 받는 중…');
+        return loadLook(info).then(ready => {
+          const missingApi = missingEssentialMotions(ready);
+          if (!missingApi.length) return { ready, config: null, warning: '' };
+
+          // 이벤트 캐릭터 등 기본 모션만 제공되는 경우에만 기존 IO 조립을 보조 수단으로 쓴다.
+          stage = 'maplestory.io';
+          setMeStatus('넥슨 API에 없는 모션을 MapleStory.io로 보완하는 중…');
+          return buildIoAppearance(ocid).then(config => loadIoLook(config).then(ioReady => ({
+            ready: ioReady,
+            config,
+            warning: '넥슨 API에서 ' + missingApi.join('·') + ' 모션을 받지 못해 MapleStory.io 모션으로 보완했어요.'
+          }))).catch(ioFailure => {
             if (!ioFailure || !ioFailure.io) throw ioFailure;
-            const missing = ioFailure.missing && ioFailure.missing.length
-              ? ' 누락: ' + ioFailure.missing.slice(0, 3).join(', ') + (ioFailure.missing.length > 3 ? ' 외 ' + (ioFailure.missing.length - 3) + '개' : '') + '.' : '';
-            return loadLook(info).then(ready => ({ ready, config: null, warning: 'MapleStory.io 조립에 실패해 넥슨 기본 이미지로 되돌렸어요.' + missing }));
-          }).then(result => {
+            const missingItems = ioFailure.missing && ioFailure.missing.length
+              ? ' IO 누락: ' + ioFailure.missing.slice(0, 3).join(', ') + (ioFailure.missing.length > 3 ? ' 외 ' + (ioFailure.missing.length - 3) + '개' : '') + '.' : '';
+            return { ready, config: null, warning: '넥슨 API에서 ' + missingApi.join('·') + ' 모션을 받지 못했어요.' + missingItems };
+          });
+        }).then(result => {
           const ready = result.ready;
           if (!ready) return;
-          if (result.config) info.io = result.config;
+          if (result.config) info.io = result.config; else delete info.io;
           me = info;
           writeMe();
           renderMe();
@@ -1409,10 +1444,10 @@
             setMeStatus(result.warning, 'err');
             return;
           }
-          const noMotion = ready.fallback.walk && ready.fallback.ladder && ready.fallback.swing;
+          const noMotion = missingEssentialMotions(ready).length === 3;
           setMeStatus(noMotion
             ? '외형은 불러왔지만 넥슨 이미지 서버가 걷기·사다리·공격 프레임을 빈 이미지로 보내고 있어요.'
-            : info.name + ' 캐릭터로 약초를 캐요!', noMotion ? 'err' : 'ok');
+            : info.name + ' 캐릭터의 넥슨 API 모션을 불러왔어요!', noMotion ? 'err' : 'ok');
           $('mePanel').open = false;
         });
       })
@@ -1634,17 +1669,41 @@
   save();
   start();
 
-  // 저장해 둔 내 캐릭터는 API를 다시 부르지 않고 이미지 주소로 바로 그린다.
+  // 저장해 둔 내 캐릭터는 API를 다시 부르지 않고 character_image 주소로 공식 모션을 다시 받는다.
   me = readMe();
   renderMe();
   if (me) {
-    const restore = me.io
-      ? loadIoLook(me.io).catch(() => loadLook(me).then(ready => {
-        setMeStatus('저장한 MapleStory.io 모션을 다시 받지 못해 넥슨 기본 이미지로 되돌렸어요.', 'err');
+    // character_image는 영구 주소가 아니다. 30분 동안은 캐시해 호출량을 아끼고,
+    // 오래됐거나 실제 empty_img로 만료됐을 때만 /character/basic에서 새 주소를 받는다.
+    const canRefresh = window.NexonKey && window.NexonKey.has() && me.ocid;
+    const refreshInfo = () => canRefresh
+      ? apiGet('/character/basic', { ocid: me.ocid }).then(b => {
+        const image = safeImage(b && b.character_image);
+        if (!image) throw new Error('IMAGE');
+        me.name = String(b.character_name || me.name).slice(0, 20);
+        me.world = String(b.world_name || me.world || '');
+        me.level = Number(b.character_level) || me.level || 0;
+        me.cls = String(b.character_class || me.cls || '');
+        me.image = image;
+        me.imageAt = Date.now();
+        writeMe();
+        renderMe();
+        return me;
+      })
+      : Promise.resolve(me);
+    const recent = me.imageAt && Date.now() - me.imageAt < 30 * 60 * 1000;
+    const freshInfo = recent ? Promise.resolve(me) : refreshInfo();
+    const restore = freshInfo.then(info => loadLook(info).catch(e => {
+      if (!recent || !canRefresh) throw e;
+      return refreshInfo().then(updated => loadLook(updated));
+    })).then(ready => {
+      if (!missingEssentialMotions(ready).length || !me.io) return ready;
+      return loadIoLook(me.io).catch(() => {
+        setMeStatus('저장한 보조 모션을 받지 못해 넥슨 API 이미지로 되돌렸어요.', 'err');
         return ready;
-      }))
-      : loadLook(me);
-    restore.catch(() => setMeStatus('저장한 캐릭터 이미지를 다시 받지 못했어요. 불러오기를 다시 눌러 주세요.', 'err'));
+      });
+    });
+    restore.catch(e => setMeStatus(describeApiError(e, 'basic') + ' 캐릭터 바꾸기에서 다시 불러올 수 있어요.', 'err'));
   }
   else if (window.NexonKey && window.NexonKey.has()) $('mePanel').open = true;
 })();
