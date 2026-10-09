@@ -34,6 +34,8 @@ function loadPlanner() {
       activeItems,
       exclude(value) { state.excludeCompleted = value; },
       setSlack(value) { state.slackPct = value; },
+      applySchedulerState,
+      bosses() { return state.bosses; },
       reload() { state = loadState(state); },
       setBosses(bosses) { state.bosses = bosses; },
       packAll,
@@ -171,4 +173,32 @@ test('도핑 선택은 저장 복원과 재조회 후에도 유지되고 조합�
   assert.doesNotMatch(full, /스우/);
   assert.match(rice, /스우/);
   assert.doesNotMatch(rice, /데미안/);
+});
+
+test('저장한 목록의 난이도가 스케줄러 등록 난이도와 다르면 맞추고 완료를 반영한다', () => {
+  const engine = loadPlanner();
+  engine.setBosses([{name:'검은 마법사', diff:'하드', mult:483.7, on:true}, {name:'듄켈', diff:'하드', mult:1073, on:true}]);
+  const res = engine.applySchedulerState({boss_contents:[
+    {content_name:'검은 마법사', difficulty:'hard', cycle:'bossMonthly', registration_flag:'false', complete_flag:'false'},
+    {content_name:'검은 마법사', difficulty:'extreme', cycle:'bossMonthly', registration_flag:'true', complete_flag:'true'},
+    {content_name:'듄켈', difficulty:'hard', cycle:'bossWeekly', registration_flag:'true', complete_flag:'false'},
+  ]});
+  assert.deepEqual(Array.from(res.changed), ['검은 마법사 하드→익스트림']);
+  assert.equal(res.done, 1);
+  const [bm, dk] = engine.bosses();
+  assert.equal(bm.diff, '익스트림');
+  assert.equal(bm.completed, true);
+  assert.equal(dk.completed, false);
+});
+
+test('다시 불러올 때 배율은 같은 난이도일 때만 이어 쓴다', () => {
+  const engine = loadPlanner();
+  engine.setBosses([{name:'검은 마법사', diff:'하드', mult:483.7}, {name:'듄켈', diff:'하드', mult:1073}]);
+  const bosses = engine.importBosses({boss_contents:[
+    {content_name:'검은 마법사', difficulty:'extreme', cycle:'bossMonthly', registration_flag:'true'},
+    {content_name:'듄켈', difficulty:'hard', cycle:'bossWeekly', registration_flag:'true'},
+  ]});
+  assert.equal(bosses[0].diff, '익스트림');
+  assert.equal(bosses[0].mult, 100);
+  assert.equal(bosses[1].mult, 1073);
 });

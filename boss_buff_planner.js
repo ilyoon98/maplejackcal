@@ -760,8 +760,9 @@
 
   // 완료 여부와 무관하게 모두 선택하고, 완료 상태는 제외 토글에서만 사용한다.
   function bossesFromScheduler(data) {
+    // 배율은 난이도마다 달라서 같은 이름·난이도일 때만 이어 쓴다(난이도 없는 예전 저장값은 이름으로).
     var prevMult = Object.create(null), prevRice = Object.create(null);
-    state.bosses.forEach(function (b) { prevMult[b.name] = b.mult; prevRice[b.name] = b.rice === true; });
+    state.bosses.forEach(function (b) { prevMult[b.name + '|' + (b.diff || '')] = b.mult; prevRice[b.name] = b.rice === true; });
     var out = [], skipped = [];
     (data && Array.isArray(data.boss_contents) ? data.boss_contents : []).forEach(function (item) {
       if (!item || !trueFlag(item.registration_flag)) return;
@@ -776,7 +777,7 @@
         name: name,
         diff: API_DIFFICULTY[String(item.difficulty || '').toLowerCase()] || '',
         icon: icon ? 'icons/boss/' + icon + '.webp' : '',
-        mult: prevMult[name] || 100,
+        mult: prevMult[name + '|' + (API_DIFFICULTY[String(item.difficulty || '').toLowerCase()] || '')] || prevMult[name + '|'] || 100,
         rice: prevRice[name] || false,
         extra: DEFAULT_EXTRA[name] || 0,
         on: true,
@@ -826,7 +827,23 @@
       .catch(function (err) { setStatus(describeApiError(err, err && err.stage), 'err'); })
       .then(function () { fetchBtn.disabled = false; });
   }
-  // 목록·배율은 그대로 두고 완료 여부만 스케줄러에서 다시 받아 같은 보스·난이도에 반영한다.
+  // 목록·배율은 그대로 두고 완료 여부만 스케줄러에서 다시 받아 반영한다. 저장해 둔 목록의
+  // 난이도가 지금 스케줄러에 등록된 난이도와 다르면(예: 검은 마법사 하드 → 익스트림) 등록된 쪽으로 맞춘다.
+  function applySchedulerState(data) {
+    var reg = Object.create(null);
+    bossesFromScheduler(data).bosses.forEach(function (b) { reg[b.name] = b; });
+    var done = 0, changed = [];
+    state.bosses.forEach(function (b) {
+      var r = reg[b.name];
+      if (r && r.diff && r.diff !== b.diff) {
+        changed.push(b.name + ' ' + (b.diff || '?') + '→' + r.diff);
+        b.diff = r.diff;
+      }
+      b.completed = !!(r && r.diff === b.diff && r.completed);
+      if (b.completed) done++;
+    });
+    return { done: done, changed: changed };
+  }
   function refreshCompleted() {
     var name = (charInput.value || '').trim();
     if (!name || !window.NexonKey || !NexonKey.has()) {
@@ -842,15 +859,10 @@
         return apiGet('/scheduler/character-state', { ocid: r.ocid }).then(null, function (e) { e.stage = 'scheduler'; throw e; });
       })
       .then(function (data) {
-        var done = Object.create(null);
-        bossesFromScheduler(data).bosses.forEach(function (b) { if (b.completed) done[b.name + '|' + b.diff] = true; });
-        var n = 0;
-        state.bosses.forEach(function (b) {
-          b.completed = done[b.name + '|' + b.diff] === true;
-          if (b.completed) n++;
-        });
+        var res = applySchedulerState(data);
         saveState(); renderAll();
-        setStatus(n ? '이번 주 완료한 보스 ' + n + '마리를 동선에서 뺐습니다.' : '목록에서 이번 주 완료한 보스가 없습니다.', 'ok');
+        setStatus((res.done ? '이번 주 완료한 보스 ' + res.done + '마리를 동선에서 뺐습니다.' : '목록에서 이번 주 완료한 보스가 없습니다.') +
+          (res.changed.length ? ' 스케줄러 난이도로 바꿨으니 배율을 확인하세요: ' + res.changed.join(', ') : ''), 'ok');
       })
       .catch(function (err) { setStatus(describeApiError(err, err && err.stage), 'err'); });
   }
@@ -1055,8 +1067,9 @@
         charInput.removeAttribute('data-account-ocid');
         renderCharacterProfile(p.character);
         syncProfileInputs(); saveState(); renderAll(); renderProfiles();
-        if (state.excludeCompleted) refreshCompleted();
-        else setStatus('저장한 배율과 보스 선택을 불러왔습니다.', 'ok');
+        // API 키가 있으면 스케줄러에서 보스·난이도·완료 여부를 바로 새로 받는다(배율은 같은 보스·난이도면 유지).
+        if (window.NexonKey && NexonKey.has()) importCharacter();
+        else setStatus('저장한 배율과 보스 선택을 불러왔습니다. 최신 보스 목록은 API 키를 등록하면 바로 받아옵니다.', 'ok');
       });
       var del = document.createElement('button'); del.type = 'button'; del.className = 'ux-button'; del.textContent = '×';
       del.setAttribute('aria-label', p.name + ' 저장 삭제');
