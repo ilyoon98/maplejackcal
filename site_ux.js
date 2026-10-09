@@ -89,8 +89,10 @@
         const panel = q('#' + key + 'Panel'), h = q('h2', panel); const body = make('div', 'ux-stage-body'); body.id = 'ux-' + key + '-body';
         while (h.nextSibling) body.append(h.nextSibling); panel.append(body);
         const button = make('button', 'ux-stage-toggle'); button.type = 'button'; button.setAttribute('aria-controls', body.id); button.setAttribute('aria-expanded', 'false');
-        const label = make('span', 'ux-stage-label', h.childNodes[0].textContent.trim()); const summary = make('span', 'ux-stage-summary'); button.append(label, summary);
-        h.childNodes[0].remove(); h.prepend(button); body.hidden = true;
+        // 제목에는 번호·아이템 아이콘·이름이 섞여 있어 토글 체크박스 앞까지를 통째로 옮긴다.
+        const label = make('span', 'ux-stage-label'); const summary = make('span', 'ux-stage-summary'); button.append(label, summary);
+        while (h.firstChild && !(h.firstChild.classList && h.firstChild.classList.contains('ic-toggle'))) label.append(h.firstChild);
+        label.lastChild.textContent = label.lastChild.textContent.trimEnd(); h.prepend(button); body.hidden = true;
         const update = () => {
           const markup = panel.dataset.optionSummary || '';
           if (summary.innerHTML !== markup) summary.innerHTML = markup;

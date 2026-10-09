@@ -88,6 +88,8 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .site-menu-item:hover { background: rgba(110, 168, 254, 0.12); }
 .site-menu-item.active { background: rgba(76, 141, 255, 0.16); }
 .site-menu-icon { flex: 0 0 auto; font-size: 1.35rem; line-height: 1; }
+.site-menu-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; }
+.site-item-icon { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
 .site-menu-name { display: block; font-size: 0.92rem; font-weight: 700; color: var(--text); }
 .site-menu-desc { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--text-dim); }
 
@@ -130,6 +132,9 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .site-tab:hover { color: var(--text); }
 .site-tab.active { color: #0b0d12; }
 .site-tab-icon { font-size: 0.95rem; line-height: 1; }
+.site-tab-icon .site-item-icon { width: 20px; height: 20px; vertical-align: -5px; }
+.site-title-icon { width: auto; height: 1.15em; margin-right: 0.3em; vertical-align: -0.2em; object-fit: contain; image-rendering: pixelated; }
+.ic-stage-icon { width: 24px; height: 24px; vertical-align: -6px; object-fit: contain; image-rendering: pixelated; }
 
 .layout {
   display: grid;

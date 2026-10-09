@@ -22,7 +22,7 @@ function walk(dir, filter) {
 }
 
 test('icons 폴더는 소문자 용도별 폴더와 WebP만 사용한다', () => {
-  const expected = ['authentic', 'boss', 'coin-shop', 'craft', 'cube', 'prototype', 'seedring', 'server', 'trace'];
+  const expected = ['authentic', 'boss', 'coin-shop', 'craft', 'cube', 'home', 'prototype', 'seedring', 'server', 'trace'];
   const actual = fs.readdirSync(iconRoot, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
     .map(entry => entry.name)

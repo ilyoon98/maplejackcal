@@ -276,8 +276,8 @@
     const flameAvg = flame && Number.isFinite(flame.avg) ? flame.avg : 0;
     const spare = state.base + flameAvg;
     const star = (partOf(state.part).star !== false && state.on.star && state.star.goal > state.star.start) ? starResult(spare) : null;
-    const pot = potentialResult({ state: state.pot, short: 'pot', official: 'potential', gradeCube: 'potentialMeso', dataKey: 'black', label: '잠재능력', icon: '🎲' });
-    const addi = potentialResult({ state: state.addi, short: 'addi', official: 'additional', gradeCube: 'addReset', dataKey: 'addi', label: '에디셔널 잠재능력', icon: '✨' });
+    const pot = potentialResult({ state: state.pot, short: 'pot', official: 'potential', gradeCube: 'potentialMeso', dataKey: 'black', label: '잠재능력', icon: '<img class="ic-stage-icon" src="icons/cube/블랙.webp" alt="" width="24" height="24">' });
+    const addi = potentialResult({ state: state.addi, short: 'addi', official: 'additional', gradeCube: 'addReset', dataKey: 'addi', label: '에디셔널 잠재능력', icon: '<img class="ic-stage-icon" src="icons/cube/에디큐브.webp" alt="" width="24" height="24">' });
 
     const parts = [
       { label: '노작 (베이스 아이템)', kind: 'base', min: state.base, avg: state.base },
@@ -603,7 +603,8 @@
       ? '평균은 대박의 ' + (r.avg / r.min).toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + '배'
       : '';
 
-    const icons = { base: '📦', flame: '🔥', star: '⭐', pot: '🎲', addi: '✨' };
+    const icon = src => '<img class="ic-stage-icon" src="' + src + '" alt="" width="24" height="24">';
+    const icons = { base: icon('icons/home/메소주머니.webp'), flame: icon('icons/coin-shop/영환불.webp'), star: icon('icons/home/스타포스강화권.webp'), pot: icon('icons/cube/블랙.webp'), addi: icon('icons/cube/에디큐브.webp') };
     $('breakdown').innerHTML = r.parts.length ? '<div class="ic-cost-cards">' + r.parts.map(p => {
       const facts = p.kind === 'base' ? ['장비 구입 비용']
         : p.kind === 'flame' ? ['성공 확률 ' + pctText(p.data.p), '평균 ' + fmt(p.data.tries) + '회']
@@ -673,7 +674,7 @@
     const conds = state.flameConds.map(c => c.kind === 'grade'
       ? '주스탯 환산 ' + c.min + '급 이상'
       : flameLabel(F.BY_ID[c.id]) + (F.BY_ID[c.id].unit || '') + ' ' + c.minTier + '단계 이상').join(' + ');
-    return '<div class="ic-card"><h3>🔥 추가옵션</h3>' +
+    return '<div class="ic-card"><h3><img class="ic-stage-icon" src="icons/coin-shop/영환불.webp" alt="" width="24" height="24"> 추가옵션</h3>' +
       '<p class="ic-note">' + esc(F.FLAMES.mesoReset.name) + ' · ' + esc(conds) + '</p>' +
       '<p class="ic-big">' + pctText(f.p) + '<small>한 번에 성공할 확률</small></p>' +
       '<p class="ic-note">평균 ' + fmt(f.tries) + '개 · ' +
@@ -681,7 +682,7 @@
   }
   function starDetail(s) {
     if (!s) return '';
-    return '<div class="ic-card"><h3>⭐ 스타포스</h3>' +
+    return '<div class="ic-card"><h3><img class="ic-stage-icon" src="icons/home/스타포스강화권.webp" alt="" width="24" height="24"> 스타포스</h3>' +
       '<p class="ic-note">' + state.star.start + '성 → ' + state.star.goal + '성 · Lv.' + state.level + '</p>' +
       '<p class="ic-big">' + s.destroys.toFixed(2) + '회<small>평균 파괴 횟수</small></p>' +
       '<p class="ic-note">평균 시도 ' + s.tries.toFixed(1) + '회 · 파괴 한 번마다 ' + mesoText(s.spare) +

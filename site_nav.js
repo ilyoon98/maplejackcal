@@ -10,7 +10,39 @@ window.SiteNavigation = {
       ['미니게임', ['herb_idle.html']]
     ],
   releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02' },
-  newDays: 30
+  newDays: 30,
+  // 메뉴와 홈 카드에 쓰는 게임 아이템 아이콘. 새 페이지를 추가하면 여기에도 넣는다.
+  icons: {
+    'index.html': 'icons/home/단풍잎.webp',
+    'starforce_history.html': 'icons/home/탐정수첩.webp',
+    'trace_calc.html': 'icons/home/주문의흔적.webp',
+    'starforce_calc.html': 'icons/home/스타포스강화권.webp',
+    'authentic_symbol_calc.html': 'icons/authentic/cernium.webp',
+    'boss_income_calc.html': 'icons/home/강렬한힘의결정.webp',
+    'boss_buff_planner.html': 'icons/home/익스트림레드.webp',
+    'cube_calc.html': 'icons/cube/레드.webp',
+    'cube_option_calc.html': 'icons/cube/블랙.webp',
+    'flame_calc.html': 'icons/coin-shop/영환불.webp',
+    'item_craft_calc.html': 'icons/home/황금망치.webp',
+    'trade_margin_calc.html': 'icons/home/메소주머니.webp',
+    'meso_market_calc.html': 'icons/home/메이플포인트.webp',
+    'hunting_calc.html': 'icons/home/솔에르다조각.webp',
+    'wealth_elixir_calc.html': 'icons/craft/소형재물획득의비약.webp',
+    'coin_shop_calc.html': 'icons/home/반짝이는메이플코인.webp',
+    'cube_play.html': 'icons/cube/명장.webp',
+    'starforce_play.html': 'icons/home/스타포스강화권.webp',
+    'boutique_gacha.html': 'icons/home/선물상자.webp',
+    'pet_gacha.html': 'icons/home/원더베리.webp',
+    'seedring_gacha.html': 'icons/seedring/Use_Black_Jade_Boss_Ring_Box.webp',
+    'herb_idle.html': 'icons/craft/보라약초.webp'
+  },
+  // 상단 탭(분류)과 홈 섹션 제목에 쓰는 아이콘
+  groupIcons: {
+    home: 'icons/home/단풍잎.webp',
+    calc: 'icons/home/감정돋보기.webp',
+    play: 'icons/home/프리미엄부화기.webp',
+    history: 'icons/home/탐정수첩.webp'
+  }
 };
 
 // 모든 일반 페이지에서 금요일 10:30(KST) 이후 이번 주 썬데이 메이플을 확인한다.
@@ -75,7 +107,7 @@ window.SiteNavigation = {
       historyTab.href = 'starforce_history.html';
       historyTab.className = 'site-tab';
       historyTab.dataset.group = 'history';
-      historyTab.innerHTML = '<span class="site-tab-icon">📋</span>로그보기';
+      historyTab.innerHTML = '<span class="site-tab-icon"></span>로그보기';
       if (location.pathname.endsWith('/starforce_history.html')) {
         track.querySelectorAll('.active').forEach(function (el) { el.classList.remove('active'); });
         historyTab.classList.add('active');
@@ -141,6 +173,42 @@ window.SiteNavigation = {
       var badge = document.createElement('span'); badge.className = 'site-new-badge';
       badge.textContent = 'NEW'; badge.setAttribute('aria-label', '새로 추가됨');
       label.appendChild(badge);
+    });
+
+    // 페이지마다 하드코딩된 탭·메뉴 이모지를 실제 아이템 아이콘으로 바꾸고, 홈 카드와 페이지 제목 앞에도 같은 아이콘을 붙인다.
+    function itemIcon(src, className) {
+      var img = document.createElement('img');
+      img.src = src; img.alt = ''; img.className = className;
+      img.width = 32; img.height = 32; img.decoding = 'async';
+      return img;
+    }
+    var groupIcons = window.SiteNavigation.groupIcons;
+    track.querySelectorAll('.site-tab').forEach(function (tab) {
+      var slot = tab.querySelector('.site-tab-icon');
+      if (slot && groupIcons[tab.dataset.group]) slot.replaceChildren(itemIcon(groupIcons[tab.dataset.group], 'site-item-icon'));
+    });
+    document.querySelectorAll('[data-site-icon]').forEach(function (heading) {
+      var src = groupIcons[heading.dataset.siteIcon];
+      if (src && !heading.querySelector('.site-title-icon')) heading.prepend(itemIcon(src, 'site-title-icon'));
+    });
+    var pageIcon = window.SiteNavigation.icons[location.pathname.split('/').pop() || 'index.html'];
+    var pageTitle = document.querySelector('h1');
+    if (pageIcon && pageTitle && !pageTitle.querySelector('.site-title-icon')) pageTitle.prepend(itemIcon(pageIcon, 'site-title-icon'));
+    document.querySelectorAll('a.site-menu-item, a.tool-card').forEach(function (link) {
+      var src = window.SiteNavigation.icons[link.getAttribute('href')];
+      if (!src) return;
+      if (link.classList.contains('site-menu-item')) {
+        var slot = link.querySelector('.site-menu-icon');
+        if (slot) slot.replaceChildren(itemIcon(src, 'site-item-icon'));
+        return;
+      }
+      var title = link.querySelector('h2');
+      if (!title || title.querySelector('.site-item-icon')) return;
+      // 제목과 NEW 배지를 한 덩어리로 묶어야 좁은 화면에서 배지가 제목을 밀어내지 않는다.
+      var text = document.createElement('span');
+      text.className = 'tool-card-title';
+      while (title.firstChild) text.appendChild(title.firstChild);
+      title.append(itemIcon(src, 'site-item-icon'), text);
     });
 
     function tabOf(group) {
