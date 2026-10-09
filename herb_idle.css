@@ -30,6 +30,7 @@
 .hi-coin { width:14px; height:14px; flex:0 0 14px; border-radius:50%; background:radial-gradient(circle at 35% 35%,#fff3b0,#f5c542 45%,#b8831c);
   box-shadow:inset 0 0 0 1.5px #8a5f10; }
 .hi-status { color:#e8e4ff; overflow:hidden; text-overflow:ellipsis; }
+.hi-status-icon { width:20px; height:20px; margin-right:6px; vertical-align:-5px; object-fit:contain; }
 .hi-toast { position:absolute; left:50%; bottom:12px; transform:translate(-50%,8px); max-width:calc(100% - 24px); padding:8px 14px; border-radius:10px;
   background:rgba(10,8,26,.88); border:1px solid #4c3f7a; color:#f3efff; font-size:.82rem; line-height:1.45; text-align:center;
   opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; }
@@ -81,6 +82,8 @@
 .hi-me > summary::-webkit-details-marker { display:none; }
 .hi-me-thumb { display:grid; place-items:center; width:48px; height:48px; flex:0 0 48px; border-radius:12px; background:radial-gradient(circle at 50% 70%,#3b2a63,#1b1a30); font-size:1.6rem; overflow:hidden; }
 .hi-me-thumb canvas { width:48px; height:48px; image-rendering:pixelated; }
+.hi-me-thumb img { width:32px; height:32px; object-fit:contain; }
+.hi-news-icon { width:24px; height:24px; flex:0 0 24px; object-fit:contain; }
 .hi-me-info { display:flex; flex-direction:column; min-width:0; flex:1 1 auto; }
 .hi-me-info b { font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .hi-me-info small { color:#8e90ad; font-size:.74rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -184,6 +187,7 @@
 .hi-log li { display:flex; gap:10px; padding:5px 2px; border-bottom:1px solid #222338; line-height:1.5; }
 .hi-log li:last-child { border-bottom:none; }
 .hi-log time { flex:0 0 auto; color:#6f7192; font-variant-numeric:tabular-nums; }
+.hi-log-icon { width:18px; height:18px; flex:0 0 18px; margin-top:2px; object-fit:contain; }
 .hi-log .sell span { color:#ffe39a; }
 .hi-log .news span { color:#cdbdff; }
 .hi-log .away span { color:#d6ff9a; }

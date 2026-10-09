@@ -335,8 +335,9 @@
 
   // ---------------------------------------------------------------- 그리기
 
-  const chip = (label, active, attrs) =>
-    '<button type="button" class="ic-chip' + (active ? ' active' : '') + '" ' + attrs + '>' + esc(label) + '</button>';
+  const chip = (label, active, attrs, icon) =>
+    '<button type="button" class="ic-chip' + (active ? ' active' : '') + '" ' + attrs + '>' +
+    (icon ? '<img class="ic-stage-icon" src="' + icon + '" alt="" width="24" height="24"> ' : '') + esc(label) + '</button>';
 
   function renderItem() {
     if (document.activeElement !== $('level')) $('level').value = state.level;
@@ -482,7 +483,7 @@
       chip('비용 30% 할인', s.discount30, 'data-sf="discount30"'),
       chip('파괴확률 30% 감소', s.destroyDown30, 'data-sf="destroyDown30"'),
       chip('5·10·15성 100%', s.lucky5, 'data-sf="lucky5"'),
-      chip('✨ 샤이닝 스타포스', SHINING.every(k => s[k]), 'data-shining="1"')
+      chip('샤이닝 스타포스', SHINING.every(k => s[k]), 'data-shining="1"', 'icons/home/스타포스강화권.webp')
     ].join('');
   }
 
@@ -557,7 +558,7 @@
         '<button type="button" class="ic-chip grade' + (cur.to === i ? ' active' : '') + (i < cur.from ? ' dim' : '') +
         '" style="--chip:' + RANK_COLORS[i] + '" data-goal="' + cfg.short + '" data-i="' + i + '">' + RANKS[i] + '</button>').join('') + '</div></div>' +
       '<div class="ic-sub">작업 시점</div>' +
-      '<div class="ic-chips">' + chip('✨ 미라클 타임에 작업', state.miracle[cfg.short], 'data-miracle="' + cfg.short + '" aria-pressed="' + !!state.miracle[cfg.short] + '"') + '</div>' +
+      '<div class="ic-chips">' + chip('미라클 타임에 작업', state.miracle[cfg.short], 'data-miracle="' + cfg.short + '" aria-pressed="' + !!state.miracle[cfg.short] + '"', cfg.short === 'addi' ? 'icons/cube/에디큐브.webp' : 'icons/cube/블랙.webp') + '</div>' +
       '<p class="ic-note">이 파트의 등급 상승 확률만 2배로 계산합니다. 잠재와 에디를 모두 미라클 때 작업하면 각각 켜 주세요. 옵션 확률과 천장은 그대로입니다.</p>' +
       '<div class="ic-sub">목표 옵션 <small>' + RANKS[cur.to] + ' 옵션표 기준</small> <span class="ic-count">' + cur.rows.length + '/' + MAX_GOALS + '</span></div>' +
       (b ? '' : '<p class="ic-empty bad">' + esc(state.part) + '은(는) ' + RANKS[cur.to] + ' 확률표에 없어 옵션 목표를 제외하고 등급업만 계산합니다.</p>') +

@@ -392,7 +392,7 @@
         cls = on ? 'good' : 'bad';
       } else {
         var worth = (state.spare || 0) >= x.r.spare;
-        verdict = (worth ? '켜는 게 이득' : '끄는 게 이득') + (on === worth ? '' : ' ⚠');
+        verdict = (worth ? '켜는 게 이득' : '끄는 게 이득') + (on === worth ? '' : ' (지금 설정과 반대)');
         cls = (on === worth) ? 'good' : 'bad';
       }
       html += '<tr' + (cls ? ' class="' + cls + '"' : '') + '>' +

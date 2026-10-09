@@ -89,6 +89,7 @@
     try { localStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, owner: TAB, wall: wallAt, game: S, log })); } catch (e) {}
   }
 
+  const LOG_ICON = { buy: 'icons/home/메소주머니.webp', sell: 'icons/home/메소주머니.webp', news: 'icons/home/신문기사.webp' };
   function addLog(text, kind) {
     log.unshift({ at: Date.now(), kind: kind || '', text });
     if (log.length > LOG_MAX) log.length = LOG_MAX;
@@ -138,11 +139,11 @@
       if (STOP_WHY[e.reason]) toast(STOP_WHY[e.reason]);
     } else if (e.type === 'autoBuy') {
       const names = e.items.map(row => ITEMS[row.key].short + ' ' + fmt(row.qty) + '개').join(' · ');
-      addLog('🛒 연금술 재료 자동 구매 · ' + names + ' · -' + short(e.cost), 'buy');
+      addLog('연금술 재료 자동 구매 · ' + names + ' · -' + short(e.cost), 'buy');
       toast('연금술 재료 자동 구매 · ' + names + ' (-' + short(e.cost) + ' 메소)');
       pulseMeso();
     } else if (e.type === 'news') {
-      addLog('📰 ' + e.news.text + ' (' + newsHit(e.news) + ')', 'news');
+      addLog(e.news.text + ' (' + newsHit(e.news) + ')', 'news');
       newsFresh = true;
     } else if (e.type === 'tick') {
       marketDirty = true;
@@ -940,8 +941,8 @@
     });
     const n = S.market.news[0];
     setHtml('news', n
-      ? '<span aria-hidden="true">📰</span><span><b>' + esc(n.text) + '</b> · ' + esc(newsHit(n)) + ' <small>(' + esc(dur(Math.max(1, S.t - n.t))) + ' 전)</small></span>'
-      : '<span aria-hidden="true">📰</span><span>새 소식이 뜨면 시세가 크게 움직여요</span>');
+      ? '<img class="pix hi-news-icon" src="icons/home/신문기사.webp" alt="" width="24" height="24"><span><b>' + esc(n.text) + '</b> · ' + esc(newsHit(n)) + ' <small>(' + esc(dur(Math.max(1, S.t - n.t))) + ' 전)</small></span>'
+      : '<img class="pix hi-news-icon" src="icons/home/신문기사.webp" alt="" width="24" height="24"><span>새 소식이 뜨면 시세가 크게 움직여요</span>');
     if (newsFresh) {
       const box = $('news');
       box.classList.remove('fresh'); void box.offsetWidth; box.classList.add('fresh');
@@ -968,19 +969,21 @@
 
   const shown = {};
   KEYS.forEach(k => { shown[k] = -1; });
+  // 지금 하는 일을 [아이콘 파일, 문구]로 돌려준다
   function statusText() {
     const a = S.actor;
-    if (a.phase === 'stun') return '💫 기절! 보라색 가루를 뒤집어썼어요';
+    if (a.phase === 'stun') return ['craft/보라색가루.webp', '기절! 보라색 가루를 뒤집어썼어요'];
     if (S.mode === 'gather') {
-      if (a.phase === 'work') return '🌿 보라 약초 캐는 중';
-      if (a.phase === 'move') return a.how === 'tele' ? '✨ 텔레포트!'
-        : a.how === 'ladder' ? '🪜 사다리 이동 중' : '🌿 다음 약초로 걷는 중';
-      if (a.phase === 'wait') return '🌱 약초가 다시 자라길 기다리는 중';
-      return '🌿 약초 찾는 중';
+      if (a.phase === 'work') return ['craft/보라약초.webp', '보라 약초 캐는 중'];
+      if (a.phase === 'move') return a.how === 'tele' ? ['home/순간이동의돌.webp', '텔레포트!']
+        : a.how === 'ladder' ? ['home/사다리.webp', '사다리 이동 중'] : ['craft/보라약초.webp', '다음 약초로 걷는 중'];
+      if (a.phase === 'wait') return ['craft/쥬니퍼베리씨앗.webp', '약초가 다시 자라길 기다리는 중'];
+      return ['craft/보라약초.webp', '약초 찾는 중'];
     }
     const oil = S.mode === 'oil';
-    if (a.phase === 'move') return oil ? '⚗️ 제련대로 가는 중' : '🧪 연금술 작업대로 가는 중';
-    return (oil ? '⚗️ 씨앗 오일 만드는 중' : '🧪 재물비 만드는 중') + ' · ' + fmt(timesLeft(S.mode)) + '번 더';
+    const icon = oil ? 'craft/쥬니퍼베리씨앗오일.webp' : 'craft/소형재물획득의비약.webp';
+    if (a.phase === 'move') return [icon, oil ? '제련대로 가는 중' : '연금술 작업대로 가는 중'];
+    return [icon, (oil ? '씨앗 오일 만드는 중' : '재물비 만드는 중') + ' · ' + fmt(timesLeft(S.mode)) + '번 더'];
   }
   function timesLeft(mode) {
     return mode === 'oil'
@@ -998,7 +1001,8 @@
 
   function renderHud() {
     setText('mesoValue', short(S.meso));
-    setText('statusText', statusText());
+    const status = statusText();
+    setHtml('statusText', '<img class="pix hi-status-icon" src="icons/' + status[0] + '" alt="" width="20" height="20">' + esc(status[1]));
     KEYS.forEach(k => {
       const v = S.inv[k];
       setText('inv_' + k, fmt(v));
@@ -1055,7 +1059,10 @@
 
   function renderLog() {
     setHtml('log', log.length
-      ? log.map(l => '<li class="' + esc(l.kind) + '"><time>' + hhmm(l.at) + '</time><span>' + esc(l.text) + '</span></li>').join('')
+      ? log.map(l => '<li class="' + esc(l.kind) + '"><time>' + hhmm(l.at) + '</time>' +
+        (LOG_ICON[l.kind] ? '<img class="pix hi-log-icon" src="' + LOG_ICON[l.kind] + '" alt="" width="18" height="18">' : '') +
+        // 예전 저장 기록에 남아 있는 앞머리 이모지는 떼고 보여준다
+        '<span>' + esc(l.text.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, '')) + '</span></li>').join('')
       : '<li class="hi-log-empty">팔거나 사면, 그리고 시세 소식이 뜨면 여기에 남아요.</li>');
   }
 
@@ -1377,7 +1384,7 @@
       g.drawImage(look.frames.stand[0], a.x - side / 2, a.y - side + 4, side, side, 0, 0, size, size);
       thumb.appendChild(c);
     } else {
-      thumb.textContent = '🧑‍🌾';
+      thumb.innerHTML = '<img class="pix" src="icons/home/약초자루.webp" alt="" width="32" height="32">';
     }
     setText('meName', me ? me.name : '기본 심마니');
     const motionMissing = me && look && look.fallback && look.fallback.walk && look.fallback.ladder && look.fallback.swing;
@@ -1479,7 +1486,7 @@
     Core.advance(S, run, e => {
       if (e.type === 'news') { news++; if (news <= 3) quietEvent(e); }
     });
-    if (news > 3) addLog('📰 그 밖에 시세 소식 ' + fmt(news - 3) + '건', 'news');
+    if (news > 3) addLog('그 밖에 시세 소식 ' + fmt(news - 3) + '건', 'news');
     clearFx();
     hudDirty = marketDirty = true;
     const d = k => S.stats[k] - before.stats[k];
@@ -1580,13 +1587,13 @@
       const k = b.dataset.sell;
       const r = Core.sell(S, k, want);
       if (!r) { toast('팔 ' + josa(ITEMS[k].short, '이', '가') + ' 없어요'); return; }
-      addLog('💰 ' + ITEMS[k].short + ' ' + fmt(r.qty) + '개 판매 · 개당 ' + short(r.price) + ' · +' + short(r.net), 'sell');
+      addLog(ITEMS[k].short + ' ' + fmt(r.qty) + '개 판매 · 개당 ' + short(r.price) + ' · +' + short(r.net), 'sell');
       toast(josa(ITEMS[k].short, '을', '를') + ' ' + fmt(r.qty) + '개 팔아서 +' + short(r.net) + ' 메소 (수수료 ' + short(r.fee) + ')');
     } else {
       const k = b.dataset.buy, ask = Core.quote(S, k, 'ask');
       const r = Core.buy(S, k, want);
       if (!r) { toast('메소가 모자라요 (구매가 1개 ' + short(ask) + ' 메소)'); return; }
-      addLog('🛒 ' + ITEMS[k].short + ' ' + fmt(r.qty) + '개 구매 · 개당 ' + short(r.price) + ' · -' + short(r.cost), 'buy');
+      addLog(ITEMS[k].short + ' ' + fmt(r.qty) + '개 구매 · 개당 ' + short(r.price) + ' · -' + short(r.cost), 'buy');
       toast(josa(ITEMS[k].short, '을', '를') + ' ' + fmt(r.qty) + '개 샀어요 (-' + short(r.cost) + ' 메소)' +
         (r.qty < r.want ? ' · 메소가 모자라 ' + fmt(r.qty) + '개만' : ''));
     }

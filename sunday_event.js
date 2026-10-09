@@ -140,7 +140,7 @@
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     link.hidden = true;
-    link.innerHTML = '<span class="sunday-event-icon" aria-hidden="true">🍁</span>' +
+    link.innerHTML = '<span class="sunday-event-icon" aria-hidden="true"><img src="icons/home/단풍잎.webp" alt="" width="26" height="26" style="image-rendering:pixelated"></span>' +
       '<span class="sunday-event-copy"><strong>썬데이 메이플</strong><small></small></span>';
     win.document.body.appendChild(link);
     return link;

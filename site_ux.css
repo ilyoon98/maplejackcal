@@ -159,6 +159,7 @@ body[data-ux-page="cube_play.html"] .sim-stage { min-height:108px; }
 .actual-verdict.is-less { color:#7bdda6; }
 .actual-verdict.is-more { color:#ff9d9d; }
 .actual-rank { padding:12px 14px; border:1px solid currentColor; border-radius:10px; }
+.actual-rank-icon { width:22px; height:22px; margin-right:6px; vertical-align:-5px; object-fit:contain; image-rendering:pixelated; }
 .actual-rank.is-lucky { color:#66b5ff; background:rgba(64,151,255,.14); }
 .actual-rank.is-good { color:#9acbff; background:rgba(64,151,255,.08); }
 .actual-rank.is-neutral { color:#c3cad8; background:rgba(195,202,216,.06); }

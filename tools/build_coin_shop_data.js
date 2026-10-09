@@ -9,7 +9,7 @@
 // 시트 구조 (첫 줄은 열 이름, 열 순서는 상관없고 이름으로 찾는다)
 //   Event: EventID, Name, StartTime(날짜), EndTime(날짜), Weeks(코인 받는 주 수), WeekCoin(주당 코인)
 //   Shop:  EventID, ItemID, Type(TypeID), Coin(가격), Value(구매 제한 수량), Limit(M=ID당, W=월드당)
-//   Item:  ItemID, String(이름), Icon(icons/coin-shop/ 파일명. 둘이면 | 로 구분. 비우면 기본 아이콘)
+//   Item:  ItemID, String(이름), Icon(icons/coin-shop/ 파일명. 둘이면 | 로 구분. 비우면 "아이템 이름.webp", 그것도 없으면 기본 아이콘)
 //   Type:  TypeID, Name(탭 이름)
 
 'use strict';
@@ -123,8 +123,10 @@ function build() {
   const itemById = {};
   items.forEach(it => {
     const id = need(it, 'ItemID', 'Item');
-    const icon = it.Icon === undefined ? [] : String(it.Icon).split(/[|,]/).map(s => s.trim()).filter(Boolean);
-    itemById[id] = { id: 'item-' + id, name: String(need(it, 'String', 'Item')), img: icon };
+    const name = String(need(it, 'String', 'Item'));
+    let icon = it.Icon === undefined ? [] : String(it.Icon).split(/[|,]/).map(s => s.trim()).filter(Boolean);
+    if (!icon.length && fs.existsSync(path.join(ROOT, 'icons', 'coin-shop', name + '.webp'))) icon = [name + '.webp'];
+    itemById[id] = { id: 'item-' + id, name: name, img: icon };
   });
 
   const out = events.map(ev => {
@@ -142,7 +144,7 @@ function build() {
       byTab[type.key].push({
         id: item.id, name: item.name,
         price: Number(need(s, 'Coin', 'Shop')), stock: Number(need(s, 'Value', 'Shop')),
-        limit: limit, icon: '🪙', img: item.img
+        limit: limit, img: item.img
       });
     });
     return {

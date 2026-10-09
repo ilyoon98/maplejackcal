@@ -142,12 +142,15 @@
             }
           }
           if (value) {
-            const tier = value.percent <= 10 ? ['lucky', '🍀', '대박 행운'] :
-              value.percent <= 40 ? ['good', '😎', '운 좋은 기록'] :
-              value.percent <= 60 ? ['neutral', '🙂', '중간권 기록'] :
-              value.percent <= 90 ? ['poor', '🥲', '아쉬운 기록'] : ['unlucky', '😭', '많이 아쉬운 기록'];
+            const tier = value.percent <= 10 ? ['lucky', 'icons/home/행운의네잎클로버.webp', '대박 행운'] :
+              value.percent <= 40 ? ['good', 'icons/home/황금단풍잎.webp', '운 좋은 기록'] :
+              value.percent <= 60 ? ['neutral', 'icons/home/단풍잎.webp', '중간권 기록'] :
+              value.percent <= 90 ? ['poor', 'icons/home/부서진별의파편.webp', '아쉬운 기록'] : ['unlucky', 'icons/home/돌멩이.webp', '많이 아쉬운 기록'];
             rank.className = 'actual-verdict actual-rank is-' + tier[0];
-            rank.textContent = tier[1] + ' 상위 ' + (value.percent < 0.1 ? '0.1% 미만' : value.percent.toLocaleString('ko-KR', {maximumFractionDigits:1}) + '%') + ' · ' + tier[2] + (value.samples ? ' (추정)' : '');
+            const tierIcon = document.createElement('img');
+            tierIcon.className = 'actual-rank-icon'; tierIcon.src = tier[1]; tierIcon.alt = '';
+            rank.textContent = '상위 ' + (value.percent < 0.1 ? '0.1% 미만' : value.percent.toLocaleString('ko-KR', {maximumFractionDigits:1}) + '%') + ' · ' + tier[2] + (value.samples ? ' (추정)' : '');
+            rank.prepend(tierIcon);
             if (compact) rank.textContent = (Number.isSafeInteger(value.attempts) ? fmt(value.attempts) + '회 · ' : '') + '상위 ' + (value.percent < 0.1 ? '0.1% 미만' : value.percent.toLocaleString('ko-KR', {maximumFractionDigits:1}) + '%') + (value.samples ? ' (추정)' : '');
           } else {
             rank.textContent = '이 조건은 시뮬레이션이 오래 걸려 상위 %를 계산하지 못했어요.';

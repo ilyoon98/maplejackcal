@@ -18,7 +18,7 @@
   .reset-badge{position:absolute;top:18px;right:20px;z-index:2;background:transparent;border:1px solid #3f4554;color:var(--text-dim);border-radius:999px;padding:5px 10px;font:inherit;font-size:.7rem;cursor:pointer}.reset-badge:hover{border-color:var(--bad);color:var(--bad)}
   .bt-wrap{max-width:1280px;margin:0 auto;padding:24px 16px 80px}
   .bt-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#2e2212 0%,#1a1726 55%,#161f33 100%);border:1px solid #6d5630;border-radius:22px;padding:30px 32px;margin-top:18px;box-shadow:0 18px 50px rgba(0,0,0,.24)}
-  .bt-hero:after{content:"🎀  ✦  🎀  ✦";position:absolute;right:26px;top:60px;color:rgba(255,231,180,.45);font-size:22px;letter-spacing:12px;transform:rotate(6deg)}
+  .bt-hero:after{content:"✦  ✦  ✦  ✦";position:absolute;right:26px;top:60px;color:rgba(255,231,180,.45);font-size:22px;letter-spacing:12px;transform:rotate(6deg)}
   .eyebrow{color:var(--bt-gold-2);font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
   .bt-hero h1{font-size:clamp(1.9rem,4vw,3.1rem);line-height:1.08;margin:9px 0 10px;letter-spacing:-.06em}
   .bt-hero p{max-width:680px;color:#cdc6b8;margin:0;line-height:1.75}
@@ -53,6 +53,7 @@
   .result-empty{text-align:center;color:var(--text-dim);padding:56px 12px;line-height:1.8}
   .result-main{text-align:center;padding:16px 8px;border-radius:14px;margin:12px 6px}
   .result-emoji{font-size:3.4rem;line-height:1.1;filter:drop-shadow(0 5px 14px rgba(255,211,106,.25))}
+  .result-emoji img{display:block;width:1.2em;height:1.2em;margin:0 auto;object-fit:contain;image-rendering:pixelated}
   .result-name{font-size:2.1rem;font-weight:800;letter-spacing:-.05em;margin-top:4px}
   .result-rarity{display:inline-block;margin-top:8px;border-radius:999px;padding:3px 10px;background:rgba(255,211,106,.16);color:var(--bt-gold);font-size:.75rem;font-weight:800}
   .result-detail{font-size:.78rem;color:#c9c0b0;margin-top:8px}
@@ -143,75 +144,75 @@
   <nav class="site-nav">
     <div class="site-tabs-track site-groups">
       <span class="site-tabs-pill" aria-hidden="true"></span>
-      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon">🏠</span>홈</a>
-      <button type="button" class="site-tab" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon">🧮</span>계산기</button>
-      <button type="button" class="site-tab active" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon">🎰</span>시뮬레이터</button>
+      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon"></span>홈</a>
+      <button type="button" class="site-tab" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon"></span>계산기</button>
+      <button type="button" class="site-tab active" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon"></span>시뮬레이터</button>
     </div>
     <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
       <a class="site-menu-item" href="trace_calc.html">
-        <span class="site-menu-icon">📜</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
       </a>
       <a class="site-menu-item" href="starforce_calc.html">
-        <span class="site-menu-icon">⭐</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">스타포스 기댓값 계산기</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
       </a>
       <a class="site-menu-item" href="authentic_symbol_calc.html">
-        <span class="site-menu-icon">🔮</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
       </a>
       <a class="site-menu-item" href="boss_income_calc.html">
-        <span class="site-menu-icon">💰</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">보스 수익 정산 계산기</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
       </a>
       <a class="site-menu-item" href="boss_buff_planner.html">
-        <span class="site-menu-icon">⏱️</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">보스 버프 동선 계산기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
       </a>
       <a class="site-menu-item" href="cube_calc.html">
-        <span class="site-menu-icon">🎲</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">큐브 등급업 비용 계산기</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
       </a>
       <a class="site-menu-item" href="cube_option_calc.html">
-        <span class="site-menu-icon">🎯</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">큐브 옵션 확률 계산기</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
       </a>
       <a class="site-menu-item" href="item_craft_calc.html">
-        <span class="site-menu-icon">🛠️</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">아이템 제작 비용 계산기</span><span class="site-menu-desc">대박·평균 제작 메소</span></span>
       </a>
       <a class="site-menu-item" href="trade_margin_calc.html">
-        <span class="site-menu-icon">💱</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">되팔기 손익 계산기</span><span class="site-menu-desc">수수료 떼고 남는 메소</span></span>
       </a>
       <a class="site-menu-item" href="meso_market_calc.html">
-        <span class="site-menu-icon">💎</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">메소마켓 시세 계산기</span><span class="site-menu-desc">1억 메소당 실수령 메포</span></span>
       </a>
       <a class="site-menu-item" href="coin_shop_calc.html">
-        <span class="site-menu-icon">🪙</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">이벤트 코인샵 계산기</span><span class="site-menu-desc">주차별 구매 계획</span></span>
       </a>
     </div>
     <div class="site-menu" id="site-menu-play" data-group="play" hidden>
       <a class="site-menu-item" href="cube_play.html">
-        <span class="site-menu-icon">🎮</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">큐브 시뮬레이터</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
       </a>
       <a class="site-menu-item" href="starforce_play.html">
-        <span class="site-menu-icon">🌟</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">스타포스 시뮬레이터</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
       </a>
       <a class="site-menu-item active" href="boutique_gacha.html">
-        <span class="site-menu-icon">🎁</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">부티크 기프트 시뮬레이터</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
       </a>
       <a class="site-menu-item" href="pet_gacha.html">
-        <span class="site-menu-icon">🐾</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">펫 시뮬레이터</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
       </a>
       <a class="site-menu-item" href="seedring_gacha.html">
-        <span class="site-menu-icon">💍</span>
+        <span class="site-menu-icon"></span>
         <span><span class="site-menu-name">시드링 시뮬레이터</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
       </a>
     </div>
@@ -267,7 +268,7 @@
         <div class="result-kicker">LATEST RESULT</div>
         <div id="resultEmpty" class="result-empty">결과가 여기에 크게 나타납니다.<br>부티크 기프트를 열어보세요.</div>
         <div id="resultMain" class="result-main hidden">
-          <div class="result-emoji" id="resultEmoji">🎟</div>
+          <div class="result-emoji" id="resultEmoji"><img src="icons/home/선물상자.webp" alt=""></div>
           <div class="result-name" id="resultName">-</div>
           <div class="result-rarity" id="resultRarity">-</div>
           <div class="result-detail" id="resultDetail">-</div>
@@ -324,15 +325,15 @@
 
   // 등급: 어느 표에서 나왔는지에 따라 같은 장수라도 체감이 다르다.
   function tierOf(n, fever){
-    if (n >= 2000) return {cls:'t-mythic', name:'역대급', mark:'🏆'};
-    if (n >= 1000) return {cls:'t-legend', name:'초대박', mark:'👑'};
-    if (n >= 500) return {cls:'t-jackpot', name:'전설', mark:'💫'};
-    if (n >= 100) return {cls:'t-epic', name:'대박', mark:'💎'};
-    if (n >= 50)  return {cls:'t-rare', name:'희귀', mark:'🌟'};
-    if (fever)    return n > 10 ? {cls:'t-rare', name:'피버 보너스', mark:'🔥'} : {cls:'t-fever', name:'피버', mark:'🔥'};
-    if (n >= 8)   return {cls:'t-nice', name:'좋음', mark:'✨'};
-    if (n >= 4)   return {cls:'t-plain', name:'무난', mark:'🎟'};
-    return {cls:'t-dud', name:'평범', mark:'🎟'};
+    if (n >= 2000) return {cls:'t-mythic', name:'역대급', mark:'icons/home/황금단풍잎.webp'};
+    if (n >= 1000) return {cls:'t-legend', name:'초대박', mark:'icons/coin-shop/이벤트 레전 잠재.webp'};
+    if (n >= 500) return {cls:'t-jackpot', name:'전설', mark:'icons/coin-shop/유니크.webp'};
+    if (n >= 100) return {cls:'t-epic', name:'대박', mark:'icons/coin-shop/에픽잠재.webp'};
+    if (n >= 50)  return {cls:'t-rare', name:'희귀', mark:'icons/home/단풍잎.webp'};
+    if (fever)    return n > 10 ? {cls:'t-rare', name:'피버 보너스', mark:'icons/coin-shop/타환불.webp'} : {cls:'t-fever', name:'피버', mark:'icons/coin-shop/타환불.webp'};
+    if (n >= 8)   return {cls:'t-nice', name:'좋음', mark:'icons/home/메소주머니.webp'};
+    if (n >= 4)   return {cls:'t-plain', name:'무난', mark:'icons/home/선물상자.webp'};
+    return {cls:'t-dud', name:'평범', mark:'icons/home/선물상자.webp'};
   }
 
   const state = {
@@ -432,7 +433,8 @@
       main.classList.remove('hidden');
       const x = state.last, t = tierOf(x.n, x.fever);
       main.classList.add(t.cls);
-      $('resultEmoji').textContent = t.mark;
+      const mark = document.createElement('img'); mark.src = t.mark; mark.alt = '';
+      $('resultEmoji').replaceChildren(mark);
       $('resultName').textContent = '티켓 ' + num(x.n) + '개';
       $('resultRarity').textContent = t.name + (x.fever ? ' · 피버 타임' : '');
       $('resultDetail').textContent = x.at + '번째 뽑기 · ' + (x.fever ? '피버 확률표' : '일반 확률표');
@@ -529,7 +531,7 @@
     setAutoUI();
     const used = money(state.spent - auto.startSpent);
     $('autoNote').textContent = hit
-      ? '🎉 ' + num(auto.done) + '회 만에 티켓 ' + num(hit.n) + '개 획득! · ' + used + ' 사용'
+      ? num(auto.done) + '회 만에 티켓 ' + num(hit.n) + '개 획득! · ' + used + ' 사용'
       : num(auto.done) + '회에서 중단 · ' + used + ' 사용';
     flashResult();
   }

@@ -119,7 +119,7 @@ window.SiteNavigation = {
       var flameLink = document.createElement('a');
       flameLink.href = 'flame_calc.html';
       flameLink.className = 'site-menu-item';
-      flameLink.innerHTML = '<span class="site-menu-icon">🔥</span><span><span class="site-menu-name">추가옵션 계산기</span><span class="site-menu-desc">목표 추옵 확률·불꽃·메소</span></span>';
+      flameLink.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">추가옵션 계산기</span><span class="site-menu-desc">목표 추옵 확률·불꽃·메소</span></span>';
       if (location.pathname.endsWith('/flame_calc.html')) flameLink.classList.add('active');
       calcMenu.appendChild(flameLink);
     }
@@ -127,7 +127,7 @@ window.SiteNavigation = {
       var huntingLink = document.createElement('a');
       huntingLink.href = 'hunting_calc.html';
       huntingLink.className = 'site-menu-item';
-      huntingLink.innerHTML = '<span class="site-menu-icon">🍁</span><span><span class="site-menu-name">아이템 획득량 계산기</span><span class="site-menu-desc">30분 사냥 조각·메소</span></span>';
+      huntingLink.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">아이템 획득량 계산기</span><span class="site-menu-desc">30분 사냥 조각·메소</span></span>';
       if (location.pathname.endsWith('/hunting_calc.html')) huntingLink.classList.add('active');
       calcMenu.appendChild(huntingLink);
     }
@@ -135,7 +135,7 @@ window.SiteNavigation = {
       var elixirLink = document.createElement('a');
       elixirLink.href = 'wealth_elixir_calc.html';
       elixirLink.className = 'site-menu-item';
-      elixirLink.innerHTML = '<span class="site-menu-icon">🧪</span><span><span class="site-menu-name">재물 비약 제작 계산기</span><span class="site-menu-desc">씨앗·오일·비약 뭘 살지</span></span>';
+      elixirLink.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">재물 비약 제작 계산기</span><span class="site-menu-desc">씨앗·오일·비약 뭘 살지</span></span>';
       if (location.pathname.endsWith('/wealth_elixir_calc.html')) elixirLink.classList.add('active');
       calcMenu.appendChild(elixirLink);
     }
@@ -144,7 +144,7 @@ window.SiteNavigation = {
       var herbLink = document.createElement('a');
       herbLink.href = 'herb_idle.html';
       herbLink.className = 'site-menu-item';
-      herbLink.innerHTML = '<span class="site-menu-icon">🌿</span><span><span class="site-menu-name">약초 방치 게임</span><span class="site-menu-desc">채집·가공해서 시세 보고 팔기</span></span>';
+      herbLink.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">약초 방치 게임</span><span class="site-menu-desc">채집·가공해서 시세 보고 팔기</span></span>';
       if (location.pathname.endsWith('/herb_idle.html')) herbLink.classList.add('active');
       playMenu.appendChild(herbLink);
     }
