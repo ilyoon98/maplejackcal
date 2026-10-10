@@ -393,11 +393,17 @@ test('넥슨 character_image 공식 코드를 걷기·사다리·점프·두손 
   assert.match(ui, /source: 'nexon-api'/);
 });
 
-test('같은 정지 그림만 반복되면 모션 성공으로 처리하지 않는다', () => {
+test('넥슨 이미지는 crossOrigin 없이 받고 고정 발 원점(150, 200)을 쓴다', () => {
+  // 넥슨 이미지 서버는 캐시 안 된 프레임을 Origin 헤더와 함께 받으면 empty_img로 보낸다.
   const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
-  const body = ui.match(/function loadPose\([\s\S]*?\n  }/)[0];
-  assert.match(body, /new Set\(good\.map\(im => im\._hiSignature\)\)\.size/);
-  assert.match(body, /!animated \|\| distinct > 1/);
+  const pose = ui.match(/function loadPose\([\s\S]*?\n  }/)[0];
+  const look = ui.match(/function loadLook\([\s\S]*?\n  }/)[0];
+  assert.match(pose, /loadImage\(frameUrl\([^)]*\)\)\)/);
+  assert.doesNotMatch(pose + look, /spriteShape|usableFrame|, true\)/);
+  assert.match(look, /anchor: NEXON_ANCHOR/);
+  assert.match(ui, /NEXON_ANCHOR = \{ ok: true, x: 150, y: 200/);
+  assert.match(ui, /if \(cors\) im\.crossOrigin = 'anonymous'/);
+  assert.match(ui, /naturalWidth === 256 && im\.naturalHeight === 256/);
 });
 
 test('저장한 캐릭터는 basic 정보를 갱신하고 empty_img를 프레임으로 쓰지 않는다', () => {

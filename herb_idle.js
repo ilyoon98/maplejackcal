@@ -1225,12 +1225,20 @@
     Object.keys(crop).forEach(k => u.searchParams.set(k, crop[k]));
     return u.href;
   }
-  function loadImage(url) {
+  // 넥슨 이미지 서버는 아직 캐시되지 않은 프레임을 Origin 헤더(crossOrigin 요청)와 함께 받으면
+  // 빈 이미지(static/empty_img.png, 256×256)로 308 이동시키고 그 응답을 10분간 캐시한다(2026-10 확인).
+  // 그래서 넥슨 그림은 crossOrigin 없이 일반 <img>로 받는다. 픽셀은 못 읽지만 그리기는 된다.
+  // MapleStory.io 그림은 기존처럼 CORS로 받아 픽셀로 발 위치를 잰다.
+  // 넥슨 300×300 이미지는 동작과 상관없이 발 원점이 (150, 200)에 고정돼 있다(서기·걷기·사다리·공격 실측).
+  const NEXON_ANCHOR = { ok: true, x: 150, y: 200, top: 120, height: 80 };
+  const isEmptyImage = im => /\/static\/empty_img\.[a-z]+(?:\?|$)/i.test(im.currentSrc || im.src) ||
+    (im.naturalWidth === 256 && im.naturalHeight === 256);
+  function loadImage(url, cors) {
     return new Promise(resolve => {
       const im = new Image();
-      im.crossOrigin = 'anonymous';   // 넥슨 이미지 서버가 CORS를 허용해서 픽셀을 읽을 수 있다
+      if (cors) im.crossOrigin = 'anonymous';
       // 만료됐거나 지원하지 않는 조합은 HTTP 오류 대신 static/empty_img.png로 이동한다.
-      im.onload = () => resolve(/\/static\/empty_img\.[a-z]+(?:\?|$)/i.test(im.currentSrc || im.src) ? null : im);
+      im.onload = () => resolve(isEmptyImage(im) ? null : im);
       im.onerror = () => resolve(null);
       im.src = url;
     });
@@ -1284,17 +1292,16 @@
     const group = groups[at];
     return Promise.all(group.actions.map(action => loadImage(frameUrl(image, action, emotion, group.motion)))).then(images => {
       if (token !== lookToken) return [];
-      const good = images.filter(im => usableFrame(im, base));
-      const distinct = new Set(good.map(im => im._hiSignature)).size;
-      const animated = group.actions.length > 1;
-      return good.length && (!animated || distinct > 1) ? good : loadPose(image, groups, emotion, base, token, at + 1);
+      // 넥슨 그림은 픽셀을 읽을 수 없어 빈 이미지(256×256)만 걸러낸다.
+      const good = images.filter(Boolean);
+      return good.length ? good : loadPose(image, groups, emotion, base, token, at + 1);
     });
   }
   function loadIoPose(config, groups, base, token, at) {
     at = at || 0;
     if (token !== lookToken || at >= groups.length) return Promise.resolve([]);
     const group = groups[at];
-    return Promise.all(group.frames.map(frame => loadImage(ioFrameUrl(config, group.action, frame)))).then(images => {
+    return Promise.all(group.frames.map(frame => loadImage(ioFrameUrl(config, group.action, frame), true))).then(images => {
       if (token !== lookToken) return [];
       const good = images.filter(im => usableFrame(im, base));
       return good.length ? good : loadIoPose(config, groups, base, token, at + 1);
@@ -1302,7 +1309,7 @@
   }
   function loadIoLook(config) {
     const token = ++lookToken, frames = {}, fallback = {};
-    return loadImage(ioFrameUrl(config, 'stand1', 0)).then(first => {
+    return loadImage(ioFrameUrl(config, 'stand1', 0), true).then(first => {
       if (token !== lookToken) return null;
       if (!first) throw ioError('MapleStory.io 이미지 로딩 실패');
       let base;
@@ -1329,17 +1336,12 @@
     return loadImage(frameUrl(info.image, stand.actions[0], 'E00', stand.motion)).then(first => {
       if (token !== lookToken) return null;   // 그새 다른 캐릭터를 불렀다
       if (!first) throw new Error('IMAGE');
-      let base;
-      try { base = spriteShape(first); } catch (e) { throw new Error('IMAGE'); }
-      if (!base) throw new Error('IMAGE');
-      first._hiAnchor = base.anchor;
+      const base = { anchor: NEXON_ANCHOR };
       return Promise.all(Object.keys(POSES).map(pose => loadPose(info.image, POSES[pose], pose === 'stun' ? 'E05' : 'E00', base, token, 0)
         .then(set => { fallback[pose] = !set.length; frames[pose] = set.length ? set : [first]; })));
     }).then(done => {
       if (done === null || token !== lookToken) return null;
-      const first = frames.stand[0];
-      const base = spriteShape(first);
-      look = { frames, fallback, anchor: base.anchor, headTop: base.anchor.height * LOOK_SCALE, source: 'nexon-api' };
+      look = { frames, fallback, anchor: NEXON_ANCHOR, headTop: NEXON_ANCHOR.height * LOOK_SCALE, source: 'nexon-api' };
       $('stage').dataset.motionWalk = fallback.walk ? 'fallback' : String(frames.walk.length);
       $('stage').dataset.motionLadder = fallback.ladder ? 'fallback' : String(frames.ladder.length);
       $('stage').dataset.motionSwing = fallback.swing ? 'fallback' : String(frames.swing.length);
