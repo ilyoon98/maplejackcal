@@ -1084,13 +1084,19 @@
   // 넥슨 character_image 문서의 액션 코드. W00은 장착 무기의 기본 모션을 유지하고,
   // 채집 공격만 두손 모션(W02)을 우선 사용한다. 지원하지 않는 조합이 no-image를
   // 돌려줄 수 있으므로 같은 동작의 공식 후보를 순서대로 시험한다.
+  // 넥슨 CDN은 action+wmotion 조합별로 캐시하고, 예전에 빈 이미지로 굳은 조합은 몇 시간씩 남는다.
+  // 그래서 같은 동작을 다른 무기 모션(W00~W04)으로도 시도하고, 프레임이 전부 온 조합만 쓴다.
+  const frameCodes = (code, n) => Array.from({ length: n }, (_, i) => code + '.' + i);
+  const motions = (order, actions) => order.map(motion => ({ motion, actions }));
+  const W_ALL = ['W00', 'W01', 'W02', 'W03', 'W04'];
   const POSES = {
-    stand: [{ motion: 'W00', actions: ['A00.0', 'A00.1', 'A00.2'] }, { motion: 'W00', actions: ['A01.0', 'A01.1', 'A01.2'] }],
-    walk: [{ motion: 'W00', actions: ['A02.0', 'A02.1', 'A02.2', 'A02.3'] }, { motion: 'W00', actions: ['A03.0', 'A03.1', 'A03.2', 'A03.3'] }, { motion: 'W04', actions: ['A02.0', 'A02.1', 'A02.2', 'A02.3'] }],
-    swing: [{ motion: 'W02', actions: ['A23.0', 'A23.1', 'A23.2', 'A23.3'] }, { motion: 'W02', actions: ['A16.0', 'A16.1', 'A16.2', 'A16.3'] }, { motion: 'W00', actions: ['A16.0', 'A16.1', 'A16.2', 'A16.3'] }, { motion: 'W01', actions: ['A16.0', 'A16.1', 'A16.2', 'A16.3'] }],
-    ladder: [{ motion: 'W04', actions: ['A08.0', 'A08.1'] }, { motion: 'W00', actions: ['A08.0', 'A08.1'] }],
-    jump: [{ motion: 'W00', actions: ['A06.0'] }, { motion: 'W04', actions: ['A06.0'] }],
-    stun: [{ motion: 'W00', actions: ['A11.0', 'A11.1', 'A11.2'] }]
+    stand: motions(W_ALL, frameCodes('A00', 3)).concat(motions(W_ALL, frameCodes('A01', 3))),
+    walk: motions(W_ALL, frameCodes('A02', 4)).concat(motions(W_ALL, frameCodes('A03', 4))),
+    swing: motions(['W02', 'W00', 'W01', 'W03', 'W04'], frameCodes('A23', 4))
+      .concat(motions(['W02', 'W00', 'W01', 'W03', 'W04'], frameCodes('A16', 4))),
+    ladder: motions(['W04', 'W00', 'W01', 'W02', 'W03'], frameCodes('A08', 2)),
+    jump: motions(W_ALL, frameCodes('A06', 1)),
+    stun: motions(W_ALL, frameCodes('A11', 3))
   };
   const API_ERROR = {
     OPENAPI00001: 'API 서버 내부 오류예요. 잠시 후 다시 해 주세요.',
@@ -1286,15 +1292,19 @@
 
   // 후보군 하나를 전부 받은 뒤 no-image를 걸러낸다. 유효 프레임이 없으면 다음 무기 모션을 시험한다.
   let lookToken = 0;
-  function loadPose(image, groups, emotion, base, token, at) {
+  // 프레임(0, 1, 2, 3…)이 전부 온 후보를 차례대로 찾는다. 끝까지 없으면 가장 많이 온 후보를 쓴다.
+  function loadPose(image, groups, emotion, base, token, at, best) {
     at = at || 0;
-    if (token !== lookToken || at >= groups.length) return Promise.resolve([]);
+    best = best || [];
+    if (token !== lookToken) return Promise.resolve([]);
+    if (at >= groups.length) return Promise.resolve(best);
     const group = groups[at];
     return Promise.all(group.actions.map(action => loadImage(frameUrl(image, action, emotion, group.motion)))).then(images => {
       if (token !== lookToken) return [];
-      // 넥슨 그림은 픽셀을 읽을 수 없어 빈 이미지(256×256)만 걸러낸다.
+      // 넥슨 그림은 픽셀을 읽을 수 없어 빈 이미지(256×256)만 걸러낸다. 순서는 프레임 번호 그대로.
       const good = images.filter(Boolean);
-      return good.length ? good : loadPose(image, groups, emotion, base, token, at + 1);
+      if (good.length === group.actions.length) return good;
+      return loadPose(image, groups, emotion, base, token, at + 1, good.length > best.length ? good : best);
     });
   }
   function loadIoPose(config, groups, base, token, at) {

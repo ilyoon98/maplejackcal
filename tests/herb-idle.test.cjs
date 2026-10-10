@@ -384,10 +384,15 @@ test('캐릭터 모션 URL은 기본 서기 파라미터를 중복 추가하지 
 
 test('넥슨 character_image 공식 코드를 걷기·사다리·점프·두손 공격에 사용한다', () => {
   const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
-  assert.match(ui, /actions: \['A02\.0', 'A02\.1', 'A02\.2', 'A02\.3'\]/);
-  assert.match(ui, /actions: \['A08\.0', 'A08\.1'\]/);
-  assert.match(ui, /motion: 'W02', actions: \['A23\.0', 'A23\.1', 'A23\.2', 'A23\.3'\]/);
-  assert.match(ui, /actions: \['A06\.0'\]/);
+  // 프레임은 0부터 차례대로, 같은 동작을 W00~W04 무기 모션으로 모두 시도한다(넥슨 CDN에 빈 이미지로 굳은 조합 우회).
+  assert.match(ui, /const frameCodes = \(code, n\) => Array\.from\(\{ length: n \}, \(_, i\) => code \+ '\.' \+ i\)/);
+  assert.match(ui, /const W_ALL = \['W00', 'W01', 'W02', 'W03', 'W04'\]/);
+  assert.match(ui, /walk: motions\(W_ALL, frameCodes\('A02', 4\)\)/);
+  assert.match(ui, /ladder: motions\(\['W04', 'W00', 'W01', 'W02', 'W03'\], frameCodes\('A08', 2\)\)/);
+  assert.match(ui, /swing: motions\(\['W02'[^\]]*\], frameCodes\('A23', 4\)\)/);
+  assert.match(ui, /jump: motions\(W_ALL, frameCodes\('A06', 1\)\)/);
+  // 프레임이 일부만 온 조합은 다음 후보로 넘어가고, 전부 실패하면 가장 많이 온 조합을 쓴다.
+  assert.match(ui, /if \(good\.length === group\.actions\.length\) return good;/);
   assert.match(ui, /넥슨 API에서 걷기·사다리·점프·공격 모션을 받는 중/);
   assert.match(ui, /return loadLook\(info\)\.then\(ready =>/);
   assert.match(ui, /source: 'nexon-api'/);
