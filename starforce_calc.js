@@ -55,13 +55,18 @@
   }
 
   function calculate(opts) {
+    var maxStar = D.maxStarForLevel(opts.level);
+    if (!Number.isInteger(opts.start) || !Number.isInteger(opts.goal) ||
+        opts.start < 0 || opts.goal < 0 || opts.start > maxStar || opts.goal > maxStar) {
+      throw new RangeError('장비 레벨 ' + opts.level + '의 강화 범위는 0~' + maxStar + '성입니다.');
+    }
     var steps = buildSteps(opts);
     var spare = opts.spare || 0;
     var per = [];
     var recovery = [];
     // 가이드의 추정 방식: 샤이닝 + 15~17성 파괴방지, 노작값 0의 12성부터 누적 비용.
-    var fees = opts.recoveryMode && opts.recoveryMode !== 'off' ? calculate({
-      level: opts.level, start: RESET, goal: 22, spare: 0,
+    var fees = maxStar > RESET && opts.recoveryMode && opts.recoveryMode !== 'off' ? calculate({
+      level: opts.level, start: RESET, goal: Math.min(22, maxStar), spare: 0,
       discount30: true, destroyDown30: true, safeguard: {15:true,16:true,17:true}
     }).rows : [];
     var sumMeso = 0, sumDestroy = 0, sumTries = 0; // 12성부터의 누적
@@ -167,7 +172,7 @@
           var r = recovery[star];
           var copies = r.useFixed ? r.copies : 1;
           spent += r.useFixed ? r.fee : 0;
-          // 제작 비용 분포에서는 대체 장비의 추가옵션 비용도 매번 새로 뽑는다.
+          // 호출자가 대체 장비 가격 분포를 제공하면 복구에 필요한 개수만큼 뽑는다.
           if (sampleSpare) {
             for (var copy = 0; copy < copies; copy++) spent += sampleSpare();
           } else spent += copies * (opts.spare || 0);
@@ -321,6 +326,7 @@
 
     $('startInput').value = state.start;
     $('goalInput').value = state.goal;
+    $('startInput').max = $('goalInput').max = D.maxStarForLevel(state.level);
     $('spareInput').value = state.spare ? state.spare.toLocaleString('en-US') : '';
 
     $('viewStep').classList.toggle('active', state.view === 'step');
@@ -444,7 +450,7 @@
     var html = '<table class="sf-table"><thead><tr>' +
       '<th>구간</th><th>성공</th><th>유지</th><th>파괴</th><th>강화 비용</th>' +
       '</tr></thead><tbody>';
-    for (var s = 0; s < MAX; s++) {
+    for (var s = 0; s < D.maxStarForLevel(state.level); s++) {
       var st = res.steps[s];
       var inRange = s >= state.start && s < state.goal;
       html += '<tr' + (inRange ? ' class="in-range"' : '') + '>' +
@@ -461,9 +467,10 @@
 
   function refresh() {
     if (state.recoveryMode !== 'off') state.recoveryMode = 'auto';
-    state.level = Math.min(300, Math.max(1, state.level || 1));
-    state.start = Math.min(MAX - 1, Math.max(0, state.start));
-    state.goal = Math.min(MAX, Math.max(0, state.goal));
+    state.level = Math.min(300, Math.max(1, Math.round(state.level || 1)));
+    var maxStar = D.maxStarForLevel(state.level);
+    state.start = Math.min(maxStar, Math.max(0, Math.round(state.start)));
+    state.goal = Math.min(maxStar, Math.max(0, Math.round(state.goal)));
     var opts = {
       level: state.level, start: state.start, goal: state.goal, spare: state.spare,
       mvp: state.mvp, pcRoom: state.pcRoom, discount30: state.discount30,
@@ -500,7 +507,7 @@
     if (!document.getElementById('levelInput')) return; // 계산기 화면이 아닌 페이지에서는 UI를 만들지 않는다
     load();
     bindNumber('levelInput', 'level', 1, 300);
-    bindNumber('startInput', 'start', 0, MAX - 1);
+    bindNumber('startInput', 'start', 0, MAX);
     bindNumber('goalInput', 'goal', 1, MAX);
     $('spareInput').addEventListener('input', function () {
       var el = $('spareInput');

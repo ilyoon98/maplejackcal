@@ -33,7 +33,14 @@
     return 100 * Math.round(Math.pow(level, 3) * Math.pow(star + 1, 2.7) / DIV[star]) + 10;
   }
 
+  // 일반 장비의 요구 레벨별 최대 강화 수치.
+  function maxStarForLevel(level) {
+    return level < 95 ? 5 : level < 108 ? 8 : level < 118 ? 10 :
+      level < 128 ? 15 : level < 138 ? 20 : 30;
+  }
+
   global.StarforceData = {
+    maxStarForLevel: maxStarForLevel,
     MAX_STAR: 30,
     DESTROY_RESET_STAR: 12,   // 파괴되면 12성으로 되돌아간다
     PROTECT_STARS: [15, 16, 17],

@@ -215,8 +215,10 @@
       })));
     });
 
-    if (document.activeElement !== $('startInput')) $('startInput').value = settings.start;
-    if (document.activeElement !== $('goalInput')) $('goalInput').value = settings.goal;
+    if (document.activeElement !== $('startInput') || Number($('startInput').value) !== settings.start) $('startInput').value = settings.start;
+    if (document.activeElement !== $('goalInput') || Number($('goalInput').value) !== settings.goal) $('goalInput').value = settings.goal;
+    $('startInput').max = D.maxStarForLevel(settings.level) - 1;
+    $('goalInput').max = D.maxStarForLevel(settings.level);
     if (document.activeElement !== $('spareInput')) $('spareInput').value = settings.spare ? settings.spare.toLocaleString('en-US') : '';
     $('spareNote').textContent = settings.spare > 0
       ? '파괴 1회마다 ' + meso(settings.spare) + ' 메소가 지출에 더해집니다.'
@@ -402,9 +404,10 @@
   function renderGame() { renderStage(); renderStats(); renderLog(); }
 
   function refresh() {
-    settings.level = Math.min(300, Math.max(1, settings.level || 1));
-    settings.start = Math.min(MAX - 1, Math.max(0, settings.start));
-    settings.goal = Math.min(MAX, Math.max(settings.start + 1, settings.goal));
+    settings.level = Math.min(300, Math.max(1, Math.round(settings.level || 1)));
+    var maxStar = D.maxStarForLevel(settings.level);
+    settings.start = Math.min(maxStar - 1, Math.max(0, Math.round(settings.start)));
+    settings.goal = Math.min(maxStar, Math.max(settings.start + 1, Math.round(settings.goal)));
     if (!session.cleared && (session.star < settings.start || session.star >= settings.goal)) {
       session.star = settings.start;
     }

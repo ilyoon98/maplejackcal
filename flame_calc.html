@@ -89,8 +89,7 @@
     </div>
   </nav>
 <header class="fc-header">
-  <div><p class="fc-kicker">환생의 불꽃 · 목표 옵션 설계</p><h1>추가옵션 계산기</h1><p class="sub">원하는 추옵까지, 불꽃과 메소가 얼마나 필요할까요?</p></div>
-  <a href="item_craft_calc.html">전체 아이템 제작 비용 보기 →</a>
+  <h1>추가옵션 계산기</h1>
 </header>
 <main class="fc-layout">
   <section aria-label="추가옵션 설정">
@@ -104,26 +103,13 @@
         <div class="ic-field" id="weaponField"><label for="weapon">무기 종류</label><select id="weapon"></select></div>
       </div>
       <div id="weaponVariants" class="ic-chips fc-variants" role="group" aria-label="200레벨 무기" hidden></div>
+      <div id="armorLevels" class="ic-chips fc-variants" role="group" aria-label="방어구 참고 레벨" hidden></div>
     </div>
-    <div class="ic-panel"><h2>불꽃과 목표 옵션</h2><p class="ic-note">최대 4개 조건을 동시에 만족하는 확률입니다.</p><div id="flameBody"></div></div>
+    <div class="ic-panel"><h2>추옵 설정</h2><div id="flameBody"></div></div>
   </section>
   <aside class="ic-panel fc-result" aria-labelledby="resultTitle"><h2>선택한 추가옵션 합계</h2><div id="optionTotal" aria-live="polite"></div><h2 id="resultTitle">목표 달성 예상</h2><div id="flameResult" aria-live="polite" aria-atomic="true"></div></aside>
 </main>
 <details class="ic-panel" id="weaponReference"><summary>1추부터 5추까지</summary><div id="weaponTable"></div><p class="ic-note">수치는 추가옵션으로 붙는 증가량입니다. <a id="weaponSource" href="https://matsu1207.tistory.com/402" target="_blank" rel="noopener">무기 공·마 수치 출처: 정심심</a></p><div id="allOptionTable"></div></details>
-<details class="ic-panel fc-help"><summary>계산 기준과 주스탯 환산 안내</summary>
-  <ul>
-    <li>보스 장비 규칙(옵션 4개 · 3~7단계)으로 계산합니다. 이 규칙을 따르는 방어구·장신구는 같은 레벨이면 추옵 확률과 수치가 같아 하나로 묶었습니다. 추가옵션이 붙지 않는 부위와 별도 규칙의 장비는 대상이 아닙니다.</li>
-    <li>옵션 종류는 중복되지 않으며, 각 옵션의 단계는 개별적으로 결정됩니다. 목표 단계 이상이면 성공으로 계산합니다.</li>
-    <li>주스탯 환산: 주스탯 1 = 1급, 올스탯 1% = 10급, 공격력 또는 마력 1 = 4급. HP는 환산에 포함하지 않습니다.</li>
-    <li>STR·DEX·INT·LUK의 확률이 같으므로 주스탯 종류는 따로 고르지 않습니다. 공·마는 직업에 필요한 한 종류만 환산합니다. 세부 조건은 급수 조건에 추가로 만족해야 하는 조건이며, 급수에 수치를 한 번 더 더하지 않습니다.</li>
-    <li>무기 종류와 레벨·계열에 맞는 공·마 수치표를 자동 적용합니다. 150제 파프니르, 160제 앱솔랩스, 200제 아케인셰이드·제네시스, 250제 데스티니를 지원합니다. 같은 200제라도 아케인과 제네시스의 공·마 수치는 다릅니다.</li>
-    <li>무기 공·마는 급수 계산에서 제외합니다. 지원하지 않는 레벨·무기 조합은 공·마 수치를 임의로 추정하지 않습니다. 데스티니 제로 무기의 3~5추는 출처에서 미확인으로 표기되어 있습니다.</li>
-    <li>최종 합계는 선택한 각 단계에 정확히 맞춘 추가옵션 증가량입니다. 미선택 옵션, 장비 기본 수치, 주문서, 스타포스, 잠재능력은 제외합니다. 올스탯 %와 고정 스탯은 따로 표시합니다.</li>
-    <li>제로 라즐리·라피스는 공·마 참고표만 제공합니다. 일반 보스 장비 규칙과 다른 옵션 생성 규칙을 확인하기 전까지 확률과 기타 옵션 합계는 계산하지 않습니다.</li>
-    <li>메소 비용은 1회 3,000,000 메소로 고정하여 계산합니다.</li>
-    <li>확률은 기존 계산기의 <a href="https://maplestory.nexon.com/Guide/OtherProbability/game/gameAddOption" target="_blank" rel="noopener">넥슨 공개 확률표</a> 기준이며, 단계별 수치는 기존 환산표를 사용합니다.</li>
-  </ul>
-</details>
 </div>
 <script src="flame_core.js"></script>
 <script src="flame_weapon_data.js"></script>

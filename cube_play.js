@@ -1,27 +1,22 @@
 const RANKS = ['레어', '에픽', '유니크', '레전드리'];
 const RANK_COLORS = ['#7cd4ff', '#b58cff', '#ffa94d', '#6bd98a'];
 const KIND_LABEL = { normal:'잠재능력', additional:'에디셔널 잠재능력' };
-const LEVEL_BRACKETS = [[1,'1~159'],[160,'160~199'],[200,'200~249'],[250,'250~300']];
 const AUTO_SPEED = 15; // 빠름 고정
-// 잠재능력 재설정(=블랙 큐브와 동일 기능) 메소 가격. 레벨구간 → [레어,에픽,유니크,레전드리]
-const POTENTIAL_COST = { 1:[4000000,16000000,34000000,40000000], 160:[4250000,17000000,36125000,42500000], 200:[4500000,18000000,38250000,45000000], 250:[5000000,20000000,42500000,50000000] };
-const ADDITIONAL_COST = { 1:[9750000,27300000,66300000,78000000], 160:[10375000,29050000,70550000,83000000], 200:[11000000,30800000,74800000,88000000], 250:[12250000,34300000,83300000,98000000] };
-const PRICE_TABLES = { potential:POTENTIAL_COST, additional:ADDITIONAL_COST };
 const CUBE_ICON = {
   potentialMeso:['잠재.webp'], black:['블랙.webp'], red:['레드.webp'], meisterMax:['명장.webp'], meister:['장인.webp'], suspicious:['수상한.webp'],
   addReset:['에디잠재.webp'], addWhite:['에디큐브.webp','화이트에디.webp'], addSuspicious:['수상한에디.webp','브론즈.webp']
 };
 function iconImg(files){ return files.map(f=>`<img src="icons/cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
 const CUBES = {
-  potentialMeso:{name:'잠재능력 재설정 (메소)', kind:'normal', p:[.15,.035,.014], cap:[10,42,107], official:'potential'},
-  black:{name:'블랙 큐브', kind:'normal', p:[.15,.035,.014], cap:[10,42,107]},
-  red:{name:'레드 큐브', kind:'normal', p:[.06,.018,.003], cap:[25,83,500]},
-  meisterMax:{name:'명장의 큐브 / 골드', kind:'normal', p:[.079994,.016959,.001996], cap:[null,null,null]},
-  meister:{name:'장인의 큐브 / 실버', kind:'normal', p:[.047619,.011858], cap:[null,null]},
-  suspicious:{name:'수상한 큐브', kind:'normal', p:[.009901], cap:[null]},
-  addReset:{name:'에디셔널 잠재 재설정', kind:'additional', p:[.02381,.009804,.007], cap:[62,152,214], official:'additional'},
-  addWhite:{name:'에디셔널 큐브 / 화이트 에디셔널 큐브', kind:'additional', p:[.047619,.019608,.007], cap:[62,152,214]},
-  addSuspicious:{name:'수상한 에디셔널 큐브 / 브론즈 에디셔널 큐브', kind:'additional', p:[.004], cap:[null]}
+  potentialMeso:{name:'잠재능력 재설정 (메소)', kind:'normal', ...CUBE_GRADE.potentialMeso, official:'potential'},
+  black:{name:'블랙 큐브', kind:'normal', ...CUBE_GRADE.black},
+  red:{name:'레드 큐브', kind:'normal', ...CUBE_GRADE.red},
+  meisterMax:{name:'명장의 큐브 / 골드', kind:'normal', ...CUBE_GRADE.meisterMax},
+  meister:{name:'장인의 큐브 / 실버', kind:'normal', ...CUBE_GRADE.meister},
+  suspicious:{name:'수상한 큐브', kind:'normal', ...CUBE_GRADE.suspicious},
+  addReset:{name:'에디셔널 잠재 재설정', kind:'additional', ...CUBE_GRADE.addReset, official:'additional'},
+  addWhite:{name:'에디셔널 큐브 / 화이트 에디셔널 큐브', kind:'additional', ...CUBE_GRADE.addWhite},
+  addSuspicious:{name:'수상한 에디셔널 큐브 / 브론즈 에디셔널 큐브', kind:'additional', ...CUBE_GRADE.addSuspicious}
 };
 const DEFAULT_RANK = 2; // 기본 현재 등급: 유니크
 let state = { tab:'normal', cube:'black', from:DEFAULT_RANK, startRank:DEFAULT_RANK, to:3, level:200, pity:0, miracle:false, stageAgg:{}, runStagePct:{}, runMiracleOn:false, runMiracleOff:false, runAttempts:0, runMeso:0, runExpected:0, runLog:[], mesoSpent:0, sessionRuns:0, expectedTotal:0, pendingChoice:null };
@@ -43,22 +38,13 @@ function currentStep(){ return Math.min(state.from, CUBES[state.cube].p.length-1
 function rankSpan(i){ return `<span style="color:${RANK_COLORS[i]}">${RANKS[i]}</span>`; }
 function stageName(i){ return `${RANKS[i]} → ${RANKS[i+1]}`; }
 function stageNameHtml(i){ return `${rankSpan(i)} → ${rankSpan(i+1)}`; }
-// 큐브 1회에 나가는 메소. 큐브 종류·등급과 무관하게 아이템 레벨 n으로만 정해진다.
-// (인게임 재설정 창의 "재설정 비용". 200제면 200*200*20 = 800,000)
-function cubeFee(level=state.level){
-  const n=Number(level)||0;
-  const rate = n>=121 ? 20 : n>=71 ? 2.5 : n>=31 ? .25 : 0;
-  return Math.floor(n*n*rate);
-}
-// 메소 재설정 비용표의 레벨 구간 키
-function costBracket(level=state.level){ return [...LEVEL_BRACKETS].reverse().find(([lv])=>level>=lv)[0]; }
+// 비용·확률·천장·기대 횟수는 cube_core.js의 공통 엔진을 사용한다.
 // 이 항목 1회 메소. 메소 재설정이면 등급별 비용표, 큐브면 레벨 공식
 function attemptPrice(stage){
   const d=CUBES[state.cube];
-  if(d.official) return (PRICE_TABLES[d.official][costBracket()] || [0,0,0,0])[stage] || 0;
-  return cubeFee();
+  if(d.official) return (PRICE_TABLES[d.official][costBracket(state.level)] || [0,0,0,0])[stage] || 0;
+  return cubeFee(state.level);
 }
-function cubeExpected(p, cap){ return cap ? (1-Math.pow(1-p,cap))/p : 1/p; }
 // 한 판 총 지출의 분포에서 분위수를 구한다. 단계별 시도 횟수 분포를 비용 축에서 합친다(합성곱).
 // 천장까지 끌려가는 소수의 판이 평균을 끌어올리기 때문에, 중앙값은 기대값보다 늘 낮다.
 const quantileCache = new Map();
@@ -139,7 +125,7 @@ function renderLevelRow(){
   const d=CUBES[state.cube];
   $('itemLevelNote').textContent = d.official
     ? `메소 재설정 ${stageName(currentStep())} 1회 ${fmt(attemptPrice(currentStep()))} 메소`
-    : `큐브 1회 ${fmt(cubeFee())} 메소`;
+    : `큐브 1회 ${fmt(cubeFee(state.level))} 메소`;
 }
 function stagePercentile(i, k, forced){
   if(forced) return 1;

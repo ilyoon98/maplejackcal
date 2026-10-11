@@ -34,7 +34,7 @@ const CUBE_GRADE = {
   meister:{ p:[.047619,.011858], cap:[null,null] },
   suspicious:{ p:[.009901], cap:[null] },
   addReset:{ p:[.02381,.009804,.007], cap:[62,152,214] },
-  addWhite:{ p:[.047619,.019608,.007], cap:[62,152,214] },
+  addWhite:{ p:[.047619,.019608,.007], cap:[31,76,214] },
   addSuspicious:{ p:[.004], cap:[null] }
 };
 // 천장이 있으면 그 횟수째에 반드시 성공하므로 기대 횟수가 1/p보다 짧아진다

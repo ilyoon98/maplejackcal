@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-11",
+  "dataFetchedAt": "2026-09-25",
+  "checks": {
+    "flameClosedForm": 576,
+    "gradeFormulas": 44,
+    "optionTables": {
+      "tables": 1205,
+      "lines": 3615,
+      "maximumRoundingDeviation": 0.001050000000063278
+    },
+    "optionEnumeration": 48,
+    "starforceMarkov": 468,
+    "liveOptionTables": {
+      "requested": 1205,
+      "matched": 1205,
+      "mismatches": [],
+      "errors": [],
+      "source": "https://maplestory.nexon.com/Guide/OtherProbability/cube"
+    },
+    "browser": {
+      "pages": [
+        "flame_calc.html",
+        "cube_calc.html",
+        "cube_option_calc.html",
+        "starforce_calc.html"
+      ],
+      "pageErrors": 0,
+      "flameExistingSuitesPassed": 2,
+      "gradeCeilingMismatchReproduced": true,
+      "starforceInvalidRangeReproduced": true,
+      "optionCostBoundariesPassed": [
+        159,
+        160,
+        199,
+        200,
+        249,
+        250
+      ]
+    },
+    "existingTests": {
+      "passed": 48,
+      "failed": 0
+    }
+  },
+  "findings": [
+    {
+      "calculator": "grade",
+      "issue": "additional_cube_ceiling",
+      "actual": [
+        62,
+        152,
+        214
+      ],
+      "expected": [
+        31,
+        76,
+        214
+      ],
+      "source": "https://maplestory.nexon.com/Guide/OtherProbability/cube/addi",
+      "expectations": [
+        {
+          "actual": 19.980292557304537,
+          "expected": 16.372460226636772
+        },
+        {
+          "actual": 48.4857959971197,
+          "expected": 39.67693459906807
+        },
+        {
+          "actual": 111.08539275420192,
+          "expected": 111.08539275420192
+        }
+      ],
+      "affectedFiles": [
+        "cube_core.js:42",
+        "cube_play.js:23"
+      ]
+    },
+    {
+      "calculator": "starforce",
+      "issue": "level_maximum_not_enforced",
+      "example": {
+        "level": 130,
+        "goal": 30,
+        "calculatedMeso": 867524052726653.6
+      },
+      "source": "https://maplestory.nexon.com/Guide/N23GameInformation/Articles/412",
+      "expectedMaximumAtLevel130": 20
+    }
+  ],
+  "limitations": [
+    {
+      "calculator": "flame",
+      "issue": "all_flames_valued_at_3000000",
+      "detail": "The standalone UI values every flame attempt at 3,000,000 meso. This is an assumption for item flames; 3,000,000 is the official meso-reset fee.",
+      "source": "https://maplestory.nexon.com/news/update/799"
+    },
+    {
+      "calculator": "flame",
+      "issue": "weapon_values_not_exhaustively_verified_against_primary_data",
+      "detail": "Weapon attack tables originate from a community reference. Existing consistency tests pass; this audit does not certify every weapon value from primary game data."
+    },
+    {
+      "calculator": "flame_and_options",
+      "issue": "identical_previous_result_exclusion_not_modeled",
+      "detail": "Official rules reject a roll identical to the previous result. The engines have no previous-option input and use unconditional probabilities and geometric expectations.",
+      "sources": [
+        "https://maplestory.nexon.com/Guide/OtherProbability/game/gameAddOption",
+        "https://maplestory.nexon.com/Guide/OtherProbability/cube/black"
+      ]
+    },
+    {
+      "calculator": "grade",
+      "issue": "fresh_pity_counter_assumed",
+      "detail": "Expected attempts assume no existing failures in the world-wide counter for that reset method and grade."
+    },
+    {
+      "calculator": "starforce",
+      "issue": "cost_and_fixed_recovery_are_not_primary_verified",
+      "detail": "Base enhancement fees are reverse-engineered from other calculators. Fixed recovery fees are estimates computed from a discounted, safeguarded enhancement expectation; the default automatic policy uses these estimates. Markov validation proves consistency with these inputs, not exact in-game prices."
+    }
+  ]
+}

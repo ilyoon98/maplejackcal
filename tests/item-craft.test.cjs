@@ -17,7 +17,7 @@ function app(saved = {}) {
   });
   for (const file of ['cube_option_data.js', 'cube_core.js', 'flame_core.js', 'flame_weapon_data.js', 'starforce_data.js', 'starforce_calc.js', 'item_craft_calc.js']) {
     let source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
-    if (file === 'item_craft_calc.js') source = source.replace(/\}\)\(\);\s*$/, 'window.test = { state, compute, refresh };})();');
+    if (file === 'item_craft_calc.js') source = source.replace(/\}\)\(\);\s*$/, 'window.test = { state, compute, refresh, recordPercentile };})();');
     vm.runInContext(source, context);
   }
   const api = context.window.test;
@@ -181,7 +181,7 @@ test('추옵 무기 계열의 실제 수치와 마력 확률을 제작 비용에
     assert.doesNotMatch(restored.get('flameBody').innerHTML, /data-flame="/);
     assert.equal(r.flame.price, 3000000);
     assert.ok(Math.abs(r.flame.avg - 3000000 / r.flame.p) < 0.0001);
-    assert.equal(r.star.spare, a.state.base + r.flame.avg);
+    assert.equal(r.star.spare, a.state.base);
   }
 });
 
@@ -268,4 +268,136 @@ test('각각은 가능해도 동시에 불가능한 조건은 조합 단위로 �
   assert.equal(a.compute().pot.opt, null);
   assert.match(a.get('excludedGoals').innerHTML, /동시에 달성할 수 없는 조합/);
   assert.ok(Number.isFinite(a.compute().avg));
+});
+
+
+test('흔적의 추옵은 한 번만 제작하고 파괴 비용과 방지 선택에 다시 더하지 않는다', () => {
+  const a = app({ base: 1000000000 });
+  const before = a.compute();
+  a.state.flameConds[0].minTier = 7;
+  const after = a.compute();
+  assert.ok(after.flame.avg > before.flame.avg);
+  assert.equal(after.star.spare, a.state.base);
+  assert.equal(after.star.avg, before.star.avg);
+  assert.deepEqual(after.star.safeguard, before.star.safeguard);
+  assert.ok(Math.abs((after.avg - before.avg) - (after.flame.avg - before.flame.avg)) < 0.001);
+  const { StarforceCalc: SF, StarforceData: D } = a.context.window;
+  const opts = { ...a.state.star, level: a.state.level, spare: a.state.base, recoveryMode: 'auto' };
+  const result = SF.calculate({ ...opts, safeguard: after.star.safeguard });
+  assert.equal(after.star.avg, result.total.meso);
+  for (let mask = 0; mask < 8; mask++) {
+    const safeguard = Object.fromEntries(D.PROTECT_STARS.map((s, i) => [s, !!(mask & (1 << i))]));
+    assert.ok(after.star.avg <= SF.calculate({ ...opts, safeguard }).total.meso);
+  }
+});
+
+test('제작 백분위 표본에서도 파괴 시 추옵을 다시 지불하지 않는다', async () => {
+  const a = app({ base: 1000000000, on: { pot: false, addi: false }, star: {recoveryDiscount20:true} });
+  const r = a.compute();
+  r.flame = { p: 1, price: 3000000, min: 3000000 };
+  a.context.window.StarforceCalc.sampleCosts = function* (opts, count, random, limit, sampleSpare) {
+    assert.equal(opts.spare, a.state.base);
+    assert.equal(opts.recoveryMode, 'auto');
+    assert.equal(opts.recoveryDiscount20, true);
+    assert.equal(sampleSpare, undefined);
+    // Every synthetic run destroys twice, paying only two replacement items.
+    return Array(count).fill(2 * opts.spare);
+  };
+  const percentile = a.recordPercentile(r);
+  const total = 3 * a.state.base + r.flame.price;
+  assert.equal((await percentile(total - 1)).percent, 0);
+  assert.equal((await percentile(total)).percent, 100);
+});
+
+test('제작 자동 복구는 독립 계산기의 복구표·스페어·할인·파괴방지와 일치한다', () => {
+  let fixed = 0, normal = 0;
+  for (const [level, goal] of [[130,20],[200,22],[200,25],[250,24]]) {
+    for (const base of [0,1e9,1e11]) for (const recoveryDiscount20 of [false,true]) {
+      const a = app({ part:'모자', level, base, on:{flame:false,pot:false,addi:false},
+        star:{start:18,goal,recoveryMode:'off',recoveryDiscount20,discount30:false,destroyDown30:false,lucky5:false} });
+      const actual = a.compute().star;
+      const { StarforceCalc: SF, StarforceData: D } = a.context.window;
+      const opts = { ...a.state.star, level, spare:base, recoveryMode:'auto' };
+      const safeguard = D.bestSafeguard(opts, o => SF.calculate(o).total.meso);
+      const expected = SF.calculate({ ...opts, safeguard });
+      assert.equal(actual.avg, expected.total.meso);
+      assert.equal(actual.tries, expected.total.tries);
+      assert.equal(actual.destroys, expected.total.destroys);
+      assert.deepEqual(actual.safeguard, safeguard);
+      assert.deepEqual(actual.recovery, expected.recovery.filter(r => r.star >= 15 && r.star < goal));
+      const off = SF.calculate({ ...opts, safeguard, recoveryMode:'off' });
+      assert.ok(actual.avg <= off.total.meso + 0.001);
+      assert.ok(actual.why.every(w => w.extraMeso >= -0.001));
+      for (const row of actual.recovery.filter(r => r.destroy > 0)) {
+        if (row.useFixed) fixed++; else normal++;
+        assert.equal(row.useFixed, row.available && row.fixedCost < row.normalCost);
+      }
+    }
+  }
+  assert.ok(fixed > 0 && normal > 0);
+});
+
+test('자동 복구가 노작값에 따라 중간 성과 12성을 선택하고 복구비 할인도 적용한다', () => {
+  const star = {start:18,goal:25,discount30:false,destroyDown30:false,lucky5:false};
+  const low = app({ base:0, star });
+  const high = app({ base:1e11, star });
+  const lowAt = s => low.compute().star.recovery.find(r => r.star === s);
+  const highAt = s => high.compute().star.recovery.find(r => r.star === s);
+  assert.equal(lowAt(21).useFixed, true);
+  assert.equal(lowAt(21).restoreStar, 21);
+  assert.equal(lowAt(21).copies, 3);
+  assert.equal(lowAt(20).copies, 2);
+  assert.equal(lowAt(24).restoreStar, 22);
+  assert.equal(lowAt(24).copies, 4);
+  assert.equal(highAt(21).useFixed, false);
+  const before = low.compute().star;
+  low.click({sf:'recoveryDiscount20'});
+  const after = low.compute().star;
+  assert.equal(low.state.star.recoveryDiscount20, true);
+  assert.equal(after.recovery.find(r => r.star === 20).fee, before.recovery.find(r => r.star === 20).fee * .8);
+  assert.ok(after.avg < before.avg);
+  assert.match(low.get('recoveryNote').innerHTML, /21성 복구/);
+  assert.match(high.get('recoveryNote').innerHTML, /12성 복구/);
+  assert.doesNotMatch(low.get('safeguardNote').innerHTML, /넘으면 ON|손익분기/);
+});
+
+test('제작 계산기는 일반 장비의 모든 레벨 경계에서 강화 한도를 적용한다', () => {
+  for (const [level, max] of [[94,5],[95,8],[107,8],[108,10],[117,10],[118,15],[127,15],[128,20],[137,20],[138,30]]) {
+    const a = app({ part: '모자', level, star: { start: 30, goal: 30 } });
+    assert.equal(a.state.star.start, max);
+    assert.equal(a.state.star.goal, max);
+    assert.equal(Number(a.get('starStart').max), max);
+    assert.equal(Number(a.get('starGoal').max), max);
+    assert.equal(a.compute().star, null);
+    a.state.star.start = 0;
+    a.refresh();
+    assert.ok(Number.isFinite(a.compute().star.avg));
+  }
+});
+
+test('제작 등업은 천장 분포의 평균이며 등업 옵션 첫 추첨을 중복 과금하지 않는다', () => {
+  for (const miracle of [false, true]) for (const level of [159,160,199,200,249,250]) {
+    const a = app({ level, on: { flame:false, star:false }, miracle: { pot:miracle, addi:miracle },
+      pot: { from:2, to:3, rows:[{key:'공격력|%',min:12}] },
+      addi: { from:0, to:3, rows:[{key:'공격력|%',min:12}] } });
+    for (const short of ['pot','addi']) {
+      const result = a.compute()[short];
+      if (short === 'addi') assert.deepEqual(Array.from(result.steps.map(s => s.cap)), [62,152,214]);
+      let gradeCost = 0;
+      for (const step of result.steps) {
+        let expected = 0;
+        for (let k = 1; k <= step.cap; k++) {
+          expected += k * (1 - step.p) ** (k - 1) * (k === step.cap ? 1 : step.p);
+        }
+        gradeCost += expected * step.price;
+      }
+      const opt = result.opt;
+      // After the free target-grade roll: E = (1-p)*(1+E).
+      const paidRerolls = (1 - opt.p) / opt.p;
+      assert.ok(Math.abs(result.avg - gradeCost - paidRerolls * opt.price) < 0.001);
+      a.state[short].from = a.state[short].to;
+      const alreadyUpgraded = a.compute()[short];
+      assert.ok(Math.abs(alreadyUpgraded.avg - opt.price / opt.p) < 0.001);
+    }
+  }
 });

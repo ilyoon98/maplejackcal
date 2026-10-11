@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-12",
+  "dataFetchedAt": "2026-09-25",
+  "checks": {
+    "flameClosedForm": 576,
+    "gradeFormulas": 44,
+    "optionTables": {
+      "tables": 1205,
+      "lines": 3615,
+      "maximumRoundingDeviation": 0.001050000000063278
+    },
+    "optionEnumeration": 48,
+    "starforceMarkov": 468,
+    "starforceLevelMaximum": 10,
+    "liveOptionTables": {
+      "requested": 1205,
+      "matched": 1205,
+      "mismatches": [],
+      "errors": [],
+      "source": "https://maplestory.nexon.com/Guide/OtherProbability/cube",
+      "verifiedOn": "2026-10-11"
+    }
+  },
+  "findings": [],
+  "resolved": [
+    {
+      "calculator": "grade",
+      "issue": "additional_cube_ceiling",
+      "caps": [
+        31,
+        76,
+        214
+      ],
+      "source": "https://maplestory.nexon.com/Guide/OtherProbability/cube/addi"
+    },
+    {
+      "calculator": "starforce",
+      "issue": "level_maximum_not_enforced",
+      "example": {
+        "level": 130,
+        "maxStar": 20
+      },
+      "source": "https://maplestory.nexon.com/Guide/N23GameInformation/Articles/412"
+    },
+    {
+      "calculator": "item_craft",
+      "issue": "flame_cost_repeated_after_destruction",
+      "detail": "Flame creation is charged once, in both expectations and percentile samples. Each destruction charges the selected restoration fee and required copies multiplied by the replacement item price, without recreating flames. Regression-tested in tests/item-craft.test.cjs.",
+      "source": "https://maplestory.nexon.com/Guide/N23GameInformation/Articles/412"
+    },
+    {
+      "calculator": "item_craft",
+      "issue": "automatic_recovery_not_passed_to_shared_engine",
+      "detail": "Crafting now passes recoveryMode=auto and recoveryDiscount20 to both expectations and percentile sampling. Safeguard selection compares all 8 combinations with the same automatic recovery policy. The restoration table and required copies match StarforceCalc.calculate; tested against low/high replacement prices and restoration discounts in tests/item-craft.test.cjs."
+    }
+  ],
+  "limitations": [
+    {
+      "calculator": "flame",
+      "issue": "all_flames_valued_at_3000000",
+      "detail": "The standalone UI values every flame attempt at 3,000,000 meso. This is an assumption for item flames; 3,000,000 is the official meso-reset fee.",
+      "source": "https://maplestory.nexon.com/news/update/799"
+    },
+    {
+      "calculator": "flame",
+      "issue": "weapon_values_not_exhaustively_verified_against_primary_data",
+      "detail": "Weapon attack tables originate from a community reference. Existing consistency tests pass; this audit does not certify every weapon value from primary game data."
+    },
+    {
+      "calculator": "grade",
+      "issue": "fresh_pity_counter_assumed",
+      "detail": "Expected attempts assume no existing failures in the world-wide counter for that reset method and grade."
+    },
+    {
+      "calculator": "starforce",
+      "issue": "cost_and_fixed_recovery_are_not_primary_verified",
+      "detail": "Base enhancement fees are reverse-engineered from other calculators. Fixed recovery fees are estimates computed from a discounted, safeguarded enhancement expectation; the default automatic policy uses these estimates. Markov validation proves consistency with these inputs, not exact in-game prices."
+    }
+  ],
+  "assumptions": [
+    {
+      "calculator": "flame_and_options",
+      "assumption": "unconditional_probability",
+      "detail": "At the user's request, previous-option input and identical-previous-result exclusion remain outside scope. Use the published unconditional probability model."
+    }
+  ],
+  "validation": {
+    "relatedNodeTests": {
+      "passed": 88,
+      "failed": 0
+    },
+    "browserChecks": [
+      "tests/calculator-rules-ui.cjs",
+      "tests/item-craft-record-ui.cjs"
+    ],
+    "craftEngineComparison": {
+      "flame": "FlameCore.probability",
+      "grade": "cube_core.js CUBE_GRADE / cubeExpected",
+      "options": "cube_core.js successProb",
+      "starforce": "StarforceCalc.calculate with automatic 12-star/fixed restoration, required copies and recovery discount",
+      "safeguard": "StarforceData.bestSafeguard (all 8 combinations with automatic recovery)"
+    },
+    "craftStarforceDefaults": "Shining event enabled; automatic restoration selects the cheaper of 12-star re-enhancement and fixed restoration using the standalone calculator recovery table. Compare standalone results with matching event settings, replacement item price and recovery discount."
+  }
+}

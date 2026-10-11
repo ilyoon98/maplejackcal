@@ -12,6 +12,17 @@
   const BOSS = true, MAX_GOALS = 4;
   const availableTiers = () => F.tiers(BOSS).filter((tier, i) => F.FLAMES[state.flame].tiers[i] > 0);
   const WEAPON_LEVELS = [150, 160, 200, 250];
+  // Community equipment guides provide reference targets, not an official cutoff.
+  // 140~200: areviewer.tistory.com/874; higher-investment targets: catandi.tistory.com/107.
+  // 250: inven.co.kr/board/maple/2304/38033 (17~18-star equipment).
+  const ARMOR_GUIDES = [
+    { level: 140, name: '보스 장신구', low: 110, high: 130, target: 110 },
+    { level: 150, name: '카루타', low: 110, high: 130, target: 110 },
+    { level: 160, name: '앱솔랩스', low: 110, high: 130, target: 120 },
+    { level: 200, name: '아케인셰이드', low: 130, high: 160, target: 150 },
+    { level: 250, name: '에테르넬', low: 150, high: 160, target: 160 }
+  ];
+  const armorGuide = () => state.part === '장비' ? ARMOR_GUIDES.find(g => g.level === state.level) : null;
   const selectedWeapon = () => state.part === '무기' ? W.resolve(state.weapon, state.weaponSeries) : null;
   const attackId = () => selectedWeapon()?.stat || (state.mainStat === 'INT' ? 'MATT' : 'ATT');
   let state = defaults();
@@ -67,9 +78,22 @@
       if (seen.has(key) || (c.kind === 'opt' && (!valid.includes(c.id) || c.id === 'MATT'))) return false;
       seen.add(key);
       return true;
-    }).slice(0, MAX_GOALS).map(c => c.kind === 'grade'
+    }).slice(0, state.part === '장비' ? MAX_GOALS + 1 : MAX_GOALS).map(c => c.kind === 'grade'
       ? { kind: 'grade', min: Math.min(10000, Math.max(0, Math.round(Number(c.min) || 0))) }
       : { kind: 'opt', id: c.id, minTier: Math.min(7, Math.max(3, Math.round(Number(c.minTier) || 6))) });
+    // Keep the armor target present, including old saves containing only options.
+    if (state.part === '장비' && !state.flameConds.some(c => c.kind === 'grade')) {
+      state.flameConds.unshift({ kind: 'grade', min: 100 });
+    }
+  }
+
+  function renderArmorGuide(gradeHtml) {
+    $('armorGuide').hidden = state.part !== '장비';
+    if (state.part !== '장비') return;
+    const guide = armorGuide();
+    $('armorGuide').innerHTML = gradeHtml +
+      (guide ? '<p class="fc-guide-target">추천 <strong>' + guide.low + '~' + guide.high + '급</strong></p>'
+        : '<p class="ic-note">' + state.level + '제 추천 없음</p>');
   }
 
   function renderFlame() {
@@ -90,12 +114,17 @@
     const used = state.flameConds;
     const full = used.length >= MAX_GOALS;
 
-    const condHtml = used.map((c, i) => {
+    const condRows = used.map((c, i) => {
       if (c.kind === 'grade') {
-        return '<div class="ic-row">' +
-          '<span class="ic-row-name">주스탯 환산 급수<small>' + esc(GRADE_HINT(weapon)) + '</small></span>' +
-          '<span class="ic-row-val"><input type="number" min="0" step="1" class="ic-num" data-cond="' + i + '" value="' + esc(c.min) + '"> 급 이상</span>' +
-          '<button type="button" class="ic-x" data-delcond="' + i + '">×</button></div>';
+        const guide = armorGuide();
+        const applied = guide && c.min === guide.target;
+        return '<div class="ic-row fc-grade-row">' +
+          '<label class="fc-grade-label" for="goalGrade">목표 추옵</label>' +
+          (guide ? '<button type="button" id="applyArmorGrade" class="ic-chip fc-guide-apply' + (applied ? ' active' : '') + '" aria-pressed="' + !!applied + '">적정 추옵 적용</button>' : '') +
+          '<div class="fc-grade-value"><div class="fc-grade-control">' +
+          '<button type="button" class="ic-level-step fc-grade-step" data-grade-step="-10" data-cond="' + i + '" aria-label="목표 추옵 10급 감소"' + (c.min <= 0 ? ' disabled' : '') + '>−</button>' +
+          '<input id="goalGrade" type="number" min="0" max="10000" step="10" inputmode="numeric" class="ic-num fc-grade-input" data-cond="' + i + '" value="' + esc(c.min) + '">' +
+          '<button type="button" class="ic-level-step fc-grade-step" data-grade-step="10" data-cond="' + i + '" aria-label="목표 추옵 10급 증가"' + (c.min >= 10000 ? ' disabled' : '') + '>+</button></div><span>급 이상</span></div></div>';
       }
       const o = F.BY_ID[c.id];
       const tierChips = tiers.map((t, k) =>
@@ -108,7 +137,11 @@
           : valueText(o, c.minTier) + ' 이상') + '</span>' +
         '<button type="button" class="ic-x" data-delcond="' + i + '">×</button>' +
         '<span class="ic-tiers">' + tierChips + '</span></div>';
-    }).join('');
+    });
+    // Keep each row's original condition index while placing the armor grade
+    // input together with the button that updates it, ahead of detailed goals.
+    const gradeHtml = condRows.filter((_, i) => used[i].kind === 'grade').join('');
+    const condHtml = condRows.filter((_, i) => weapon || used[i].kind !== 'grade').join('');
 
     const gradePick = used.some(c => c.kind === 'grade') ? ''
       : '<button type="button" class="ic-pick" data-addgrade="1"' + (full ? ' disabled' : '') + '>주스탯 급수</button>';
@@ -118,29 +151,27 @@
     const primaryIds = weapon ? FLAME_PRIMARY : ['ATT', 'ALL_PCT'];
     const primary = free.filter(o => primaryIds.includes(o.id));
     const others = free.filter(o => !primaryIds.includes(o.id));
-    const price = 3000000;
 
-    $('flameBody').innerHTML =
-      '<div class="ic-sub">무엇으로 돌리나요</div>' +
+    const flameHtml = '<section class="fc-flame-settings" aria-label="불꽃 선택"><div class="ic-sub">무엇으로 돌리나요</div>' +
       '<div class="fc-flames">' + [['abyss', '심연 불꽃', '심환불'], ['black', '검은 불꽃', '검환불'], ['burning', '타오르는 불꽃', '타환불']].map(([k, name, icon]) => {
         const active = state.flame === k || k === 'black' && state.flame === 'mesoReset';
         return '<button type="button" class="ic-chip fc-flame' + (active ? ' active' : '') + '" data-flame="' + k + '" aria-pressed="' + active + '" title="' + F.FLAMES[k].name + '"><img src="icons/coin-shop/' + icon + '.webp" alt="" width="28" height="32"><span>' + name + '</span></button>';
       }).join('') + '</div>' +
-      '<p class=\"ic-note\">1회 <b>300만 메소</b> 고정</p>' +
-      '<div class="ic-sub fc-goal-heading">목표 추가옵션 <span class="ic-count">' + used.length + '/' + MAX_GOALS + '</span></div>' +
-      (condHtml || '<p class="ic-empty">아래에서 원하는 추가옵션을 눌러 조건을 넣으세요. 설정한 조건을 모두 만족하는 확률을 계산합니다.</p>') +
-      '<p class="ic-note">공·마와 올스탯을 선택하면 해당 옵션을 반드시 포함하면서 목표 급수도 만족해야 합니다.</p>' +
+      '<p class="ic-note">1회 <b>300만 메소</b> 고정</p></section>';
+
+    $('flameBody').innerHTML =
+      '<section id="armorGuide" class="fc-armor-guide" aria-label="목표 급수와 적정 추옵 안내" hidden></section>' +
+      (condHtml || (!used.length ? '<p class="ic-empty">목표 옵션을 선택하세요.</p>' : '')) +
       '<div class="ic-picks">' + (weapon ? primary.map(pick).join('') + gradePick : gradePick + primary.map(pick).join('')) + '</div>' +
       (others.length ? '<button type="button" class="ic-more" data-more="flame">' +
         (state.showAll.flame ? '세부 조건 접기 ▴' : '세부 조건 추가 ▾') + '</button>' +
         '<div class="ic-picks' + (state.showAll.flame ? '' : ' hidden') + '">' + others.map(pick).join('') + '</div>' : '') +
-      (state.showAll.flame ? '<p class="ic-note">세부 스탯은 STR을 주스탯으로 대표 계산합니다. STR + DEX는 두 스탯이 함께 붙는 복합 추옵이며, 급수에는 STR 수치만 반영합니다.</p>' : '');
+      flameHtml;
+    renderArmorGuide(gradeHtml);
   }
 
   // 주스탯 환산 급수: 주스탯 1 = 1, 올스탯 1% = 10, 공격력(마력) 1 = 4.
   // 어느 스탯을 주스탯으로 잡든 확률이 같아서 스탯을 따로 고를 필요가 없다.
-  const GRADE_HINT = weapon => '주스탯 1 · 올스탯 1% = 10' +
-    (weapon ? ' · 무기 공·마는 급수 환산에서 제외' : ' · 공격력(마력) 1 = 4');
   // 스탯·HP·이속 같은 건 급수 하나에 다 녹아 있어서, 따로 걸 만한 것만 앞줄에 둔다
   const FLAME_PRIMARY = ['ATT', 'ALL_PCT', 'BOSS_DMG', 'DMG'];
 
@@ -161,6 +192,8 @@
     $('weapon').value = state.weapon;
     $('weaponVariants').hidden = state.part !== '무기' || state.level !== 200;
     $('weaponVariants').innerHTML = W.series.filter(s => s.level === 200).map(s => chip(s.name, s.id === state.weaponSeries, 'data-series="' + s.id + '"')).join('');
+    $('armorLevels').hidden = state.part !== '장비';
+    $('armorLevels').innerHTML = ARMOR_GUIDES.map(g => chip(g.level + '제', g.level === state.level, 'data-armor-level="' + g.level + '"')).join('');
     document.querySelectorAll('[data-level-step]').forEach(button => {
       const down = Number(button.dataset.levelStep) < 0;
       button.disabled = state.part === '무기' && (down ? state.level <= 150 : state.level >= 250);
@@ -197,8 +230,7 @@
     const ids = [...new Set([...unknown, ...Object.keys(totals).filter(id => totals[id] !== 0)])];
     $('optionTotal').innerHTML = '<p class="fc-target">' + esc(selectedWeapon()?.name || ('Lv.' + state.level + ' ' + state.part)) + '</p>' +
       (conds.length ? '<dl class="fc-totals">' + ids.map(id => '<div><dt>' + esc(flameLabel(F.BY_ID[id])) + '</dt><dd data-total="' + id + '">' + (unknown.has(id) ? '무기·계열 확인' : (totals[id] > 0 ? '+' : '') + fmt(totals[id]) + (F.BY_ID[id].unit || '')) + '</dd></div>').join('') + '</dl>'
-      : '') + (gradeGoal ? '<dl class="fc-totals"><div><dt>' + (includedGrade ? '나머지 주스탯 환산' : '주스탯 환산') + '</dt><dd id="remainingGrade">' + fmt(remainingGrade) + '급 이상</dd></div></dl>' +
-        (includedGrade ? '<p class="ic-note">필수 옵션 최소 수치 기준 · ' + fmt(gradeGoal.min) + ' − ' + fmt(includedGrade) + ' = ' + fmt(remainingGrade) + '급</p>' : '') : '');
+      : '') + (gradeGoal ? '<dl class="fc-totals"><div><dt>' + (includedGrade ? '나머지 주스탯 환산' : '주스탯 환산') + '</dt><dd id="remainingGrade">' + fmt(remainingGrade) + '급 이상</dd></div></dl>' : '');
   }
   function renderResult() {
     if (selectedWeapon()?.special) {
@@ -228,12 +260,25 @@
         return '<article class="fc-chance"><span>성공 확률 ' + Math.round(q * 100) + '%</span><strong>' + fmt(count) + '회</strong><small>' + fmt(count * price) + ' 메소</small></article>';
       }).join('') + '</div>';
   }
-  function refresh() {
+  function refresh(preserveGradeInput = false) {
     normalize();
     $('level').value = state.level;
     $('part').value = state.part;
     renderWeapon();
-    renderFlame();
+    if (preserveGradeInput) {
+      // Committing typed input must not replace a step button during its click.
+      const grade = state.flameConds.find(c => c.kind === 'grade');
+      $('goalGrade').value = grade.min;
+      document.querySelectorAll('[data-grade-step]').forEach(button => {
+        button.disabled = Number(button.dataset.gradeStep) < 0 ? grade.min <= 0 : grade.min >= 10000;
+      });
+      const apply = $('applyArmorGrade');
+      if (apply) {
+        const applied = grade.min === armorGuide()?.target;
+        apply.classList.toggle('active', applied);
+        apply.setAttribute('aria-pressed', applied);
+      }
+    } else renderFlame();
     renderTotal();
     renderResult();
     document.querySelectorAll('[data-delcond]').forEach(el => el.setAttribute('aria-label', '목표 옵션 삭제'));
@@ -250,6 +295,20 @@
     if (el.id === 'resetAll') state = defaults();
     else if (d.flame) state.flame = d.flame === 'black' ? 'mesoReset' : d.flame;
     else if (d.series) state.weaponSeries = d.series;
+    else if (d.armorLevel && state.part === '장비') state.level = Number(d.armorLevel);
+    else if (d.gradeStep) {
+      const grade = state.flameConds[Number(d.cond)];
+      if (!grade || grade.kind !== 'grade') return;
+      grade.min = Math.max(0, Math.min(10000, grade.min + Number(d.gradeStep)));
+    }
+    else if (el.id === 'applyArmorGrade') {
+      const guide = armorGuide();
+      if (!guide) return;
+      const grade = state.flameConds.find(c => c.kind === 'grade');
+      if (grade) grade.min = guide.target;
+      else if (state.flameConds.length < MAX_GOALS) state.flameConds.unshift({ kind: 'grade', min: guide.target });
+      else return;
+    }
     else if (d.addflame && state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'opt', id: d.addflame, minTier: 6 });
     else if (d.addgrade && state.flameConds.length < MAX_GOALS) state.flameConds.push({ kind: 'grade', min: 100 });
     else if (d.delcond !== undefined) state.flameConds.splice(Number(d.delcond), 1);
@@ -262,7 +321,17 @@
         : state.level + direction;
     }
     else return;
-    refresh();
+    refresh(!!d.gradeStep);
+  });
+  document.querySelector('main').addEventListener('keydown', e => {
+    if (e.target.id !== 'goalGrade' || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+    const direction = { ArrowUp: 10, ArrowDown: -10, '+': 10, '-': -10, '−': -10 }[e.key];
+    if (!direction) return;
+    e.preventDefault();
+    const grade = state.flameConds[Number(e.target.dataset.cond)];
+    if (!grade || grade.kind !== 'grade') return;
+    grade.min = Math.max(0, Math.min(10000, Math.round(Number(e.target.value) || 0) + direction));
+    refresh(true);
   });
   document.querySelector('main').addEventListener('change', e => {
     const el = e.target;
@@ -281,7 +350,7 @@
     }
     else if (el.dataset.cond !== undefined) state.flameConds[Number(el.dataset.cond)].min = Number(el.value);
     else return;
-    refresh();
+    refresh(el.id === 'goalGrade');
   });
   refresh();
 })();

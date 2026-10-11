@@ -10,8 +10,9 @@
 //   대박  = 모든 단계가 첫 시도에 성공했을 때 들어가는 메소 (이보다 싸게는 못 만든다)
 //   평균  = 각 단계 기대 비용의 합
 //
-// 파괴 모델: 스타포스에서 파괴되면 노작을 다시 사고 추가옵션도 다시 띄워야 하므로,
-// 스타포스 계산의 "대체 장비값"에 노작 가격 + 추가옵션 기대 비용을 넣는다.
+// 파괴 모델: 스타포스 계산기의 복구표로 12성/중간 성 복구를 자동 선택한다.
+// 장비 흔적에 추가옵션이 보존되므로 대체 장비값은 노작 가격만 넣는다.
+// 추가옵션 제작 비용은 최초 한 번만 부담한다.
 // 잠재는 스타포스를 끝낸 뒤에 돌리는 것으로 본다(파괴로 날아가지 않는다).
 (function () {
   const F = window.FlameCore;
@@ -128,7 +129,7 @@
     weapon: '', weaponSeries: 'genesis',
     flameConds: defaultFlameConds('무기'),
     // 기본값은 샤이닝 스타포스가 열린 때 기준. 파괴방지는 노작값을 보고 자동으로 정한다.
-    star: { start: 0, goal: 22, mvp: 0, pcRoom: false, discount30: true, destroyDown30: true, lucky5: true },
+    star: { start: 0, goal: 22, mvp: 0, pcRoom: false, discount30: true, destroyDown30: true, lucky5: true, recoveryDiscount20: false },
     miracle: { pot: false, addi: false },
     pot: { from: 2, to: 3, rows: [] },
     addi: { from: 0, to: 3, rows: [] },
@@ -200,37 +201,31 @@
   const starOpts = (spare, safeguard) => ({
     level: state.level, start: state.star.start, goal: state.star.goal, spare: spare,
     mvp: state.star.mvp, pcRoom: state.star.pcRoom, discount30: state.star.discount30,
-    destroyDown30: state.star.destroyDown30, lucky5: state.star.lucky5, safeguard: safeguard
+    destroyDown30: state.star.destroyDown30, lucky5: state.star.lucky5, safeguard: safeguard,
+    recoveryMode: 'auto', recoveryDiscount20: state.star.recoveryDiscount20
   });
 
-  // 파괴방지는 노작값(= 파괴 1회 손실)이 손익분기를 넘는 성만 켠다.
-  // 어느 성을 켜느냐가 다른 성의 손익분기도 바꾸므로 더 이상 안 바뀔 때까지 몇 번 돌린다.
+  // 독립 계산기와 동일하게 가능한 8개 조합의 총 기대비용을 비교한다.
   function autoSafeguard(spare) {
-    const sg = {}, why = [];
-    for (let pass = 0; pass < 4; pass++) {
-      let changed = false;
-      for (const st of SFD.PROTECT_STARS) {
-        const r = SF.breakEvenSpare(starOpts(0, sg), st);
-        const want = r.kind === 'always' || (r.kind === 'value' && spare >= r.spare);
-        if (!!sg[st] !== want) { sg[st] = want; changed = true; }
-      }
-      if (!changed) break;
-    }
-    for (const st of SFD.PROTECT_STARS) {
-      const r = SF.breakEvenSpare(starOpts(0, sg), st);
-      if (r.kind !== 'none') why.push({ star: st, on: !!sg[st], breakEven: r.kind === 'always' ? 0 : r.spare });
-    }
-    return { safeguard: sg, why };
+    const sg = SFD.bestSafeguard(starOpts(spare, {}), opts => SF.calculate(opts).total.meso);
+    const res = SF.calculate(starOpts(spare, sg));
+    // 복구 선택이 노작값에 따라 바뀌므로 고정된 손익분기 대신 실제 총비용을 비교한다.
+    const why = SFD.PROTECT_STARS.filter(st => st < state.star.goal).map(st => {
+      const other = { ...sg, [st]: !sg[st] };
+      return { star: st, on: !!sg[st], extraMeso: SF.calculate(starOpts(spare, other)).total.meso - res.total.meso };
+    });
+    return { safeguard: sg, why, result: res };
   }
 
   function starResult(spare) {
     const auto = autoSafeguard(spare);
-    const res = SF.calculate(starOpts(spare, auto.safeguard));
+    const res = auto.result;
     let min = 0;
     for (let k = state.star.start; k < state.star.goal; k++) min += res.steps[k].cost;
     return {
       min, avg: res.total.meso, destroys: res.total.destroys, tries: res.total.tries,
-      spare, safeguard: auto.safeguard, why: auto.why
+      spare, safeguard: auto.safeguard, why: auto.why,
+      recovery: res.recovery.filter(r => r.star >= 15 && r.star < state.star.goal)
     };
   }
 
@@ -272,9 +267,8 @@
     const rawFlame = flameResult();
     const flame = rawFlame && rawFlame.p > 0 ? rawFlame : null;
     const flameExcluded = rawFlame && !flame ? ['현재 목표는 달성 불가하거나 확률 계산 미지원'] : [];
-    // 파괴되면 노작을 다시 사고 추가옵션도 다시 띄워야 한다
-    const flameAvg = flame && Number.isFinite(flame.avg) ? flame.avg : 0;
-    const spare = state.base + flameAvg;
+    // 흔적의 추가옵션을 새 장비에 전수하므로 추옵 비용은 파괴 손실에 포함하지 않는다.
+    const spare = state.base;
     const star = (partOf(state.part).star !== false && state.on.star && state.star.goal > state.star.start) ? starResult(spare) : null;
     const pot = potentialResult({ state: state.pot, short: 'pot', official: 'potential', gradeCube: 'potentialMeso', dataKey: 'black', label: '잠재능력', icon: '<img class="ic-stage-icon" src="icons/cube/블랙.webp" alt="" width="24" height="24">' });
     const addi = potentialResult({ state: state.addi, short: 'addi', official: 'additional', gradeCube: 'addReset', dataKey: 'addi', label: '에디셔널 잠재능력', icon: '<img class="ic-stage-icon" src="icons/cube/에디큐브.webp" alt="" width="24" height="24">' });
@@ -306,12 +300,11 @@
         const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
         const geometric = p => p >= 1 ? 1 : Math.floor(Math.log1p(-random()) / Math.log1p(-p)) + 1;
         const sampleStage = s => !s || !s.price ? 0 : Math.max(0, geometric(s.p) - (s.min === 0 ? 1 : 0)) * s.price;
-        const sampleBase = () => base + sampleStage(r.flame);
         const samplePotential = pot => pot.steps.reduce((sum, s) => sum + Math.min(geometric(s.p), s.cap || Infinity) * s.price, 0) + sampleStage(pot.opt);
         const count = 5000;
         let stars = Array(count).fill(0);
         if (opts) {
-          const gen = SF.sampleCosts(opts, count, random, 5000000, sampleBase);
+          const gen = SF.sampleCosts(opts, count, random, 5000000);
           let next;
           do {
             next = gen.next();
@@ -320,7 +313,7 @@
           if (!next.value) return null;
           stars = next.value;
         }
-        return stars.map(cost => cost + sampleBase() + samplePotential(r.pot) + samplePotential(r.addi)).sort((a, b) => a - b);
+        return stars.map(cost => cost + base + sampleStage(r.flame) + samplePotential(r.pot) + samplePotential(r.addi)).sort((a, b) => a - b);
       })();
       const samples = await pending;
       if (!samples) return null;
@@ -475,14 +468,16 @@
 
   function renderStar() {
     const s = state.star;
-    if (document.activeElement !== $('starStart')) $('starStart').value = s.start;
-    if (document.activeElement !== $('starGoal')) $('starGoal').value = s.goal;
+    if (document.activeElement !== $('starStart') || Number($('starStart').value) !== s.start) $('starStart').value = s.start;
+    if (document.activeElement !== $('starGoal') || Number($('starGoal').value) !== s.goal) $('starGoal').value = s.goal;
+    $('starStart').max = $('starGoal').max = SFD.maxStarForLevel(state.level);
     $('mvpChips').innerHTML = MVP_OPTIONS.map(([v, l]) => chip(l, s.mvp === v, 'data-mvp="' + v + '"')).join('');
     $('starEvents').innerHTML = [
       chip('PC방 5%', s.pcRoom, 'data-sf="pcRoom"'),
       chip('비용 30% 할인', s.discount30, 'data-sf="discount30"'),
       chip('파괴확률 30% 감소', s.destroyDown30, 'data-sf="destroyDown30"'),
       chip('5·10·15성 100%', s.lucky5, 'data-sf="lucky5"'),
+      chip('복구 메소 20% 할인', s.recoveryDiscount20, 'data-sf="recoveryDiscount20"'),
       chip('샤이닝 스타포스', SHINING.every(k => s[k]), 'data-shining="1"', 'icons/home/스타포스강화권.webp')
     ].join('');
   }
@@ -491,13 +486,25 @@
   function renderSafeguard(star) {
     const box = $('safeguardNote');
     if (!star || !star.why.length) {
-      box.innerHTML = '<p class="ic-empty">지금 구간에서는 15~17성을 지나지 않아 파괴방지를 쓸 일이 없습니다.</p>';
+      box.innerHTML = '<p class="ic-empty">현재 구간에는 파괴방지를 비교할 강화 단계가 없습니다.</p>';
       return;
     }
     box.innerHTML = '<div class="ic-chips">' + star.why.map(w =>
       '<span class="ic-verdict' + (w.on ? ' on' : '') + '">' + w.star + '성 ' + (w.on ? 'ON' : 'OFF') +
-      '<small>' + (w.breakEven ? '노작 ' + mesoText(w.breakEven) + ' 넘으면 ON' : '항상 이득') + '</small></span>').join('') + '</div>' +
-      '<p class="ic-note">파괴 1회 손실 <b>' + mesoText(star.spare) + '</b> 메소(노작 + 추가옵션)를 기준으로 자동 판정했습니다.</p>';
+      '<small>' + (Math.abs(w.extraMeso) < 1 ? '비용 차이 없음' : '반대로 바꾸면 ' + mesoText(w.extraMeso) + ' 증가') + '</small></span>').join('') + '</div>' +
+      '<p class="ic-note">노작 <b>' + mesoText(star.spare) + '</b> 메소와 자동 복구 선택을 반영한 총 기대비용을 비교했습니다. 추가옵션은 흔적에 보존됩니다.</p>';
+  }
+
+  function renderRecovery(star) {
+    const active = star ? star.recovery.filter(r => r.destroy > 0) : [];
+    if (!active.length) {
+      $('recoveryNote').innerHTML = '<p class="ic-empty">현재 강화 조건에서는 파괴되지 않습니다.</p>';
+      return;
+    }
+    $('recoveryNote').innerHTML = '<p class="ic-note">스타포스 계산기의 복구표를 사용해 12성 복구 후 재강화와 중간 성 복구 중 기대비용이 낮은 쪽을 자동 적용합니다.</p>' +
+      '<div class="ic-scroll"><table class="data-table"><thead><tr><th>파괴 당시</th><th>자동 선택</th><th>복구 메소 (추정)</th><th>대체 장비</th></tr></thead><tbody>' +
+      active.map(r => '<tr><td>' + r.star + '성</td><td>' + (r.useFixed ? r.restoreStar + '성 복구' : '12성 복구') +
+        '</td><td>' + mesoText(r.useFixed ? r.fee : 0) + '</td><td>' + (r.useFixed ? r.copies : 1) + '개</td></tr>').join('') + '</tbody></table></div>';
   }
 
   // 세 줄이 전부 최고 수치로 떴을 때의 합계. 목표를 얼마까지 적을 수 있는지 보여준다.
@@ -686,8 +693,8 @@
     return '<div class="ic-card"><h3><img class="ic-stage-icon" src="icons/home/스타포스강화권.webp" alt="" width="24" height="24"> 스타포스</h3>' +
       '<p class="ic-note">' + state.star.start + '성 → ' + state.star.goal + '성 · Lv.' + state.level + '</p>' +
       '<p class="ic-big">' + s.destroys.toFixed(2) + '회<small>평균 파괴 횟수</small></p>' +
-      '<p class="ic-note">평균 시도 ' + s.tries.toFixed(1) + '회 · 파괴 한 번마다 ' + mesoText(s.spare) +
-      ' 메소(노작 + 추가옵션)가 다시 들어갑니다.</p></div>';
+      '<p class="ic-note">평균 시도 ' + s.tries.toFixed(1) + '회 · 12성/중간 성 복구를 자동 선택하고 복구 메소와 필요한 대체 장비값(1개 ' + mesoText(s.spare) +
+      ' 메소)을 반영합니다. 추가옵션은 흔적에 보존됩니다.</p></div>';
   }
   function potDetail(d) {
     if (!d.steps.length && !d.opt) return '';
@@ -715,8 +722,9 @@
       if (levels.length) state.level = levels.reduce((best, lv) =>
         Math.abs(lv - state.level) < Math.abs(best - state.level) ? lv : best);
     }
-    state.star.start = Math.min(SFD.MAX_STAR - 1, Math.max(0, state.star.start));
-    state.star.goal = Math.min(SFD.MAX_STAR, Math.max(0, state.star.goal));
+    const maxStar = SFD.maxStarForLevel(state.level);
+    state.star.start = Math.min(maxStar, Math.max(0, Math.round(Number(state.star.start) || 0)));
+    state.star.goal = Math.min(maxStar, Math.max(0, Math.round(Number(state.star.goal) || 0)));
     const normalized = [];
     for (const cond of state.flameConds) {
       const c = cond.kind === 'opt' && cond.id === 'MATT' ? { ...cond, id: 'ATT' } : cond;
@@ -758,6 +766,7 @@
     const r = compute();
     renderResult(r);
     renderSafeguard(r.star);
+    renderRecovery(r.star);
     save();
   }
 

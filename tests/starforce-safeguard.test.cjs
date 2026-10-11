@@ -38,6 +38,7 @@ test('파괴가 없는 구간에서는 방지를 켜지 않고 비싼 노작에�
 test('확정 복구 자동 선택은 일반 복구와 항상 확정 복구보다 비싸지 않다',()=>{
   for (const level of [130,200,250]) for (const spare of [0,1e9,1e11]) {
     for (const goal of [17,22,24,30]) for (const discount30 of [false,true]) {
+      if (goal > data.maxStarForLevel(level)) continue;
       const opts = {...base,level,spare,goal,discount30,destroyDown30:discount30};
       const auto = cost({...opts,recoveryMode:'auto'});
       assert.ok(auto <= cost(opts) + 1);
@@ -131,4 +132,19 @@ test('결과 UI가 노작값·복구 방법·파괴방지 안내를 렌더링하
   assert.doesNotMatch(nodes.get('recoverySummary').innerHTML,/확정 복구/);
   assert.match(nodes.get('recoveryAdvice').innerHTML,/<td>3개<\/td>/);
   assert.match(nodes.get('safeguardAdvice').innerHTML,/손익분기/);
+});
+
+
+test('레벨별 최대 강화 수치는 공식 경계와 일치하고 범위를 벗어난 계산을 거부한다', () => {
+  for (const [level,max] of [[1,5],[94,5],[95,8],[107,8],[108,10],[117,10],[118,15],[127,15],[128,20],[137,20],[138,30],[300,30]]) {
+    assert.equal(data.maxStarForLevel(level), max);
+    for (const recoveryMode of ['off','auto']) {
+      const opts = {...base,level,start:0,goal:max,recoveryMode};
+      assert.ok(Number.isFinite(cost(opts)));
+      assert.throws(() => cost({...opts,goal:max+1}), {name:'RangeError'});
+      assert.throws(() => cost({...opts,start:max+1}), {name:'RangeError'});
+      assert.throws(() => cost({...opts,goal:1.5}), {name:'RangeError'});
+      assert.equal(cost({...opts,start:max}),0);
+    }
+  }
 });
