@@ -84,15 +84,39 @@
   .data-table th:first-child,.data-table td:first-child { text-align:left; }
   .data-table th { color:#8e90ab; }
   .tiny { color:#777992; font-size:.7rem; line-height:1.55; }
-  .luck-main { font-weight:800; font-size:.78rem; white-space:nowrap; }
-  .luck-meso { font-size:.7rem; color:#b9bad2; white-space:nowrap; margin-top:1px; }
-  .luck-sub { font-size:.68rem; color:#777992; margin-top:1px; }
+  .record-panel > h2 { font-size:1.15rem; margin-bottom:6px; }
+  .record-intro { margin:0 0 18px; color:#b9bad2; font-size:.9rem; line-height:1.6; }
+  .record-stages { display:grid; gap:12px; }
+  .record-stage { min-width:0; border:1px solid #35364f; border-radius:12px; background:#1c1d2e; padding:16px; }
+  .record-stage-head { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+  .record-stage-head > div:first-child { min-width:0; }
+  .cube-panel .record-stage h3 { font-size:1rem; line-height:1.5; margin:0; word-break:keep-all; }
+  .record-expected { color:#b9bad2; font-size:.875rem; margin:5px 0 0; }
+  .record-input { flex:none; width:100px; }
+  .record-input label { display:block; margin-bottom:6px; color:#c9c8e9; font-size:.875rem; }
+  .record-input-field { display:flex; align-items:center; gap:8px; }
+  .record-input-field > span { color:#b9bad2; font-size:.95rem; }
+  .actual-input { box-sizing:border-box; min-width:0; width:100%; min-height:44px; background:#10111a; border:1px solid #545672; border-radius:8px; color:#f1f0ff; padding:8px 10px; font:inherit; font-size:1rem; font-variant-numeric:tabular-nums; }
+  .actual-input::placeholder { color:#9698b2; }
+  .record-stage .pct-cell { margin-top:15px; padding-top:14px; border-top:1px solid #35364f; }
+  .record-verdict { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; }
+  .luck-main { font-weight:800; font-size:1.08rem; line-height:1.5; word-break:keep-all; }
+  .luck-meso { font-size:.9rem; color:#c9c8e9; word-break:keep-all; }
+  .record-stats { display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:12px; }
+  .record-stat { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 7px; font-size:.875rem; color:#b9bad2; }
+  .record-stat strong { font-size:1rem; color:#ededff; font-variant-numeric:tabular-nums; }
+  .record-stat small { font-size:.875rem; color:#b9bad2; }
   .luck-good { color:#6bd98a; }
   .luck-bad { color:#ff8484; }
   .luck-even { color:#c9c8e9; }
-  .luck-summary { margin-top:11px; padding:10px 12px; border:1px solid #34354d; border-radius:10px; background:#1c1d2e; font-size:.78rem; color:#a9abc7; line-height:1.55; }
-  .luck-summary .tiny { margin-top:4px; }
-  .actual-input { width:80px; background:#10111a; border:1px solid #34354d; border-radius:6px; color:var(--text); padding:5px 6px; font:inherit; font-size:.74rem; }
+  .luck-summary { display:flex; flex-direction:column; gap:6px; margin-top:16px; padding:14px 16px; border:1px solid #454668; border-radius:12px; background:#232439; font-size:.95rem; color:#ededff; line-height:1.6; word-break:keep-all; }
+  .luck-summary > span { color:#b9bad2; font-size:.875rem; }
+  .record-details { margin-top:18px; padding-top:12px; border-top:1px solid #35364f; font-size:.875rem; color:#b9bad2; line-height:1.7; }
+  .record-details > summary { cursor:pointer; padding:6px 0; font-size:.9rem; color:#c9c8e9; }
+  .record-details p { margin:12px 0 0; word-break:keep-all; }
+  .record-basis-table { overflow-x:auto; margin-top:10px; }
+  .record-details .data-table { font-size:.875rem; }
+  .record-details .data-table th,.record-details .data-table td { padding:10px 5px; }
   #ceilingPanel, #probPanel { margin-top:16px; }
   #ceilingPanel summary, #probPanel summary { cursor:pointer; font-weight:700; font-size:1rem; list-style:none; }
   #ceilingPanel summary::-webkit-details-marker, #probPanel summary::-webkit-details-marker { display:none; }
@@ -100,14 +124,8 @@
   #ceilingPanel[open] summary::before, #probPanel[open] summary::before { transform:rotate(90deg); }
   #ceilingPanel > div, #ceilingPanel > p, #probPanel > div { margin-top:12px; }
   @media(max-width:900px){ .cube-layout{grid-template-columns:1fr;} .cube-panel.sticky{position:static;} }
-  #dataTable th, #dataTable td { white-space:nowrap; }
   @media(max-width:520px){ .primary-metrics,.price-chip-row{grid-template-columns:repeat(2,1fr);} .cube-hero{padding:22px 18px;} .cube-panel{padding:14px;} }
-  /* 좁은 화면에서는 1회 확률·천장을 접는다. 아래 "큐브별 등업 확률"과 "등급업 천장 요약"에 같은 값이 있다. */
-  @media(max-width:560px){
-    #dataTable th:nth-child(2), #dataTable td:nth-child(2), #dataTable th:nth-child(3), #dataTable td:nth-child(3) { display:none; }
-    #dataTable th, #dataTable td { padding:7px 3px; }
-    .actual-input { width:62px; }
-  }
+  @media(max-width:380px){ .record-stage{padding:12px;} .record-stage-head{gap:10px;} .record-input{width:86px;} }
 </style>
 <link rel="stylesheet" href="site_ux.css">
 <script src="site_ux.js" defer></script>
@@ -219,7 +237,7 @@
           <div class="primary-metric" id="ceilingCostBox"><div class="label">천장까지 쓰면</div><div class="value" id="ceilingCost">-</div></div>
         </div>
       </div>
-      <div class="cube-panel"><h2>내 기록 비교</h2><p class="ux-hint">실제 사용 횟수를 입력하면 평균보다 얼마나 덜 썼는지, 더 썼는지 확인할 수 있어요.</p><div id="dataTable"></div></div>
+      <div class="cube-panel record-panel"><h2>내 기록 비교</h2><p class="record-intro">등업까지 쓴 횟수를 입력하세요.</p><div id="dataTable"></div></div>
     </aside>
   </main>
   <details class="cube-panel" id="ceilingPanel">

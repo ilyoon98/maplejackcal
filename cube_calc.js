@@ -145,19 +145,22 @@ function renderPriceBox(){
       + RANKS.map((name,i)=>`<div class="price-chip"><div class="price-chip-label" style="color:${RANK_COLORS[i]}">${name}</div><div class="price-chip-value">${fmt(meso[i])}</div></div>`).join('') + '</div>'
     : `<div class="field-note">큐브 1회 <strong>${fmt(cubeFee(state.level))}</strong> 메소 (${n} × ${n} × ${rate})</div>`;
 }
-// 한 구간의 결과 칸. 기대치 대비 이득/손해를 횟수와 메소로 같이 보여준다.
+// 입력한 구간의 결과만 보여준다. 자세한 계산 기준은 별도로 접어 둔다.
 function resultCellHtml(step, actual){
-  if(!actual) return '-';
+  if(!actual) return '';
   const { gap, meso, gain, flat }=stageDiff(step, actual);
-  const rank=`<div class="luck-sub">상위 ${(successCdf(actual,step.p,step.cap)*100).toFixed(2)}%</div>`;
-  if(flat) return `<div class="luck-main luck-even">기대치와 같음</div>${rank}`;
-  const money = step.price>0 ? `<div class="luck-meso">메소 ${mesoText(meso)} ${gain?'아낌':'더 씀'}</div>` : '';
-  return `<div class="luck-main ${gain?'luck-good':'luck-bad'}">${Math.abs(gap).toFixed(1)}회 ${gain?'이득':'손해'}</div>${money}${rank}`;
+  const percentile=(successCdf(actual,step.p,step.cap)*100).toFixed(2);
+  // 자연 등업에 계속 실패할 확률은 천장 보장과 별도로 계산한다.
+  const failureProbability=(Math.pow(1-step.p,actual)*100).toFixed(2);
+  const verdict=flat ? '기대 횟수와 같아요' : `기대보다 ${Math.abs(gap).toFixed(1)}회 ${gain?'덜 사용':'더 사용'}`;
+  const money=!flat && step.price>0 ? `<span class="luck-meso">${mesoText(meso)} 메소 ${gain?'절약':'초과'}</span>` : '';
+  return `<div class="record-verdict"><strong class="luck-main ${flat?'luck-even':gain?'luck-good':'luck-bad'}">${verdict}</strong>${money}</div>
+    <div class="record-stats"><div class="record-stat"><span>상위</span><strong>${percentile}%</strong></div><div class="record-stat luck-probability"><span>${fmt(actual)}회 연속 실패</span><strong>${failureProbability}%</strong><small>천장 제외</small></div></div>`;
 }
-// 입력한 구간만 모아 합산 손익을 한 줄로 알려준다.
+// 여러 구간을 입력했을 때만 합계를 보여준다.
 function summaryHtml(plan){
   const filled=plan.steps.filter(s=>state.actual[s.i]>0);
-  if(!filled.length) return '<div class="tiny luck-summary">실제로 쓴 횟수를 넣으면 기대치보다 이득인지 손해인지 계산해준다.</div>';
+  if(filled.length<2) return '<div class="luck-summary" hidden></div>';
   const expected=filled.reduce((sum,s)=>sum+s.e,0);
   const used=filled.reduce((sum,s)=>sum+state.actual[s.i],0);
   const meso=filled.reduce((sum,s)=>sum+(s.e-state.actual[s.i])*s.price,0);
@@ -165,25 +168,23 @@ function summaryHtml(plan){
   const verdict = Math.abs(gap)<.05
     ? '<b class="luck-even">기대치와 같음</b>'
     : `<b class="${gain?'luck-good':'luck-bad'}">${Math.abs(gap).toFixed(1)}회 ${gain?'이득':'손해'}${Math.abs(meso)>=1?` · 메소 ${mesoText(meso)} ${gain?'아낀 셈':'더 쓴 셈'}`:''}</b>`;
-  const cashNote = CUBES[state.cube].official ? '' : '<div class="tiny">메소는 재설정 비용만 센다. 큐브 자체 값(캐시·현물)은 빠져 있다.</div>';
-  return `<div class="luck-summary">입력한 구간 합계 · 기대 ${expected.toFixed(1)}회 → 실제 ${fmt(used)}회 : ${verdict}${cashNote}</div>`;
+  return `<div class="luck-summary"><span>입력한 ${filled.length}개 구간 · 총 ${fmt(used)}회</span>${verdict}</div>`;
 }
 function renderData(){
   const plan=expectedPlan(state.cube);
   const rows=plan.steps.map(s=>{
     const actual=state.actual[s.i];
-    return `<tr data-i="${s.i}">
-      <td>${s.name}</td>
-      <td>${pct(s.p)}</td>
-      <td>${s.cap?`${s.cap}회`:'-'}</td>
-      <td>${fmt(s.e)}회</td>
-      <td><input class="actual-input" type="number" min="1" data-i="${s.i}" value="${actual||''}" placeholder="내 횟수"></td>
-      <td class="pct-cell">${resultCellHtml(s, actual)}</td>
-    </tr>`;
+    return `<article class="record-stage" data-i="${s.i}" aria-labelledby="recordStage${s.i}">
+      <div class="record-stage-head"><div><h3 id="recordStage${s.i}">${s.name}</h3><p class="record-expected">기대 ${s.e.toFixed(1)}회</p></div>
+        <div class="record-input"><label for="recordCount${s.i}">내 횟수</label><div class="record-input-field"><input id="recordCount${s.i}" class="actual-input" type="number" min="1" step="1" ${s.cap?`max="${s.cap}"`:''} inputmode="numeric" data-i="${s.i}" value="${actual||''}" placeholder="입력"><span>회</span></div></div>
+      </div><div class="pct-cell" ${actual?'':'hidden'} role="status" aria-live="polite">${resultCellHtml(s, actual)}</div>
+    </article>`;
   }).join('');
-  $('dataTable').innerHTML=`<table class="data-table"><thead><tr><th>구간</th><th>1회 확률</th><th>천장</th><th>기대 횟수</th><th>내 실제 횟수</th><th>내 결과</th></tr></thead><tbody>${rows||'<tr><td colspan="6">목표 등급을 선택하세요.</td></tr>'}</tbody></table>`
-    + (plan.steps.length ? summaryHtml(plan) : '');
-  // 입력할 때마다 표 전체를 다시 그리면 입력창이 리셋되며 포커스가 빠지므로, 해당 칸과 합계 줄만 갱신한다.
+  const basis=plan.steps.map(s=>`<tr><td>${s.name}</td><td>${pct(s.p)}</td><td>${s.cap?`${fmt(s.cap)}회`:'없음'}</td></tr>`).join('');
+  const cashNote=CUBES[state.cube].official?'메소 재설정 비용 기준입니다.':'메소는 큐브 사용 수수료만 반영하며, 큐브 구입비는 제외합니다.';
+  $('dataTable').innerHTML=`<div class="record-stages">${rows||'<p class="record-intro">목표 등급을 선택하세요.</p>'}</div>`
+    + (plan.steps.length ? summaryHtml(plan)+`<details class="record-details"><summary>확률 · 계산 기준</summary><div class="record-basis-table"><table class="data-table"><thead><tr><th>구간</th><th>1회 확률</th><th>천장</th></tr></thead><tbody>${basis}</tbody></table></div><p>상위 비율은 천장 보장을 포함해 입력한 횟수 이내에 등업할 확률입니다. 낮을수록 운이 좋은 기록이며, 실제 유저 순위는 아닙니다.</p><p>연속 실패 확률은 천장 보장을 제외하고 계산합니다. 예: 성공률 15%로 10회 모두 실패할 확률은 19.69%입니다.</p><p>${cashNote}</p></details>` : '');
+  // 입력 중에는 결과와 합계만 갱신해 입력 포커스를 유지한다.
   $('dataTable').querySelectorAll('.actual-input').forEach(inp=>{
     inp.oninput=e=>{
       const i=Number(e.target.dataset.i);
@@ -192,7 +193,9 @@ function renderData(){
       // 천장을 넘는 횟수는 나올 수 없으므로 천장으로 잘라 준다
       if(step.cap && v>step.cap){ v=step.cap; e.target.value=v; }
       if(v>0) state.actual[i]=v; else delete state.actual[i];
-      e.target.closest('tr').querySelector('.pct-cell').innerHTML = resultCellHtml(step, v>0?v:0);
+      const result=e.target.closest('.record-stage').querySelector('.pct-cell');
+      result.hidden=!(v>0);
+      result.innerHTML=resultCellHtml(step, v>0?v:0);
       const box=$('dataTable').querySelector('.luck-summary');
       if(box) box.outerHTML = summaryHtml(plan);
     };
