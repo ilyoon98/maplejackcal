@@ -83,3 +83,53 @@ test('겹쳐 붙은 77과 점이 붙은 .1도 나눠 읽는다', () => {
   assert.equal(res[9].text, '10.19%');
   assert.equal(res[15].text, '17.28%');
 });
+
+// 사용자가 제보한 150% 캡처. 브라우저가 다시 그린 글꼴이라 100%의 단순 확대와 다르다.
+const shot150 = decodePng(path.join(__dirname, 'fixtures/boss_shot_150.png'));
+const PERCENT_150 = [
+  '5.68%', '33.91%', '26.13%', '43.10%', '79.52%', '96.84%', '80.16%', '149.9%',
+  '175.9%', '233.7%', '288.0%', '362.3%', '411.6%', '702.7%', '803.5%', '846.6%',
+  '699.7%', '1006%', '474.3%', '1405%', '1933%', '2582%', '5062%', '4233%',
+  '5271%', '5029%', '7543%', '9089%', '12594%', '55095%', '58000%',
+];
+
+test('150% 실제 캡처의 31개 보스·난이도·배율을 정확히 읽는다', () => {
+  const res = reader.analyze(shot150, reader.siteRefs());
+  assert.equal(res.length, 31);
+  assert.ok(res.every(r => r.card.w === 108 && r.card.h === 204));
+  assert.deepEqual(res.map(r => [r.name, r.diff, r.text]),
+    EXPECTED.slice(16).map(([name, diff], i) => [name, diff, PERCENT_150[i]]));
+  assert.deepEqual(res.map(r => r.value), PERCENT_150.map(parseFloat));
+});
+
+test('100% 캡처를 2배 확대해도 기존 글꼴의 배율을 유지한다', () => {
+  const enlarged = {width:shot.width * 2, height:shot.height * 2};
+  enlarged.data = new Uint8ClampedArray(enlarged.width * enlarged.height * 4);
+  for (let y = 0; y < enlarged.height; y++) {
+    for (let x = 0; x < enlarged.width; x++) {
+      const src = ((y >> 1) * shot.width + (x >> 1)) * 4;
+      enlarged.data.set(shot.data.subarray(src, src + 4), (y * enlarged.width + x) * 4);
+    }
+  }
+  const res = reader.analyze(enlarged, reader.siteRefs());
+  assert.deepEqual(res.map(r => [r.name, r.diff, r.text]), EXPECTED);
+  assert.deepEqual(res.map(r => r.value), EXPECTED.map(([, , pct]) => pct ? parseFloat(pct) : null));
+});
+
+test('숫자 획이 손상된 캡처는 추측한 배율을 적용하지 않는다', () => {
+  const damaged = {...shot150, data:new Uint8ClampedArray(shot150.data)};
+  const c = reader.findCards(damaged).cards[3];
+  // 숫자 줄 가운데에 격자 잡음을 섞어도 카드와 보스 초상화는 그대로 유지한다.
+  for (let y = c.y + c.h - 26; y < c.y + c.h - 13; y++) {
+    for (let x = c.x + 27; x < c.x + 66; x++) {
+      if ((x + y) % 3) continue;
+      const p = (y * damaged.width + x) * 4;
+      damaged.data[p] = damaged.data[p + 1] = damaged.data[p + 2] = 255;
+    }
+  }
+  const res = reader.analyze(damaged, reader.siteRefs());
+  assert.equal(res[3].name, '스우');
+  assert.equal(res[3].diff, '익스트림');
+  assert.equal(res[3].value, null);
+  assert.equal(res[4].value, 79.52);
+});

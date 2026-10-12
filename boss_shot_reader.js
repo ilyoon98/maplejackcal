@@ -31,11 +31,45 @@
     '.': './././././././#',
     '%': '###...#./#.#..#../#.#.#.../###.#.../...#..#./..#..#.#/..#..#.#/.#...###'
   };
-  var TEMPLATES = Object.keys(GLYPHS).map(function (ch) {
-    var rows = GLYPHS[ch].split('/');
-    var w = rows[0].length, bits = new Uint8Array(w * GLYPH_H);
-    rows.forEach(function (r, y) { for (var x = 0; x < w; x++) bits[y * w + x] = r[x] === '#' ? 1 : 0; });
-    return { ch: ch, w: w, bits: bits };
+  // 150%에서는 브라우저가 글꼴을 다시 그리므로 8px 글자를 단순 확대한 모양과 다르다.
+  // 실제 13px 높이의 글꼴을 따로 비교해야 소수점이 숫자로 바뀌거나 숫자가 둘로 쪼개지지 않는다.
+  var LARGE_GLYPHS = {
+    '0': '..#####../.#######./.##...###/###...###/###....##/###....##/###....##/###....##/###....##/###...###/.#######./..######./....#....',
+    '1': '...###/.#####/######/##.###/...###/...###/...###/...###/...###/...###/...###/...###/......',
+    '2': '..######./.########/.##...###/###....##/......###/......##./.....###./....###../...###.../..###..../.########/#########/.........',
+    '3': '..######../.########./.##....##./.#.....##./......###./...#####../...######./.......###/.#.....###/###....###/.########./..######../.....#....',
+    '4': '.....###../....####../....####../...#####../..###.##../..##..##../.###..##../.##...##../##########/##########/......##../......##../..........',
+    '5': '.#######./.#######./###....../###....../#######../########./###...###/......###/.#....###/###...###/########./.######../....#....',
+    '6': '..######../.########./.##...###./###.....#./########../#########./####..###./###....##./###....##./###....##./.########./..######../..........',
+    '7': '#########/#########/......###/......##./.....###./.....##../....###../....##.../...###.../..###..../..###..../.###...../.........',
+    '8': '.######../.#######./###...###/###...###/###..###./.#######./.#######./###...###/##....###/##....###/#########/.#######./....#....',
+    '9': '.######../########./###...###/##....###/##....###/###...###/#########/.#####.##/.#....###/###...##./########./.######../.........',
+    '.': '.../.../.../.../.../.../.../.../.../.../###/###/...',
+    '%': '#####....##../##.##...##.../##.##..###.../##.##..##..../#####.##...../.###.###...../.....##.####./....##.#####./...###.##..##/...##..##..##/..##...##.###/.###....####./.........#...'
+  };
+  function makeTemplates(glyphs) {
+    return Object.keys(glyphs).map(function (ch) {
+      var rows = glyphs[ch].split('/');
+      var w = rows[0].length, h = rows.length, bits = new Uint8Array(w * h);
+      rows.forEach(function (r, y) { for (var x = 0; x < w; x++) bits[y * w + x] = r[x] === '#' ? 1 : 0; });
+      return { ch: ch, w: w, h: h, bits: bits };
+    });
+  }
+  var TEMPLATES = makeTemplates(GLYPHS), LARGE_TEMPLATES = makeTemplates(LARGE_GLYPHS);
+  // 반 픽셀 위치에 놓인 글자는 획의 폭이 달라지는 브라우저 힌팅 변형도 함께 비교한다.
+  [
+    ['2', '.######../########./###...##./##....##./......##./.....###./....###../...###.../..###..../.###...../#########/#########/.........'],
+    ['3', '.######.../########../###...##../.#....##../.....###../...####.../...#####../......###./#.....###./##....###./########../.#######../....#.....'],
+    ['6', '..#####../.#######./###...###/###....#./##.####../########./###...###/##.....##/##.....##/###...###/.#######./..######./....#....'],
+    ['8', '..######./.########/###...###/###...###/.###..###/.#######./.#######./###...###/###....##/###....##/#########/.#######./....#....'],
+    ['8', '..######../.########./.###...##./.##....###/.###..###./..######../.########./.###...###/###....###/###....###/.########./..#######./.....#....'],
+    ['8', '.######../########./###...##./##....###/###..###./.######../########./###...###/##....###/##....###/########./.#######./....#....'],
+    ['8', '..######../.########./.##...###./.##....##./.###..###./..######../.########./###...###./###....###/###....###/.########./.#######../....#.....'],
+    ['0', '..#####../.#######./###...##./###...###/##....###/##....###/##....###/##....###/##....###/###...###/.#######./..#####../....#....']
+  ].forEach(function (entry, i) {
+    var glyphs = {}; glyphs[entry[0]] = entry[1];
+    var t = makeTemplates(glyphs)[0]; t.variant = i + 1;
+    LARGE_TEMPLATES.push(t);
   });
 
   // 그 사이트의 초상화 서명(tests/fixtures/boss_shot_1.png에서 뽑은 signature(), int8·base64).
@@ -306,18 +340,21 @@
     // 잉크 진하기(0~1). 1배 캡처는 사실상 0/1이고, 확대 캡처의 흐린 가장자리는 중간값이 된다.
     var W = lx1 - lx0 + 1, H = lh, soft = new Float32Array(W * H);
     for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
-      soft[y * W + x] = Math.min(1, Math.max(0, (dist(colorAt(img, lx0 + x, ly0 + y), bgc) - 30) / 100));
+      soft[y * W + x] = H >= 11 ? (dist(colorAt(img, lx0 + x, ly0 + y), bgc) > 80 ? 1 : 0) :
+        Math.min(1, Math.max(0, (dist(colorAt(img, lx0 + x, ly0 + y), bgc) - 30) / 100));
     }
-    var text = parseLine(soft, W, H, H / GLYPH_H);
+    var result = parseLine(soft, W, H, H / GLYPH_H, true);
+    var text = result.text;
     var m = /^(\d+(?:\.\d+)?)%$/.exec(text || '');
-    return { text: text || '', value: m ? parseFloat(m[1]) : null };
+    // 모양이 잘 맞지 않는 줄은 그럴듯한 큰 정수로 추측해 넣지 않고 직접 확인하도록 남긴다.
+    return { text: text || '', value: m && result.error <= 0.15 ? parseFloat(m[1]) : null };
   }
   // 글자 템플릿을 (w × h)로 늘린 진하기 표(겹치는 면적 비율로 칠한다).
   var scaledCache = new Map();
   function scaledTemplate(t, w, h) {
-    var key = t.ch + ':' + w + 'x' + h;
+    var key = t.h + ':' + t.ch + ':' + (t.variant || 0) + ':' + w + 'x' + h;
     if (scaledCache.has(key)) return scaledCache.get(key);
-    var out = new Float32Array(w * h), kx = t.w / w, ky = GLYPH_H / h;
+    var out = new Float32Array(w * h), kx = t.w / w, ky = t.h / h;
     for (var Y = 0; Y < h; Y++) for (var X = 0; X < w; X++) {
       var sx0 = X * kx, sx1 = (X + 1) * kx, sy0 = Y * ky, sy1 = (Y + 1) * ky, sum = 0;
       for (var y = Math.floor(sy0); y < Math.ceil(sy1); y++) {
@@ -345,7 +382,16 @@
   };
   var NS = 11, END = 10;
   var DOT_PENALTY = 0;
-  function parseLine(soft, W, H, s) {
+  function parseLine(soft, W, H, s, details) {
+    // 브라우저 확대와 이미지를 단순 확대한 경우 모두 지원한다.
+    var result = parseWithTemplates(soft, W, H, s, TEMPLATES);
+    if (H >= 11) {
+      var large = parseWithTemplates(soft, W, H, s, LARGE_TEMPLATES);
+      if (large.error < result.error) result = large;
+    }
+    return details ? result : result.text;
+  }
+  function parseWithTemplates(soft, W, H, s, templates) {
     var area = s * s;
     var colInk = new Float64Array(W);
     for (var x = 0; x < W; x++) for (var y = 0; y < H; y++) colInk[x] += soft[y * W + x];
@@ -360,22 +406,22 @@
       if (here === Infinity) continue;
       // 빈 칸 건너뛰기(칠해진 칸을 건너뛰면 크게 손해).
       relax(i, st, i + 1, st, here + colInk[i] * 3 / area, null);
-      TEMPLATES.forEach(function (t) {
+      templates.forEach(function (t) {
         var nst = NEXT[t.ch === '.' || t.ch === '%' ? t.ch : 'digit'][st];
         if (nst < 0) return;
-        var base = Math.max(1, Math.round(t.w * s));
+        var base = Math.max(1, Math.round(t.w * H / t.h));
         [base - 1, base, base + 1].forEach(function (wt) {
           if (wt < 1) return;
           var tpl = scaledTemplate(t, wt, H);
           // 글자 사이가 0칸이면 그대로 붙고, '77'처럼 1칸 겹치기도 한다.
           // 겹칠 때는 마지막 열을 다음 글자에게 맡기고 나머지만 비교한다.
-          var spans = t.w >= 4 ? [wt, wt - Math.max(1, Math.round(s))] : [wt];
+          var spans = t.w >= 4 ? [wt, wt - 1] : [wt];
           spans.forEach(function (span) {
             if (span < 1 || i + span > W) return;
             var miss = 0;
             for (var y = 0; y < H; y++) for (var x = 0; x < span; x++) miss += Math.abs(tpl[y * wt + x] - soft[y * W + i + x]);
             miss /= area;
-            if (miss > Math.max(2, t.w * GLYPH_H * 0.3)) return;
+            if (miss > Math.max(2, t.w * GLYPH_H * GLYPH_H / t.h * 0.3)) return;
             // 점 자리는 아래 1/4에만 잉크가 있고 위쪽은 비어 있어야 한다(흐린 틈과 구별).
             if (t.ch === '.') {
               var low = 0, high = 0;
@@ -393,10 +439,11 @@
       });
     }
     var end = W * NS + END;
-    if (cost[end] === Infinity) return '';
+    if (cost[end] === Infinity) return { text: '', error: Infinity };
     var out = [];
     for (var p = end; p > 0; p = from[p]) if (pick[p]) out.push(pick[p]);
-    return out.reverse().join('');
+    var text = out.reverse().join('');
+    return { text: text, error: cost[end] / (W * H / area) };
   }
 
   // ── 전체 ───────────────────────────────────────────────────

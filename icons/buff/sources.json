@@ -1,0 +1,64 @@
+{
+  "sourcePage": "https://maplescouter.com/ko/input",
+  "downloadedOn": "2026-10-10",
+  "icons": [
+    {
+      "file": "superpower.webp",
+      "url": "https://maplescouter.com/doping_v2/superpower.png"
+    },
+    {
+      "file": "fish.webp",
+      "url": "https://maplescouter.com/doping_v2/fish.png"
+    },
+    {
+      "file": "urus.webp",
+      "url": "https://maplescouter.com/doping_v2/urus.png"
+    },
+    {
+      "file": "union.webp",
+      "url": "https://maplescouter.com/doping_v2/union.png"
+    },
+    {
+      "file": "extreme.webp",
+      "url": "https://maplescouter.com/doping_v2/extreme.png"
+    },
+    {
+      "file": "sayram.webp",
+      "url": "https://maplescouter.com/doping_v2/sayram.png"
+    },
+    {
+      "file": "vipbuff.webp",
+      "url": "https://maplescouter.com/doping_v2/vipbuff.png"
+    },
+    {
+      "file": "statpotion.webp",
+      "url": "https://maplescouter.com/doping_v2/statpotion.png"
+    },
+    {
+      "file": "legendhero.webp",
+      "url": "https://maplescouter.com/doping_v2/legendhero.png"
+    },
+    {
+      "file": "buff300.webp",
+      "url": "https://maplescouter.com/doping_v2/buff300.png"
+    },
+    {
+      "file": "bighero.webp",
+      "url": "https://maplescouter.com/doping_v2/bighero.png"
+    },
+    {
+      "file": "jangbi.webp",
+      "url": "https://maplescouter.com/doping_v2/jangbi.png"
+    },
+    {
+      "file": "collector.webp",
+      "url": "https://maplescouter.com/doping_v2/collector.png"
+    },
+    {
+      "file": "rice-sack.webp",
+      "url": "https://maplestory.io/api/GMS/255/item/4031229/icon",
+      "itemId": 4031229,
+      "name": "Sack of Rice"
+    }
+  ]
+}

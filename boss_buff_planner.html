@@ -14,6 +14,7 @@
 <title>보스 버프 동선 계산기</title>
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="nexon_characters.css" />
+<link rel="stylesheet" href="site_tooltips.css" />
 <style>
   .setting-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; }
   .setting { display:flex; flex-direction:column; gap:6px; }
@@ -70,14 +71,56 @@
   .pack-head .tag-row { display:flex; gap:5px; margin:5px 0 3px; }
   .pack-bin.rice { border-style:dashed; }
 
-  .boss-head, .boss-row { display:grid; grid-template-columns:24px 30px minmax(0,1fr) 92px 76px 86px 30px; gap:8px; align-items:center; }
-  .row-doping { padding:6px 4px; font-size:0.75rem; white-space:nowrap; }
+  .doping-group { min-width:0; margin:0; padding:12px 0; border:0; }
+  .doping-group legend { padding:0; color:var(--text); font-size:0.8rem; font-weight:800; }
+  .doping-heading { display:inline-flex; align-items:center; gap:6px; }
+  .rice-sack-icon { width:24px; height:24px; object-fit:contain; image-rendering:pixelated; }
+  .doping-icons { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); max-width:456px; gap:6px; }
+  .doping-tile { position:relative; min-width:0; cursor:pointer; }
+  .doping-full-options { margin-top:10px; padding-top:12px; border-top:1px solid var(--border); }
+  .doping-full-options > summary { width:fit-content; cursor:pointer; color:var(--text-dim); font-size:0.78rem; font-weight:700; }
+  .doping-full-options[open] > summary { color:var(--text); margin-bottom:10px; }
+  .doping-tile > input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; z-index:1; cursor:pointer; }
+  .doping-tile-face { display:flex; flex-direction:column; align-items:center; gap:5px; box-sizing:border-box; padding:7px 3px; border:1px solid var(--border); border-radius:8px; background:#11141a; }
+  .doping-icon { width:32px; height:32px; flex:none; object-fit:contain; image-rendering:pixelated; }
+  .doping-fd { color:var(--text-dim); font-size:0.65rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .doping-check { display:flex; align-items:center; justify-content:center; width:16px; height:16px; border:1px solid #495261; border-radius:4px; color:#fff; font-size:0.72rem; font-weight:900; }
+  .doping-tile.exclusive .doping-check { border-radius:50%; }
+  .doping-tile > input:checked + .doping-tile-face { border-color:var(--accent-strong); background:rgba(76,141,255,.14); }
+  .doping-tile > input:checked + .doping-tile-face .doping-check { border-color:var(--accent-strong); background:var(--accent-strong); }
+  .doping-tile > input:checked + .doping-tile-face .doping-fd { color:var(--text); }
+  .doping-tile > input:hover + .doping-tile-face { border-color:var(--accent); }
+  .doping-tile > input:focus-visible + .doping-tile-face { outline:2px solid var(--accent); outline-offset:2px; }
+  .doping-tile > input:disabled { cursor:default; }
+  .doping-tile > input:disabled + .doping-tile-face { opacity:0.35; }
+  .doping-summary { margin:12px 0 0; color:var(--accent); font-size:0.8rem; line-height:1.7; }
+  @media (max-width:420px) {
+    .doping-icons { gap:4px; }
+    .doping-tile-face { padding:7px 1px; }
+    .doping-icon { width:28px; max-width:100%; height:28px; }
+    .doping-fd { font-size:0.54rem; letter-spacing:-.025em; }
+  }
+  @media (max-width:340px) { .doping-fd { font-size:0.48rem; } }
+  .boss-head, .boss-row { display:grid; grid-template-columns:60px 28px minmax(0,1fr) 88px 72px 82px 68px; gap:6px; align-items:center; }
+  .boss-selection-count { color:var(--text-dim); font-size:0.72rem; font-weight:500; margin-left:8px; white-space:nowrap; }
+  .row-include, .row-complete { min-height:34px; width:100%; padding:5px 4px; border:1px solid var(--border); border-radius:7px; background:#11141a; color:var(--text-dim); font:inherit; font-size:0.73rem; font-weight:750; white-space:nowrap; cursor:pointer; }
+  .row-include.selected { background:#253f67; border-color:#669cef; color:#e4efff; }
+  .row-complete.completed { background:#193e32; border-color:var(--good); color:#a6f0cb; }
+  .row-include:hover, .row-complete:hover { filter:brightness(1.18); }
+  .row-include:focus-visible, .row-complete:focus-visible, .row-diff:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .row-diff { max-width:76px; min-height:28px; border:1px solid transparent; padding-right:3px; cursor:pointer; font:inherit; }
+  .row-diff option { background:#191c24; color:var(--text); }
+  .row-doping { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:36px; padding:5px 6px; border:1px solid; border-radius:9px; font:inherit; font-size:0.73rem; font-weight:800; line-height:1; white-space:nowrap; cursor:pointer; }
+  .row-doping img { width:22px; height:22px; object-fit:contain; image-rendering:pixelated; }
+  .row-doping.full { background:#253f67; border-color:#669cef; color:#e4efff; }
+  .row-doping.rice { background:#45361c; border-color:#d1a760; color:#ffe6ab; }
+  .row-doping:hover { filter:brightness(1.18); }
+  .row-doping:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
   .boss-head { padding:0 2px 6px; font-size:0.74rem; color:var(--text-dim); text-align:center; }
   .boss-head .name-col { text-align:left; }
   .boss-row { padding:6px 2px; border-top:1px solid var(--border); }
-  .boss-row.off { opacity:0.42; }
-  .row-check { display:flex; justify-content:center; }
-  .row-check input { width:16px; height:16px; accent-color:var(--accent-strong); cursor:pointer; }
+  .boss-row.done { background:rgba(76,175,125,.06); }
+  .boss-row.off .row-icon, .boss-row.off .nm { opacity:0.5; }
   .row-icon { width:28px; height:28px; object-fit:contain; }
   .row-icon.blank { display:inline-block; }
   .row-name { min-width:0; }
@@ -132,33 +175,8 @@
   .boss-list-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:16px; }
   .boss-list-actions .tool-btn { min-height:36px; flex-shrink:0; }
   .boss-list-actions #resetBtn { margin-left:auto; }
-  .boss-add { display:grid; grid-template-columns:minmax(0,1fr) 112px auto; align-items:end; gap:12px; padding:14px; margin-bottom:16px; background:#11141a; border:1px solid var(--border); border-radius:12px; }
-  .boss-add-field { display:flex; flex-direction:column; gap:7px; min-width:0; color:var(--text-dim); font-size:0.75rem; font-weight:600; }
-  .boss-add input, .boss-add select { box-sizing:border-box; width:100%; min-width:0; height:40px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); color:var(--text); font:inherit; font-size:0.88rem; }
-  .boss-picker { position:relative; }
-  .boss-picker-btn { display:flex; align-items:center; gap:8px; width:100%; height:40px; box-sizing:border-box; padding:0 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); color:var(--text); font:inherit; font-size:0.88rem; cursor:pointer; text-align:left; }
-  .boss-picker-btn:hover, .boss-picker-btn[aria-expanded="true"] { border-color:var(--accent); }
-  .boss-picker-btn .dim { color:var(--text-dim); font-weight:400; }
-  .boss-picker-btn .caret { margin-left:auto; color:var(--text-dim); font-size:0.75rem; }
-  .boss-picker-btn .diff-badge { margin-left:auto; }
-  .boss-picker-btn .diff-badge + .caret { margin-left:0; }
-  .boss-picker-menu { position:absolute; z-index:30; left:0; width:max(100%, 300px); max-width:calc(100vw - 48px); box-sizing:border-box; overflow-x:hidden; top:calc(100% + 4px); max-height:320px; overflow-y:auto; padding:4px; border:1px solid var(--border); border-radius:10px; background:#1b1f27; box-shadow:0 10px 28px rgba(0,0,0,0.5); }
-  .picker-row { display:flex; align-items:center; gap:8px; width:100%; padding:6px 8px; border:0; border-radius:7px; background:none; color:var(--text); font:inherit; text-align:left; cursor:pointer; }
-  .picker-row:hover, .picker-row:focus-visible { background:#232833; outline:none; }
-  .picker-row[aria-selected="true"] { background:#2b4366; }
-  .picker-row .shot-bname { flex:1 1 auto; min-width:0; }
-  .boss-add .new-mult { display:flex; align-items:center; height:40px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card, #191c24); }
-  .boss-add .new-mult input { flex:1; width:0; height:38px; border:0; background:transparent; padding-right:4px; font-variant-numeric:tabular-nums; }
-  .boss-add .unit { padding-right:11px; font-weight:400; }
-  .boss-add #addBoss { min-height:40px; padding:9px 16px; border-radius:8px; background:var(--accent-strong); border-color:transparent; color:#0b0d12; }
-  .boss-add #addBoss:hover { filter:brightness(1.12); }
-  .boss-add input:focus-visible, .boss-add select:focus-visible, .boss-add button:focus-visible, .boss-list-actions button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-  @media (max-width:520px) {
-    .boss-add { grid-template-columns:minmax(0,1fr) 112px; gap:12px; }
-    .boss-add .boss-add-name { grid-column:1 / -1; }
-    .boss-add #addBoss { width:100%; }
-    .boss-list-actions #resetBtn { margin-left:0; }
-  }
+  .boss-list-actions button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  @media (max-width:520px) { .boss-list-actions #resetBtn { margin-left:0; } }
   @media (max-width:760px) {
     .character-import-card.has-profile { grid-template-columns:minmax(0,1fr); }
     .buff-character-showcase { min-height:250px; }
@@ -225,12 +243,26 @@
 
   /* 좁은 화면에서는 이름 칸이 글자당 한 줄로 쪼개질 만큼 좁아진다.
      격자를 풀고 줄바꿈을 허용해 이름 → 입력칸 순으로 흐르게 한다. */
-  @media (max-width:520px) {
+  @media (max-width:680px), (min-width:961px) and (max-width:1100px) {
     .boss-head { display:none; }
     .boss-row { display:flex; flex-wrap:wrap; gap:6px; }
-    .row-name { flex:1 1 90px; }
-    .row-input { flex:0 0 76px; }
-    .row-input input { width:52px; }
+    .row-include { flex:0 0 60px; order:0; }
+    .row-icon { flex:0 0 28px; order:1; }
+    .row-name { flex:1 1 calc(100% - 180px); order:2; }
+    .row-complete { flex:0 0 68px; order:3; }
+    .row-input { flex:1 1 76px; min-width:0; order:4; }
+    .row-input input { width:100%; }
+    .row-doping { flex:0 0 82px; order:5; }
+  }
+  @media (max-width:420px) {
+    .row-name { flex-basis:calc(100% - 34px); }
+    .row-icon { order:0; }
+    .row-name { order:1; }
+    .row-include { order:2; }
+    .row-complete { order:3; }
+    .row-doping { order:4; }
+    .row-input { flex-basis:calc(50% - 3px); order:5; }
+    .boss-selection-count { display:block; margin-left:0; margin-top:4px; }
   }
 </style>
 <link rel="stylesheet" href="site_ux.css">
@@ -343,26 +375,26 @@
         </aside>
       </section>
 
+      <section class="card" aria-labelledby="dopingHeading">
+        <h2 id="dopingHeading">도핑별 최종뎀</h2>
+        <div id="dopingList"></div>
+      </section>
+
+      <div data-ux-help="도핑 설정과 배율 보정" hidden>
+        <p class="note">아이콘을 눌러 선택하세요. 마우스를 올리면 이름이 나옵니다. 원형 표시 3종은 각 조합에서 하나만 선택할 수 있습니다.</p>
+        <p id="dopingSummary" class="doping-summary" aria-live="polite"></p>
+        <p class="note">입력 배율은 풀도핑 기준입니다. 제공된 표의 최종뎀 환산값으로 풀도핑과 쌀도핑의 차이를 계산하며, 실제 효과는 캐릭터 스탯에 따라 달라집니다. 표에 없는 버프는 두 조합에서 같다고 가정합니다.</p>
+        <p class="note" id="dopingNote"></p>
+      </div>
+
       <section class="card">
-        <h2>보스 목록</h2>
+        <h2>보스 목록 <span class="boss-selection-count" id="bossSelectionCount"></span></h2>
         <div class="boss-list-actions" role="group" aria-label="보스 목록 관리">
-          <button type="button" class="tool-btn" id="allOn">전체 켜기</button>
-          <button type="button" class="tool-btn" id="allOff">전체 끄기</button>
-          <button type="button" class="tool-btn" id="excludeCompletedBtn" aria-pressed="false" title="불러온 스케줄러의 완료 상태를 기준으로 동선에서 제외합니다">완료한 보스 제외하기 OFF</button>
+          <button type="button" class="tool-btn" id="allOn">전체 포함</button>
+          <button type="button" class="tool-btn" id="allOff">전체 제외</button>
+          <button type="button" class="tool-btn" id="excludeCompletedBtn" aria-pressed="false" data-tooltip="완료 표시한 보스만 동선 계산에서 제외합니다. 포함 선택은 유지됩니다.">완료한 보스 제외하기 OFF</button>
+          <button type="button" class="tool-btn" id="refreshCompletedBtn" data-tooltip="넥슨 스케줄러의 완료 상태로 다시 불러옵니다">완료 새로고침</button>
           <button type="button" class="tool-btn" id="resetBtn">초기화</button>
-        </div>
-        <div class="boss-add" role="group" aria-label="보스 직접 추가">
-          <div class="boss-add-field boss-add-name"><span id="newNameLabel">보스 이름</span>
-            <div class="boss-picker" id="bossPicker">
-              <input type="hidden" id="newName">
-              <button type="button" class="boss-picker-btn" id="bossPickerBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="newNameLabel bossPickerBtn"></button>
-              <div class="boss-picker-menu" id="bossPickerMenu" role="listbox" aria-labelledby="newNameLabel" hidden></div>
-            </div>
-          </div>
-          <label class="boss-add-field" for="newMult">배율
-            <span class="new-mult"><input type="number" id="newMult" min="1" step="10" value="100"><span class="unit">%</span></span>
-          </label>
-          <button type="button" class="tool-btn" id="addBoss">+ 보스 추가</button>
         </div>
         <div class="shot-box">
           <div class="shot-drop" id="shotDrop" role="button" tabindex="0" aria-describedby="shotHelp">
@@ -376,17 +408,16 @@
               <li>이 페이지에서 <b>Ctrl + V</b></li>
               <li>아래에서 확인 후 <b>선택한 배율 넣기</b></li>
             </ol>
-            <span class="shot-foot">목록에 있는 보스만 넣고, 이미지는 이 브라우저 안에서만 처리합니다.</span>
+            <span class="shot-foot">선택한 난이도의 배율을 채웁니다. 동선 포함·완료 선택은 그대로 유지됩니다.</span>
           </div>
           <input type="file" id="shotFile" accept="image/*" hidden>
           <p class="note fetch-status" id="shotStatus"></p>
           <div id="shotResult" hidden></div>
         </div>
-        <p class="ux-hint">배율 또는 실제 클리어 시간(분)을 입력하세요. 두 값은 함께 반영됩니다.</p><div class="boss-head">
-          <span></span><span></span><span class="name-col">보스</span><span>배율</span><span>소요</span><span>도핑</span><span></span>
+        <p class="ux-hint">배율은 풀도핑 기준으로, 시간은 선택한 도핑 기준으로 입력하세요. 여유 시간과 윌의 +4분은 별도로 더합니다.</p><div class="boss-head">
+          <span>동선 포함</span><span></span><span class="name-col">보스 · 난이도</span><span>배율</span><span>소요</span><span>도핑</span><span>완료 상태</span>
         </div>
         <div id="bossList"></div>
-        <p class="note">보스별 도핑 버튼을 누르면 풀도핑 ↔ 쌀도핑으로 바뀝니다. 한 버프에는 같은 도핑만 묶되, 쌀도핑 보스를 풀도핑 버프에 넣어 버프 개수가 줄어들면 풀도핑으로 자동 계산합니다. 입력 시간은 풀도핑 기준이며, 쌀도핑은 배율의 97%로 동선을 계산합니다.</p>
         <p class="note">윌은 페이즈 이동 때문에 처치 시간에 +4분이 자동으로 붙습니다. 입력한 값은 이 브라우저에 저장됩니다.</p>
       </section>
 
@@ -397,7 +428,7 @@
           <b>소요 시간 = 기준 시간 ÷ (배율 ÷ 100) × (1 + 여유%)</b>, 한 버프에 n마리를 넣으면 <b>이동 시간 × (n−1)</b>이 더 붙습니다. 그걸로<br>
           ① 켜둔 보스를 전부 도는 <b>최소 버프 개수</b>와 각 버프에 넣을 보스·순서를 짭니다. 도핑별 보스 15마리까지는 정확한 최적해, 그보다 많으면 근사값입니다.<br>
           ② 버프를 한 번만 쓸 때 <b>남는 시간이 가장 적은</b> 조합도 따로 보여줍니다. 같은 시간이면 보스를 더 많이 잡는 쪽이 위로 옵니다.<br>
-          ③ 보스별로 <b>풀도핑 / 쌀도핑</b>을 선택합니다. 쌀도핑은 배율 ×0.97(상대 3% 감소)로 계산하며, 한 버프에는 같은 도핑의 보스만 묶습니다. 단, 전체 동선에서는 쌀도핑 보스를 풀도핑 버프에 넣어 버프 개수가 줄어들 때 풀도핑으로 바꿔 계산합니다.
+          ③ 보스별로 <b>풀도핑 / 쌀도핑</b>을 선택합니다. 쌀도핑은 위 도핑 목록에서 제외한 버프의 최종뎀 환산값으로 배율을 보정하며, 한 버프에는 같은 도핑의 보스만 묶습니다. 단, 전체 동선에서는 쌀도핑 보스를 풀도핑 버프에 넣어 버프 개수가 줄어들 때 풀도핑으로 바꿔 계산합니다.
         </p>
       </section></div>
     </div>
@@ -406,7 +437,7 @@
       <div class="route-settings" role="group" aria-label="동선 설정">
         <span class="route-item"><label for="moveMin">보스 간 이동</label><input type="number" id="moveMin" min="0" step="0.5" value="1"><span class="unit">분</span></span>
         <span class="route-item"><label for="slackPct">여유 시간 +</label><input type="number" id="slackPct" min="0" step="5" value="0"><span class="unit">%</span></span>
-        <span class="route-fixed" title="버프 지속 30분, 배율 100%일 때 20분으로 계산합니다">버프 30분 · 100% = 20분</span>
+        <span class="route-fixed" data-tooltip="버프 지속 30분, 배율 100%일 때 20분으로 계산합니다">버프 30분 · 100% = 20분</span>
       </div>
       <section class="card card-primary">
         <h2>전체 보스 도는 순서</h2>
@@ -424,6 +455,7 @@
 <script src="nexon_key.js"></script>
 <script src="nexon_characters.js"></script>
 <script src="boss_shot_reader.js"></script>
+<script src="site_tooltips.js"></script>
 <script src="boss_buff_planner.js"></script>
 </body>
 </html>
