@@ -72,6 +72,48 @@
     LARGE_TEMPLATES.push(t);
   });
 
+  // 작은 캡처의 안티앨리어싱 글꼴: 획의 진하기를 보존한 9px 표본(같은 숫자의 픽셀 위치 변형 포함).
+  var SMALL_SAMPLES = [
+    ["0",6,"ALX//9YkjP9rMe/G1s4TAKXv770LAHP/770LAHP/1sYOAJz3nP9aIe/GAM7//+cuAAAhMQAA"],
+    ["1",4,"ALX/nN7e95yMCu+cAADvnAAA75wAAO+cAADvnAAA75wAAAAA"],
+    ["2",6,"C8b//95KlPdaId7Oc4QAB73WAAAASvecAAAx770AADHvzgAAMe/OAAAAvf/////vAAAAAAAA"],
+    ["3",6,"AM7//+9KpfdaId7OQkoCAL3WAACt1u9zAACEtfe9AAAAAIT/xu8zAL33Md7///d7AAAhQgAA"],
+    ["4",7,"AAAAY//WGB0AAN731hgrAKXvvdYYC0r3c73WGADWvQu91hiM/9bW7/fGY6WlpdbnlEcAAAC91hgAAAAAAAAA"],
+    ["5",6,"vf////9H1sZaWloK75xSQgAA9/f3/84WpVoAWv97AAAAAO+c/5wFe/9zlP///60KAABCBAAA"],
+    ["6",6,"ALX//95KnPdjMd7O3q0xWjFS78739/dz/94YAMbn76UAAJzvve8uIdbeId7//+9KAAAhMQAA"],
+    ["7",6,"7/////+9Ulpac/+EAAAAxt4dAABC/3sAAADG3hoAAEr/cwAAAM7WGAAAY/9jAAAAAAAAAAAA"],
+    ["8",6,"Id7//9Ykxt4hMe+1zs4QAN69Su/e3udKnPe1tf+c/6UAAK3v78YOAM7nc/f//+9rAAAxMQAA"],
+    ["9",6,"St7//84W1t4xQu+195wAAK3v570LAN7vc//3987vACFaQq3e3tYhWvecSu///8YWAABCCgAA"],
+    [".",2,"AAAAAAAAAAAAAA4Aa4zO7wAA"],
+    ["%",9,"Y/fvtQsAtcYOvb1a7yZz7y4AtcZz5yHncwAAId7vc729CwAAAAAAc+cx1u9zAAAh73OtzoTnAADGtQe9vULvAIzeHQBz9+e9ACEAAAAAMUoC"],
+    ["2",7,"AIz///eMBSH/pQel9zxCpR8Ac/9HAAAAANbWFQAAAL3vLgAAAL3vSgAAAL3vSgAAAHP//////3MAAAAAAAAA"],
+    ["2",7,"AIz///eMBSH/pQel9zxCpR8Ac/9HAAAAANbWFQUAAL3vLgAmAL3vSgAAH73vSgAAAHP//////3MAAAAAAAAA"],
+    ["3",6,"Id7//94uxucxMe+1SkIAAN69AADG3u9KAACUvf+cAAAAAK3v3tYhIdbnWu///+9aAAAxMQAA"],
+    ["5",6,"c/////+cnO9aWloxvdZCUgQAxvf3/+9KhIQHId7GAAAAAL3W1tYYMe+9Su///9YkAAAxIQAA"],
+    ["6",7,"ACHO///WIQe970JC77UZ94RCUkJKHv/G9//vSlr/vQAS3s4e/3MAB73WD9bWADHvxgBK7///3iEAAAAxIQAA"],
+    ["7",6,"vf/////vQlpaWt7GAAAAe/9SAAAA3sYOAACE/1AAAADevQsAAIz/RwAAAOe1BwAAAAAAAAAA"],
+    ["8",6,"c/f//60K960He/9a/4wAIf9rlPfW78YW1uel1vdK/00AAN69/3sCSve1tf///9YkAABKCgAA"],
+    ["9",7,"AIz3//+UBUL/rQqE/2OM/0cAAN69Wv9zAEr/vR29//fv1r0rAEJaId6tQv+lB5T/RwCU////jAUAAABCAgAA"],
+    ["4",7,"AAAAjP+9CwAAIff3vQsAAL3W1r0LAHP3Sta9CyHvpQXWvQut/9bW9++tc6WlpefWhAAAAADWvQsAAAAAAAAA"],
+    ["%",9,"xu/3QgAh90oA/wzOnA3WpQAA/0LWjJzWAAAAlPfOSu9KAAAAAAAP1pyU78YAAAOl1hn3St6MAEr3IR7/CcacE+eEAA3W3vdCIQAAAAABUiEA"],
+    ["%",9,"hPf3nAIAzq0F1pyM1hWc3hgAzq2czkrvSgAASu/vStacBQAAAAAAnNZK5+dKAABK70XGra3OAADejADWnITWALXGDgCc7++cACEAAAAAQkIA"],
+    ["0",7,"AHP3//drACH3tQq99zOc/z8AIf9zve8rAADvnL3vKwAA75yc9zgAIf+EQv+lB733MwCU////cwAAAABCAgAA"],
+    ["0",7,"R3P3//drACH3tQq99zOc/z8AIf9zve8rAADvnL3vKwAA75yc9zgAIf+EQv+lB733MwCU////cwAAAABCAgAA"],
+    ["3",6,"c/f//7UL97UKe/9aWiEAIf9rAFrW784WAEKl1vdKAAAAAN69/6UHWvetlP///84hAABKCgAA"],
+    ["6",7,"AFrv//+lCgDvvSGE/2OE9zhSQlIxnOfn9//OFrX/cwBK/4yc7y4AAO+cQv+cBXv/exiU////tQsAAABCBAAA"],
+    ["6",7,"AFrv//+lCgDvvSGE/2OE9zhSQlIxnOfn9//OFrX/cwBK/4yc7y4AAO+cQv+cBXv/ewCU////tQsAAABCBAAA"],
+    ["6",7,"AFrv//+lCgDvvSGE/2OE9zhSQlIxnOfn9//OFrX/cwBK/4yc7y4AAO+cQv+cBXv/ewCU////tQsAAABCBAAA"],
+    ["6",7,"ALX//95KAJz3YzHezhPerTFaMVIE78739/dzAP/eGADG5x3vpQAAnO+Mve8uIdbecyHe///vSgAAACExAAAA"],
+    ["8",7,"AJT///+MBUL/jAKl/z9a/1UAc/9FALX31vetCiHn3qXe5y617y4AAPecnP9aAGv/jADO////vRYAAABKBAAA"],
+    ["8",6,"AM7//+dKpfc5Id7OtecdAL3WId7n1vdrc/+9rfe9570LAIT/1t4hALX/Su////eMAAAhQgAA"],
+    [".",2,"RwAdAAAAAAAAAAAApST/ewAA"]
+  ];
+  var SMALL_TEMPLATES = SMALL_SAMPLES.map(function (sample, i) {
+    var raw = atob(sample[2]), bits = new Float32Array(raw.length);
+    for (var j = 0; j < raw.length; j++) bits[j] = raw.charCodeAt(j) / 255;
+    return {ch:sample[0], w:sample[1], h:9, bits:bits, variant:i + 1};
+  });
+
   // 그 사이트의 초상화 서명(tests/fixtures/boss_shot_1.png에서 뽑은 signature(), int8·base64).
   // 사이트가 보스마다 다른 위치로 잘라 쓰고, 검은 마법사처럼 아예 다른 그림인 보스도 있어서
   // 아이콘만으로는 헷갈리는 경우를 이걸로 먼저 맞힌다. 익스트림은 테두리가 달라 따로 있다.
@@ -183,6 +225,25 @@
     var cards = comps.filter(function (c) {
       return Math.abs(c.w - best.w) <= Math.max(2, best.w * 0.04) && Math.abs(c.h - best.h) <= Math.max(2, best.h * 0.04);
     });
+    // 툴팁이 테두리에 닿으면 여러 카드가 한 덩어리가 된다. 반복되는 행·열 위치에서
+    // 실제 사각 테두리가 남아 있는 칸만 복원한다(빈 마지막 칸이나 잘린 카드는 제외).
+    var xs = [], ys = [];
+    cards.forEach(function (c) {
+      if (!xs.some(function (x) { return Math.abs(x - c.x) <= 2; })) xs.push(c.x);
+      if (!ys.some(function (y) { return Math.abs(y - c.y) <= 2; })) ys.push(c.y);
+    });
+    function borderFraction(x, y, dx, dy, length) {
+      var count = 0;
+      for (var k = 0; k < length; k++) if (dist(colorAt(img, x + dx * k, y + dy * k), bg) > 14) count++;
+      return count / length;
+    }
+    if (xs.length > 1 && ys.length > 1) ys.forEach(function (y) { xs.forEach(function (x) {
+      if (x + best.w > img.width || y + best.h > img.height || cards.some(function (c) { return Math.abs(c.x - x) <= 2 && Math.abs(c.y - y) <= 2; })) return;
+      var pad = Math.max(3, Math.round(best.w * 0.12)), width = best.w - pad * 2, height = best.h - pad * 2;
+      var top = borderFraction(x + pad, y, 1, 0, width), bottom = borderFraction(x + pad, y + best.h - 1, 1, 0, width);
+      var left = borderFraction(x, y + pad, 0, 1, height), right = borderFraction(x + best.w - 1, y + pad, 0, 1, height);
+      if (top >= 0.6 && bottom >= 0.8 && left >= 0.6 && right >= 0.6) cards.push({x:x, y:y, w:best.w, h:best.h, recovered:true});
+    }); });
     // 위→아래, 같은 줄이면 왼→오른.
     cards.sort(function (a, b) { return Math.abs(a.y - b.y) > best.h / 2 ? a.y - b.y : a.x - b.x; });
     return { bg: bg, cards: cards, comps: comps };
@@ -335,6 +396,9 @@
     while (b > 0 && rowInk[b - 1]) b--;
     var ly0 = y0 + b, ly1 = y0 + e, lh = ly1 - ly0 + 1;
     if (lh < GLYPH_H * s * 0.75 || lh > GLYPH_H * s * 1.25) return { text: '', value: null };
+    // 툴팁의 반투명 바탕은 숫자 줄과 카드 아래 여백의 색이 다를 수 있다.
+    // 숫자 줄의 실제 배경을 써야 빈 열을 잉크로 오해해 소수점을 버리지 않는다.
+    bgc = modeColor(img, x0, ly0, x1, ly1);
     var lx0 = x1, lx1 = x0;
     for (y = ly0; y <= ly1; y++) for (x = x0; x <= x1; x++) if (ink(x, y)) { if (x < lx0) lx0 = x; if (x > lx1) lx1 = x; }
     // 잉크 진하기(0~1). 1배 캡처는 사실상 0/1이고, 확대 캡처의 흐린 가장자리는 중간값이 된다.
@@ -344,6 +408,22 @@
         Math.min(1, Math.max(0, (dist(colorAt(img, lx0 + x, ly0 + y), bgc) - 30) / 100));
     }
     var result = parseLine(soft, W, H, H / GLYPH_H, true);
+    // 같은 72px 카드라도 작은 글꼴은 비트맵 글꼴과 달리 흐린 획을 포함한다.
+    // 아래쪽의 약한 픽셀까지 읽고 전경색으로 정규화해 별도 표본과 비교한다.
+    if (H >= 7 && H <= 10) {
+      var smallH = Math.max(9, H), smallX0 = x1, smallX1 = x0, peak = 0;
+      for (y = ly0; y < Math.min(img.height, ly0 + smallH); y++) for (x = x0; x <= x1; x++) {
+        var strength = dist(colorAt(img, x, y), bgc);
+        if (strength > peak) peak = strength;
+        if (strength > 80) { if (x < smallX0) smallX0 = x; if (x > smallX1) smallX1 = x; }
+      }
+      var smallW = smallX1 - smallX0 + 1, smooth = new Float32Array(smallW * smallH);
+      for (y = 0; y < smallH; y++) for (x = 0; x < smallW; x++) {
+        smooth[y * smallW + x] = Math.min(1, dist(colorAt(img, smallX0 + x, ly0 + y), bgc) / (peak || 1));
+      }
+      var small = parseWithTemplates(smooth, smallW, smallH, smallH / GLYPH_H, SMALL_TEMPLATES);
+      if (small.error < result.error) result = small;
+    }
     var text = result.text;
     var m = /^(\d+(?:\.\d+)?)%$/.exec(text || '');
     // 모양이 잘 맞지 않는 줄은 그럴듯한 큰 정수로 추측해 넣지 않고 직접 확인하도록 남긴다.
@@ -455,12 +535,16 @@
       var boss = refs && refs.length ? matchBoss(signature(img, box), refs) : { ref: null, score: 0, margin: 0 };
       var diff = readDiff(img, box);
       var pct = readPercent(img, card, box.y + box.h);
+      // 테두리가 툴팁과 이어졌어도 난이도·배율이 보이는 카드까지 버리지 않는다.
+      var covered = !diff;
       return {
         card: card, portrait: box,
         name: boss.ref ? boss.ref.name : '', icon: boss.ref ? boss.ref.icon : '', score: boss.score, margin: boss.margin,
         sure: !!boss.ref && boss.score >= 0.7 && boss.margin >= 0.05,
         diffKey: diff, diff: DIFF_LABEL[diff] || '',
-        text: pct.text, value: pct.value, scale: card.w / BASE_CARD_W
+        // 가려진 난이도를 추측해 잘못된 보스에 숫자를 적용하지 않는다.
+        covered: covered,
+        text: covered ? '' : pct.text, value: covered ? null : pct.value, scale: card.w / BASE_CARD_W
       };
     });
     // 같은 보스·난이도가 두 장 나오면(아이콘에 없는 다른 그림이 끼어든 경우) 덜 닮은 쪽을 의심한다.

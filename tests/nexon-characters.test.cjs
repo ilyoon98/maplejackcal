@@ -69,3 +69,103 @@ test('직접 검색은 선택기 위쪽의 접근 가능한 토글 스위치로 
   assert.match(css, /\.nx-character-mode-bar\{[^}]*justify-content:flex-end/);
   assert.match(css, /\.nx-character-mode\[aria-checked="true"\] \.nx-mode-thumb/);
 });
+
+function mountPicker(response = Promise.resolve(payload)) {
+  function node(tag) {
+    const n = {tag, children:[], className:'', dataset:{}, attrs:{}, handlers:{}, hidden:false};
+    let value = '', label = '';
+    Object.defineProperty(n, 'value', {
+      get(){ return tag === 'select' ? (n.children.find(c => c.value === value) || n.children[0] || {}).value || '' : value; },
+      set(v){ value = String(v); },
+    });
+    Object.defineProperty(n, 'textContent', {get(){return label;}, set(v){ label = String(v); n.children = []; }});
+    n.append = (...items) => n.children.push(...items);
+    n.appendChild = child => n.children.push(child);
+    n.setAttribute = (key, v) => { n.attrs[key] = String(v); };
+    n.removeAttribute = key => {
+      delete n.attrs[key];
+      if (key.startsWith('data-')) delete n.dataset[key.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())];
+    };
+    n.addEventListener = (name, fn) => {n.handlers[name] = fn;};
+    n.dispatchEvent = event => {if(n.handlers[event.type]) n.handlers[event.type](event);};
+    n.classList = {
+      add(name){n.className += ' ' + name;},
+      toggle(name, on){const names = new Set(n.className.split(/\s+/).filter(Boolean)); if(on) names.add(name); else names.delete(name); n.className = [...names].join(' ');},
+    };
+    return n;
+  }
+  const env = {
+    document:{createElement:node}, Event:class {constructor(type){this.type = type;}},
+    addEventListener(){}, NexonKey:{has:() => true, get:() => 'fake-key'},
+    fetch:() => response.then(body => ({ok:true, json:() => Promise.resolve(body)})),
+  };
+  vm.runInNewContext(code, env);
+  const host = node('div'), input = node('input'), selections = [];
+  const picker = env.NexonCharacters.mount({host, input, onSelect:c => selections.push(c.name)});
+  function find(className, root = host) {
+    if(root.className.split(/\s+/).includes(className)) return root;
+    for(const child of root.children){const match = find(className, child); if(match) return match;}
+  }
+  return {picker, input, find, selections};
+}
+
+test('저장 캐릭터를 선택하면 서버·캐릭터 필드와 조회 OCID를 함께 바꾼다', async () => {
+  const {picker, input, find, selections} = mountPicker();
+  await picker.ready;
+  assert.equal(find('nx-world-select').value, '스카니아');
+  assert.equal(picker.selectCharacter({name:'루나부캐', world:'루나'}), true);
+  assert.equal(find('nx-world-select').value, '루나');
+  assert.equal(find('nx-character-select').value, '1');
+  assert.equal(find('nx-world-icon').src, 'icons/server/루나.webp');
+  assert.equal(input.value, '루나부캐');
+  assert.equal(input.dataset.accountOcid, '1');
+  assert.equal(input.dataset.accountWorld, '루나');
+  assert.deepEqual(selections, ['스카메인', '루나부캐']);
+  picker.selectCharacter({name:'스카부캐', world:'스카니아'});
+  assert.equal(find('nx-world-select').value, '스카니아');
+  assert.equal(find('nx-character-select').value, '4');
+  assert.equal(input.dataset.accountOcid, '4');
+});
+
+test('계정 목록 로딩 중 배지를 선택해도 로딩 완료 후 최고 레벨 캐릭터로 되돌리지 않는다', async () => {
+  let resolve;
+  const response = new Promise(r => {resolve = r;});
+  const {picker, input, find} = mountPicker(response);
+  picker.selectCharacter({name:'루나부캐', world:'루나'});
+  assert.equal(input.value, '루나부캐');
+  resolve(payload);
+  await picker.ready;
+  assert.equal(find('nx-world-select').value, '루나');
+  assert.equal(find('nx-character-select').value, '1');
+  assert.equal(input.dataset.accountOcid, '1');
+});
+
+test('계정 밖 저장 캐릭터는 직접 검색으로 표시하고 이전 캐릭터의 OCID를 지운다', async () => {
+  const {picker, input, find} = mountPicker();
+  await picker.ready;
+  picker.selectCharacter({name:'다른계정캐릭터', world:'베라'});
+  assert.equal(input.hidden, false);
+  assert.equal(input.value, '다른계정캐릭터');
+  assert.equal(input.dataset.accountOcid, undefined);
+  assert.equal(input.dataset.accountWorld, undefined);
+  assert.equal(find('nx-character-mode').attrs['aria-checked'], 'true');
+  await picker.reload();
+  assert.equal(input.value, '다른계정캐릭터');
+  assert.equal(find('nx-character-mode').attrs['aria-checked'], 'true');
+});
+
+test('조회 없이 필드만 동기화하는 선택은 목록 로딩 전후 모두 자동 조회를 중복 호출하지 않는다', async () => {
+  let resolve;
+  const {picker, input, find, selections} = mountPicker(new Promise(r => {resolve = r;}));
+  picker.selectCharacter({name:'루나부캐'}, {notify:false});
+  resolve(payload);
+  await picker.ready;
+  assert.equal(find('nx-world-select').value, '루나');
+  assert.equal(input.dataset.accountOcid, '1');
+  assert.deepEqual(selections, []);
+  picker.selectCharacter({name:'스카부캐'}, {notify:false});
+  assert.equal(input.dataset.accountOcid, '4');
+  assert.deepEqual(selections, []);
+  find('nx-character-select').dispatchEvent({type:'change'});
+  assert.deepEqual(selections, ['스카부캐']);
+});

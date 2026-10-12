@@ -70,6 +70,8 @@
       icon: b.icon || (entry ? 'icons/boss/' + entry[1] + '.webp' : ''),
       mult: Math.max(0.01, num(b.mult, 100)), extra: DEFAULT_EXTRA[b.name] || 0,
       on: b.on !== false, rice: b.rice === true, completed: b.completed === true,
+      registered: b.registered === true,
+      inList: b.inList === true || b.on !== false,
       completionOverride: b.completionOverride === true,
       difficultySettings: b.difficultySettings || {}
     };
@@ -105,50 +107,8 @@
     b.mult = setting ? Math.max(0.01, num(setting.mult, 100)) : 100;
     if (setting) b.rice = setting.rice === true;
   }
-  // 사용자 제공 표의 최종뎀 환산값(%). 캐릭터 스탯에 따른 실측값이 아닌 근사치다.
-  var DOPING_BUFFS = [
-    { id: 'mvp', name: 'MVP 슈퍼파워', fd: 0.844, icon: 'superpower' },
-    { id: 'fish', name: '붕어빵 뿌리기', fd: 0.844, icon: 'fish' },
-    { id: 'urus', name: '마슈르의 선물 (우뿌)', fd: 0.844, icon: 'urus' },
-    { id: 'union', name: '유니온의 힘', fd: 0.844, icon: 'union' },
-    { id: 'extreme', name: '익스트림 레드/블루', fd: 0.844, icon: 'extreme' },
-    { id: 'sayram', name: '세이람의 영약', fd: 5.825, icon: 'sayram' },
-    { id: 'vip', name: 'VIP 버프', fd: 3.527, icon: 'vipbuff' },
-    { id: 'stat', name: '향상된 10단계 물약', fd: 0.279, icon: 'statpotion' },
-    { id: 'honor', name: '명예의 영약', fd: 1.68, icon: 'buff300' },
-    { id: 'collector', name: '콜렉터의 영약', fd: 1.804, icon: 'collector' },
-    { id: 'legend', name: '전설의 영웅 비약', fd: 0.832, icon: 'legendhero' },
-    { id: 'hero', name: '고급 대영웅의 비약', fd: 1.085, icon: 'bighero' },
-    { id: 'master', name: '명장 — 고급 무기 제련', fd: 1.608, icon: 'jangbi' }
-  ];
-  // 각 조합에서 하나만 사용. 저장된 중복 선택은 최종뎀이 큰 항목을 남긴다.
-  var EXCLUSIVE_DOPING = ['master', 'hero', 'legend'];
-  function normalizeDoping(raw) {
-    var result = { full: {}, rice: {} };
-    DOPING_BUFFS.forEach(function (buff) {
-      var exclusive = EXCLUSIVE_DOPING.indexOf(buff.id) >= 0;
-      var full = raw && raw.full && typeof raw.full[buff.id] === 'boolean'
-        ? raw.full[buff.id] : !exclusive || buff.id === 'master';
-      var rice = raw && raw.rice && typeof raw.rice[buff.id] === 'boolean'
-        ? raw.rice[buff.id] : exclusive ? buff.id === 'legend' : buff.id !== 'collector';
-      result.full[buff.id] = full;
-      result.rice[buff.id] = rice && (full || exclusive);
-    });
-    ['full', 'rice'].forEach(function (mode) {
-      var selected = EXCLUSIVE_DOPING.filter(function (id) { return result[mode][id]; });
-      selected.slice(1).forEach(function (id) { result[mode][id] = false; });
-    });
-    return result;
-  }
-  // 입력 배율은 풀도핑 기준. 비약 교체를 포함해 두 조합의 최종뎀 배수를 비교한다.
-  function riceRate() {
-    return DOPING_BUFFS.reduce(function (rate, buff) {
-      var factor = 1 + buff.fd / 100;
-      if (state.doping.full[buff.id]) rate /= factor;
-      if (state.doping.rice[buff.id]) rate *= factor;
-      return rate;
-    }, 1);
-  }
+  // 쌀도핑은 풀도핑 기준 입력 배율의 97%로 고정한다.
+  var RICE_RATE = 0.97;
   function riceLabel() { return '쌀도핑'; }
   var MAX_EXACT_1 = 15;      // 판 종류가 하나뿐일 때 3^n DP 한계.
   var MAX_ENUM = 20;         // 조합 전수조사 한계(2^n).
@@ -167,7 +127,7 @@
       moveMin: 1,
       slackPct: 0,
       excludeCompleted: false,
-      doping: normalizeDoping(),
+      showAllBosses: false,
       bosses: catalogBosses(DEFAULT_BOSSES.map(function (b, i) {
         return { id: 'b' + i, name: b.name, diff: b.diff, icon: b.icon, mult: 100, extra: DEFAULT_EXTRA[b.name] || 0, on: true };
       }))
@@ -185,7 +145,8 @@
       s.moveMin = Math.max(0, num(s.moveMin, 1));
       s.slackPct = Math.max(0, num(s.slackPct, 0));
       s.excludeCompleted = s.excludeCompleted === true;
-      s.doping = normalizeDoping(s.doping);
+      s.showAllBosses = s.showAllBosses === true;
+      delete s.doping; // 이전 버프별 선택값은 더 이상 사용하지 않는다.
       s.bosses = catalogBosses(s.bosses);
       return s;
     } catch (err) { return defaultState(); }
@@ -208,7 +169,7 @@
   // 배율 100%가 기준 시간(기본 20분), 200%면 그 절반.
   function secOf(mult) { return Math.max(1, Math.round(state.baseMin * 60 * 100 / mult)); }
   function multOf(sec) { return state.baseMin * 60 * 100 / sec; }
-  function riceSecOf(mult) { return secOf(mult * riceRate()); }
+  function riceSecOf(mult) { return secOf(mult * RICE_RATE); }
   // 여유 %: 처치 시간을 그 비율만큼 늘려 잡는다(고정 추가 시간에는 붙이지 않는다).
   function withSlack(sec) { return Math.max(1, Math.round(sec * (1 + state.slackPct / 100))); }
   function extraSec(b) { return Math.max(0, Math.round((b.extra || 0) * 60)); }
@@ -413,49 +374,6 @@
   var moveInput = document.getElementById('moveMin');
   var slackInput = document.getElementById('slackPct');
   var excludeCompletedBtn = document.getElementById('excludeCompletedBtn');
-  var dopingListEl = document.getElementById('dopingList');
-  var dopingSummaryEl = document.getElementById('dopingSummary');
-  var fullDopingOpen = false;
-  dopingListEl.addEventListener('toggle', function (e) {
-    if (e.target.id === 'fullDopingOptions' && e.target.isConnected) fullDopingOpen = e.target.open;
-  }, true);
-
-  function renderDoping() {
-    dopingListEl.innerHTML = ['rice', 'full'].map(function (mode) {
-      var heading = mode === 'full' ? '풀도핑' : '쌀도핑';
-      var group = '<fieldset class="doping-group"><legend><span class="doping-heading">' +
-        (mode === 'rice' ? '<img class="rice-sack-icon" src="icons/buff/rice-sack.webp" width="24" height="24" alt="">' : '') +
-        heading + '</span></legend><div class="doping-icons">' +
-        DOPING_BUFFS.map(function (buff) {
-          var selected = state.doping[mode][buff.id];
-          var exclusive = EXCLUSIVE_DOPING.indexOf(buff.id) >= 0;
-          var disabled = mode === 'rice' && !state.doping.full[buff.id] && !exclusive;
-          var note = exclusive ? '명장 · 전영비 · 고대비 중 하나만 선택' : '';
-          if (disabled) note += (note ? '\n' : '') + '풀도핑에서 먼저 선택하세요.';
-          return '<label class="doping-tile' + (exclusive ? ' exclusive' : '') + '" data-tooltip="' + esc(buff.name) + '" data-tooltip-value="최종뎀 +' + buff.fd.toFixed(3) + '%" data-tooltip-note="' + esc(note) + '">' +
-            '<input type="checkbox" data-buff="' + buff.id + '" data-mode="' + mode + '" aria-label="' + esc(buff.name) + ' ' + heading + '"' + (selected ? ' checked' : '') + (disabled ? ' disabled' : '') + '>' +
-            '<span class="doping-tile-face"><img class="doping-icon" src="icons/buff/' + buff.icon + '.webp" width="32" height="32" alt="">' +
-            '<span class="doping-fd">+' + buff.fd.toFixed(3) + '%</span><span class="doping-check" aria-hidden="true">' + (selected ? '✓' : '') + '</span></span></label>';
-        }).join('') + '</div></fieldset>';
-      return mode === 'full' ? '<details id="fullDopingOptions" class="doping-full-options"' + (fullDopingOpen ? ' open' : '') + '><summary>풀도핑 설정</summary><p class="note">환산에서 도핑 설정을 바꿨다면, 배율 측정에 사용한 조합으로 맞춰주세요.</p>' + group + '</details>' : group;
-    }).join('');
-    var pct = (riceRate() - 1) * 100;
-    dopingSummaryEl.textContent = '쌀도핑 배율 ×' + riceRate().toFixed(5) + ' · ' +
-      (Math.abs(pct) < 0.005 ? '풀도핑과 동일' : '최종뎀 ' + (pct > 0 ? '증가 ' : '감소 ') + Math.abs(pct).toFixed(2) + '%');
-    document.getElementById('dopingNote').textContent = '입력 배율은 풀도핑 기준이며, 쌀도핑에는 배율 ×' + riceRate().toFixed(5) + '를 적용합니다. 보스별 버튼으로 풀도핑 ↔ 쌀도핑을 선택하세요. 버프 개수가 줄어들면 쌀도핑 보스를 풀도핑 판에 넣습니다.';
-  }
-  dopingListEl.addEventListener('change', function (e) {
-    var t = e.target, id = t.dataset.buff, mode = t.dataset.mode;
-    if (!DOPING_BUFFS.some(function (buff) { return buff.id === id; }) || (mode !== 'full' && mode !== 'rice')) return;
-    state.doping[mode][id] = t.checked;
-    if (EXCLUSIVE_DOPING.indexOf(id) >= 0) {
-      if (t.checked) EXCLUSIVE_DOPING.forEach(function (other) { if (other !== id) state.doping[mode][other] = false; });
-    } else if (mode === 'full') state.doping.rice[id] = t.checked;
-    state.doping = normalizeDoping(state.doping);
-    saveState(); renderAll();
-  });
-
-
   function activeItems() {
     return state.bosses.filter(function (b) { return b.on && !(state.excludeCompleted && b.completed); }).map(function (b) {
       return {
@@ -471,8 +389,13 @@
     var focus = active && typeof listEl.contains === 'function' && listEl.contains(active)
       ? {act:active.dataset.act, index:active.dataset.i} : null;
     listEl.innerHTML = '';
-    document.getElementById('bossSelectionCount').textContent = activeItems().length + '마리 동선 · 전체 ' + state.bosses.length + '마리';
+    var visible = visibleBosses();
+    document.getElementById('bossSelectionCount').textContent = activeItems().length + '마리 동선 · 목록 ' + visible.length + '마리';
+    var viewBtn = document.getElementById('showAllBossesBtn');
+    viewBtn.textContent = state.showAllBosses ? '내 보스만 보기' : '전체 보스 보기';
+    viewBtn.setAttribute('aria-pressed', String(state.showAllBosses));
     state.bosses.forEach(function (b, i) {
+      if (visible.indexOf(b) < 0) return;
       var sec = b.rice ? riceSecOf(b.mult) : secOf(b.mult);
       var excluded = state.excludeCompleted && b.completed;
       var dopingName = b.rice ? '쌀도핑' : '풀도핑';
@@ -482,25 +405,29 @@
       var entry = catalogEntry(b.name);
       row.className = 'boss-row' + (b.on && !excluded ? '' : ' off') + (b.completed ? ' done' : '');
       row.innerHTML =
-        '<button type="button" class="row-include' + (b.on ? ' selected' : '') + '" data-act="on" data-i="' + i + '" aria-pressed="' + b.on + '" aria-label="' + esc(b.name) + ' 동선 포함">' + (b.on ? '✓ 포함' : '제외') + '</button>' +
+        '<button type="button" class="row-include' + (b.on ? ' selected' : '') + '" data-act="on" data-i="' + i + '" aria-pressed="' + b.on + '" aria-label="' + esc(b.name) + ' 동선 포함" data-tooltip="' + (b.on ? '동선에 포함' : '동선에서 제외') + '" data-tooltip-note="누르면 포함 여부가 바뀝니다.">' + (b.on ? '✓' : '') + '</button>' +
         (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="">' : '<span class="row-icon blank"></span>') +
         // 완료 표시는 고정된 오른쪽 버튼에만 두어 이름·난이도가 밀리지 않는다.
         '<div class="row-name"><strong><span class="nm" data-tooltip="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
-        (entry ? '<select class="row-diff diff-badge ' + (DIFF_CLASS[b.diff] || '') + '" data-act="diff" data-i="' + i + '" aria-label="' + esc(b.name) + ' 난이도">' +
-          entry[2].map(function (diff) { return '<option value="' + diff + '"' + (diff === b.diff ? ' selected' : '') + '>' + diff + '</option>'; }).join('') + '</select>' : diffBadge(b.diff)) +
         (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') +
         '</strong></div>' +
-        '<div class="row-input"><input type="number" min="0.01" step="0.01" value="' + percentText(b.mult) + '" data-act="mult" data-i="' + i + '"><span class="unit">%</span></div>' +
-        '<div class="row-input"><input type="number" tabindex="-1" min="0.1" step="0.5" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '"><span class="unit">분</span></div>' +
+        '<div class="row-difficulty">' + (entry ? '<select class="row-diff diff-badge ' + (DIFF_CLASS[b.diff] || '') + '" data-act="diff" data-i="' + i + '" aria-label="' + esc(b.name) + ' 난이도">' +
+          entry[2].map(function (diff) { return '<option value="' + diff + '"' + (diff === b.diff ? ' selected' : '') + '>' + diff + '</option>'; }).join('') + '</select>' : diffBadge(b.diff)) + '</div>' +
+        '<div class="row-input row-mult"><input type="number" min="0.01" step="0.01" value="' + percentText(b.mult) + '" data-act="mult" data-i="' + i + '" aria-label="' + esc(b.name) + ' 배율"><span class="unit">%</span></div>' +
+        '<div class="row-input row-time"><input type="number" tabindex="-1" min="0.1" step="0.1" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '" aria-label="' + esc(b.name) + ' 소요 시간"><span class="unit">분</span></div>' +
         '<button type="button" class="row-doping ' + (b.rice ? 'rice' : 'full') + '" data-act="rice" data-i="' + i + '" aria-label="' + esc(b.name) + ' 도핑: ' + dopingName + ', ' + nextDoping + '으로 변경" aria-pressed="' + !!b.rice + '" data-tooltip="현재 ' + dopingName + '" data-tooltip-note="누르면 ' + nextDoping + '으로 바뀝니다.">' +
         '<img src="icons/buff/' + dopingIcon + '.webp" width="22" height="22" alt=""><span>' + dopingName + '</span></button>' +
         '<button type="button" class="row-complete' + (b.completed ? ' completed' : '') + '" data-act="complete" data-i="' + i + '" aria-pressed="' + !!b.completed + '" aria-label="' + esc(b.name) + ' 완료 상태">' + (b.completed ? '✓ 완료' : '미완료') + '</button>';
       listEl.appendChild(row);
     });
+    if (!visible.length) listEl.innerHTML = '<p class="empty">스케줄러에서 보스를 불러오거나 전체 보스 보기에서 직접 선택하세요.</p>';
     if (focus) {
       var control = listEl.querySelector('[data-act="' + focus.act + '"][data-i="' + focus.index + '"]');
       if (control) control.focus({preventScroll:true});
     }
+  }
+  function visibleBosses() {
+    return state.bosses.filter(function (b) { return state.showAllBosses || b.registered || b.inList || b.on; });
   }
   function trim(v) {
     return String(Math.abs(v - Math.round(v)) < 0.005 ? Math.round(v) : Math.round(v * 10) / 10);
@@ -630,11 +557,24 @@
   function renderAll() {
     excludeCompletedBtn.classList.toggle('on', state.excludeCompleted);
     excludeCompletedBtn.setAttribute('aria-pressed', String(state.excludeCompleted));
-    excludeCompletedBtn.textContent = '완료한 보스 제외하기 ' + (state.excludeCompleted ? 'ON' : 'OFF');
-    renderDoping(); renderList(); renderResults();
+    excludeCompletedBtn.textContent = '완료 제외 ' + (state.excludeCompleted ? 'ON' : 'OFF');
+    renderList(); renderResults();
   }
 
   // ── 이벤트 ──────────────────────────────────────────────────
+  var bossActionsMenu = document.getElementById('bossActionsMenu');
+  bossActionsMenu.addEventListener('click', function (e) {
+    if (e.target.closest('button')) bossActionsMenu.open = false;
+  });
+  document.addEventListener('click', function (e) {
+    if (bossActionsMenu.open && !bossActionsMenu.contains(e.target)) bossActionsMenu.open = false;
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && bossActionsMenu.open) {
+      bossActionsMenu.open = false;
+      bossActionsMenu.querySelector('summary').focus();
+    }
+  });
   listEl.addEventListener('input', function (e) {
     var t = e.target, i = parseInt(t.dataset.i, 10);
     if (isNaN(i)) return;
@@ -646,7 +586,7 @@
       row.querySelector('[data-act="time"]').value = trim((b.rice ? riceSecOf(b.mult) : secOf(b.mult)) / 60);
     } else if (t.dataset.act === 'time') {
       var min = Math.max(0.1, num(t.value, 1));
-      b.mult = Math.round(multOf(min * 60) / (b.rice ? riceRate() : 1) * 10) / 10;
+      b.mult = Math.round(multOf(min * 60) / (b.rice ? RICE_RATE : 1) * 10) / 10;
       row.querySelector('[data-act="mult"]').value = percentText(b.mult);
     } else return;
     saveState(); renderResults();
@@ -657,7 +597,10 @@
     var i = parseInt(t.dataset.i, 10);
     if (isNaN(i)) return;
     if (t.dataset.act === 'rice') state.bosses[i].rice = !state.bosses[i].rice;
-    else if (t.dataset.act === 'on') state.bosses[i].on = !state.bosses[i].on;
+    else if (t.dataset.act === 'on') {
+      state.bosses[i].on = !state.bosses[i].on;
+      state.bosses[i].inList = true;
+    }
     else if (t.dataset.act === 'complete') {
       state.bosses[i].completed = !state.bosses[i].completed;
       state.bosses[i].completionOverride = true;
@@ -693,11 +636,11 @@
     saveState(); renderAll();
   });
   document.getElementById('allOn').addEventListener('click', function () {
-    state.bosses.forEach(function (b) { b.on = true; });
+    visibleBosses().forEach(function (b) { b.on = true; b.inList = true; });
     saveState(); renderAll();
   });
   document.getElementById('allOff').addEventListener('click', function () {
-    state.bosses.forEach(function (b) { b.on = false; });
+    visibleBosses().forEach(function (b) { if (b.on) b.inList = true; b.on = false; });
     saveState(); renderAll();
   });
   excludeCompletedBtn.addEventListener('click', function () {
@@ -705,6 +648,10 @@
     saveState(); renderAll();
   });
   document.getElementById('refreshCompletedBtn').addEventListener('click', refreshCompleted);
+  document.getElementById('showAllBossesBtn').addEventListener('click', function () {
+    state.showAllBosses = !state.showAllBosses;
+    saveState(); renderAll();
+  });
 
   // ── 넥슨 스케줄러에서 보스 목록 불러오기 ──────────────────
   // 보스 수익 정산과 같은 방식: 캐릭터 이름 → ocid → 스케줄러의 주간·월간 보스.
@@ -740,22 +687,16 @@
   var characterShowcaseImage = document.getElementById('buffCharacterShowcaseImage');
   var characterShowcaseName = document.getElementById('buffCharacterShowcaseName');
   var characterShowcaseMeta = document.getElementById('buffCharacterShowcaseMeta');
+  var characterRequestId = 0;
 
-  // 내 캐릭터 고르기 모드에서는 '보스 불러오기'를 서버·캐릭터 칸과 한 줄에 두고,
-  // 직접 검색 모드에서는 이름 입력칸 옆으로 돌려놓는다.
-  var fetchHome = fetchBtn.parentNode;
-  function placeFetchBtn(manual) {
-    var fields = document.querySelector('#buffCharacterPicker .nx-character-fields');
-    if (!manual && fields) fields.appendChild(fetchBtn); else fetchHome.appendChild(fetchBtn);
-    fetchHome.hidden = !manual && !!fields;
-  }
-  if (window.NexonCharacters) NexonCharacters.mount({ host: '#buffCharacterPicker', input: charInput, onModeChange: placeFetchBtn });
-  placeFetchBtn(!charInput.hidden);
-  // 드롭다운에서 캐릭터(또는 서버)를 직접 바꾸면 바로 보스를 불러온다.
-  // 페이지를 열 때의 자동 선택은 change 이벤트가 없어서 API를 부르지 않는다.
-  document.getElementById('buffCharacterPicker').addEventListener('change', function (e) {
-    if (e.target.matches('.nx-character-select, .nx-world-select') && charInput.value.trim()) importCharacter();
-  });
+  var characterPicker = window.NexonCharacters
+    ? NexonCharacters.mount({
+      host: '#buffCharacterPicker',
+      input: charInput,
+      onSelect: function(){ importCharacter(); },
+      onModeChange: function(manual){ fetchBtn.hidden = !manual; }
+    }) : null;
+  if (!characterPicker) { charInput.hidden = false; fetchBtn.hidden = false; }
 
   function setStatus(msg, kind) {
     fetchStatus.textContent = msg || '';
@@ -868,27 +809,31 @@
     registered.forEach(function (b) { byName[b.name] = b; });
     result.forEach(function (b) {
       var incoming = byName[b.name];
-      if (!preserveSelection) { b.on = !!incoming; b.completionOverride = false; }
+      b.registered = !!incoming;
+      if (!preserveSelection) { b.on = !!incoming; b.inList = !!incoming; b.completionOverride = false; }
       if (!incoming) { if (!b.completionOverride) b.completed = false; return; }
       changeDifficulty(b, incoming.diff);
       b.mult = incoming.mult; b.rice = incoming.rice;
       if (!b.completionOverride) b.completed = incoming.completed;
       delete byName[b.name];
     });
-    Object.keys(byName).forEach(function (name) { result.push(normalizeBoss(byName[name], result.length)); });
+    Object.keys(byName).forEach(function (name) {
+      var extra = normalizeBoss(byName[name], result.length); extra.registered = true;
+      result.push(extra);
+    });
     return result;
   }
 
   function importCharacter() {
-    if (fetchBtn.disabled) return; // 불러오는 중이면 겹쳐 부르지 않는다.
     var name = (charInput.value || '').trim();
     if (!name) { setStatus('캐릭터 이름을 입력하세요.', 'err'); charInput.focus(); return; }
     if (!window.NexonKey || !NexonKey.has()) { setStatus('먼저 홈에서 넥슨 오픈 API 키를 등록하세요.', 'err'); return; }
+    var requestId = ++characterRequestId;
     fetchBtn.disabled = true;
     setStatus('불러오는 중…');
     renderCharacterProfile(null);
     var selectedOcid = charInput.dataset.accountOcid || '';
-    (selectedOcid ? Promise.resolve({ ocid:selectedOcid }) : apiGet('/id', { character_name: name }))
+    return (selectedOcid ? Promise.resolve({ ocid:selectedOcid }) : apiGet('/id', { character_name: name }))
       .then(null, function (e) { e.stage = 'id'; throw e; })
       .then(function (r) {
         if (!r || !r.ocid) throw new Error('캐릭터 식별자(OCID)를 받지 못했습니다.');
@@ -899,6 +844,7 @@
         ]);
       })
       .then(function (results) {
+        if (requestId !== characterRequestId || (charInput.value || '').trim() !== name) return;
         var data = results[0];
         var characterProfile = normalizeCharacterProfile(results[1], name);
         renderCharacterProfile(characterProfile);
@@ -915,8 +861,8 @@
           (parsed.skipped.length ? ' 아이콘 없는 보스: ' + parsed.skipped.join(', ') : ''), 'ok');
         try { localStorage.setItem('bossBuffPlanner.lastChar', name); } catch (err) {}
       })
-      .catch(function (err) { setStatus(describeApiError(err, err && err.stage), 'err'); })
-      .then(function () { fetchBtn.disabled = false; });
+      .catch(function (err) { if (requestId === characterRequestId) setStatus(describeApiError(err, err && err.stage), 'err'); })
+      .then(function () { if (requestId === characterRequestId) fetchBtn.disabled = false; });
   }
   // 목록·배율은 그대로 두고 완료 여부만 스케줄러에서 다시 받아 반영한다. 저장해 둔 목록의
   // 난이도가 지금 스케줄러에 등록된 난이도와 다르면(예: 검은 마법사 하드 → 익스트림) 등록된 쪽으로 맞춘다.
@@ -926,6 +872,7 @@
     var done = 0, changed = [];
     state.bosses.forEach(function (b) {
       var r = reg[b.name];
+      b.registered = !!r;
       if (r && r.diff && r.diff !== b.diff) {
         changed.push(b.name + ' ' + (b.diff || '?') + '→' + r.diff);
         changeDifficulty(b, r.diff);
@@ -1004,7 +951,7 @@
       var taken = Object.create(null);
       // 덜 닮은 카드가 같은 보스를 차지하지 않게 확실한 것부터 배정한다.
       list.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (r) {
-        var row = { thumb: r.thumb, value: r.value, idx: -1, on: false };
+        var row = { thumb: r.thumb, value: r.value, covered: r.covered === true, idx: -1, on: false };
         if (!r.name || !r.diff) { shotUnknown.push(row); return; }
         var idx = findBossIndex(r.name, r.diff);
         if (idx < 0) { shotOutside++; return; }
@@ -1017,8 +964,10 @@
       shotRows.sort(function (a, b) { return a.idx - b.idx; }); // 목록 순서대로.
       var odd = list.some(function (r) { return r.scale > 1.03 && r.scale < 1.4; });
       var unread = shotRows.filter(function (r) { return r.value == null; }).length;
+      var covered = list.filter(function (r) { return r.covered; }).length;
       setShotStatus('카드 ' + list.length + '장을 읽었습니다. 확인 후 ‘선택한 배율 넣기’를 누르세요.' +
         (unread ? ' 배율을 확실히 읽지 못한 보스 ' + unread + '개는 직접 입력하세요.' : '') +
+        (covered ? ' 가려진 카드 ' + covered + '장은 툴팁·메뉴가 없어지도록 마우스를 옮긴 뒤 다시 캡처해 주세요.' : '') +
         (odd ? ' 숫자가 흐리면 원본 크기로 다시 캡처해 주세요.' : ''), unread ? 'err' : 'ok');
       renderShot();
     }).catch(function (err) {
@@ -1027,8 +976,8 @@
   }
   function shotRowHtml(row, i, group) {
     var b = state.bosses[row.idx], note, warn = false;
-    if (!b) { note = '목록의 어느 보스인지 고르세요.'; warn = true; }
-    else if (row.value == null) { note = '배율 숫자를 확실히 읽지 못했습니다. 직접 적으세요.'; warn = true; }
+    if (!b) { note = row.covered ? '카드가 가려져 있습니다. 툴팁 없이 다시 캡처하세요.' : '목록의 어느 보스인지 고르세요.'; warn = true; }
+    else if (row.value == null) { note = (row.covered ? '카드가 가려져 있습니다.' : '배율 숫자를 확실히 읽지 못했습니다.') + ' 기존 ' + percentText(b.mult) + '%는 유지됩니다. 다시 캡처하거나 직접 적으세요.'; warn = true; }
     else note = '지금 ' + percentText(b.mult) + '% → ' + percentText(row.value) + '%';
     var name;
     if (group === 'unknown') {
@@ -1069,16 +1018,18 @@
   }
   var shotUnknownOpen = false;
   function applyShot() {
-    var set = 0;
+    var set = 0, unread = 0;
     shotRows.concat(shotUnknown).forEach(function (row) {
       var b = state.bosses[row.idx];
+      if (b && row.value == null) unread++;
       if (!row.on || !b || !(row.value > 0)) return;
       b.mult = Math.max(0.01, row.value);
       set++;
     });
     saveState(); renderAll();
     shotResult.hidden = true;
-    setShotStatus(set ? '배율 ' + set + '개를 넣었습니다.' : '넣을 배율을 고르지 않았습니다.', set ? 'ok' : 'err');
+    setShotStatus((set ? '배율 ' + set + '개를 넣었습니다.' : '넣을 배율을 고르지 않았습니다.') +
+      (unread ? ' 읽지 못한 ' + unread + '개는 적용하지 않았으며 기존 배율이 유지됩니다.' : ''), set && !unread ? 'ok' : 'err');
   }
   shotResult.addEventListener('change', function (e) {
     var t = e.target, row = (t.dataset.g === 'unknown' ? shotUnknown : shotRows)[parseInt(t.dataset.i, 10)];
@@ -1133,9 +1084,9 @@
     readShot(img.getAsFile());
   });
 
-  var profileBar = document.createElement('div'); profileBar.className = 'ux-profile-list';
+  var profileBar = document.createElement('div'); profileBar.className = 'nx-character-recents';
   profileBar.setAttribute('aria-label', '저장한 캐릭터');
-  fetchStatus.after(profileBar);
+  keyState.before(profileBar);
   function syncProfileInputs() {
     moveInput.value = trim(state.moveMin); slackInput.value = trim(state.slackPct);
     document.dispatchEvent(new Event('buff-profile-loaded'));
@@ -1152,21 +1103,21 @@
   }
   function renderProfiles() {
     profileBar.replaceChildren();
+    profileBar.hidden = !profiles.length;
     profiles.forEach(function(p){
-      var group = document.createElement('span'); group.className = 'ux-profile';
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'ux-button';
+      var group = document.createElement('span'); group.className = 'nx-character-chip' + (p.name === activeProfile ? ' active' : '');
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'nx-character-chip-name';
       b.textContent = p.name; b.setAttribute('aria-pressed', String(p.name === activeProfile));
       b.addEventListener('click', function(){
-        activeProfile = p.name; charInput.value = p.name; state = loadState(p.state);
-        // 위 선택 칸에서 고른 다른 캐릭터의 OCID가 남지 않게 지운다(이름으로 다시 찾는다).
-        charInput.removeAttribute('data-account-ocid');
+        activeProfile = p.name; state = loadState(p.state);
+        selectProfileCharacter(p);
         renderCharacterProfile(p.character);
         syncProfileInputs(); saveState(); renderAll(); renderProfiles();
         // API 키가 있으면 스케줄러에서 보스·난이도·완료 여부를 바로 새로 받는다(배율은 같은 보스·난이도면 유지).
         if (window.NexonKey && NexonKey.has()) importCharacter();
         else setStatus('저장한 배율과 보스 선택을 불러왔습니다. 최신 보스 목록은 API 키를 등록하면 바로 받아옵니다.', 'ok');
       });
-      var del = document.createElement('button'); del.type = 'button'; del.className = 'ux-button'; del.textContent = '×';
+      var del = document.createElement('button'); del.type = 'button'; del.className = 'nx-character-chip-x'; del.textContent = '×';
       del.setAttribute('aria-label', p.name + ' 저장 삭제');
       del.addEventListener('click', function(){
         profiles = profiles.filter(function(x){ return x !== p; });
@@ -1177,9 +1128,19 @@
       group.append(b, del); profileBar.append(group);
     });
   }
+  function selectProfileCharacter(profile, notify) {
+    // 이전 캐릭터를 조회하던 응답이 새로 고른 저장 프로필을 덮지 않게 한다.
+    characterRequestId++;
+    fetchBtn.disabled = false;
+    charInput.value = profile.name;
+    charInput.removeAttribute('data-account-ocid');
+    charInput.removeAttribute('data-account-world');
+    if (characterPicker) characterPicker.selectCharacter({name:profile.name, world:profile.character && profile.character.worldName || ''}, {notify:!!notify});
+    try { localStorage.setItem('bossBuffPlanner.lastChar', profile.name); } catch (err) {}
+  }
   renderProfiles();
   var initialProfile = profiles.find(function(p){ return p.name === charInput.value; });
-  if (initialProfile) { activeProfile = initialProfile.name; renderCharacterProfile(initialProfile.character); renderProfiles(); }
+  if (initialProfile) { activeProfile = initialProfile.name; selectProfileCharacter(initialProfile, true); renderCharacterProfile(initialProfile.character); renderProfiles(); }
   refreshKeyState();
 
   renderAll();

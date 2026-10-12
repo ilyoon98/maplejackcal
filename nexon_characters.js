@@ -138,12 +138,12 @@
     note.setAttribute('aria-live', 'polite');
     host.append(modeBar, fields, note);
 
-    var all = [], manual = false;
+    var all = [], manual = false, pendingSelection = null;
     function setNote(message) {
       note.textContent = message || '';
       note.hidden = !message;
     }
-    function setManual(next, focus) {
+    function setManual(next, focus, skipSelection) {
       var wasManual = manual;
       manual = !!next;
       host.classList.toggle('is-manual', manual);
@@ -155,12 +155,12 @@
         input.removeAttribute('data-account-world');
         if (focus) { input.value = ''; input.focus(); }
         setNote('내 계정이 아닌 캐릭터 이름도 직접 검색할 수 있습니다.');
-      } else if (wasManual) {
+      } else if (wasManual && !skipSelection) {
         applySelection();
       }
     }
 
-    function applySelection() {
+    function applySelection(notify) {
       var selected = all.find(function (character) { return character.ocid === characterSelect.value; });
       if (!selected) return;
       input.value = selected.name;
@@ -169,10 +169,10 @@
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
       setNote('');
-      if (typeof options.onSelect === 'function') options.onSelect(selected);
+      if (notify !== false && typeof options.onSelect === 'function') options.onSelect(selected);
     }
 
-    function renderCharacters(preferredOcid) {
+    function renderCharacters(preferredOcid, skipSelection, notify) {
       var iconPath = worldIconPath(worldSelect.value);
       worldIcon.hidden = !iconPath;
       worldIcon.removeAttribute('src');
@@ -188,12 +188,40 @@
       });
       if (preferredOcid && list.some(function (character) { return character.ocid === preferredOcid; })) characterSelect.value = preferredOcid;
       characterSelect.disabled = !list.length;
-      if (list.length) applySelection();
+      if (list.length) { if (!skipSelection) applySelection(notify); }
       else setNote('이 서버에는 레벨 ' + minLevel + ' 이상 캐릭터가 없습니다.');
+    }
+
+    function findCharacter(target) {
+      return all.find(function (character) {
+        if (character.level < minLevel) return false;
+        if (target.ocid) return character.ocid === target.ocid;
+        return character.name === target.name && (!target.world || character.world === target.world);
+      });
+    }
+    function selectCharacter(target, selectionOptions) {
+      target = typeof target === 'string' ? {name:target} : target || {};
+      pendingSelection = {name:text(target.name), world:text(target.world), ocid:text(target.ocid), notify:!(selectionOptions && selectionOptions.notify === false)};
+      var selected = findCharacter(pendingSelection);
+      input.removeAttribute('data-account-ocid');
+      input.removeAttribute('data-account-world');
+      if (selected) {
+        worldSelect.value = selected.world;
+        setManual(false, false, true);
+        renderCharacters(selected.ocid, false, pendingSelection.notify);
+        pendingSelection = null;
+        return true;
+      }
+      // 계정 목록이 아직 로딩 중이거나 계정 밖 캐릭터라면 선택한 이름을 직접 검색 칸에 표시한다.
+      setManual(true, false);
+      input.value = pendingSelection.name;
+      return false;
     }
 
     function renderList(characters) {
       all = characters;
+      var wanted = pendingSelection || {name:text(input.value), world:text(input.dataset.accountWorld)};
+      pendingSelection = null;
       var availableWorlds = worlds(all, minLevel);
       worldSelect.textContent = '';
       availableWorlds.forEach(function (world) {
@@ -211,9 +239,18 @@
       }
       worldSelect.disabled = false;
       var highest = all[0];
-      worldSelect.value = highest && availableWorlds.indexOf(highest.world) >= 0 ? highest.world : availableWorlds[0];
-      renderCharacters(highest && highest.ocid);
-      setManual(false, false);
+      var preferred = findCharacter(wanted);
+      if ((wanted.name || wanted.ocid) && !preferred) {
+        worldSelect.value = highest && availableWorlds.indexOf(highest.world) >= 0 ? highest.world : availableWorlds[0];
+        renderCharacters(highest && highest.ocid, true);
+        setManual(true, false);
+        input.value = wanted.name;
+        return;
+      }
+      var selected = preferred || highest;
+      worldSelect.value = selected && availableWorlds.indexOf(selected.world) >= 0 ? selected.world : availableWorlds[0];
+      setManual(false, false, true);
+      renderCharacters(selected && selected.ocid, false, wanted.notify);
     }
 
     function describe(error) {
@@ -233,14 +270,14 @@
       });
     }
 
-    worldSelect.addEventListener('change', function () { renderCharacters(); });
-    characterSelect.addEventListener('change', applySelection);
-    manualButton.addEventListener('click', function () { setManual(!manual, !manual); });
+    worldSelect.addEventListener('change', function () { pendingSelection = null; renderCharacters(); });
+    characterSelect.addEventListener('change', function () { pendingSelection = null; applySelection(); });
+    manualButton.addEventListener('click', function () { pendingSelection = null; setManual(!manual, !manual); });
     root.addEventListener('storage', function (event) {
       if (root.NexonKey && event.key === root.NexonKey.STORAGE_KEY) reload();
     });
-    reload();
-    return { reload: reload, setManual: setManual };
+    var ready = reload();
+    return { reload: reload, setManual: setManual, selectCharacter: selectCharacter, ready: ready };
   }
 
   root.NexonCharacters = {

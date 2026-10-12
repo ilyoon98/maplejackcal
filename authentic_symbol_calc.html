@@ -39,6 +39,8 @@
     display:flex;
     align-items:flex-end;
     flex-wrap:wrap;
+    min-width:0;
+    max-width:100%;
     gap:12px 16px;
   }
   .hero-force-label{
@@ -251,83 +253,6 @@
     color:var(--text-dim);
     margin:0 0 12px;
   }
-  .char-search-row{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-  .char-search-row input[type="text"]{
-    flex:1 1 220px;
-    min-width:0;
-    font-size:1.15rem;
-    font-weight:700;
-    padding:12px 16px;
-    border-radius:10px;
-    border:1px solid var(--border);
-    background:#11141a;
-    color:var(--text);
-  }
-  .char-search-row input[type="text"]:focus{ outline:2px solid var(--accent); outline-offset:1px; }
-  .char-search-row .fetch-btn{
-    font-size:1rem;
-    font-weight:800;
-    padding:0 26px;
-    border-radius:10px;
-    white-space:nowrap;
-  }
-  /* 최근에 검색한 캐릭터 배지 — 여러 캐릭터를 번갈아 볼 때 이름을 다시 타이핑하지 않도록
-     성공한 검색만 기록해두고, 배지를 누르면 곧바로 재조회한다. */
-  .char-recent{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    align-items:center;
-    margin-top:10px;
-  }
-  .char-recent-label{
-    font-size:0.8rem;
-    font-weight:700;
-    color:var(--text-dim);
-  }
-  .char-chip{
-    display:inline-flex;
-    align-items:center;
-    border:1px solid var(--border);
-    background:#11141a;
-    border-radius:999px;
-    overflow:hidden;
-  }
-  .char-chip-name{
-    border:0;
-    background:transparent;
-    color:var(--text);
-    font-size:0.9rem;
-    font-weight:700;
-    padding:6px 4px 6px 12px;
-    cursor:pointer;
-    max-width:12em;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .char-chip:hover{ border-color:var(--accent-strong); }
-  .char-chip-name:hover{ color:var(--accent-strong); }
-  .char-chip.active{
-    border-color:var(--accent-strong);
-    background:rgba(76,141,255,.15);
-  }
-  .char-chip.active .char-chip-name{ color:var(--accent-strong); }
-  .char-chip-x{
-    border:0;
-    background:transparent;
-    color:var(--text-dim);
-    font-size:0.95rem;
-    line-height:1;
-    padding:6px 10px 6px 6px;
-    cursor:pointer;
-  }
-  .char-chip-x:hover{ color:var(--bad); }
-
   .char-search-hero .note{ margin:10px 0 0; }
   .character-showcase{
     position:relative;
@@ -492,33 +417,119 @@
     display:flex;
     flex-direction:column;
     gap:6px;
+    width:440px;
+    max-width:100%;
+    flex-shrink:0;
   }
-  .boss-select-group > label{
+  .boss-select-group > .boss-select-label{
     font-size:0.82rem;
     font-weight:600;
     color:var(--text-dim);
   }
-  .boss-selects{ display:flex; gap:8px; }
-  .boss-selects select{
+  /* 보스와 난이도 수가 바뀌어도 입력 영역의 너비를 유지한다. */
+  .boss-selects{ display:grid; grid-template-columns:172px minmax(0,1fr); align-items:start; gap:8px; }
+  .boss-picker{ position:relative; width:172px; flex-shrink:0; }
+  .boss-picker-trigger{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    width:100%;
+    min-height:52px;
     font-weight:600;
     font-size:0.85rem;
-    padding:8px 10px;
+    padding:6px 10px;
     border-radius:8px;
     border:1px solid var(--border);
     background:#11141a;
     color:var(--text);
     cursor:pointer;
   }
-  .boss-selects select:disabled{
-    color:var(--text-dim);
-    cursor:not-allowed;
-  }
-  .boss-selects select:focus{
+  .boss-picker-trigger::after{ content:'▾'; margin-left:auto; color:var(--text-dim); }
+  .boss-picker-trigger[aria-expanded="true"]{ border-color:var(--accent); }
+  .boss-picker-trigger:focus-visible,
+  .boss-picker-option:focus-visible,
+  .boss-difficulty:focus-visible{
     outline:2px solid var(--accent);
     outline-offset:1px;
   }
-  #bossSelect{ min-width:150px; }
-  #diffSelect{ min-width:140px; }
+  .boss-picker-image{ width:36px; height:36px; flex-shrink:0; object-fit:contain; }
+  .boss-picker-image[hidden]{ display:none; }
+  .boss-picker-list{
+    position:absolute;
+    z-index:30;
+    top:calc(100% + 6px);
+    left:0;
+    width:100%;
+    box-sizing:border-box;
+    max-height:360px;
+    max-height:min(360px,50vh);
+    overflow-y:auto;
+    padding:4px;
+    background:#11141a;
+    border:1px solid var(--border);
+    border-radius:10px;
+    box-shadow:0 12px 32px rgba(0,0,0,.4);
+  }
+  .boss-picker-option{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    min-height:48px;
+    padding:6px 8px;
+    border:0;
+    border-radius:6px;
+    background:transparent;
+    color:var(--text);
+    text-align:left;
+    font:inherit;
+    font-size:.85rem;
+    cursor:pointer;
+  }
+  .boss-picker-option:hover,
+  .boss-picker-option:focus-visible{ background:var(--surface-2); }
+  .boss-picker-option[aria-selected="true"]{ background:#1c2740; color:var(--accent); }
+  .boss-difficulties{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); align-items:center; gap:6px; min-height:52px; }
+  .boss-difficulty-hint{ grid-column:1 / -1; font-size:.8rem; color:var(--text-dim); }
+  .boss-difficulty{
+    --difficulty:var(--accent);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    min-width:0;
+    min-height:52px;
+    padding:5px 2px;
+    border:1px solid var(--difficulty);
+    border-radius:8px;
+    background:#11141a;
+    color:var(--difficulty);
+    font:inherit;
+    font-size:.78rem;
+    font-weight:700;
+    white-space:nowrap;
+    cursor:pointer;
+  }
+  .boss-difficulty[data-level="EASY"]{ --difficulty:#96999d; }
+  .boss-difficulty[data-level="NORMAL"]{ --difficulty:#20acc0; }
+  .boss-difficulty[data-level="HARD"]{ --difficulty:#d83f6c; }
+  .boss-difficulty[data-level="CHAOS"]{ --difficulty:#edbd76; }
+  .boss-difficulty[data-level="EXTREME"]{ --difficulty:#ff2447; }
+  .boss-difficulty[data-level="ALL"]{ grid-column:1 / -1; }
+  .boss-difficulty:hover{ background:var(--surface-2); }
+  .boss-difficulty:focus-visible{ outline-color:var(--difficulty); }
+  .boss-difficulty[aria-pressed="true"]{ background:var(--difficulty); color:#fff; }
+  .boss-difficulty[data-level="EASY"][aria-pressed="true"],
+  .boss-difficulty[data-level="NORMAL"][aria-pressed="true"]{ color:#111722; }
+  .boss-difficulty[data-level="CHAOS"][aria-pressed="true"],
+  .boss-difficulty[data-level="EXTREME"][aria-pressed="true"]{ background:#111722; color:var(--difficulty); box-shadow:inset 0 0 0 1px var(--difficulty); }
+  .boss-difficulty-force{ font-size:.7rem; font-weight:500; font-variant-numeric:tabular-nums; }
+  @media (max-width:540px){
+    .boss-select-group{ width:100%; }
+    .boss-selects{ grid-template-columns:minmax(0,1fr); }
+    .boss-difficulty{ font-size:.72rem; }
+  }
 
   table{
     width:100%;
@@ -824,15 +835,15 @@
     <h1>어센틱 심볼 계산기</h1>
   </header>
 
-  <section class="char-search-hero" id="charSearchHero">
+  <section class="char-search-hero nx-character-search-panel" id="charSearchHero">
     <div class="char-search-main">
       <h2>캐릭터 검색</h2>
       <div id="authenticCharacterPicker"></div>
-      <div class="char-search-row">
+      <div class="nx-character-search-row">
         <input type="text" id="charNameInput" placeholder="다른 캐릭터 이름" autocomplete="off" spellcheck="false" maxlength="20" aria-label="캐릭터 이름" hidden>
         <button type="button" class="fetch-btn" id="fetchBtn" hidden>캐릭터 검색</button>
       </div>
-      <div class="char-recent" id="charRecent" hidden></div>
+      <div class="nx-character-recents" id="charRecent" hidden></div>
       <div id="apiKeyLine"></div>
       <p class="note fetch-status" id="fetchStatus" aria-live="polite"></p>
     </div>
@@ -876,12 +887,22 @@
         </div>
       </div>
       <div class="boss-select-group">
-        <label for="bossSelect">보스로 설정 (최대효율 125% 기준)</label>
+        <span class="boss-select-label" id="bossSelectLabel">보스로 설정 (최대효율 125% 기준)</span>
         <div class="boss-selects">
-          <select id="bossSelect">
+          <div class="boss-picker" id="bossPicker">
+            <button type="button" class="boss-picker-trigger" id="bossPickerTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="bossPickerList" aria-labelledby="bossSelectLabel bossPickerName">
+              <img class="boss-picker-image" id="bossPickerImage" alt="" hidden>
+              <span id="bossPickerName">보스 선택</span>
+            </button>
+            <div class="boss-picker-list" id="bossPickerList" role="listbox" aria-label="보스 선택" hidden></div>
+          </div>
+          <div class="boss-difficulties" id="bossDifficulties" role="group" aria-label="보스 난이도">
+            <span class="boss-difficulty-hint">보스를 먼저 선택하세요</span>
+          </div>
+          <select id="bossSelect" hidden aria-label="보스">
             <option value="">보스 선택</option>
           </select>
-          <select id="diffSelect" disabled>
+          <select id="diffSelect" hidden disabled aria-label="난이도">
             <option value="">난이도</option>
           </select>
         </div>
@@ -991,43 +1012,43 @@
 
   // target = 100% 요구량 + 50 (빨간색 125% 최대효율 수치)
   var BOSS_FORCE = [
-    { name:"벨로나", diffs:[
+    { name:"벨로나", icon:"icons/boss/vellona.webp", diffs:[
       {label:"EASY", req:400, target:450},
       {label:"NORMAL", req:450, target:500},
       {label:"HARD", req:550, target:600}
     ]},
-    { name:"유피테르", diffs:[
+    { name:"유피테르", icon:"icons/boss/jupiter.webp", diffs:[
       {label:"NORMAL", req:810, target:860},
       {label:"HARD", req:810, target:860}
     ]},
-    { name:"발드릭스", diffs:[
+    { name:"발드릭스", icon:"icons/boss/baldrix.webp", diffs:[
       {label:"NORMAL", req:700, target:750},
       {label:"HARD", req:700, target:750}
     ]},
-    { name:"림보", diffs:[
+    { name:"림보", icon:"icons/boss/limbo.webp", diffs:[
       {label:"NORMAL", req:500, target:550},
       {label:"HARD", req:500, target:550}
     ]},
-    { name:"찬란한 흉성", diffs:[
+    { name:"찬란한 흉성", icon:"icons/boss/radiant.webp", diffs:[
       {label:"NORMAL", req:400, target:450},
       {label:"HARD", req:550, target:600}
     ]},
-    { name:"최초의 대적자", diffs:[
+    { name:"최초의 대적자", icon:"icons/boss/first_challenger.webp", diffs:[
       {label:"EASY", req:220, target:270},
       {label:"NORMAL", req:320, target:370},
       {label:"HARD", req:340, target:390},
       {label:"EXTREME", req:460, target:510}
     ]},
-    { name:"카링", diffs:[
+    { name:"카링", icon:"icons/boss/kaling.webp", diffs:[
       {label:"EASY", req:230, target:280},
       {label:"NORMAL", req:330, target:380},
       {label:"HARD", req:350, target:400},
       {label:"EXTREME", req:480, target:530}
     ]},
-    { name:"세렌", diffs:[
+    { name:"세렌", icon:"icons/boss/seren.webp", diffs:[
       {label:"전체 (2페이즈 기준)", req:200, target:250}
     ]},
-    { name:"칼로스", diffs:[
+    { name:"칼로스", icon:"icons/boss/watcher_kalos.webp", diffs:[
       {label:"EASY", req:200, target:250},
       {label:"NORMAL (2페이즈 기준)", req:300, target:350},
       {label:"CHAOS", req:330, target:380},
@@ -1326,15 +1347,92 @@
   var bossSelect = document.getElementById('bossSelect');
   var diffSelect = document.getElementById('diffSelect');
   var bossPickNote = document.getElementById('bossPickNote');
+  var bossPicker = document.getElementById('bossPicker');
+  var bossPickerTrigger = document.getElementById('bossPickerTrigger');
+  var bossPickerList = document.getElementById('bossPickerList');
+  var bossPickerImage = document.getElementById('bossPickerImage');
+  var bossPickerName = document.getElementById('bossPickerName');
+  var bossDifficulties = document.getElementById('bossDifficulties');
+  var difficultyNames = { EASY:'이지', NORMAL:'노멀', HARD:'하드', CHAOS:'카오스', EXTREME:'익스트림' };
+
+  function closeBossPicker(restoreFocus){
+    bossPickerList.hidden = true;
+    bossPickerTrigger.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) bossPickerTrigger.focus();
+  }
+
+  function openBossPicker(fromEnd){
+    bossPickerList.hidden = false;
+    bossPickerTrigger.setAttribute('aria-expanded', 'true');
+    var options = bossPickerList.querySelectorAll('[role="option"]');
+    var active = bossSelect.value === '' ? (fromEnd ? options.length - 1 : 0) : +bossSelect.value;
+    options[active].focus();
+  }
 
   BOSS_FORCE.forEach(function(b, i){
     var opt = document.createElement('option');
     opt.value = i;
     opt.textContent = b.name;
     bossSelect.appendChild(opt);
+
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'boss-picker-option';
+    button.setAttribute('role', 'option');
+    button.setAttribute('aria-selected', 'false');
+    button.tabIndex = -1;
+    var img = document.createElement('img');
+    img.className = 'boss-picker-image';
+    img.src = b.icon;
+    img.alt = '';
+    var name = document.createElement('span');
+    name.textContent = b.name;
+    button.appendChild(img);
+    button.appendChild(name);
+    button.addEventListener('click', function(){
+      bossSelect.value = String(i);
+      bossSelect.dispatchEvent(new Event('change'));
+      closeBossPicker(true);
+    });
+    bossPickerList.appendChild(button);
+  });
+
+  bossPickerTrigger.addEventListener('click', function(){
+    if (bossPickerList.hidden) openBossPicker(false);
+    else closeBossPicker(false);
+  });
+  bossPickerTrigger.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      openBossPicker(e.key === 'ArrowUp');
+    }
+  });
+  bossPickerList.addEventListener('keydown', function(e){
+    var options = Array.from(bossPickerList.querySelectorAll('[role="option"]'));
+    var index = options.indexOf(document.activeElement);
+    if (e.key === 'Escape'){
+      e.preventDefault();
+      closeBossPicker(true);
+      return;
+    }
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].indexOf(e.key) === -1) return;
+    e.preventDefault();
+    if (e.key === 'Home') index = 0;
+    else if (e.key === 'End') index = options.length - 1;
+    else index = (index + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+    options[index].focus();
+  });
+  document.addEventListener('click', function(e){
+    if (!bossPicker.contains(e.target)) closeBossPicker(false);
+  });
+  bossPicker.addEventListener('focusout', function(e){
+    if (!bossPicker.contains(e.relatedTarget)) closeBossPicker(false);
   });
 
   function applyDiffSelection(){
+    bossDifficulties.querySelectorAll('button').forEach(function(button){
+      button.setAttribute('aria-pressed', String(button.dataset.diff === diffSelect.value));
+    });
     if (bossSelect.value === '' || diffSelect.value === ''){ bossPickNote.textContent = ''; return; }
     var boss = BOSS_FORCE[+bossSelect.value];
     var d = boss.diffs[+diffSelect.value];
@@ -1346,14 +1444,53 @@
 
   bossSelect.addEventListener('change', function(){
     diffSelect.innerHTML = '<option value="">난이도</option>';
+    bossDifficulties.replaceChildren();
     bossPickNote.textContent = '';
-    if (bossSelect.value === ''){ diffSelect.disabled = true; return; }
+    bossPickerList.querySelectorAll('[role="option"]').forEach(function(button, i){
+      button.setAttribute('aria-selected', String(String(i) === bossSelect.value));
+    });
+    if (bossSelect.value === ''){
+      diffSelect.disabled = true;
+      bossPickerName.textContent = '보스 선택';
+      bossPickerImage.hidden = true;
+      var hint = document.createElement('span');
+      hint.className = 'boss-difficulty-hint';
+      hint.textContent = '보스를 먼저 선택하세요';
+      bossDifficulties.appendChild(hint);
+      return;
+    }
     var boss = BOSS_FORCE[+bossSelect.value];
+    bossPickerName.textContent = boss.name;
+    bossPickerImage.src = boss.icon;
+    bossPickerImage.hidden = false;
     boss.diffs.forEach(function(d, j){
       var opt = document.createElement('option');
       opt.value = j;
       opt.textContent = d.label + ' (목표 ' + d.target + ')';
       diffSelect.appendChild(opt);
+
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'boss-difficulty';
+      button.dataset.diff = String(j);
+      var difficulty = d.label.match(/^(EASY|NORMAL|HARD|CHAOS|EXTREME)\b/);
+      button.dataset.level = difficulty ? difficulty[1] : 'ALL';
+      button.setAttribute('aria-pressed', 'false');
+      var label = d.label.replace(/EASY|NORMAL|HARD|CHAOS|EXTREME/g, function(name){ return difficultyNames[name]; });
+      button.setAttribute('aria-label', label + ', 목표 포스 ' + d.target);
+      button.title = label + ' · 요구 포스 ' + d.req + ' · 최대효율 목표 ' + d.target;
+      var name = document.createElement('span');
+      name.textContent = difficulty ? difficultyNames[difficulty[1]] : label;
+      var force = document.createElement('span');
+      force.className = 'boss-difficulty-force';
+      force.textContent = d.target + ' F';
+      button.appendChild(name);
+      button.appendChild(force);
+      button.addEventListener('click', function(){
+        diffSelect.value = String(j);
+        diffSelect.dispatchEvent(new Event('change'));
+      });
+      bossDifficulties.appendChild(button);
     });
     diffSelect.disabled = false;
     // 제일 낮은(첫) 난이도를 자동 선택
@@ -1537,9 +1674,12 @@
   var characterShowcaseImage = document.getElementById('characterShowcaseImage');
   var characterShowcaseName = document.getElementById('characterShowcaseName');
   var characterShowcaseMeta = document.getElementById('characterShowcaseMeta');
+  var characterPicker = null;
+  var characterRequestId = 0;
+  var fetchBtnIdleText = fetchBtn.textContent;
 
   if (window.NexonCharacters) {
-    NexonCharacters.mount({
+    characterPicker = NexonCharacters.mount({
       host: '#authenticCharacterPicker',
       input: charNameInput,
       onSelect: function(){ doFetch(); },
@@ -1635,32 +1775,38 @@
     saveRecent(loadRecent().filter(function(n){ return n.toLowerCase() !== name.toLowerCase(); }));
     renderRecent();
   }
+  function selectRecentCharacter(name){
+    charNameInput.value = name;
+    charNameInput.removeAttribute('data-account-ocid');
+    charNameInput.removeAttribute('data-account-world');
+    if (characterPicker) characterPicker.selectCharacter({name:name}, {notify:false});
+    renderRecent();
+    return doFetch();
+  }
   function renderRecent(){
     var list = loadRecent();
     charRecent.textContent = '';
     charRecent.hidden = list.length === 0;
     if (!list.length) return;
     var label = document.createElement('span');
-    label.className = 'char-recent-label';
+    label.className = 'nx-character-recents-label';
     label.textContent = '최근 검색';
     charRecent.appendChild(label);
     var current = charNameInput.value.trim().toLowerCase();
     list.forEach(function(name){
       var chip = document.createElement('span');
-      chip.className = 'char-chip' + (name.toLowerCase() === current ? ' active' : '');
+      chip.className = 'nx-character-chip' + (name.toLowerCase() === current ? ' active' : '');
       var pick = document.createElement('button');
       pick.type = 'button';
-      pick.className = 'char-chip-name';
+      pick.className = 'nx-character-chip-name';
       pick.textContent = name;
       pick.title = name + ' 다시 검색';
       pick.addEventListener('click', function(){
-        charNameInput.value = name;
-        renderRecent();
-        doFetch();
+        selectRecentCharacter(name);
       });
       var del = document.createElement('button');
       del.type = 'button';
-      del.className = 'char-chip-x';
+      del.className = 'nx-character-chip-x';
       del.textContent = '×';
       del.setAttribute('aria-label', name + ' 목록에서 지우기');
       del.title = '목록에서 지우기';
@@ -1752,6 +1898,9 @@
 
   function doFetch(){
     var name = charNameInput.value.trim();
+    var requestId = ++characterRequestId;
+    fetchBtn.disabled = false;
+    fetchBtn.textContent = fetchBtnIdleText;
     if (!NexonKey.has()){
       refreshApiKeyLine();
       setStatus('위의 "등록하러 가기"로 먼저 API 키를 등록하세요.', 'err');
@@ -1760,7 +1909,6 @@
     refreshApiKeyLine();
     if (!name){ setStatus('캐릭터 이름을 입력하세요.', 'err'); charNameInput.focus(); return; }
 
-    var origText = fetchBtn.textContent;
     fetchBtn.disabled = true;
     fetchBtn.textContent = '불러오는 중…';
     setStatus(name + ' 캐릭터 정보를 조회하는 중…');
@@ -1768,8 +1916,9 @@
     var stage = 'id';
 
     var selectedOcid = charNameInput.dataset.accountOcid || '';
-    (selectedOcid ? Promise.resolve({ ocid:selectedOcid }) : apiGet('/id', { character_name: name }))
+    return (selectedOcid ? Promise.resolve({ ocid:selectedOcid }) : apiGet('/id', { character_name: name }))
       .then(function(r){
+        if (requestId !== characterRequestId) return null;
         if (!r || !r.ocid) throw new Error('캐릭터 식별자(ocid)를 받지 못했습니다.');
         stage = 'symbol';
         return Promise.all([
@@ -1778,6 +1927,7 @@
         ]);
       })
       .then(function(results){
+        if (requestId !== characterRequestId || !results) return;
         var data = results[0];
         var profile = normalizeCharacterProfile(results[1]);
         var result = applySymbolData(data);
@@ -1798,11 +1948,13 @@
         setStatus(msg, 'ok');
       })
       .catch(function(e){
+        if (requestId !== characterRequestId) return;
         setStatus(describeError(e, stage), 'err');
       })
       .then(function(){
+        if (requestId !== characterRequestId) return;
         fetchBtn.disabled = false;
-        fetchBtn.textContent = origText;
+        fetchBtn.textContent = fetchBtnIdleText;
       });
   }
 

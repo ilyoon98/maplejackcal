@@ -7,38 +7,7 @@ const zlib = require('node:zlib');
 require('../boss_shot_reader.js');
 const reader = globalThis.BossShotReader;
 
-// 8비트 RGBA, 비인터레이스 PNG만 푸는 최소 디코더(픽스처 전용).
-function decodePng(file) {
-  const buf = fs.readFileSync(file);
-  let pos = 8, width = 0, height = 0;
-  const idat = [];
-  while (pos < buf.length) {
-    const len = buf.readUInt32BE(pos), type = buf.toString('ascii', pos + 4, pos + 8);
-    const body = buf.subarray(pos + 8, pos + 8 + len);
-    if (type === 'IHDR') {
-      width = body.readUInt32BE(0); height = body.readUInt32BE(4);
-      assert.equal(body[8], 8); assert.equal(body[9], 6); assert.equal(body[12], 0);
-    } else if (type === 'IDAT') idat.push(body);
-    pos += 12 + len;
-  }
-  const raw = zlib.inflateSync(Buffer.concat(idat));
-  const bpp = 4, stride = width * bpp, data = new Uint8ClampedArray(width * height * 4);
-  for (let y = 0; y < height; y++) {
-    const filter = raw[y * (stride + 1)], src = y * (stride + 1) + 1, dst = y * stride;
-    for (let x = 0; x < stride; x++) {
-      const a = x >= bpp ? data[dst + x - bpp] : 0, b = y ? data[dst - stride + x] : 0;
-      const c = x >= bpp && y ? data[dst - stride + x - bpp] : 0, v = raw[src + x];
-      let p;
-      if (filter === 0) p = 0;
-      else if (filter === 1) p = a;
-      else if (filter === 2) p = b;
-      else if (filter === 3) p = (a + b) >> 1;
-      else { const q = a + b - c, pa = Math.abs(q - a), pb = Math.abs(q - b), pc = Math.abs(q - c); p = pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
-      data[dst + x] = (v + p) & 255;
-    }
-  }
-  return {width, height, data};
-}
+const {decodePng} = require('./helpers/png-rgba.cjs');
 
 // 픽스처 카드 47장(위→아래, 왼→오른). 배율 ''은 '[파티] 0%'처럼 숫자로 읽지 않는 줄.
 const EXPECTED = [
@@ -132,4 +101,38 @@ test('숫자 획이 손상된 캡처는 추측한 배율을 적용하지 않는�
   assert.equal(res[3].diff, '익스트림');
   assert.equal(res[3].value, null);
   assert.equal(res[4].value, 79.52);
+});
+
+const smallShot = decodePng(path.join(__dirname, 'fixtures/boss_shot_small.png'));
+test('작은 캡처는 반투명 툴팁 아래의 소수점도 읽고 난이도가 가려진 3장만 제외한다', () => {
+  const res = reader.analyze(smallShot, reader.siteRefs());
+  assert.equal(res.length, 31); // 툴팁 때문에 이어진 카드도 복원하며 마지막 빈 칸은 만들지 않는다.
+  assert.deepEqual(res.map(r => r.name), EXPECTED.slice(16).map(([name]) => name));
+  assert.deepEqual(res.map(r => r.value), [
+    26.67, 51.98, 57.39, null, null, null, 176.4, 209.7,
+    244.5, 323.6, 408.8, 502.7, 573.9, 974.9, 1115, 1175,
+    970.7, 1395, 670.9, 1950, 2682, 3582, 7023, 5873,
+    7313, 6977, 10465, 12609, 17473, 76436, 80467,
+  ]);
+  assert.equal(res.filter(r => r.covered).length, 3);
+  assert.equal(res[6].text, '176.4%');
+  assert.equal(res[7].text, '209.7%');
+  assert.ok(res.filter(r => !r.covered).every(r => r.value != null));
+  assert.ok(res.filter(r => r.covered).every(r => r.value == null && r.text === ''));
+});
+
+test('작은 글꼴도 숫자에 잡음이 겹치면 기존 값을 추측하지 않는다', () => {
+  const damaged = {...smallShot, data:new Uint8ClampedArray(smallShot.data)};
+  const c = reader.findCards(damaged).cards[0];
+  for (let y = c.y + 119; y < c.y + 127; y++) {
+    for (let x = c.x + 17; x < c.x + 44; x++) {
+      if ((x + y) % 2) continue;
+      const p = (y * damaged.width + x) * 4;
+      damaged.data[p] = damaged.data[p + 1] = damaged.data[p + 2] = 255;
+    }
+  }
+  const res = reader.analyze(damaged, reader.siteRefs());
+  assert.equal(res[0].name, '벨로나');
+  assert.equal(res[0].value, null);
+  assert.equal(res[1].value, 51.98);
 });
