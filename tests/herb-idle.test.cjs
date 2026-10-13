@@ -427,6 +427,7 @@ test('경매 단말기는 판매 3종과 구매 2종을 탭으로 나누고 선�
   assert.match(ui, /role="tablist"/);
   assert.match(ui, /role="tabpanel"/);
   assert.match(ui, /herbIdleMarketTab/);
+  assert.match(ui, /decor\.hidden = marketTab !== 'buy'/);
   assert.match(ui, /ArrowLeft/);
   assert.match(css, /\.hi-market-tabs/);
   assert.match(css, /\.hi-market-pane\[hidden\]/);
@@ -484,10 +485,13 @@ test('전시품 9칸은 서로 다른 전용 아이콘을 쓰고 메소 장식 �
   assert.equal(Core.DECOR_ITEMS.length, 5);
   assert.match(html, /id="decorShop"/);
   assert.match(html, /달빛 장식 상점/);
+  assert.ok(html.indexOf('id="marketCards"') < html.indexOf('id="decorShop"'));
+  assert.ok(html.indexOf('id="decorShop"') < html.indexOf('hi-order-assets'));
   assert.match(ui, /renderDecorShop/);
   assert.match(ui, /Core\.buyDecor/);
   assert.match(ui, /Core\.toggleDecor/);
   assert.match(css, /\.hi-decor-card\.equipped/);
+  assert.match(css, /\.hi-decor\[hidden\]/);
 });
 
 test('씨앗과 오일은 판매만 하고 최상결과 현자의 돌만 구매한다', () => {

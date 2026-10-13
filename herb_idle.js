@@ -998,6 +998,8 @@
       button.tabIndex = active ? 0 : -1;
     });
     document.querySelectorAll('[data-market-pane]').forEach(pane => { pane.hidden = pane.dataset.marketPane !== marketTab; });
+    const decor = $('decorShop');
+    if (decor) decor.hidden = marketTab !== 'buy';
     if (remember !== false) try { localStorage.setItem('herbIdleMarketTab', marketTab); } catch (e) {}
   }
   function buildMarket() {
@@ -1153,7 +1155,7 @@
         '<em>' + (has ? '구매 완료 · 영구 보유' : short(item.cost) + ' 메소') + '</em></div>' +
         '<button type="button" data-decor="' + item.id + '"' + (!has && S.meso < item.cost ? ' disabled' : '') + ' aria-pressed="' + on + '">' + action + '</button></article>';
     }).join('');
-    setHtml('decorShop', '<details><summary><span><small>수익 보너스 없는 순수 치장</small><b>달빛 장식 상점</b></span><em>' + owned + '/' + DECOR_ITEMS.length + '</em></summary>' +
+    setHtml('decorShop', '<details><summary><span><small>치장 · 메소 구매 · 수익 효과 없음</small><b>달빛 장식 상점</b></span><em>' + owned + '/' + DECOR_ITEMS.length + '</em></summary>' +
       '<p class="hi-decor-note">전시품 꾸미기와 함께 적용됩니다. 산 장식은 버튼으로 켜고 끌 수 있어요.</p><div class="hi-decor-list">' + cards + '</div></details>');
   }
 

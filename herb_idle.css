@@ -240,6 +240,7 @@
 @keyframes hi-collection-pulse { 50% { box-shadow:0 0 0 3px rgba(255,214,90,.09),inset 0 -3px rgba(0,0,0,.18); } }
 @media (prefers-reduced-motion:reduce) { .hi-collection-slot.next { animation:none; } }
 .hi-decor { margin-top:8px; border:1px solid #5c4b7c; border-radius:11px; background:linear-gradient(145deg,rgba(255,197,98,.08),rgba(112,75,177,.12)); overflow:hidden; }
+.hi-decor[hidden] { display:none; }
 .hi-decor details > summary { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; cursor:pointer; list-style:none; }
 .hi-decor details > summary::-webkit-details-marker { display:none; }
 .hi-decor details > summary::after { content:'›'; color:#bca6e8; font-size:1.15rem; transform:rotate(90deg); transition:transform .18s ease; }
