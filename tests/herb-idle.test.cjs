@@ -389,6 +389,38 @@ test('거래 UI는 1·10·최대 수량 바로가기와 접힌 수익 비교를 
   assert.match(css, /\.hi-item \{ display:grid/);
 });
 
+test('달빛 조합 후원은 수익을 늘리지 않고 다음 비용만 계속 커진다', () => {
+  const s = fresh();
+  s.meso = 1000000000000;
+  const beforeEffects = Core.facilityEffects(s);
+  const first = Core.patronCost(s);
+  const r1 = Core.donate(s);
+  const second = Core.patronCost(s);
+  const r2 = Core.donate(s);
+  assert.equal(first, 100000000);
+  assert.ok(second > first);
+  assert.ok(r2.next > second);
+  assert.equal(s.patron, 2);
+  assert.equal(s.stats.donated, r1.cost + r2.cost);
+  assert.deepEqual(Core.facilityEffects(s), beforeEffects);
+  assert.equal(s.inv.elixir, 0);
+  const loaded = Core.normalize(JSON.parse(JSON.stringify(s)));
+  assert.equal(loaded.patron, 2);
+  assert.equal(loaded.stats.donated, s.stats.donated);
+  loaded.meso = 0;
+  assert.equal(Core.donate(loaded), null);
+});
+
+test('후원 UI는 생산 보너스가 없는 반복형 메소 소모처임을 밝힌다', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.html'), 'utf8');
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
+  assert.match(html, /id="patron"/);
+  assert.match(html, /달빛 조합 후원/);
+  assert.match(html, /생산 보너스 없이/);
+  assert.match(ui, /id="patronDonate"/);
+  assert.match(ui, /수익 보너스 없음 · 명예 기록/);
+});
+
 test('메소 표시는 실제 메소 주머니 아이콘을 사용한다', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.css'), 'utf8');
   const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');

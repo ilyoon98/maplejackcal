@@ -197,6 +197,18 @@
 .hi-facility button:hover:not(:disabled) { border-color:#ffd65a; background:#37301e; }
 .hi-facility button:disabled { opacity:.42; cursor:default; }
 .hi-facility-seal { display:grid; place-items:center; width:42px; height:42px; flex:0 0 42px; border:1px solid #6bd98a; border-radius:50%; color:#9cf0b2; font-size:.62rem; font-weight:900; transform:rotate(-8deg); }
+.hi-patron { position:relative; margin-top:8px; padding:10px; overflow:hidden; border:1px dashed #766039; border-radius:11px; background:linear-gradient(120deg,rgba(255,214,90,.08),rgba(155,107,255,.08)); }
+.hi-patron::after { content:''; position:absolute; right:-18px; top:-28px; width:74px; height:74px; border:1px solid rgba(255,214,90,.1); border-radius:50%; pointer-events:none; }
+.hi-patron-top { display:flex; align-items:center; gap:9px; }
+.hi-patron-top > div { display:flex; flex-direction:column; min-width:0; }
+.hi-patron-top small { color:#9b8452; font-size:.62rem; font-weight:800; letter-spacing:.03em; }
+.hi-patron-top b { color:#ffe39a; font-size:.86rem; }
+.hi-patron-top span:not(.hi-patron-seal) { color:#7f809e; font-size:.67rem; }
+.hi-patron-seal { display:grid; place-items:center; width:39px; height:39px; flex:0 0 39px; border:2px double #b9964e; border-radius:50%; color:#ffe39a; font-size:.78rem; font-weight:900; transform:rotate(-7deg); }
+.hi-patron button { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; height:31px; margin-top:8px; border:1px solid #66532d; border-radius:8px; background:#29241b; color:#e7cf91; font:inherit; font-size:.74rem; font-weight:900; cursor:pointer; }
+.hi-patron button:hover:not(:disabled) { border-color:#ffd65a; color:#ffe9ad; }
+.hi-patron button:focus-visible { outline:2px solid #b48cff; outline-offset:2px; }
+.hi-patron button:disabled { opacity:.42; cursor:default; }
 .hi-stats { display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin:12px 0 0; font-size:.8rem; }
 .hi-stats dt { color:var(--text-dim); }
 .hi-stats dd { margin:0; text-align:right; font-weight:700; font-variant-numeric:tabular-nums; }

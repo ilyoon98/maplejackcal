@@ -54,6 +54,10 @@
     { name: '자동 증류기', effect: '오일 성공률 95% · 제작 1.25초' },
     { name: '달빛 연금실', effect: '재물비 6개 → 8개 · 제작 2.5초' }
   ];
+  const PATRON_TITLES = [
+    [0, '새싹 후원자'], [3, '보랏빛 단골'], [6, '달빛 조합원'], [10, '황금 손'],
+    [15, '약초 거상'], [25, '달빛 전설'], [50, '영원한 후원자']
+  ];
   // 기록에는 거래와 시세 소식만 남긴다. 가공·채집 소식은 화면 안 알림으로만 보여 준다.
   const LOG_KINDS = ['sell', 'buy', 'news'];
   const IMG = {};
@@ -1019,6 +1023,18 @@
       '<button type="button" id="facilityBuy"' + (S.meso < cost ? ' disabled' : '') + '><img class="pix" src="icons/home/메소주머니.webp" alt="" width="18" height="18">' + short(cost) + ' 투자</button>');
   }
 
+  function patronTitle(level) {
+    let title = PATRON_TITLES[0][1];
+    PATRON_TITLES.forEach(row => { if (level >= row[0]) title = row[1]; });
+    return title;
+  }
+
+  function renderPatron() {
+    const level = S.patron || 0, cost = Core.patronCost(S), title = patronTitle(level);
+    setHtml('patron', '<div class="hi-patron-top"><span class="hi-patron-seal">' + level + '</span><div><small>수익 보너스 없음 · 명예 기록</small><b>' + esc(title) + '</b><span>누적 ' + short(S.stats.donated || 0) + ' 후원</span></div></div>' +
+      '<button type="button" id="patronDonate"' + (S.meso < cost ? ' disabled' : '') + '><img class="pix" src="icons/home/메소주머니.webp" alt="" width="18" height="18">다음 후원 ' + short(cost) + '</button>');
+  }
+
   function renderHud() {
     const effects = Core.facilityEffects(S);
     setText('mesoValue', short(S.meso));
@@ -1066,6 +1082,7 @@
       '<span>시작 ' + short(C.START_MESO) + '에서 <em class="' + (gain > 0 ? 'hi-up' : gain < 0 ? 'hi-down' : '') + '">' +
         (gain > 0 ? '+' : '') + short(gain) + '</em></span>');
     renderFacility();
+    renderPatron();
     const st = S.stats;
     setHtml('stats', [
       ['채집', fmt(st.gathers) + '회'],
@@ -1075,7 +1092,8 @@
       ['판매로 번 돈', short(st.income) + ' 메소'],
       ['재료 구입', short(st.bought) + ' 메소'],
       ['오일병·빈병', short(st.spent) + ' 메소'],
-      ['채집소 투자', short(st.invested || 0) + ' 메소']
+      ['채집소 투자', short(st.invested || 0) + ' 메소'],
+      ['조합 후원', short(st.donated || 0) + ' 메소']
     ].map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join(''));
     setText('playTime', '플레이 ' + dur(S.t));
   }
@@ -1621,6 +1639,21 @@
     toast(next.name + ' 증축 완료! ' + next.effect);
     pulseMeso();
     hudDirty = marketDirty = true;
+    refresh();
+    save();
+  });
+
+  $('patron').addEventListener('click', e => {
+    const b = e.target.closest('#patronDonate');
+    if (!b || paused) return;
+    step();
+    const result = Core.donate(S);
+    if (!result) { toast('다음 후원에 필요한 메소가 부족해요'); return; }
+    const title = patronTitle(result.level);
+    addLog('달빛 조합 후원 ' + result.level + '회 · -' + short(result.cost), 'buy');
+    toast(title + ' · 후원 ' + result.level + '회 달성!');
+    pulseMeso();
+    hudDirty = true;
     refresh();
     save();
   });

@@ -57,7 +57,10 @@
     HISTORY: 120,            // 차트에 남기는 시세 개수 (6분)
     NEWS_CHANCE: 1 / 50,     // 시세 1번 바뀔 때 소식이 뜰 확률 (평균 2분 반에 1번)
     OFFLINE_CAP: 8 * 3600,   // 자리 비움은 최대 8시간까지만 진행
-    FACILITY_COSTS: [1000000000, 3000000000, 10000000000]
+    FACILITY_COSTS: [1000000000, 3000000000, 10000000000],
+    PATRON_BASE: 100000000,
+    PATRON_GROWTH: 1.45,
+    PATRON_MAX_COST: 1000000000000000
   };
 
   // spread: 기준 시세 양쪽에 붙는 매수·매도 호가 폭. beta: 다 같이 움직이는 흐름을 타는 정도,
@@ -295,6 +298,21 @@
     s.facility = Math.min(C.FACILITY_COSTS.length, count(s.facility) + 1);
     s.stats.invested = count(s.stats.invested) + cost;
     return { level: s.facility, cost, effects: facilityEffects(s) };
+  }
+
+  // 생산량에는 손대지 않는 순수 명예형 메소 소모처. 횟수 제한 없이 다음 후원액만 계속 커진다.
+  function patronCost(s) {
+    const level = Math.min(1000, count(s && s.patron));
+    const raw = C.PATRON_BASE * Math.pow(C.PATRON_GROWTH, Math.min(level, 80));
+    return Math.min(C.PATRON_MAX_COST, Math.ceil(raw / 10000000) * 10000000);
+  }
+  function donate(s) {
+    const cost = patronCost(s);
+    if (s.meso < cost) return null;
+    s.meso -= cost;
+    s.patron = count(s.patron) + 1;
+    s.stats.donated = count(s.stats.donated) + cost;
+    return { level: s.patron, cost, total: s.stats.donated, next: patronCost(s) };
   }
 
   // 재료는 시작할 때 넣고, 도중에 다른 일로 바꾸면 돌려준다.
@@ -560,7 +578,7 @@
   function newStats() {
     const sold = {};
     SELL.forEach(k => { sold[k] = 0; });
-    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, invested: 0, sold };
+    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, invested: 0, donated: 0, sold };
   }
 
   function create(seed) {
@@ -572,6 +590,7 @@
       rng: (Number(seed) >>> 0) || 1,
       meso: C.START_MESO,
       facility: 0,
+      patron: 0,
       inv,
       mode: 'gather',
       batch: null,
@@ -598,6 +617,7 @@
     s.rng = num(raw.rng, 1) | 0;
     s.meso = Math.max(0, Math.floor(num(raw.meso, C.START_MESO)));
     s.facility = Math.min(C.FACILITY_COSTS.length, count(raw.facility));
+    s.patron = count(raw.patron);
     if (raw.inv) KEYS.forEach(k => { s.inv[k] = count(raw.inv[k]); });
     if (raw.stats) {
       Object.keys(s.stats).forEach(k => { if (k !== 'sold') s.stats[k] = count(raw.stats[k]); });
@@ -665,7 +685,7 @@
 
   const API = {
     C, ITEMS, KEYS, SELL, BUY, MODES, WORLD, PLATFORMS, HERBS, STATIONS, NEWS,
-    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, posAt, seedValues, quote, rollSeeds, rand,
+    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, patronCost, donate, posAt, seedValues, quote, rollSeeds, rand,
     spriteAnchor
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
