@@ -999,19 +999,20 @@
       button.tabIndex = active ? 0 : -1;
     });
     document.querySelectorAll('[data-market-pane]').forEach(pane => { pane.hidden = pane.dataset.marketPane !== marketTab; });
-    const decor = $('decorShop');
-    if (decor) decor.hidden = marketTab !== 'buy';
+    const extras = $('marketBuyExtras');
+    if (extras) extras.hidden = marketTab !== 'buy';
     if (remember !== false) try { localStorage.setItem('herbIdleMarketTab', marketTab); } catch (e) {}
   }
   function buildMarket() {
     $('marketCards').innerHTML =
       '<div class="hi-market-tabs" role="tablist" aria-label="경매 거래 종류">' +
         '<button type="button" role="tab" id="marketTabSell" aria-controls="marketPaneSell" data-market-tab="sell"><span>판매</span><small>3종 · 수수료 5%</small></button>' +
-        '<button type="button" role="tab" id="marketTabBuy" aria-controls="marketPaneBuy" data-market-tab="buy"><span>구매</span><small>2종 · 수수료 없음</small></button>' +
+        '<button type="button" role="tab" id="marketTabBuy" aria-controls="marketPaneBuy" data-market-tab="buy"><span>구매</span><small>재료 2종 · 시설·치장</small></button>' +
       '</div>' +
       '<div class="hi-market-pane" id="marketPaneSell" role="tabpanel" aria-labelledby="marketTabSell" data-market-pane="sell">' +
         SELL.map(itemCard).join('') + '<details class="hi-compare-details"><summary>가공 수익 비교</summary><div class="hi-compare" id="compare"></div></details></div>' +
       '<div class="hi-market-pane" id="marketPaneBuy" role="tabpanel" aria-labelledby="marketTabBuy" data-market-pane="buy">' + BUY.map(itemCard).join('') + '</div>';
+    $('marketPaneBuy').appendChild($('marketBuyExtras'));
     setMarketTab(marketTab, false);
   }
 
