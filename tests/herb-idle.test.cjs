@@ -226,6 +226,16 @@ test('채집소 증축: 10억·30억·100억을 순서대로 투자해 생산성
   assert.equal(Core.normalize(JSON.parse(JSON.stringify(s))).facility, 3);
 });
 
+test('채집소 증축을 완료해도 구입한 세 설비와 효과를 계속 표시한다', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.css'), 'utf8');
+  assert.match(ui, /모든 설비 가동 중/);
+  assert.match(ui, /구입한 효과는 계속 적용됩니다/);
+  assert.match(ui, /hi-facility-owned/);
+  assert.match(ui, /FACILITIES\.map\(\(row, i\)/);
+  assert.match(css, /\.hi-facility-owned/);
+});
+
 test('필요한 만큼: 지금 오일을 다 재물비로 만들 때 더 사야 하는 재료 수', () => {
   const s = fresh();
   s.inv.oil = 23;           // 4번 만들 수 있음

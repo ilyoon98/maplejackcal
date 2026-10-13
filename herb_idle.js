@@ -1044,7 +1044,9 @@
   function renderFacility() {
     const level = S.facility || 0, next = FACILITIES[level], cost = Core.facilityCost(S);
     if (!next) {
-      setHtml('facility', '<div class="hi-facility-top"><span class="hi-facility-seal">MAX</span><div><b>채집소 증축 완료</b><small>세 설비가 모두 가동 중이에요.</small></div></div>');
+      const installed = FACILITIES.map((row, i) => '<li><span>' + (i + 1) + '</span><div><b>' + esc(row.name) + '</b><small>' + esc(row.effect) + '</small></div><em>가동 중</em></li>').join('');
+      setHtml('facility', '<div class="hi-facility-top hi-facility-complete"><div><small>채집소 증축 · 3/3단계</small><b>모든 설비 가동 중</b><span>구입한 효과는 계속 적용됩니다.</span></div><span class="hi-facility-seal">MAX</span></div>' +
+        '<ol class="hi-facility-owned">' + installed + '</ol>');
       return;
     }
     const steps = FACILITIES.map((row, i) => '<span class="' + (i < level ? 'done' : i === level ? 'now' : '') + '">' + (i + 1) + '</span>').join('');

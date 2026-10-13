@@ -197,6 +197,13 @@
 .hi-facility button:hover:not(:disabled) { border-color:#ffd65a; background:#37301e; }
 .hi-facility button:disabled { opacity:.42; cursor:default; }
 .hi-facility-seal { display:grid; place-items:center; width:42px; height:42px; flex:0 0 42px; border:1px solid #6bd98a; border-radius:50%; color:#9cf0b2; font-size:.62rem; font-weight:900; transform:rotate(-8deg); }
+.hi-facility-owned { list-style:none; display:grid; gap:5px; margin:9px 0 0; padding:8px 0 0; border-top:1px solid rgba(155,107,255,.22); }
+.hi-facility-owned li { display:grid; grid-template-columns:20px 1fr auto; align-items:center; gap:7px; min-width:0; }
+.hi-facility-owned li > span { display:grid; place-items:center; width:19px; height:19px; border:1px solid #4f8c62; border-radius:50%; background:#243d31; color:#aaf4bd; font-size:.6rem; font-weight:900; }
+.hi-facility-owned li > div { display:flex; flex-direction:column; min-width:0; }
+.hi-facility-owned b { color:#e8e2f7; font-size:.69rem; }
+.hi-facility-owned small { overflow:hidden; color:#7f809e; font-size:.61rem; text-overflow:ellipsis; white-space:nowrap; }
+.hi-facility-owned em { color:#78c991; font-size:.59rem; font-style:normal; font-weight:800; }
 .hi-collection { margin-top:8px; padding:10px; border:1px solid #534879; border-radius:11px; background:linear-gradient(120deg,rgba(155,107,255,.11),rgba(42,36,75,.45)); }
 .hi-collection-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .hi-collection-head > div:first-child { display:flex; flex-direction:column; min-width:0; }
