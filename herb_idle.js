@@ -56,16 +56,22 @@
   ];
   const COLLECTION_SOURCES = ['gather', 'oil', 'alchemy'];
   const COLLECTION_META = {
-    gather: { name: '씨앗', action: '약초 캐기', rate: '1%', icon: '쥬니퍼베리씨앗.webp' },
-    oil: { name: '오일', action: '오일 만들기', rate: '3%', icon: '쥬니퍼베리씨앗오일.webp' },
-    alchemy: { name: '재물비', action: '비약 만들기', rate: '8%', icon: '소형재물획득의비약.webp' }
+    gather: { name: '씨앗', action: '약초 캐기', icon: '쥬니퍼베리씨앗.webp' },
+    oil: { name: '오일', action: '오일 만들기', icon: '쥬니퍼베리씨앗오일.webp' },
+    alchemy: { name: '재물비', action: '비약 만들기', icon: '소형재물획득의비약.webp' }
   };
+  const DECOR_CATEGORY = { effect: '채집 효과', ladder: '사다리', weather: '날씨', station: '작업대', background: '배경' };
+  const DECOR_CATEGORIES = Object.keys(DECOR_CATEGORY);
   // 기록에는 거래·시세·전시품 발견만 남긴다. 일반 가공·채집은 화면 안 알림으로만 보여 준다.
   const LOG_KINDS = ['sell', 'buy', 'news', 'collect'];
   const IMG = {};
   Object.keys(ICON).forEach(k => { const im = new Image(); im.src = 'icons/craft/' + ICON[k]; IMG[k] = im; });
   const herbImg = new Image();
   herbImg.src = 'icons/craft/보라약초.webp';
+  const COLLECTION_IMG = {};
+  COLLECTION_SOURCES.forEach(source => COLLECTIBLES[source].forEach((item, index) => {
+    const im = new Image(); im.src = item.icon; COLLECTION_IMG[source + ':' + index] = im;
+  }));
   const ready = im => im.complete && im.naturalWidth > 0;
 
   // ---------------------------------------------------------------- 상태 · 저장
@@ -77,7 +83,8 @@
   let savedAt = 0;
   let hudDirty = true, marketDirty = true, logDirty = true, newsFresh = false;
   let marketTab = 'sell';
-  let decorShopOpen = false, decorShopMarkup = '';
+  let facilityOpen = false, facilityMarkup = '';
+  let decorShopOpen = false, decorShopMarkup = '', decorView = 'buy';
   try { if (localStorage.getItem('herbIdleMarketTab') === 'buy') marketTab = 'buy'; } catch (e) {}
   let me = null;             // 불러온 내 캐릭터 {name, world, level, cls, image}
   let look = null;           // 그릴 준비가 끝난 캐릭터 이미지 {frames, anchor, headTop}
@@ -85,6 +92,10 @@
   const collectionLevel = source => S && S.collection && typeof S.collection === 'object' ? (S.collection[source] || 0) : 0;
   const collectionTotal = () => COLLECTION_SOURCES.reduce((sum, source) => sum + collectionLevel(source), 0);
   const decorOn = id => !!(S && Core.decorActive(S, id));
+  const collectionRate = (source, index) => {
+    const rates = C.COLLECTION_RATE[source], rate = Array.isArray(rates) ? rates[index] : rates;
+    return ((rate || 0) * 100).toFixed(rate < .01 ? 1 : 0).replace(/\.0$/, '') + '%';
+  };
 
   const newSeed = () => (Math.random() * 4294967296) >>> 0;
 
@@ -340,6 +351,7 @@
       for (let i = 0; i < 4; i++) addPart({ kind: 'leaf', x: p.x + rnd(-18, 18), y: p.y - rnd(18, 48), vx: rnd(-36, 36), vy: rnd(-85, -40), g: -5,
         life: rnd(.9, 1.35), size: rnd(2.2, 3.4), color: i % 2 ? '#8fe9ff' : '#f4c9ff', rot: rnd(0, 6), vr: rnd(-12, 12) });
     }
+    if (decorOn('starlight')) sparks(p.x, p.y - 32, '#8fe9ff', 9, 105);
   }
   function fxOil(e) {
     const st = STATIONS.oil;
@@ -441,6 +453,7 @@
     drawOil(now);
     drawAlchemy(now);
     drawHerbs(now);
+    drawShowcase(now);
     drawDrops();
     drawActor(now);
     drawParts();
@@ -454,6 +467,14 @@
       ctx.fillStyle = dawn; ctx.fillRect(0, 0, WORLD.w, 250);
       ctx.fillStyle = 'rgba(89,55,116,.22)';
       ctx.beginPath(); ctx.moveTo(0, 225); ctx.quadraticCurveTo(135, 145, 280, 225); ctx.quadraticCurveTo(430, 155, 570, 225); ctx.quadraticCurveTo(750, 130, WORLD.w, 225); ctx.lineTo(WORLD.w, 265); ctx.lineTo(0, 265); ctx.fill();
+    }
+    if (decorOn('mapleNight')) {
+      ctx.fillStyle = 'rgba(120,28,58,.13)'; ctx.fillRect(0, 0, WORLD.w, 270);
+      ctx.fillStyle = 'rgba(255,128,92,.55)';
+      for (let i = 0; i < 14; i++) {
+        const x = 34 + (i * 73) % 900, y = 36 + (i * 47) % 175;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(i * .71); ctx.fillRect(-2.5, -2.5, 5, 5); ctx.restore();
+      }
     }
     ctx.fillStyle = '#fff';
     STARS.forEach(s => {
@@ -482,6 +503,13 @@
           line(x, y, x - 5, y + 10);
         }
       }
+      if (decorOn('coinShower')) {
+        ctx.fillStyle = '#ffd65a';
+        for (let i = 0; i < 16; i++) {
+          const x = (i * 61 + now * 34) % 1040 - 40, y = (i * 37 + now * 54) % 270;
+          ctx.save(); ctx.globalAlpha = .25 + (i % 4) * .08; ctx.translate(x, y); ctx.rotate(now + i); ctx.fillRect(-2.5, -1.3, 5, 2.6); ctx.restore();
+        }
+      }
     }
     ctx.globalAlpha = 1;
   }
@@ -491,13 +519,13 @@
     const ladder = (x, top, bottom) => {
       ctx.save();
       ctx.globalAlpha = 0.5 + Math.sin(now * 1.8 + x) * 0.05;
-      const gold = decorOn('goldLadder'), dressed = collectionLevel('gather') >= 2;
-      ctx.strokeStyle = gold ? '#d49a24' : dressed ? '#79b85a' : '#8269b8'; ctx.lineWidth = dressed || gold ? 4 : 3;
+      const gold = decorOn('goldLadder'), crystal = decorOn('crystalLadder'), dressed = collectionLevel('gather') >= 2;
+      ctx.strokeStyle = crystal ? '#65d9ff' : gold ? '#d49a24' : dressed ? '#79b85a' : '#8269b8'; ctx.lineWidth = dressed || gold || crystal ? 4 : 3;
       line(x - 8, top, x - 8, bottom); line(x + 8, top, x + 8, bottom);
-      ctx.strokeStyle = gold ? '#fff0a0' : dressed ? '#d8c06a' : '#b49adb'; ctx.lineWidth = 2;
+      ctx.strokeStyle = crystal ? '#d9f8ff' : gold ? '#fff0a0' : dressed ? '#d8c06a' : '#b49adb'; ctx.lineWidth = 2;
       for (let y = top + 9; y < bottom; y += 15) line(x - 7, y, x + 7, y);
-      if (dressed || gold) {
-        ctx.fillStyle = gold ? '#ffd65a' : '#8ed06d';
+      if (dressed || gold || crystal) {
+        ctx.fillStyle = crystal ? '#8fe9ff' : gold ? '#ffd65a' : '#8ed06d';
         for (let y = top + 16; y < bottom; y += 31) { ell(x - 11, y, 4, 2); ell(x + 11, y + 9, 4, 2); }
       }
       ctx.restore();
@@ -576,10 +604,11 @@
       ctx.beginPath(); ctx.arc(0, -46, 31, -2.8, -.3); ctx.stroke();
       ctx.fillStyle = '#ffe9a8'; circ(29, -53, 2.2); circ(-28, -54, 2.2);
     }
-    if (decorOn('royalBench')) {
-      ctx.strokeStyle = '#ffe68b'; ctx.lineWidth = 2;
+    if (decorOn('royalBench') || decorOn('forgeBench')) {
+      const forge = decorOn('forgeBench');
+      ctx.strokeStyle = forge ? '#7edcff' : '#ffe68b'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(-31, -33); ctx.quadraticCurveTo(0, -43, 31, -33); ctx.stroke();
-      ctx.fillStyle = '#fff1a8'; circ(-31, -33, 2.4); circ(31, -33, 2.4);
+      ctx.fillStyle = forge ? '#d8f8ff' : '#fff1a8'; circ(-31, -33, 2.4); circ(31, -33, 2.4);
     }
     ctx.restore();
     sign(st.x, st.y - 94, '씨앗 오일 제련', chosen);
@@ -636,10 +665,11 @@
         circ(Math.cos(a) * 42, -24 + Math.sin(a) * 10, 2.2);
       }
     }
-    if (decorOn('royalBench')) {
-      ctx.strokeStyle = '#ffe68b'; ctx.lineWidth = 2;
+    if (decorOn('royalBench') || decorOn('forgeBench')) {
+      const forge = decorOn('forgeBench');
+      ctx.strokeStyle = forge ? '#7edcff' : '#ffe68b'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(-38, -39); ctx.quadraticCurveTo(0, -56, 38, -39); ctx.stroke();
-      ctx.fillStyle = '#fff1a8'; circ(-38, -39, 2.4); circ(38, -39, 2.4); circ(0, -55, 3);
+      ctx.fillStyle = forge ? '#d8f8ff' : '#fff1a8'; circ(-38, -39, 2.4); circ(38, -39, 2.4); circ(0, -55, 3);
     }
     ctx.fillStyle = '#5d3699'; rr(-33, -43, 16, 6, 1.5);
     ctx.fillStyle = '#efe3c4'; ctx.fillRect(-31.5, -41.3, 13, 1.2); ctx.fillRect(-31.5, -39.2, 13, 1.2);
@@ -688,6 +718,25 @@
       }
       ctx.restore();
     });
+  }
+
+  function drawShowcase(now) {
+    const pick = S.showcase;
+    if (!pick || !COLLECTIBLES[pick.source] || !COLLECTIBLES[pick.source][pick.index]) return;
+    const im = COLLECTION_IMG[pick.source + ':' + pick.index], x = 514, y = WORLD.ground;
+    ctx.save();
+    ctx.fillStyle = 'rgba(16,12,34,.78)'; rr(x - 27, y - 66, 54, 58, 9);
+    ctx.strokeStyle = '#8a70c4'; ctx.lineWidth = 1.4; ctx.stroke();
+    const glow = .16 + Math.sin(now * 2.2) * .04;
+    ctx.fillStyle = 'rgba(181,139,255,' + glow + ')'; circ(x, y - 38, 30);
+    if (ready(im)) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(im, x - 23, y - 61, 46, 46);
+      ctx.imageSmoothingEnabled = true;
+    }
+    ctx.fillStyle = '#47345f'; rr(x - 32, y - 10, 64, 10, 3);
+    ctx.fillStyle = '#d8b75f'; ctx.fillRect(x - 13, y - 7, 26, 3);
+    ctx.restore();
   }
 
   function drawDrops() {
@@ -1116,16 +1165,24 @@
 
   function renderFacility() {
     const level = S.facility || 0, next = FACILITIES[level], cost = Core.facilityCost(S);
+    const host = $('facility');
+    if (!host) return;
+    const current = host.querySelector('details');
+    if (current) facilityOpen = current.open;
+    let body;
     if (!next) {
       const installed = FACILITIES.map((row, i) => '<li><span>' + (i + 1) + '</span><div><b>' + esc(row.name) + '</b><small>' + esc(row.effect) + '</small></div><em>가동 중</em></li>').join('');
-      setHtml('facility', '<div class="hi-facility-top hi-facility-complete"><div><small>채집소 증축 · 3/3단계</small><b>모든 설비 가동 중</b><span>구입한 효과는 계속 적용됩니다.</span></div><span class="hi-facility-seal">MAX</span></div>' +
-        '<ol class="hi-facility-owned">' + installed + '</ol>');
-      return;
+      body = '<details><summary><span><small>시설</small><b>채집소 증축</b></span><em>3/3 · MAX</em></summary><ol class="hi-facility-owned">' + installed + '</ol></details>';
+    } else {
+      const steps = FACILITIES.map((row, i) => '<span class="' + (i < level ? 'done' : i === level ? 'now' : '') + '">' + (i + 1) + '</span>').join('');
+      body = '<details><summary><span><small>시설</small><b>채집소 증축</b></span><em>' + level + '/3</em></summary>' +
+        '<div class="hi-facility-body"><div class="hi-facility-top"><div><b>' + esc(next.name) + '</b><span>' + esc(next.effect) + '</span></div>' +
+        '<div class="hi-facility-steps" aria-hidden="true">' + steps + '</div></div>' +
+        '<button type="button" id="facilityBuy"' + (S.meso < cost ? ' disabled' : '') + '><img class="pix" src="icons/home/메소주머니.webp" alt="" width="18" height="18">' + short(cost) + ' 투자</button></div></details>';
     }
-    const steps = FACILITIES.map((row, i) => '<span class="' + (i < level ? 'done' : i === level ? 'now' : '') + '">' + (i + 1) + '</span>').join('');
-    setHtml('facility', '<div class="hi-facility-top"><div><small>메소 사용처 · ' + (level + 1) + '/3단계</small><b>' + esc(next.name) + '</b><span>' + esc(next.effect) + '</span></div>' +
-      '<div class="hi-facility-steps" aria-hidden="true">' + steps + '</div></div>' +
-      '<button type="button" id="facilityBuy"' + (S.meso < cost ? ' disabled' : '') + '><img class="pix" src="icons/home/메소주머니.webp" alt="" width="18" height="18">' + short(cost) + ' 투자</button>');
+    if (facilityMarkup !== body) { host.innerHTML = body; facilityMarkup = body; }
+    const details = host.querySelector('details');
+    if (details) details.open = facilityOpen;
   }
 
   function renderCollection() {
@@ -1134,35 +1191,44 @@
       const meta = COLLECTION_META[source], level = collectionLevel(source), rows = COLLECTIBLES[source];
       const slots = rows.map((item, i) => {
         const state = i < level ? 'found' : i === level ? 'next' : 'locked';
-        const title = i < level ? item.name + ' · ' + item.unlock : i === level ? item.name + ' · ' + meta.action + ' ' + meta.rate : '같은 줄의 ' + i + '단계를 먼저 발견해야 해요';
-        return '<div class="hi-collection-slot ' + state + '" title="' + esc(title) + '"><span class="hi-collection-tier">' + (i + 1) + '</span>' +
-          '<img class="pix" src="' + item.icon + '" alt="" width="50" height="50"><b>' + (state === 'next' ? '?' : state === 'locked' ? '·' : '✓') + '</b></div>';
+        const selected = state === 'found' && S.showcase && S.showcase.source === source && S.showcase.index === i;
+        const title = state === 'found' ? item.name + ' · ' + item.unlock : '미발견 전시품';
+        const content = '<span class="hi-collection-tier">' + (i + 1) + '</span><img class="pix" src="' + item.icon + '" alt="" width="60" height="60">' +
+          (state === 'found' ? '<b>' + (selected ? '전시 중' : '전시') + '</b>' : '');
+        return state === 'found'
+          ? '<button type="button" class="hi-collection-slot found' + (selected ? ' selected' : '') + '" data-showcase="' + source + ':' + i + '" title="' + esc(title) + '" aria-pressed="' + selected + '">' + content + '</button>'
+          : '<div class="hi-collection-slot ' + state + '" title="미발견 전시품">' + content + '</div>';
       }).join('');
       const next = rows[level];
-      return '<section class="hi-collection-track"><header><img class="pix" src="icons/craft/' + meta.icon + '" alt="" width="34" height="34"><div><b>' + meta.name + '</b><small>' + meta.rate + '</small></div></header>' +
-        '<div class="hi-collection-stack">' + slots + '</div><p class="' + (next ? '' : 'complete') + '">' +
-        (next ? '<strong>' + esc(next.name) + '</strong><span>' + esc(next.unlock) + '</span>' : '<strong>완성</strong><span>꾸미기 3종 적용</span>') + '</p></section>';
+      return '<section class="hi-collection-track"><header><img class="pix" src="icons/craft/' + meta.icon + '" alt="" width="38" height="38"><div><b>' + meta.name + '</b><small>' +
+        (next ? collectionRate(source, level) : '완료') + '</small></div></header><div class="hi-collection-stack">' + slots + '</div></section>';
     }).join('');
-    setHtml('collection', '<div class="hi-collection-title"><div><small>각 줄에서 1 → 2 → 3 순서로 발견</small><b>달빛 전시대</b></div><em>' + total + '/9</em></div>' +
+    setHtml('collection', '<div class="hi-collection-title"><div><b>달빛 전시대</b><small>발견한 전시품을 눌러 진열</small></div><em>' + total + '/9</em></div>' +
       '<div class="hi-collection-board">' + tracks + '</div>');
   }
 
   function renderDecorShop() {
     const owned = DECOR_ITEMS.filter(item => Core.ownsDecor(S, item.id)).length;
-    const cards = DECOR_ITEMS.map(item => {
+    const card = (item, equip) => {
       const has = Core.ownsDecor(S, item.id), on = Core.decorActive(S, item.id);
-      const action = has ? (on ? '장착 중' : '장착') : short(item.cost) + ' 구매';
-      return '<article class="hi-decor-card ' + (has ? 'owned' : '') + (on ? ' equipped' : '') + '">' +
-        '<img class="pix" src="' + item.icon + '" alt="" width="30" height="30"><div><b>' + esc(item.name) + '</b><small>' + esc(item.desc) + '</small>' +
-        '<em>' + (has ? '구매 완료 · 영구 보유' : short(item.cost) + ' 메소') + '</em></div>' +
-        '<button type="button" data-decor="' + item.id + '"' + (!has && S.meso < item.cost ? ' disabled' : '') + ' aria-pressed="' + on + '">' + action + '</button></article>';
+      if (equip && !has) return '';
+      const action = equip ? (on ? '해제' : '장착') : has ? '보유 중' : short(item.cost) + ' 구매';
+      return '<article class="hi-decor-card ' + (has ? 'owned' : '') + (on ? ' equipped' : '') + '"><img class="pix" src="' + item.icon + '" alt="" width="34" height="34">' +
+        '<div><b>' + esc(item.name) + '</b><small>' + esc(item.desc) + '</small>' + (!equip ? '<em>' + (has ? '영구 보유' : short(item.cost) + ' 메소') + '</em>' : '') + '</div>' +
+        '<button type="button" data-decor-' + (equip ? 'equip' : 'buy') + '="' + item.id + '"' + ((!equip && (has || S.meso < item.cost)) ? ' disabled' : '') + ' aria-pressed="' + on + '">' + action + '</button></article>';
+    };
+    const groups = DECOR_CATEGORIES.map(category => {
+      const items = DECOR_ITEMS.filter(item => item.category === category);
+      const rows = items.map(item => card(item, decorView === 'equip')).join('');
+      return '<section class="hi-decor-group"><h4>' + DECOR_CATEGORY[category] + '</h4>' + (rows || '<p>구매한 장식이 없어요</p>') + '</section>';
     }).join('');
     const host = $('decorShop');
     if (!host) return;
     const current = host.querySelector('details');
     if (current) decorShopOpen = current.open;
-    const markup = '<details><summary><span><small>치장 · 메소 구매 · 수익 효과 없음</small><b>달빛 장식 상점</b></span><em>' + owned + '/' + DECOR_ITEMS.length + '</em></summary>' +
-      '<p class="hi-decor-note">전시품 꾸미기와 함께 적용됩니다. 산 장식은 버튼으로 켜고 끌 수 있어요.</p><div class="hi-decor-list">' + cards + '</div></details>';
+    const markup = '<details><summary><span><small>치장</small><b>달빛 장식</b></span><em>' + owned + '/' + DECOR_ITEMS.length + '</em></summary>' +
+      '<div class="hi-decor-tabs" role="tablist"><button type="button" data-decor-view="buy" aria-selected="' + (decorView === 'buy') + '">구매</button>' +
+      '<button type="button" data-decor-view="equip" aria-selected="' + (decorView === 'equip') + '">장착</button></div><div class="hi-decor-list">' + groups + '</div></details>';
     if (decorShopMarkup !== markup) {
       host.innerHTML = markup;
       decorShopMarkup = markup;
@@ -1767,6 +1833,10 @@
     chip.classList.remove('pulse'); void chip.offsetWidth; chip.classList.add('pulse');
   }
 
+  $('facility').addEventListener('toggle', e => {
+    if (e.target.matches('details')) facilityOpen = e.target.open;
+  }, true);
+
   $('facility').addEventListener('click', e => {
     const b = e.target.closest('#facilityBuy');
     if (!b || paused) return;
@@ -1786,21 +1856,34 @@
   }, true);
 
   $('decorShop').addEventListener('click', e => {
-    const b = e.target.closest('[data-decor]');
+    const view = e.target.closest('[data-decor-view]');
+    if (view) { decorView = view.dataset.decorView === 'equip' ? 'equip' : 'buy'; renderDecorShop(); return; }
+    const b = e.target.closest('[data-decor-buy], [data-decor-equip]');
     if (!b || paused) return;
     step();
-    const id = b.dataset.decor, item = Core.decorItem(id);
+    const id = b.dataset.decorBuy || b.dataset.decorEquip, item = Core.decorItem(id);
     if (!item) return;
-    if (!Core.ownsDecor(S, id)) {
+    if (b.dataset.decorBuy) {
       const result = Core.buyDecor(S, id);
       if (!result) { toast(item.name + ' 구매에 필요한 메소가 부족해요'); return; }
       addLog('장식 구입 · ' + item.name + ' · -' + short(result.cost), 'buy');
-      toast(item.name + ' 구입 완료! 바로 장착했어요');
+      toast(item.name + ' 구입 완료 · 장착 탭에서 선택할 수 있어요');
       pulseMeso();
     } else {
       const result = Core.toggleDecor(S, id);
       toast(item.name + (result.equipped ? ' 장착 완료' : ' 장착 해제'));
     }
+    hudDirty = true;
+    refresh();
+    save();
+  });
+
+  $('collection').addEventListener('click', e => {
+    const b = e.target.closest('[data-showcase]');
+    if (!b || paused) return;
+    const parts = b.dataset.showcase.split(':'), item = Core.selectCollectible(S, parts[0], Number(parts[1]));
+    if (!item) return;
+    toast(item.name + ' 전시 완료');
     hudDirty = true;
     refresh();
     save();

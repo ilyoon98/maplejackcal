@@ -58,7 +58,8 @@
     NEWS_CHANCE: 1 / 50,     // 시세 1번 바뀔 때 소식이 뜰 확률 (평균 2분 반에 1번)
     OFFLINE_CAP: 8 * 3600,   // 자리 비움은 최대 8시간까지만 진행
     FACILITY_COSTS: [1000000000, 3000000000, 10000000000],
-    COLLECTION_RATE: { gather: 0.01, oil: 0.03, alchemy: 0.08 }
+    // 같은 줄에서도 뒤 전시품일수록 희귀하다.
+    COLLECTION_RATE: { gather: [0.02, 0.01, 0.005], oil: [0.06, 0.03, 0.015], alchemy: [0.12, 0.06, 0.03] }
   };
 
   // spread: 기준 시세 양쪽에 붙는 매수·매도 호가 폭. beta: 다 같이 움직이는 흐름을 타는 정도,
@@ -100,10 +101,15 @@
   // 수익 보너스는 주지 않아 경제 밸런스와 무관하며, 구입 뒤 언제든 켜고 끌 수 있다.
   const DECOR_ITEMS = [
     { id: 'butterfly', category: 'effect', name: '달나비 채집광', cost: 300000000, icon: 'icons/home/행운의네잎클로버.webp', desc: '채집할 때 달나비가 피어나요' },
+    { id: 'starlight', category: 'effect', name: '별빛 채집광', cost: 700000000, icon: 'icons/home/솔에르다조각.webp', desc: '채집할 때 푸른 별조각이 흩어져요' },
     { id: 'goldLadder', category: 'ladder', name: '황금 덩굴 사다리', cost: 1000000000, icon: 'icons/home/사다리.webp', desc: '층 사이 사다리를 황금빛으로 바꿔요' },
+    { id: 'crystalLadder', category: 'ladder', name: '수정 달빛 사다리', cost: 1800000000, icon: 'icons/home/루나크리스탈.webp', desc: '층 사이 사다리를 푸른 수정빛으로 바꿔요' },
     { id: 'purpleRain', category: 'weather', name: '보랏빛 별비', cost: 3000000000, icon: 'icons/home/부서진별의파편.webp', desc: '밤하늘에 보랏빛 별비가 내려요' },
+    { id: 'coinShower', category: 'weather', name: '황금 단풍비', cost: 4200000000, icon: 'icons/home/반짝이는메이플코인.webp', desc: '밤하늘에 금빛 단풍 조각이 내려요' },
     { id: 'royalBench', category: 'station', name: '왕실 연금 작업대', cost: 5000000000, icon: 'icons/craft/소형재물획득의비약레시피.webp', desc: '두 작업대를 금빛 장식으로 꾸며요' },
-    { id: 'dawnGarden', category: 'background', name: '새벽빛 정원', cost: 10000000000, icon: 'icons/home/황금단풍잎.webp', desc: '채집소 뒤에 새벽빛과 산등성이가 번져요' }
+    { id: 'forgeBench', category: 'station', name: '별망치 작업대', cost: 6500000000, icon: 'icons/home/황금망치.webp', desc: '두 작업대를 청금빛 금속으로 꾸며요' },
+    { id: 'dawnGarden', category: 'background', name: '새벽빛 정원', cost: 10000000000, icon: 'icons/home/황금단풍잎.webp', desc: '채집소 뒤에 새벽빛과 산등성이가 번져요' },
+    { id: 'mapleNight', category: 'background', name: '단풍별 밤', cost: 14000000000, icon: 'icons/home/단풍잎.webp', desc: '채집소 뒤에 붉은 단풍별이 떠올라요' }
   ];
 
   // items: 품목별로 더할 충격 범위(로그 단위). 소식은 1분 반쯤에 걸쳐 절반으로 줄어든다.
@@ -340,16 +346,29 @@
     if (!item || ownsDecor(s, id) || s.meso < item.cost) return null;
     s.meso -= item.cost;
     s.decor.owned.push(id);
-    s.decor.equipped.push(id);
     s.stats.decorSpent = count(s.stats.decorSpent) + item.cost;
-    return { item, cost: item.cost, equipped: true };
+    return { item, cost: item.cost, equipped: false };
   }
   function toggleDecor(s, id) {
     if (!ownsDecor(s, id)) return null;
     const at = s.decor.equipped.indexOf(id);
     if (at >= 0) s.decor.equipped.splice(at, 1);
-    else s.decor.equipped.push(id);
+    else {
+      const item = decorItem(id);
+      s.decor.equipped = s.decor.equipped.filter(activeId => {
+        const active = decorItem(activeId);
+        return !active || active.category !== item.category;
+      });
+      s.decor.equipped.push(id);
+    }
     return { item: decorItem(id), equipped: at < 0 };
+  }
+
+  function selectCollectible(s, source, index) {
+    const track = COLLECTIBLES[source], at = count(index);
+    if (!track || at >= count(s.collection && s.collection[source]) || !track[at]) return null;
+    s.showcase = { source, index: at };
+    return track[at];
   }
 
   function tryCollect(s, source, emit) {
@@ -357,7 +376,9 @@
     if (!track || !s.collection || typeof s.collection !== 'object') return null;
     const index = Math.min(track.length, count(s.collection[source]));
     const item = track[index];
-    if (!item || rand(s) >= C.COLLECTION_RATE[source]) return null;
+    const rates = C.COLLECTION_RATE[source];
+    const rate = Array.isArray(rates) ? rates[index] : rates;
+    if (!item || !(rate > 0) || rand(s) >= rate) return null;
     s.collection[source] = index + 1;
     const result = { source, index, item, count: s.collection[source] };
     emit({ type: 'collect', collection: result });
@@ -643,6 +664,7 @@
       meso: C.START_MESO,
       facility: 0,
       collection: { gather: 0, oil: 0, alchemy: 0 },
+      showcase: null,
       decor: { owned: [], equipped: [] },
       inv,
       mode: 'gather',
@@ -677,12 +699,23 @@
       const oldOrder = ['gather', 'oil', 'alchemy', 'gather', 'oil', 'alchemy'];
       oldOrder.slice(0, Math.min(oldOrder.length, count(raw.collection))).forEach(k => { s.collection[k]++; });
     }
+    if (raw.showcase && MODES.indexOf(raw.showcase.source) >= 0) {
+      const index = count(raw.showcase.index), source = raw.showcase.source;
+      if (index < s.collection[source] && COLLECTIBLES[source][index]) s.showcase = { source, index };
+    }
     const validDecor = DECOR_ITEMS.map(item => item.id);
     if (raw.decor && typeof raw.decor === 'object') {
       s.decor.owned = Array.isArray(raw.decor.owned)
         ? raw.decor.owned.filter((id, i, rows) => validDecor.indexOf(id) >= 0 && rows.indexOf(id) === i) : [];
-      s.decor.equipped = Array.isArray(raw.decor.equipped)
+      const equipped = Array.isArray(raw.decor.equipped)
         ? raw.decor.equipped.filter((id, i, rows) => s.decor.owned.indexOf(id) >= 0 && rows.indexOf(id) === i) : [];
+      const categories = [];
+      s.decor.equipped = equipped.filter(id => {
+        const item = decorItem(id);
+        if (!item || categories.indexOf(item.category) >= 0) return false;
+        categories.push(item.category);
+        return true;
+      });
     }
     if (raw.inv) KEYS.forEach(k => { s.inv[k] = count(raw.inv[k]); });
     if (raw.stats) {
@@ -751,7 +784,7 @@
 
   const API = {
     C, ITEMS, KEYS, SELL, BUY, MODES, WORLD, PLATFORMS, HERBS, STATIONS, NEWS, COLLECTIBLES, DECOR_ITEMS,
-    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, decorItem, ownsDecor, decorActive, buyDecor, toggleDecor, tryCollect, posAt, seedValues, quote, rollSeeds, rand,
+    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, decorItem, ownsDecor, decorActive, buyDecor, toggleDecor, selectCollectible, tryCollect, posAt, seedValues, quote, rollSeeds, rand,
     spriteAnchor
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
