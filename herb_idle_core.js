@@ -58,9 +58,7 @@
     NEWS_CHANCE: 1 / 50,     // 시세 1번 바뀔 때 소식이 뜰 확률 (평균 2분 반에 1번)
     OFFLINE_CAP: 8 * 3600,   // 자리 비움은 최대 8시간까지만 진행
     FACILITY_COSTS: [1000000000, 3000000000, 10000000000],
-    PATRON_BASE: 100000000,
-    PATRON_GROWTH: 1.45,
-    PATRON_MAX_COST: 1000000000000000
+    COLLECTION_RATE: { gather: 0.01, oil: 0.03, alchemy: 0.08 }
   };
 
   // spread: 기준 시세 양쪽에 붙는 매수·매도 호가 폭. beta: 다 같이 움직이는 흐름을 타는 정도,
@@ -77,8 +75,17 @@
   // 게임 흐름상 재물비는 완제품이라 판매만, 제작 재료는 구매만 한다.
   // 씨앗과 오일은 직접 팔거나 다음 단계 가공을 위해 살 수 있다.
   const SELL = ['seed', 'oil', 'elixir'];
-  const BUY = ['seed', 'oil', 'crystal', 'stone'];
+  const BUY = ['crystal', 'stone'];
   const MODES = ['gather', 'oil', 'alchemy'];
+  // 앞 전시품을 발견해야 다음 전시품이 등장한다. 생산 보너스 대신 장면 꾸미기만 차례로 해금한다.
+  const COLLECTIBLES = [
+    { name: '달빛 네잎 약초', source: 'gather', unlock: '황금 채집 반짝임' },
+    { name: '보랏빛 오일 결정', source: 'oil', unlock: '수정 증류대' },
+    { name: '별무리 비약 병', source: 'alchemy', unlock: '별똥별 날씨' },
+    { name: '덩굴 사다리 표본', source: 'gather', unlock: '빛나는 덩굴 사다리' },
+    { name: '현자의 증류 코일', source: 'oil', unlock: '달빛 비약 작업대' },
+    { name: '새벽빛 농축액', source: 'alchemy', unlock: '오로라 밤하늘' }
+  ];
 
   // items: 품목별로 더할 충격 범위(로그 단위). 소식은 1분 반쯤에 걸쳐 절반으로 줄어든다.
   const NEWS = [
@@ -86,7 +93,7 @@
     { text: '씨앗 사재기 소문이 돌아요', items: { seed: [0.12, 0.25] } },
     { text: '심마니가 대거 몰려와 씨앗 매물이 쏟아져요', items: { seed: [-0.3, -0.15] } },
     { text: '채집 핫타임! 씨앗이 넘쳐나요', items: { seed: [-0.25, -0.12], oil: [-0.08, -0.03] } },
-    { text: '연금술사들이 오일을 싹쓸이하고 있어요', items: { oil: [0.1, 0.22] } },
+    { text: '비약 제작자들이 오일을 싹쓸이하고 있어요', items: { oil: [0.1, 0.22] } },
     { text: '오일 재고가 쌓여 값이 내려가요', items: { oil: [-0.18, -0.08] } },
     { text: '보스 패치를 앞두고 재물비가 잘 팔려요', items: { elixir: [0.06, 0.14] } },
     { text: '재획 이벤트 시작! 재물비 수요가 늘었어요', items: { elixir: [0.05, 0.12], oil: [0.04, 0.1] } },
@@ -245,7 +252,7 @@
     return s.meso < cost ? 'meso' : '';
   }
 
-  // 현재 오일로 가능한 연금술 횟수만큼 제작 재료를 자동 구매한다.
+  // 현재 오일로 가능한 재물 획득 비약 제작 횟수만큼 재료를 자동 구매한다.
   // 전량 구매가 부담되면 한 번 제작분만 사고, 한 번분과 빈병 값조차 없으면 상태를 바꾸지 않는다.
   function autoSupplyAlchemy(s, emit) {
     emit = emit || noop;
@@ -300,19 +307,14 @@
     return { level: s.facility, cost, effects: facilityEffects(s) };
   }
 
-  // 생산량에는 손대지 않는 순수 명예형 메소 소모처. 횟수 제한 없이 다음 후원액만 계속 커진다.
-  function patronCost(s) {
-    const level = Math.min(1000, count(s && s.patron));
-    const raw = C.PATRON_BASE * Math.pow(C.PATRON_GROWTH, Math.min(level, 80));
-    return Math.min(C.PATRON_MAX_COST, Math.ceil(raw / 10000000) * 10000000);
-  }
-  function donate(s) {
-    const cost = patronCost(s);
-    if (s.meso < cost) return null;
-    s.meso -= cost;
-    s.patron = count(s.patron) + 1;
-    s.stats.donated = count(s.stats.donated) + cost;
-    return { level: s.patron, cost, total: s.stats.donated, next: patronCost(s) };
+  function tryCollect(s, source, emit) {
+    const index = Math.min(COLLECTIBLES.length, count(s.collection));
+    const item = COLLECTIBLES[index];
+    if (!item || item.source !== source || rand(s) >= C.COLLECTION_RATE[source]) return null;
+    s.collection = index + 1;
+    const result = { index, item, count: s.collection };
+    emit({ type: 'collect', collection: result });
+    return result;
   }
 
   // 재료는 시작할 때 넣고, 도중에 다른 일로 바꾸면 돌려준다.
@@ -391,6 +393,7 @@
       s.herbs[i].readyAt = s.t + C.RESPAWN_MIN + rand(s) * (C.RESPAWN_MAX - C.RESPAWN_MIN);
       s.herbs[i].cutAt = s.t;
       emit({ type: 'gather', herb: i, seeds: n });
+      tryCollect(s, 'gather', emit);
     } else if (job.kind === 'oil') {
       // 실패하면 보라색 가루가 나오는데 쓸 데 없는 꽝이라 가방에 넣지 않고, 가루가 터져 잠시 기절한다.
       const ok = rand(s) < facilityEffects(s).oilRate;
@@ -400,6 +403,7 @@
       s.stats.spent += job.meso;
       if (s.batch) { s.batch.tries++; if (ok) s.batch.made++; else s.batch.fail++; s.batch.spent += job.meso; }
       emit({ type: 'oil', ok });
+      if (ok) tryCollect(s, 'oil', emit);
       if (!ok) {
         a.phase = 'stun';
         a.start = s.t;
@@ -414,6 +418,7 @@
       s.stats.spent += job.meso;
       if (s.batch) { s.batch.tries++; s.batch.made += made; s.batch.spent += job.meso; }
       emit({ type: 'alchemy', made });
+      tryCollect(s, 'alchemy', emit);
     }
     plan(s, emit);
   }
@@ -578,7 +583,7 @@
   function newStats() {
     const sold = {};
     SELL.forEach(k => { sold[k] = 0; });
-    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, invested: 0, donated: 0, sold };
+    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, invested: 0, sold };
   }
 
   function create(seed) {
@@ -590,7 +595,7 @@
       rng: (Number(seed) >>> 0) || 1,
       meso: C.START_MESO,
       facility: 0,
-      patron: 0,
+      collection: 0,
       inv,
       mode: 'gather',
       batch: null,
@@ -617,7 +622,7 @@
     s.rng = num(raw.rng, 1) | 0;
     s.meso = Math.max(0, Math.floor(num(raw.meso, C.START_MESO)));
     s.facility = Math.min(C.FACILITY_COSTS.length, count(raw.facility));
-    s.patron = count(raw.patron);
+    s.collection = Math.min(COLLECTIBLES.length, count(raw.collection));
     if (raw.inv) KEYS.forEach(k => { s.inv[k] = count(raw.inv[k]); });
     if (raw.stats) {
       Object.keys(s.stats).forEach(k => { if (k !== 'sold') s.stats[k] = count(raw.stats[k]); });
@@ -684,8 +689,8 @@
   }
 
   const API = {
-    C, ITEMS, KEYS, SELL, BUY, MODES, WORLD, PLATFORMS, HERBS, STATIONS, NEWS,
-    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, patronCost, donate, posAt, seedValues, quote, rollSeeds, rand,
+    C, ITEMS, KEYS, SELL, BUY, MODES, WORLD, PLATFORMS, HERBS, STATIONS, NEWS, COLLECTIBLES,
+    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, tryCollect, posAt, seedValues, quote, rollSeeds, rand,
     spriteAnchor
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

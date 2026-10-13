@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   const Core = window.HerbIdleCore;
-  const { C, ITEMS, KEYS, SELL, BUY, WORLD, PLATFORMS, HERBS, STATIONS } = Core;
+  const { C, ITEMS, KEYS, SELL, BUY, WORLD, PLATFORMS, HERBS, STATIONS, COLLECTIBLES } = Core;
   const STORE_KEY = 'herbIdleGame';
   const AWAY_MIN = 60;     // 이보다 오래(초) 비웠다 오면 정산 창
   const QUIET_MIN = 2;     // 이보다 길게 밀린 시간은 효과 없이 조용히 따라잡는다
@@ -54,12 +54,10 @@
     { name: '자동 증류기', effect: '오일 성공률 95% · 제작 1.25초' },
     { name: '달빛 연금실', effect: '재물비 6개 → 8개 · 제작 2.5초' }
   ];
-  const PATRON_TITLES = [
-    [0, '새싹 후원자'], [3, '보랏빛 단골'], [6, '달빛 조합원'], [10, '황금 손'],
-    [15, '약초 거상'], [25, '달빛 전설'], [50, '영원한 후원자']
-  ];
-  // 기록에는 거래와 시세 소식만 남긴다. 가공·채집 소식은 화면 안 알림으로만 보여 준다.
-  const LOG_KINDS = ['sell', 'buy', 'news'];
+  const COLLECTION_ICON = ['보라약초.webp', '쥬니퍼베리씨앗오일.webp', '소형재물획득의비약.webp', '보라약초.webp', '쥬니퍼베리씨앗오일.webp', '소형재물획득의비약.webp'];
+  const SOURCE_LABEL = { gather: '약초 캐기 · 1%', oil: '오일 만들기 · 3%', alchemy: '재물 획득 비약 만들기 · 8%' };
+  // 기록에는 거래·시세·전시품 발견만 남긴다. 일반 가공·채집은 화면 안 알림으로만 보여 준다.
+  const LOG_KINDS = ['sell', 'buy', 'news', 'collect'];
   const IMG = {};
   Object.keys(ICON).forEach(k => { const im = new Image(); im.src = 'icons/craft/' + ICON[k]; IMG[k] = im; });
   const herbImg = new Image();
@@ -98,7 +96,7 @@
     try { localStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, owner: TAB, wall: wallAt, game: S, log })); } catch (e) {}
   }
 
-  const LOG_ICON = { buy: 'icons/home/메소주머니.webp', sell: 'icons/home/메소주머니.webp', news: 'icons/home/신문기사.webp' };
+  const LOG_ICON = { buy: 'icons/home/메소주머니.webp', sell: 'icons/home/메소주머니.webp', news: 'icons/home/신문기사.webp', collect: 'icons/craft/보라약초.webp' };
   function addLog(text, kind) {
     log.unshift({ at: Date.now(), kind: kind || '', text });
     if (log.length > LOG_MAX) log.length = LOG_MAX;
@@ -119,7 +117,7 @@
   const WHY = {
     oil: { seed: () => '씨앗이 6개 있어야 오일을 만들 수 있어요 (지금 ' + fmt(S.inv.seed) + '개)',
       meso: () => '허브 오일병 살 메소(1,000)가 모자라요. 먼저 조금 팔아 주세요' },
-    alchemy: { oil: () => '오일이 5개 있어야 연금술을 할 수 있어요 (지금 ' + fmt(S.inv.oil) + '개)',
+    alchemy: { oil: () => '오일이 5개 있어야 재물 획득 비약을 만들 수 있어요 (지금 ' + fmt(S.inv.oil) + '개)',
       crystal: () => '최상급 아이템 결정 자동 구매에 실패했어요',
       stone: () => '현자의 돌 자동 구매에 실패했어요',
       meso: () => '최상결·현자의 돌과 포션 빈병을 살 메소가 모자라요' }
@@ -148,9 +146,15 @@
       if (STOP_WHY[e.reason]) toast(STOP_WHY[e.reason]);
     } else if (e.type === 'autoBuy') {
       const names = e.items.map(row => ITEMS[row.key].short + ' ' + fmt(row.qty) + '개').join(' · ');
-      addLog('연금술 재료 자동 구매 · ' + names + ' · -' + short(e.cost), 'buy');
-      toast('연금술 재료 자동 구매 · ' + names + ' (-' + short(e.cost) + ' 메소)');
+      addLog('비약 재료 자동 구매 · ' + names + ' · -' + short(e.cost), 'buy');
+      toast('비약 재료 자동 구매 · ' + names + ' (-' + short(e.cost) + ' 메소)');
       pulseMeso();
+    } else if (e.type === 'collect') {
+      const found = e.collection;
+      addLog('전시품 발견 · ' + found.item.name + ' · ' + found.item.unlock + ' 해금', 'collect');
+      toast('전시품 발견! ' + found.item.name + ' · ' + found.item.unlock + ' 해금');
+      if (found.index === COLLECTIBLES.length - 1) bg = paintBackground();
+      sparks(Core.posAt(S.actor, S.t).x, Core.posAt(S.actor, S.t).y - 50, '#ffd65a', 28, 150);
     } else if (e.type === 'news') {
       addLog(e.news.text + ' (' + newsHit(e.news) + ')', 'news');
       newsFresh = true;
@@ -213,6 +217,13 @@
     let gr = g.createLinearGradient(0, 0, 0, G);
     gr.addColorStop(0, '#100d2a'); gr.addColorStop(0.5, '#251c4d'); gr.addColorStop(0.85, '#4a3068'); gr.addColorStop(1, '#6a3f6e');
     g.fillStyle = gr; g.fillRect(0, 0, WORLD.w, G + 10);
+    if (S && S.collection >= 6) {
+      const aurora = g.createLinearGradient(90, 30, 850, 210);
+      aurora.addColorStop(0, 'rgba(80,255,190,0)'); aurora.addColorStop(.35, 'rgba(80,255,190,.16)');
+      aurora.addColorStop(.65, 'rgba(180,110,255,.2)'); aurora.addColorStop(1, 'rgba(180,110,255,0)');
+      g.fillStyle = aurora;
+      g.beginPath(); g.moveTo(0, 118); g.bezierCurveTo(220, 20, 480, 205, 960, 70); g.lineTo(960, 140); g.bezierCurveTo(520, 255, 220, 85, 0, 180); g.closePath(); g.fill();
+    }
     gr = g.createRadialGradient(470, G + 40, 20, 470, G + 40, 560);
     gr.addColorStop(0, 'rgba(255,160,120,.3)'); gr.addColorStop(1, 'rgba(255,160,120,0)');
     g.fillStyle = gr; g.fillRect(0, 0, WORLD.w, G);
@@ -313,6 +324,7 @@
     const big = e.seeds >= 4;
     floatText('+' + e.seeds, p.x, p.y - 62, big ? '#ffd65a' : '#d6ff9a', 'seed', big);
     if (big) sparks(p.x, p.y - 34, '#ffd65a', 12, 120);
+    if (S.collection >= 1) sparks(p.x, p.y - 28, '#ffe86b', 5, 75);
   }
   function fxOil(e) {
     const st = STATIONS.oil;
@@ -433,6 +445,14 @@
         ctx.globalAlpha = a * 0.22; ctx.fillStyle = '#d9c4ff'; circ(x, y, 4.5);
         ctx.globalAlpha = a; ctx.fillStyle = '#f6efff'; circ(x, y, 1.2);
       });
+      if (S.collection >= 3) {
+        for (let i = 0; i < 5; i++) {
+          const x = (now * (34 + i * 3) + i * 211) % 1120 - 80;
+          const y = 28 + ((i * 47) % 120);
+          ctx.globalAlpha = .25 + (i % 3) * .12; ctx.strokeStyle = '#d9efff'; ctx.lineWidth = 1.2;
+          line(x, y, x - 16, y + 8);
+        }
+      }
     }
     ctx.globalAlpha = 1;
   }
@@ -442,10 +462,14 @@
     const ladder = (x, top, bottom) => {
       ctx.save();
       ctx.globalAlpha = 0.5 + Math.sin(now * 1.8 + x) * 0.05;
-      ctx.strokeStyle = '#8269b8'; ctx.lineWidth = 3;
+      ctx.strokeStyle = S.collection >= 4 ? '#79b85a' : '#8269b8'; ctx.lineWidth = S.collection >= 4 ? 4 : 3;
       line(x - 8, top, x - 8, bottom); line(x + 8, top, x + 8, bottom);
-      ctx.strokeStyle = '#b49adb'; ctx.lineWidth = 2;
+      ctx.strokeStyle = S.collection >= 4 ? '#d8c06a' : '#b49adb'; ctx.lineWidth = 2;
       for (let y = top + 9; y < bottom; y += 15) line(x - 7, y, x + 7, y);
+      if (S.collection >= 4) {
+        ctx.fillStyle = '#8ed06d';
+        for (let y = top + 16; y < bottom; y += 31) { ell(x - 11, y, 4, 2); ell(x + 11, y + 9, 4, 2); }
+      }
       ctx.restore();
     };
     ladder(240, 246, WORLD.ground);
@@ -491,6 +515,7 @@
     ctx.translate(st.x, st.y);
     ctx.fillStyle = '#41445a'; rr(-30, -30, 60, 30, 5);
     ctx.fillStyle = '#555a73'; rr(-32, -33, 64, 7, 3);
+    if (S.collection >= 2) { ctx.fillStyle = '#b89aff'; rr(-27, -31, 54, 2, 1); }
     ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1;
     [-24, -14].forEach((yy, r) => {
       line(-30, yy, 30, yy);
@@ -557,13 +582,18 @@
     ctx.fillStyle = '#4a2e18'; ctx.fillRect(-27, -13, 54, 3);
     ctx.fillStyle = '#8a5a33'; rr(-36, -37, 72, 7.5, 3);
     ctx.fillStyle = '#a8713f'; rr(-36, -37, 72, 2.6, 1.5);
+    if (S.collection >= 5) {
+      ctx.strokeStyle = '#ffd65a'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(0, -20, 31, Math.PI, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#ffe99b'; circ(-31, -20, 2); circ(31, -20, 2);
+    }
     ctx.fillStyle = '#5d3699'; rr(-33, -43, 16, 6, 1.5);
     ctx.fillStyle = '#efe3c4'; ctx.fillRect(-31.5, -41.3, 13, 1.2); ctx.fillRect(-31.5, -39.2, 13, 1.2);
     flask(-6, -37, '#5fd3e8', 0);
     flask(10, -37, '#ff8ac2', 1);
     flask(24, -37, '#ffd65a', 2);
     ctx.restore();
-    sign(st.x, st.y - 94, '연금술', chosen);
+    sign(st.x, st.y - 94, '재물 획득 비약', chosen);
   }
 
   const HERB_H = 50, HERB_W = HERB_H * 67 / 77;
@@ -994,8 +1024,8 @@
     }
     const oil = S.mode === 'oil';
     const icon = oil ? 'craft/쥬니퍼베리씨앗오일.webp' : 'craft/소형재물획득의비약.webp';
-    if (a.phase === 'move') return [icon, oil ? '제련대로 가는 중' : '연금술 작업대로 가는 중'];
-    return [icon, (oil ? '씨앗 오일 만드는 중' : '재물비 만드는 중') + ' · ' + fmt(timesLeft(S.mode)) + '번 더'];
+    if (a.phase === 'move') return [icon, oil ? '제련대로 가는 중' : '비약 작업대로 가는 중'];
+    return [icon, (oil ? '씨앗 오일 만드는 중' : '재물 획득 비약 만드는 중') + ' · ' + fmt(timesLeft(S.mode)) + '번 더'];
   }
   function timesLeft(mode) {
     return mode === 'oil'
@@ -1023,16 +1053,14 @@
       '<button type="button" id="facilityBuy"' + (S.meso < cost ? ' disabled' : '') + '><img class="pix" src="icons/home/메소주머니.webp" alt="" width="18" height="18">' + short(cost) + ' 투자</button>');
   }
 
-  function patronTitle(level) {
-    let title = PATRON_TITLES[0][1];
-    PATRON_TITLES.forEach(row => { if (level >= row[0]) title = row[1]; });
-    return title;
-  }
-
-  function renderPatron() {
-    const level = S.patron || 0, cost = Core.patronCost(S), title = patronTitle(level);
-    setHtml('patron', '<div class="hi-patron-top"><span class="hi-patron-seal">' + level + '</span><div><small>수익 보너스 없음 · 명예 기록</small><b>' + esc(title) + '</b><span>누적 ' + short(S.stats.donated || 0) + ' 후원</span></div></div>' +
-      '<button type="button" id="patronDonate"' + (S.meso < cost ? ' disabled' : '') + '><img class="pix" src="icons/home/메소주머니.webp" alt="" width="18" height="18">다음 후원 ' + short(cost) + '</button>');
+  function renderCollection() {
+    const count = S.collection || 0, next = COLLECTIBLES[count];
+    const slots = COLLECTIBLES.map((item, i) => '<div class="hi-collection-slot ' + (i < count ? 'found' : i === count ? 'next' : 'locked') + '" title="' + esc(i < count ? item.name + ' · ' + item.unlock : i === count ? item.name : '앞 전시품을 먼저 발견해야 해요') + '">' +
+      (i < count ? '<img class="pix" src="icons/craft/' + COLLECTION_ICON[i] + '" alt="" width="24" height="24">' : '<span>' + (i === count ? '?' : '·') + '</span>') + '</div>').join('');
+    setHtml('collection', '<div class="hi-collection-head"><div><small>한 번씩만 발견하는 꾸미기 전시품</small><b>달빛 전시대 <em>' + count + '/' + COLLECTIBLES.length + '</em></b></div>' +
+      '<div class="hi-collection-slots">' + slots + '</div></div>' +
+      (next ? '<p><strong>다음 · ' + esc(next.name) + '</strong><span>' + esc(SOURCE_LABEL[next.source]) + ' · ' + esc(next.unlock) + '</span></p>'
+        : '<p class="complete"><strong>전시 완성</strong><span>모든 꾸미기가 약초밭에 적용됐어요.</span></p>'));
   }
 
   function renderHud() {
@@ -1082,7 +1110,7 @@
       '<span>시작 ' + short(C.START_MESO) + '에서 <em class="' + (gain > 0 ? 'hi-up' : gain < 0 ? 'hi-down' : '') + '">' +
         (gain > 0 ? '+' : '') + short(gain) + '</em></span>');
     renderFacility();
-    renderPatron();
+    renderCollection();
     const st = S.stats;
     setHtml('stats', [
       ['채집', fmt(st.gathers) + '회'],
@@ -1092,8 +1120,7 @@
       ['판매로 번 돈', short(st.income) + ' 메소'],
       ['재료 구입', short(st.bought) + ' 메소'],
       ['오일병·빈병', short(st.spent) + ' 메소'],
-      ['채집소 투자', short(st.invested || 0) + ' 메소'],
-      ['조합 후원', short(st.donated || 0) + ' 메소']
+      ['채집소 투자', short(st.invested || 0) + ' 메소']
     ].map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join(''));
     setText('playTime', '플레이 ' + dur(S.t));
   }
@@ -1103,7 +1130,8 @@
       ? log.map(l => '<li class="' + esc(l.kind) + '"><time>' + hhmm(l.at) + '</time>' +
         (LOG_ICON[l.kind] ? '<img class="pix hi-log-icon" src="' + LOG_ICON[l.kind] + '" alt="" width="18" height="18">' : '') +
         // 예전 저장 기록에 남아 있는 앞머리 이모지는 떼고 보여준다
-        '<span>' + esc(l.text.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, '')) + '</span></li>').join('')
+        '<span>' + esc(l.text.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, '')
+          .replace(/연금술사들이/g, '비약 제작자들이').replace(/연금술 재료/g, '비약 재료')) + '</span></li>').join('')
       : '<li class="hi-log-empty">팔거나 사면, 그리고 시세 소식이 뜨면 여기에 남아요.</li>');
   }
 
@@ -1639,21 +1667,6 @@
     toast(next.name + ' 증축 완료! ' + next.effect);
     pulseMeso();
     hudDirty = marketDirty = true;
-    refresh();
-    save();
-  });
-
-  $('patron').addEventListener('click', e => {
-    const b = e.target.closest('#patronDonate');
-    if (!b || paused) return;
-    step();
-    const result = Core.donate(S);
-    if (!result) { toast('다음 후원에 필요한 메소가 부족해요'); return; }
-    const title = patronTitle(result.level);
-    addLog('달빛 조합 후원 ' + result.level + '회 · -' + short(result.cost), 'buy');
-    toast(title + ' · 후원 ' + result.level + '회 달성!');
-    pulseMeso();
-    hudDirty = true;
     refresh();
     save();
   });

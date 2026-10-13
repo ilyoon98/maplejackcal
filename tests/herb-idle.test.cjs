@@ -186,7 +186,7 @@ test('판매: 씨앗·오일·재물비만 가능하고 매수 호가에서 수�
   assert.equal(s.stats.income, s.meso - C.START_MESO);
 });
 
-test('구매: 씨앗·오일·최상결·현자의 돌만 가능하고 메소가 모자라면 가능한 만큼 산다', () => {
+test('구매: 최상결·현자의 돌만 가능하고 메소가 모자라면 가능한 만큼 산다', () => {
   const s = fresh();
   s.meso = 1000000;
   s.market.items.crystal.price = 298000;
@@ -198,10 +198,11 @@ test('구매: 씨앗·오일·최상결·현자의 돌만 가능하고 메소가
   assert.equal(s.meso, 88000);
   assert.equal(Core.buy(s, 'crystal', 1), null);
   s.meso = 1000000;
-  assert.equal(Core.buy(s, 'seed', 1).qty, 1);
+  assert.equal(Core.buy(s, 'seed', 1), null);
+  assert.equal(Core.buy(s, 'oil', 1), null);
   assert.equal(Core.buy(s, 'elixir', 1), null);
   assert.equal(Core.buy(s, 'stone', 0), null);
-  assert.equal(s.stats.bought, 912000 + Core.quote(s, 'seed', 'ask'));
+  assert.equal(s.stats.bought, 912000);
   assert.equal(s.stats.income, 0);
 });
 
@@ -365,7 +366,7 @@ test('씨앗 1개 가치 비교는 지금 재료 시세를 빼고 계산한다',
   assert.equal(Core.afterFee(10 * 740000), 7030000);
   assert.equal(Core.afterFee(19), 18);   // 수수료 0.95는 올려서 1
   assert.deepEqual(SELL, ['seed', 'oil', 'elixir']);
-  assert.deepEqual(BUY, ['seed', 'oil', 'crystal', 'stone']);
+  assert.deepEqual(BUY, ['crystal', 'stone']);
 });
 
 test('거래 UI는 허용된 판매·구매만 숫자 입력으로 받는다', () => {
@@ -389,36 +390,40 @@ test('거래 UI는 1·10·최대 수량 바로가기와 접힌 수익 비교를 
   assert.match(css, /\.hi-item \{ display:grid/);
 });
 
-test('달빛 조합 후원은 수익을 늘리지 않고 다음 비용만 계속 커진다', () => {
+test('달빛 전시품은 약초·오일·재물비 순서로 한 번씩만 발견한다', () => {
   const s = fresh();
-  s.meso = 1000000000000;
   const beforeEffects = Core.facilityEffects(s);
-  const first = Core.patronCost(s);
-  const r1 = Core.donate(s);
-  const second = Core.patronCost(s);
-  const r2 = Core.donate(s);
-  assert.equal(first, 100000000);
-  assert.ok(second > first);
-  assert.ok(r2.next > second);
-  assert.equal(s.patron, 2);
-  assert.equal(s.stats.donated, r1.cost + r2.cost);
+  const rates = {...C.COLLECTION_RATE}, events = [];
+  C.COLLECTION_RATE.gather = C.COLLECTION_RATE.oil = C.COLLECTION_RATE.alchemy = 1;
+  assert.equal(Core.tryCollect(s, 'oil', e => events.push(e)), null, '현재 전시품 출처가 아니면 나오지 않는다');
+  Core.COLLECTIBLES.forEach(item => {
+    const found = Core.tryCollect(s, item.source, e => events.push(e));
+    assert.equal(found.item.name, item.name);
+  });
+  assert.equal(s.collection, Core.COLLECTIBLES.length);
+  assert.equal(Core.tryCollect(s, 'gather', () => {}), null, '완성 뒤에는 중복이 나오지 않는다');
+  assert.equal(events.filter(e => e.type === 'collect').length, Core.COLLECTIBLES.length);
   assert.deepEqual(Core.facilityEffects(s), beforeEffects);
-  assert.equal(s.inv.elixir, 0);
   const loaded = Core.normalize(JSON.parse(JSON.stringify(s)));
-  assert.equal(loaded.patron, 2);
-  assert.equal(loaded.stats.donated, s.stats.donated);
-  loaded.meso = 0;
-  assert.equal(Core.donate(loaded), null);
+  assert.equal(loaded.collection, Core.COLLECTIBLES.length);
+  Object.assign(C.COLLECTION_RATE, rates);
 });
 
-test('후원 UI는 생산 보너스가 없는 반복형 메소 소모처임을 밝힌다', () => {
+test('수집 UI는 순차 전시와 활동별 확률·꾸미기 해금을 안내한다', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.html'), 'utf8');
   const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
-  assert.match(html, /id="patron"/);
-  assert.match(html, /달빛 조합 후원/);
-  assert.match(html, /생산 보너스 없이/);
-  assert.match(ui, /id="patronDonate"/);
-  assert.match(ui, /수익 보너스 없음 · 명예 기록/);
+  assert.match(html, /id="collection"/);
+  assert.match(html, /약초 캐기 1%/);
+  assert.match(html, /오일 만들기 3%/);
+  assert.match(html, /재물 획득 비약 만들기 8%/);
+  assert.match(ui, /달빛 전시대/);
+  assert.match(ui, /앞 전시품을 먼저 발견해야 해요/);
+  assert.doesNotMatch(ui + html, /patron|달빛 조합 후원/);
+});
+
+test('씨앗과 오일은 판매만 하고 최상결과 현자의 돌만 구매한다', () => {
+  assert.deepEqual(SELL, ['seed', 'oil', 'elixir']);
+  assert.deepEqual(BUY, ['crystal', 'stone']);
 });
 
 test('메소 표시는 실제 메소 주머니 아이콘을 사용한다', () => {
