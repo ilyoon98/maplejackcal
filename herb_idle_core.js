@@ -58,8 +58,14 @@
     NEWS_CHANCE: 1 / 50,     // 시세 1번 바뀔 때 소식이 뜰 확률 (평균 2분 반에 1번)
     OFFLINE_CAP: 8 * 3600,   // 자리 비움은 최대 8시간까지만 진행
     FACILITY_COSTS: [1000000000, 3000000000, 10000000000],
+    SHOWCASE_COSTS: [2000000000, 8000000000],
+    SHOWCASE_CAPACITY: [1, 3, 5],
     // 같은 줄에서도 뒤 전시품일수록 희귀하다.
-    COLLECTION_RATE: { gather: [0.02, 0.01, 0.005], oil: [0.06, 0.03, 0.015], alchemy: [0.12, 0.06, 0.03] }
+    COLLECTION_RATE: {
+      gather: [0.02, 0.01, 0.005, 0.0025, 0.001],
+      oil: [0.06, 0.03, 0.015, 0.007, 0.003],
+      alchemy: [0.12, 0.06, 0.03, 0.015, 0.007]
+    }
   };
 
   // spread: 기준 시세 양쪽에 붙는 매수·매도 호가 폭. beta: 다 같이 움직이는 흐름을 타는 정도,
@@ -78,22 +84,28 @@
   const SELL = ['seed', 'oil', 'elixir'];
   const BUY = ['crystal', 'stone'];
   const MODES = ['gather', 'oil', 'alchemy'];
-  // 씨앗·오일·재물비는 서로 독립된 3단 전시 라인이다. 같은 라인에서 앞 전시품만 얻으면 다음 것이 열린다.
+  // 씨앗·오일·재물비는 서로 독립된 5단 전시 라인이다. 같은 라인에서 앞 전시품만 얻으면 다음 것이 열린다.
   const COLLECTIBLES = {
     gather: [
       { name: '달빛 네잎 약초', unlock: '황금 채집 반짝임', icon: 'herb_idle_assets/collectibles/gather-1.png' },
       { name: '은빛 덩굴 표본', unlock: '빛나는 덩굴 사다리', icon: 'herb_idle_assets/collectibles/gather-2.png' },
-      { name: '새벽 이슬 표본', unlock: '오로라 밤하늘', icon: 'herb_idle_assets/collectibles/gather-3.png' }
+      { name: '새벽 이슬 표본', unlock: '오로라 밤하늘', icon: 'herb_idle_assets/collectibles/gather-3.png' },
+      { name: '행운의 네잎 표본', unlock: '희귀 약초 진열품', icon: 'icons/home/행운의네잎클로버.webp' },
+      { name: '황금 단풍 약초', unlock: '전설 약초 진열품', icon: 'icons/home/황금단풍잎.webp' }
     ],
     oil: [
       { name: '보랏빛 오일 결정', unlock: '수정 증류솥', icon: 'herb_idle_assets/collectibles/oil-1.png' },
       { name: '청명한 증류 불꽃', unlock: '푸른 증류 불꽃', icon: 'herb_idle_assets/collectibles/oil-2.png' },
-      { name: '달빛 증류 코일', unlock: '달빛 증류 장치', icon: 'herb_idle_assets/collectibles/oil-3.png' }
+      { name: '달빛 증류 코일', unlock: '달빛 증류 장치', icon: 'herb_idle_assets/collectibles/oil-3.png' },
+      { name: '루나 오일 결정', unlock: '희귀 오일 진열품', icon: 'icons/home/루나크리스탈.webp' },
+      { name: '에르다 증류핵', unlock: '전설 오일 진열품', icon: 'icons/home/솔에르다조각.webp' }
     ],
     alchemy: [
       { name: '별무리 비약 병', unlock: '별똥별 날씨', icon: 'herb_idle_assets/collectibles/alchemy-1.png' },
       { name: '현자의 유리구슬', unlock: '빛나는 비약 작업대', icon: 'herb_idle_assets/collectibles/alchemy-2.png' },
-      { name: '황금 재물비 원액', unlock: '비약 궤도 장식', icon: 'herb_idle_assets/collectibles/alchemy-3.png' }
+      { name: '황금 재물비 원액', unlock: '비약 궤도 장식', icon: 'herb_idle_assets/collectibles/alchemy-3.png' },
+      { name: '강렬한 비약 결정', unlock: '희귀 비약 진열품', icon: 'icons/home/강렬한힘의결정.webp' },
+      { name: '별빛 재물 코인', unlock: '전설 비약 진열품', icon: 'icons/home/반짝이는메이플코인.webp' }
     ]
   };
 
@@ -364,11 +376,32 @@
     return { item: decorItem(id), equipped: at < 0 };
   }
 
-  function selectCollectible(s, source, index) {
+  function showcaseCapacity(s) {
+    return C.SHOWCASE_CAPACITY[Math.min(C.SHOWCASE_CAPACITY.length - 1, count(s && s.showcaseLevel))];
+  }
+  function showcaseCost(s) {
+    return C.SHOWCASE_COSTS[count(s && s.showcaseLevel)] || 0;
+  }
+  function buyShowcaseUpgrade(s) {
+    const cost = showcaseCost(s);
+    if (!cost || s.meso < cost) return null;
+    s.meso -= cost;
+    s.showcaseLevel = count(s.showcaseLevel) + 1;
+    s.stats.showcaseSpent = count(s.stats.showcaseSpent) + cost;
+    return { level: s.showcaseLevel, cost, capacity: showcaseCapacity(s) };
+  }
+  function toggleCollectible(s, source, index) {
     const track = COLLECTIBLES[source], at = count(index);
     if (!track || at >= count(s.collection && s.collection[source]) || !track[at]) return null;
-    s.showcase = { source, index: at };
-    return track[at];
+    if (!Array.isArray(s.showcase)) s.showcase = [];
+    const found = s.showcase.findIndex(row => row.source === source && row.index === at);
+    if (found >= 0) {
+      s.showcase.splice(found, 1);
+      return { item: track[at], displayed: false, full: false };
+    }
+    if (s.showcase.length >= showcaseCapacity(s)) return { item: track[at], displayed: false, full: true };
+    s.showcase.push({ source, index: at });
+    return { item: track[at], displayed: true, full: false };
   }
 
   function tryCollect(s, source, emit) {
@@ -651,7 +684,7 @@
   function newStats() {
     const sold = {};
     SELL.forEach(k => { sold[k] = 0; });
-    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, invested: 0, decorSpent: 0, sold };
+    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, invested: 0, decorSpent: 0, showcaseSpent: 0, sold };
   }
 
   function create(seed) {
@@ -664,7 +697,8 @@
       meso: C.START_MESO,
       facility: 0,
       collection: { gather: 0, oil: 0, alchemy: 0 },
-      showcase: null,
+      showcaseLevel: 0,
+      showcase: [],
       decor: { owned: [], equipped: [] },
       inv,
       mode: 'gather',
@@ -692,6 +726,7 @@
     s.rng = num(raw.rng, 1) | 0;
     s.meso = Math.max(0, Math.floor(num(raw.meso, C.START_MESO)));
     s.facility = Math.min(C.FACILITY_COSTS.length, count(raw.facility));
+    s.showcaseLevel = Math.min(C.SHOWCASE_COSTS.length, count(raw.showcaseLevel));
     if (raw.collection && typeof raw.collection === 'object') {
       MODES.forEach(k => { s.collection[k] = Math.min(COLLECTIBLES[k].length, count(raw.collection[k])); });
     } else {
@@ -699,10 +734,14 @@
       const oldOrder = ['gather', 'oil', 'alchemy', 'gather', 'oil', 'alchemy'];
       oldOrder.slice(0, Math.min(oldOrder.length, count(raw.collection))).forEach(k => { s.collection[k]++; });
     }
-    if (raw.showcase && MODES.indexOf(raw.showcase.source) >= 0) {
-      const index = count(raw.showcase.index), source = raw.showcase.source;
-      if (index < s.collection[source] && COLLECTIBLES[source][index]) s.showcase = { source, index };
-    }
+    const savedShowcase = Array.isArray(raw.showcase) ? raw.showcase : raw.showcase ? [raw.showcase] : [];
+    savedShowcase.forEach(row => {
+      if (!row || MODES.indexOf(row.source) < 0) return;
+      const index = count(row.index), source = row.source;
+      if (index >= s.collection[source] || !COLLECTIBLES[source][index]) return;
+      if (s.showcase.some(saved => saved.source === source && saved.index === index)) return;
+      if (s.showcase.length < showcaseCapacity(s)) s.showcase.push({ source, index });
+    });
     const validDecor = DECOR_ITEMS.map(item => item.id);
     if (raw.decor && typeof raw.decor === 'object') {
       s.decor.owned = Array.isArray(raw.decor.owned)
@@ -784,7 +823,7 @@
 
   const API = {
     C, ITEMS, KEYS, SELL, BUY, MODES, WORLD, PLATFORMS, HERBS, STATIONS, NEWS, COLLECTIBLES, DECOR_ITEMS,
-    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, decorItem, ownsDecor, decorActive, buyDecor, toggleDecor, selectCollectible, tryCollect, posAt, seedValues, quote, rollSeeds, rand,
+    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, showcaseCapacity, showcaseCost, buyShowcaseUpgrade, decorItem, ownsDecor, decorActive, buyDecor, toggleDecor, toggleCollectible, tryCollect, posAt, seedValues, quote, rollSeeds, rand,
     spriteAnchor
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

@@ -84,8 +84,12 @@
   let hudDirty = true, marketDirty = true, logDirty = true, newsFresh = false;
   let marketTab = 'sell';
   let facilityOpen = false, facilityMarkup = '';
-  let decorShopOpen = false, decorShopMarkup = '', decorView = 'buy';
-  try { if (localStorage.getItem('herbIdleMarketTab') === 'buy') marketTab = 'buy'; } catch (e) {}
+  let showcaseUpgradeOpen = false, showcaseUpgradeMarkup = '';
+  let decorShopOpen = false, decorShopMarkup = '', decorEquipMarkup = '';
+  try {
+    const savedTab = localStorage.getItem('herbIdleMarketTab');
+    if (['sell', 'buy', 'equip'].indexOf(savedTab) >= 0) marketTab = savedTab;
+  } catch (e) {}
   let me = null;             // 불러온 내 캐릭터 {name, world, level, cls, image}
   let look = null;           // 그릴 준비가 끝난 캐릭터 이미지 {frames, anchor, headTop}
 
@@ -721,21 +725,38 @@
   }
 
   function drawShowcase(now) {
-    const pick = S.showcase;
-    if (!pick || !COLLECTIBLES[pick.source] || !COLLECTIBLES[pick.source][pick.index]) return;
-    const im = COLLECTION_IMG[pick.source + ':' + pick.index], x = 514, y = WORLD.ground;
+    const picks = Array.isArray(S.showcase) ? S.showcase : [];
+    const capacity = Core.showcaseCapacity(S), x = 146, y = WORLD.ground;
     ctx.save();
-    ctx.fillStyle = 'rgba(16,12,34,.78)'; rr(x - 27, y - 66, 54, 58, 9);
-    ctx.strokeStyle = '#8a70c4'; ctx.lineWidth = 1.4; ctx.stroke();
-    const glow = .16 + Math.sin(now * 2.2) * .04;
-    ctx.fillStyle = 'rgba(181,139,255,' + glow + ')'; circ(x, y - 38, 30);
-    if (ready(im)) {
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(im, x - 23, y - 61, 46, 46);
-      ctx.imageSmoothingEnabled = true;
-    }
-    ctx.fillStyle = '#47345f'; rr(x - 32, y - 10, 64, 10, 3);
-    ctx.fillStyle = '#d8b75f'; ctx.fillRect(x - 13, y - 7, 26, 3);
+    ctx.fillStyle = '#251b32'; rr(x - 43, y - 104, 86, 99, 7);
+    ctx.strokeStyle = '#76548f'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = 'rgba(133,102,170,.12)'; rr(x - 38, y - 98, 76, 84, 4);
+    ctx.strokeStyle = 'rgba(213,181,255,.38)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#5c3e68'; ctx.fillRect(x - 40, y - 59, 80, 4);
+    const slots = capacity === 1 ? [{ x, y: y - 54, size: 48 }]
+      : capacity === 3
+        ? [{ x: x - 23, y: y - 68, size: 36 }, { x: x + 23, y: y - 68, size: 36 }, { x, y: y - 27, size: 36 }]
+        : [{ x: x - 25, y: y - 75, size: 32 }, { x, y: y - 75, size: 32 }, { x: x + 25, y: y - 75, size: 32 }, { x: x - 14, y: y - 31, size: 32 }, { x: x + 19, y: y - 31, size: 32 }];
+    slots.forEach((slot, index) => {
+      const pick = picks[index];
+      ctx.fillStyle = pick ? 'rgba(181,139,255,' + (.11 + Math.sin(now * 2.2 + index) * .025) + ')' : 'rgba(8,7,16,.32)';
+      circ(slot.x, slot.y, slot.size * .54);
+      if (!pick) {
+        ctx.strokeStyle = 'rgba(185,159,211,.22)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(slot.x, slot.y, slot.size * .34, 0, Math.PI * 2); ctx.stroke();
+        return;
+      }
+      const im = COLLECTION_IMG[pick.source + ':' + pick.index];
+      if (ready(im)) {
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(im, slot.x - slot.size / 2, slot.y - slot.size / 2, slot.size, slot.size);
+        ctx.imageSmoothingEnabled = true;
+      }
+    });
+    ctx.fillStyle = '#3a273f'; rr(x - 47, y - 10, 94, 10, 3);
+    ctx.fillStyle = '#d8b75f'; ctx.fillRect(x - 17, y - 7, 34, 3);
+    ctx.fillStyle = '#ddcafa'; ctx.font = '800 9px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('달빛 진열장', x, y - 108);
     ctx.restore();
   }
 
@@ -1041,7 +1062,7 @@
     '</article>';
   }
   function setMarketTab(next, remember) {
-    marketTab = next === 'buy' ? 'buy' : 'sell';
+    marketTab = ['sell', 'buy', 'equip'].indexOf(next) >= 0 ? next : 'sell';
     document.querySelectorAll('[data-market-tab]').forEach(button => {
       const active = button.dataset.marketTab === marketTab;
       button.setAttribute('aria-selected', String(active));
@@ -1050,18 +1071,23 @@
     document.querySelectorAll('[data-market-pane]').forEach(pane => { pane.hidden = pane.dataset.marketPane !== marketTab; });
     const extras = $('marketBuyExtras');
     if (extras) extras.hidden = marketTab !== 'buy';
+    const equip = $('decorEquip');
+    if (equip) equip.hidden = marketTab !== 'equip';
     if (remember !== false) try { localStorage.setItem('herbIdleMarketTab', marketTab); } catch (e) {}
   }
   function buildMarket() {
     $('marketCards').innerHTML =
-      '<div class="hi-market-tabs" role="tablist" aria-label="경매 거래 종류">' +
+      '<div class="hi-market-tabs" role="tablist" aria-label="달빛 교역소 메뉴">' +
         '<button type="button" role="tab" id="marketTabSell" aria-controls="marketPaneSell" data-market-tab="sell"><span>판매</span><small>3종 · 수수료 5%</small></button>' +
-        '<button type="button" role="tab" id="marketTabBuy" aria-controls="marketPaneBuy" data-market-tab="buy"><span>구매</span><small>재료 2종 · 시설·치장</small></button>' +
+        '<button type="button" role="tab" id="marketTabBuy" aria-controls="marketPaneBuy" data-market-tab="buy"><span>구매</span><small>재료·시설·장식</small></button>' +
+        '<button type="button" role="tab" id="marketTabEquip" aria-controls="marketPaneEquip" data-market-tab="equip"><span>장착</span><small>보유 장식 선택</small></button>' +
       '</div>' +
       '<div class="hi-market-pane" id="marketPaneSell" role="tabpanel" aria-labelledby="marketTabSell" data-market-pane="sell">' +
         SELL.map(itemCard).join('') + '<details class="hi-compare-details"><summary>가공 수익 비교</summary><div class="hi-compare" id="compare"></div></details></div>' +
-      '<div class="hi-market-pane" id="marketPaneBuy" role="tabpanel" aria-labelledby="marketTabBuy" data-market-pane="buy">' + BUY.map(itemCard).join('') + '</div>';
+      '<div class="hi-market-pane" id="marketPaneBuy" role="tabpanel" aria-labelledby="marketTabBuy" data-market-pane="buy">' + BUY.map(itemCard).join('') + '</div>' +
+      '<div class="hi-market-pane" id="marketPaneEquip" role="tabpanel" aria-labelledby="marketTabEquip" data-market-pane="equip"></div>';
     $('marketPaneBuy').appendChild($('marketBuyExtras'));
+    $('marketPaneEquip').appendChild($('decorEquip'));
     setMarketTab(marketTab, false);
   }
 
@@ -1185,13 +1211,34 @@
     if (details) details.open = facilityOpen;
   }
 
+  function renderShowcaseUpgrade() {
+    const host = $('showcaseUpgrade');
+    if (!host) return;
+    const current = host.querySelector('details');
+    if (current) showcaseUpgradeOpen = current.open;
+    const capacity = Core.showcaseCapacity(S), cost = Core.showcaseCost(S), level = S.showcaseLevel || 0;
+    let body;
+    if (!cost) {
+      body = '<details><summary><span><small>전시 시설</small><b>달빛 진열장 확장</b></span><em>5칸 · MAX</em></summary>' +
+        '<p class="hi-showcase-copy">발견한 전시품을 최대 5개까지 동시에 진열할 수 있어요.</p></details>';
+    } else {
+      const nextCapacity = C.SHOWCASE_CAPACITY[level + 1];
+      body = '<details><summary><span><small>전시 시설</small><b>달빛 진열장 확장</b></span><em>' + capacity + '칸 → ' + nextCapacity + '칸</em></summary>' +
+        '<div class="hi-showcase-body"><p>왼쪽 진열장에 트로피를 ' + nextCapacity + '개까지 함께 놓을 수 있어요.</p>' +
+        '<button type="button" id="showcaseBuy"' + (S.meso < cost ? ' disabled' : '') + '><img class="pix" src="icons/home/메소주머니.webp" alt="" width="18" height="18">' + short(cost) + ' 확장</button></div></details>';
+    }
+    if (showcaseUpgradeMarkup !== body) { host.innerHTML = body; showcaseUpgradeMarkup = body; }
+    const details = host.querySelector('details');
+    if (details) details.open = showcaseUpgradeOpen;
+  }
+
   function renderCollection() {
     const total = collectionTotal();
     const tracks = COLLECTION_SOURCES.map(source => {
       const meta = COLLECTION_META[source], level = collectionLevel(source), rows = COLLECTIBLES[source];
       const slots = rows.map((item, i) => {
         const state = i < level ? 'found' : i === level ? 'next' : 'locked';
-        const selected = state === 'found' && S.showcase && S.showcase.source === source && S.showcase.index === i;
+        const selected = state === 'found' && Array.isArray(S.showcase) && S.showcase.some(row => row.source === source && row.index === i);
         const title = state === 'found' ? item.name + ' · ' + item.unlock : '미발견 전시품';
         const content = '<span class="hi-collection-tier">' + (i + 1) + '</span><img class="pix" src="' + item.icon + '" alt="" width="60" height="60">' +
           (state === 'found' ? '<b>' + (selected ? '전시 중' : '전시') + '</b>' : '');
@@ -1203,38 +1250,51 @@
       return '<section class="hi-collection-track"><header><img class="pix" src="icons/craft/' + meta.icon + '" alt="" width="38" height="38"><div><b>' + meta.name + '</b><small>' +
         (next ? collectionRate(source, level) : '완료') + '</small></div></header><div class="hi-collection-stack">' + slots + '</div></section>';
     }).join('');
-    setHtml('collection', '<div class="hi-collection-title"><div><b>달빛 전시대</b><small>발견한 전시품을 눌러 진열</small></div><em>' + total + '/9</em></div>' +
+    setHtml('collection', '<div class="hi-collection-title"><div><b>달빛 전시대</b><small>발견한 전시품을 눌러 진열</small></div><em>' + total + '/15 · 진열 ' + S.showcase.length + '/' + Core.showcaseCapacity(S) + '</em></div>' +
       '<div class="hi-collection-board">' + tracks + '</div>');
   }
 
   function renderDecorShop() {
     const owned = DECOR_ITEMS.filter(item => Core.ownsDecor(S, item.id)).length;
-    const card = (item, equip) => {
-      const has = Core.ownsDecor(S, item.id), on = Core.decorActive(S, item.id);
-      if (equip && !has) return '';
-      const action = equip ? (on ? '해제' : '장착') : has ? '보유 중' : short(item.cost) + ' 구매';
-      return '<article class="hi-decor-card ' + (has ? 'owned' : '') + (on ? ' equipped' : '') + '"><img class="pix" src="' + item.icon + '" alt="" width="34" height="34">' +
-        '<div><b>' + esc(item.name) + '</b><small>' + esc(item.desc) + '</small>' + (!equip ? '<em>' + (has ? '영구 보유' : short(item.cost) + ' 메소') + '</em>' : '') + '</div>' +
-        '<button type="button" data-decor-' + (equip ? 'equip' : 'buy') + '="' + item.id + '"' + ((!equip && (has || S.meso < item.cost)) ? ' disabled' : '') + ' aria-pressed="' + on + '">' + action + '</button></article>';
+    const card = item => {
+      const has = Core.ownsDecor(S, item.id);
+      return '<article class="hi-decor-card ' + (has ? 'owned' : '') + '"><img class="pix" src="' + item.icon + '" alt="" width="34" height="34">' +
+        '<div><b>' + esc(item.name) + '</b><small>' + esc(item.desc) + '</small><em>' + (has ? '영구 보유' : short(item.cost) + ' 메소') + '</em></div>' +
+        '<button type="button" data-decor-buy="' + item.id + '"' + ((has || S.meso < item.cost) ? ' disabled' : '') + '>' + (has ? '보유 중' : short(item.cost) + ' 구매') + '</button></article>';
     };
     const groups = DECOR_CATEGORIES.map(category => {
       const items = DECOR_ITEMS.filter(item => item.category === category);
-      const rows = items.map(item => card(item, decorView === 'equip')).join('');
-      return '<section class="hi-decor-group"><h4>' + DECOR_CATEGORY[category] + '</h4>' + (rows || '<p>구매한 장식이 없어요</p>') + '</section>';
+      return '<section class="hi-decor-group"><h4>' + DECOR_CATEGORY[category] + '</h4>' + items.map(card).join('') + '</section>';
     }).join('');
     const host = $('decorShop');
     if (!host) return;
     const current = host.querySelector('details');
     if (current) decorShopOpen = current.open;
-    const markup = '<details><summary><span><small>치장</small><b>달빛 장식</b></span><em>' + owned + '/' + DECOR_ITEMS.length + '</em></summary>' +
-      '<div class="hi-decor-tabs" role="tablist"><button type="button" data-decor-view="buy" aria-selected="' + (decorView === 'buy') + '">구매</button>' +
-      '<button type="button" data-decor-view="equip" aria-selected="' + (decorView === 'equip') + '">장착</button></div><div class="hi-decor-list">' + groups + '</div></details>';
+    const markup = '<details><summary><span><small>치장 상점</small><b>달빛 장식 구매</b></span><em>' + owned + '/' + DECOR_ITEMS.length + '</em></summary>' +
+      '<div class="hi-decor-list">' + groups + '</div></details>';
     if (decorShopMarkup !== markup) {
       host.innerHTML = markup;
       decorShopMarkup = markup;
     }
     const details = host.querySelector('details');
     if (details) details.open = decorShopOpen;
+  }
+
+  function renderDecorEquip() {
+    const host = $('decorEquip');
+    if (!host) return;
+    const groups = DECOR_CATEGORIES.map(category => {
+      const items = DECOR_ITEMS.filter(item => item.category === category && Core.ownsDecor(S, item.id));
+      const rows = items.map(item => {
+        const on = Core.decorActive(S, item.id);
+        return '<article class="hi-decor-card owned' + (on ? ' equipped' : '') + '"><img class="pix" src="' + item.icon + '" alt="" width="34" height="34">' +
+          '<div><b>' + esc(item.name) + '</b><small>' + esc(item.desc) + '</small></div>' +
+          '<button type="button" data-decor-equip="' + item.id + '" aria-pressed="' + on + '">' + (on ? '해제' : '장착') + '</button></article>';
+      }).join('');
+      return '<section class="hi-decor-group"><h4>' + DECOR_CATEGORY[category] + '</h4>' + (rows || '<p>구매한 장식이 없어요</p>') + '</section>';
+    }).join('');
+    const markup = '<div class="hi-decor-equip-head"><div><small>카테고리별 하나씩</small><b>보유 장식 장착</b></div><em>' + S.decor.equipped.length + '개 사용 중</em></div><div class="hi-decor-list">' + groups + '</div>';
+    if (decorEquipMarkup !== markup) { host.innerHTML = markup; decorEquipMarkup = markup; }
   }
 
   function renderHud() {
@@ -1284,8 +1344,10 @@
       '<span>시작 ' + short(C.START_MESO) + '에서 <em class="' + (gain > 0 ? 'hi-up' : gain < 0 ? 'hi-down' : '') + '">' +
         (gain > 0 ? '+' : '') + short(gain) + '</em></span>');
     renderFacility();
+    renderShowcaseUpgrade();
     renderCollection();
     renderDecorShop();
+    renderDecorEquip();
     const st = S.stats;
     setHtml('stats', [
       ['채집', fmt(st.gathers) + '회'],
@@ -1296,6 +1358,7 @@
       ['재료 구입', short(st.bought) + ' 메소'],
       ['오일병·빈병', short(st.spent) + ' 메소'],
       ['채집소 투자', short(st.invested || 0) + ' 메소'],
+      ['진열장 확장', short(st.showcaseSpent || 0) + ' 메소'],
       ['장식 구입', short(st.decorSpent || 0) + ' 메소']
     ].map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join(''));
     setText('playTime', '플레이 ' + dur(S.t));
@@ -1851,28 +1914,50 @@
     save();
   });
 
+  $('showcaseUpgrade').addEventListener('toggle', e => {
+    if (e.target.matches('details')) showcaseUpgradeOpen = e.target.open;
+  }, true);
+
+  $('showcaseUpgrade').addEventListener('click', e => {
+    const b = e.target.closest('#showcaseBuy');
+    if (!b || paused) return;
+    step();
+    const result = Core.buyShowcaseUpgrade(S);
+    if (!result) { toast('진열장 확장에 필요한 메소가 부족해요'); return; }
+    addLog('달빛 진열장 확장 · ' + result.capacity + '칸 · -' + short(result.cost), 'buy');
+    toast('달빛 진열장이 ' + result.capacity + '칸으로 넓어졌어요');
+    pulseMeso();
+    hudDirty = true;
+    refresh();
+    save();
+  });
+
   $('decorShop').addEventListener('toggle', e => {
     if (e.target.matches('details')) decorShopOpen = e.target.open;
   }, true);
 
   $('decorShop').addEventListener('click', e => {
-    const view = e.target.closest('[data-decor-view]');
-    if (view) { decorView = view.dataset.decorView === 'equip' ? 'equip' : 'buy'; renderDecorShop(); return; }
-    const b = e.target.closest('[data-decor-buy], [data-decor-equip]');
+    const b = e.target.closest('[data-decor-buy]');
     if (!b || paused) return;
     step();
-    const id = b.dataset.decorBuy || b.dataset.decorEquip, item = Core.decorItem(id);
+    const id = b.dataset.decorBuy, item = Core.decorItem(id);
     if (!item) return;
-    if (b.dataset.decorBuy) {
-      const result = Core.buyDecor(S, id);
-      if (!result) { toast(item.name + ' 구매에 필요한 메소가 부족해요'); return; }
-      addLog('장식 구입 · ' + item.name + ' · -' + short(result.cost), 'buy');
-      toast(item.name + ' 구입 완료 · 장착 탭에서 선택할 수 있어요');
-      pulseMeso();
-    } else {
-      const result = Core.toggleDecor(S, id);
-      toast(item.name + (result.equipped ? ' 장착 완료' : ' 장착 해제'));
-    }
+    const result = Core.buyDecor(S, id);
+    if (!result) { toast(item.name + ' 구매에 필요한 메소가 부족해요'); return; }
+    addLog('장식 구입 · ' + item.name + ' · -' + short(result.cost), 'buy');
+    toast(item.name + ' 구입 완료 · 장착 탭에서 선택할 수 있어요');
+    pulseMeso();
+    hudDirty = true;
+    refresh();
+    save();
+  });
+
+  $('decorEquip').addEventListener('click', e => {
+    const b = e.target.closest('[data-decor-equip]');
+    if (!b || paused) return;
+    const item = Core.decorItem(b.dataset.decorEquip), result = Core.toggleDecor(S, b.dataset.decorEquip);
+    if (!item || !result) return;
+    toast(item.name + (result.equipped ? ' 장착 완료' : ' 장착 해제'));
     hudDirty = true;
     refresh();
     save();
@@ -1881,9 +1966,10 @@
   $('collection').addEventListener('click', e => {
     const b = e.target.closest('[data-showcase]');
     if (!b || paused) return;
-    const parts = b.dataset.showcase.split(':'), item = Core.selectCollectible(S, parts[0], Number(parts[1]));
-    if (!item) return;
-    toast(item.name + ' 전시 완료');
+    const parts = b.dataset.showcase.split(':'), result = Core.toggleCollectible(S, parts[0], Number(parts[1]));
+    if (!result) return;
+    if (result.full) { toast('진열장이 가득 찼어요 · 구매 탭에서 확장해 주세요'); return; }
+    toast(result.item.name + (result.displayed ? ' 전시 완료' : ' 전시 해제'));
     hudDirty = true;
     refresh();
     save();
@@ -1937,7 +2023,8 @@
     const tab = e.target.closest('[data-market-tab]');
     if (tab && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       e.preventDefault();
-      setMarketTab(tab.dataset.marketTab === 'sell' ? 'buy' : 'sell');
+      const tabs = ['sell', 'buy', 'equip'], at = tabs.indexOf(tab.dataset.marketTab);
+      setMarketTab(tabs[(at + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]);
       document.querySelector('[data-market-tab="' + marketTab + '"]').focus();
       return;
     }

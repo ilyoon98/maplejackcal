@@ -423,7 +423,7 @@ test('거래 UI는 1·10·최대 수량 바로가기와 접힌 수익 비교를 
   assert.match(css, /\.hi-item \{ display:grid/);
 });
 
-test('경매 단말기는 판매와 구매를 탭으로 나누고 시설·치장을 구매 탭에 둔다', () => {
+test('달빛 교역소는 판매·구매·장착을 나누고 시설·치장을 구매 탭에 둔다', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.html'), 'utf8');
   const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.css'), 'utf8');
@@ -433,42 +433,41 @@ test('경매 단말기는 판매와 구매를 탭으로 나누고 시설·치장
   assert.match(ui, /role="tabpanel"/);
   assert.match(ui, /herbIdleMarketTab/);
   assert.match(html, /id="marketBuyExtras"/);
+  assert.match(html, /달빛 교역소/);
+  assert.match(html, /id="decorEquip"/);
   assert.ok(html.indexOf('id="marketCards"') < html.indexOf('id="facility"'));
   assert.ok(html.indexOf('id="facility"') < html.indexOf('id="decorShop"'));
   assert.match(ui, /appendChild\(\$\('marketBuyExtras'\)\)/);
+  assert.match(ui, /appendChild\(\$\('decorEquip'\)\)/);
   assert.match(ui, /extras\.hidden = marketTab !== 'buy'/);
-  assert.match(ui, /재료 2종 · 시설·치장/);
+  assert.match(ui, /equip\.hidden = marketTab !== 'equip'/);
+  assert.match(ui, /재료·시설·장식/);
   assert.match(ui, /ArrowLeft/);
   assert.match(css, /\.hi-market-tabs/);
   assert.match(css, /\.hi-market-pane\[hidden\]/);
   assert.match(css, /\.hi-market-buy-extra\[hidden\]/);
 });
 
-test('달빛 전시품은 씨앗·오일·재물비 세 줄에서 각각 1→2→3으로 발견한다', () => {
+test('달빛 전시품은 씨앗·오일·재물비 세 줄에서 각각 1→2→3→4→5로 발견한다', () => {
   const s = fresh();
   const beforeEffects = Core.facilityEffects(s);
   const rates = JSON.parse(JSON.stringify(C.COLLECTION_RATE)), events = [];
-  C.COLLECTION_RATE.gather = C.COLLECTION_RATE.oil = C.COLLECTION_RATE.alchemy = [1, 1, 1];
+  C.COLLECTION_RATE.gather = C.COLLECTION_RATE.oil = C.COLLECTION_RATE.alchemy = [1, 1, 1, 1, 1];
   Core.tryCollect(s, 'gather', e => events.push(e));
   Core.tryCollect(s, 'gather', e => events.push(e));
   assert.deepEqual(s.collection, {gather: 2, oil: 0, alchemy: 0}, '다른 줄과 무관하게 씨앗 줄이 진행된다');
-  Core.tryCollect(s, 'oil', e => events.push(e));
-  Core.tryCollect(s, 'alchemy', e => events.push(e));
-  Core.tryCollect(s, 'alchemy', e => events.push(e));
-  Core.tryCollect(s, 'alchemy', e => events.push(e));
-  Core.tryCollect(s, 'gather', e => events.push(e));
-  Core.tryCollect(s, 'oil', e => events.push(e));
-  Core.tryCollect(s, 'oil', e => events.push(e));
-  assert.deepEqual(s.collection, {gather: 3, oil: 3, alchemy: 3});
+  ['gather', 'oil', 'alchemy'].forEach(source => {
+    while (s.collection[source] < 5) Core.tryCollect(s, source, e => events.push(e));
+  });
+  assert.deepEqual(s.collection, {gather: 5, oil: 5, alchemy: 5});
   assert.equal(Core.tryCollect(s, 'gather', () => {}), null, '완성 뒤에는 중복이 나오지 않는다');
-  assert.equal(events.filter(e => e.type === 'collect').length, 9);
+  assert.equal(events.filter(e => e.type === 'collect').length, 15);
   assert.deepEqual(Core.facilityEffects(s), beforeEffects);
   const loaded = Core.normalize(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(loaded.collection, s.collection);
-  assert.equal(Core.selectCollectible(s, 'oil', 2).name, Core.COLLECTIBLES.oil[2].name);
-  assert.deepEqual(s.showcase, {source: 'oil', index: 2});
+  assert.equal(Core.toggleCollectible(s, 'oil', 2).item.name, Core.COLLECTIBLES.oil[2].name);
+  assert.deepEqual(s.showcase, [{source: 'oil', index: 2}]);
   assert.deepEqual(Core.normalize(JSON.parse(JSON.stringify(s))).showcase, s.showcase);
-  assert.equal(Core.selectCollectible(s, 'oil', 3), null);
   const old = JSON.parse(JSON.stringify(s));
   old.collection = 5;
   assert.deepEqual(Core.normalize(old).collection, {gather: 2, oil: 2, alchemy: 1}, '직렬 전시 저장본도 보존한다');
@@ -479,9 +478,9 @@ test('수집 UI는 단계별로 낮아지는 확률과 장면 전시를 제공�
   const html = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.html'), 'utf8');
   const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
   assert.match(html, /id="collection"/);
-  assert.deepEqual(C.COLLECTION_RATE.gather, [0.02, 0.01, 0.005]);
-  assert.deepEqual(C.COLLECTION_RATE.oil, [0.06, 0.03, 0.015]);
-  assert.deepEqual(C.COLLECTION_RATE.alchemy, [0.12, 0.06, 0.03]);
+  assert.deepEqual(C.COLLECTION_RATE.gather, [0.02, 0.01, 0.005, 0.0025, 0.001]);
+  assert.deepEqual(C.COLLECTION_RATE.oil, [0.06, 0.03, 0.015, 0.007, 0.003]);
+  assert.deepEqual(C.COLLECTION_RATE.alchemy, [0.12, 0.06, 0.03, 0.015, 0.007]);
   assert.match(ui, /달빛 전시대/);
   assert.match(ui, /data-showcase/);
   assert.match(ui, /drawShowcase/);
@@ -492,14 +491,14 @@ test('수집 UI는 단계별로 낮아지는 확률과 장면 전시를 제공�
   assert.doesNotMatch(ui + html, /patron|달빛 조합 후원/);
 });
 
-test('전시품 9칸은 서로 다른 전용 아이콘을 쓰고 메소 장식 상점을 제공한다', () => {
+test('전시품 15칸은 서로 다른 아이콘을 쓰고 메소 장식 상점을 제공한다', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.html'), 'utf8');
   const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.css'), 'utf8');
   const icons = Object.values(Core.COLLECTIBLES).flat().map(item => item.icon);
-  assert.equal(icons.length, 9);
-  assert.equal(new Set(icons).size, 9);
-  icons.forEach(icon => assert.ok(fs.statSync(path.join(__dirname, '..', icon)).size > 1000, icon));
+  assert.equal(icons.length, 15);
+  assert.equal(new Set(icons).size, 15);
+  icons.forEach(icon => assert.ok(fs.statSync(path.join(__dirname, '..', icon)).size > 250, icon));
   assert.equal(Core.DECOR_ITEMS.length, 10);
   assert.deepEqual([...new Set(Core.DECOR_ITEMS.map(item => item.category))].sort(), ['background', 'effect', 'ladder', 'station', 'weather']);
   assert.match(html, /id="decorShop"/);
@@ -509,16 +508,35 @@ test('전시품 9칸은 서로 다른 전용 아이콘을 쓰고 메소 장식 �
   assert.match(ui, /renderDecorShop/);
   assert.match(ui, /Core\.buyDecor/);
   assert.match(ui, /Core\.toggleDecor/);
-  assert.match(ui, /data-decor-view="buy"/);
-  assert.match(ui, /data-decor-view="equip"/);
+  assert.match(ui, /data-decor-buy/);
+  assert.match(ui, /data-decor-equip/);
   assert.match(ui, /let decorShopOpen = false/);
   assert.match(ui, /addEventListener\('toggle'/);
   assert.match(ui, /details\.open = decorShopOpen/);
   assert.match(css, /\.hi-collection-board \{ display:grid; grid-template-columns:minmax\(0,1fr\)/);
-  assert.match(css, /\.hi-collection-slot img \{ width:60px; height:60px/);
+  assert.match(css, /\.hi-collection-stack \{ display:grid; grid-template-columns:repeat\(5/);
   assert.match(css, /filter:brightness\(0\)/);
   assert.match(css, /\.hi-decor-card\.equipped/);
   assert.match(css, /\.hi-decor\[hidden\]/);
+});
+
+test('달빛 진열장은 메소로 1→3→5칸 확장하고 기존 단일 저장도 보존한다', () => {
+  const s = fresh();
+  s.collection.gather = 5;
+  assert.equal(Core.showcaseCapacity(s), 1);
+  assert.equal(Core.toggleCollectible(s, 'gather', 0).displayed, true);
+  assert.equal(Core.toggleCollectible(s, 'gather', 1).full, true);
+  s.meso = 10000000000;
+  assert.deepEqual(Core.buyShowcaseUpgrade(s), {level: 1, cost: 2000000000, capacity: 3});
+  assert.equal(Core.toggleCollectible(s, 'gather', 1).displayed, true);
+  assert.equal(Core.toggleCollectible(s, 'gather', 2).displayed, true);
+  assert.equal(Core.toggleCollectible(s, 'gather', 3).full, true);
+  assert.deepEqual(Core.buyShowcaseUpgrade(s), {level: 2, cost: 8000000000, capacity: 5});
+  assert.equal(Core.showcaseCost(s), 0);
+  const old = JSON.parse(JSON.stringify(s));
+  delete old.showcaseLevel;
+  old.showcase = {source: 'gather', index: 4};
+  assert.deepEqual(Core.normalize(old).showcase, [{source: 'gather', index: 4}]);
 });
 
 test('씨앗과 오일은 판매만 하고 최상결과 현자의 돌만 구매한다', () => {
