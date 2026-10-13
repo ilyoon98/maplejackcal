@@ -490,6 +490,9 @@ test('전시품 9칸은 서로 다른 전용 아이콘을 쓰고 메소 장식 �
   assert.match(ui, /renderDecorShop/);
   assert.match(ui, /Core\.buyDecor/);
   assert.match(ui, /Core\.toggleDecor/);
+  assert.match(ui, /let decorShopOpen = false/);
+  assert.match(ui, /addEventListener\('toggle'/);
+  assert.match(ui, /details\.open = decorShopOpen/);
   assert.match(css, /\.hi-decor-card\.equipped/);
   assert.match(css, /\.hi-decor\[hidden\]/);
 });

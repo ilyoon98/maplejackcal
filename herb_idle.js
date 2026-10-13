@@ -77,6 +77,7 @@
   let savedAt = 0;
   let hudDirty = true, marketDirty = true, logDirty = true, newsFresh = false;
   let marketTab = 'sell';
+  let decorShopOpen = false, decorShopMarkup = '';
   try { if (localStorage.getItem('herbIdleMarketTab') === 'buy') marketTab = 'buy'; } catch (e) {}
   let me = null;             // 불러온 내 캐릭터 {name, world, level, cls, image}
   let look = null;           // 그릴 준비가 끝난 캐릭터 이미지 {frames, anchor, headTop}
@@ -1155,8 +1156,18 @@
         '<em>' + (has ? '구매 완료 · 영구 보유' : short(item.cost) + ' 메소') + '</em></div>' +
         '<button type="button" data-decor="' + item.id + '"' + (!has && S.meso < item.cost ? ' disabled' : '') + ' aria-pressed="' + on + '">' + action + '</button></article>';
     }).join('');
-    setHtml('decorShop', '<details><summary><span><small>치장 · 메소 구매 · 수익 효과 없음</small><b>달빛 장식 상점</b></span><em>' + owned + '/' + DECOR_ITEMS.length + '</em></summary>' +
-      '<p class="hi-decor-note">전시품 꾸미기와 함께 적용됩니다. 산 장식은 버튼으로 켜고 끌 수 있어요.</p><div class="hi-decor-list">' + cards + '</div></details>');
+    const host = $('decorShop');
+    if (!host) return;
+    const current = host.querySelector('details');
+    if (current) decorShopOpen = current.open;
+    const markup = '<details><summary><span><small>치장 · 메소 구매 · 수익 효과 없음</small><b>달빛 장식 상점</b></span><em>' + owned + '/' + DECOR_ITEMS.length + '</em></summary>' +
+      '<p class="hi-decor-note">전시품 꾸미기와 함께 적용됩니다. 산 장식은 버튼으로 켜고 끌 수 있어요.</p><div class="hi-decor-list">' + cards + '</div></details>';
+    if (decorShopMarkup !== markup) {
+      host.innerHTML = markup;
+      decorShopMarkup = markup;
+    }
+    const details = host.querySelector('details');
+    if (details) details.open = decorShopOpen;
   }
 
   function renderHud() {
@@ -1768,6 +1779,10 @@
     refresh();
     save();
   });
+
+  $('decorShop').addEventListener('toggle', e => {
+    if (e.target.matches('details')) decorShopOpen = e.target.open;
+  }, true);
 
   $('decorShop').addEventListener('click', e => {
     const b = e.target.closest('[data-decor]');
