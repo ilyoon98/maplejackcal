@@ -76,6 +76,8 @@
   let paused = false;        // 다른 탭이 이어받으면 멈춘다
   let savedAt = 0;
   let hudDirty = true, marketDirty = true, logDirty = true, newsFresh = false;
+  let marketTab = 'sell';
+  try { if (localStorage.getItem('herbIdleMarketTab') === 'buy') marketTab = 'buy'; } catch (e) {}
   let me = null;             // 불러온 내 캐릭터 {name, world, level, cls, image}
   let look = null;           // 그릴 준비가 끝난 캐릭터 이미지 {frames, anchor, headTop}
 
@@ -988,10 +990,26 @@
       (canSell ? trade('sell', '판매') : '') + (canBuy ? trade('buy', '구매') : '') +
     '</article>';
   }
+  function setMarketTab(next, remember) {
+    marketTab = next === 'buy' ? 'buy' : 'sell';
+    document.querySelectorAll('[data-market-tab]').forEach(button => {
+      const active = button.dataset.marketTab === marketTab;
+      button.setAttribute('aria-selected', String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    document.querySelectorAll('[data-market-pane]').forEach(pane => { pane.hidden = pane.dataset.marketPane !== marketTab; });
+    if (remember !== false) try { localStorage.setItem('herbIdleMarketTab', marketTab); } catch (e) {}
+  }
   function buildMarket() {
     $('marketCards').innerHTML =
-      '<div class="hi-market-legend"><span class="sell">판매 · 수수료 5%</span><span class="buy">구매 · 수수료 없음</span></div>' +
-      KEYS.map(itemCard).join('') + '<details class="hi-compare-details"><summary>가공 수익 비교</summary><div class="hi-compare" id="compare"></div></details>';
+      '<div class="hi-market-tabs" role="tablist" aria-label="경매 거래 종류">' +
+        '<button type="button" role="tab" id="marketTabSell" aria-controls="marketPaneSell" data-market-tab="sell"><span>판매</span><small>3종 · 수수료 5%</small></button>' +
+        '<button type="button" role="tab" id="marketTabBuy" aria-controls="marketPaneBuy" data-market-tab="buy"><span>구매</span><small>2종 · 수수료 없음</small></button>' +
+      '</div>' +
+      '<div class="hi-market-pane" id="marketPaneSell" role="tabpanel" aria-labelledby="marketTabSell" data-market-pane="sell">' +
+        SELL.map(itemCard).join('') + '<details class="hi-compare-details"><summary>가공 수익 비교</summary><div class="hi-compare" id="compare"></div></details></div>' +
+      '<div class="hi-market-pane" id="marketPaneBuy" role="tabpanel" aria-labelledby="marketTabBuy" data-market-pane="buy">' + BUY.map(itemCard).join('') + '</div>';
+    setMarketTab(marketTab, false);
   }
 
   function setText(id, text) { const n = $(id); if (n && n.textContent !== text) n.textContent = text; }
@@ -1771,6 +1789,8 @@
   });
 
   $('marketCards').addEventListener('click', e => {
+    const tab = e.target.closest('[data-market-tab]');
+    if (tab) { setMarketTab(tab.dataset.marketTab); return; }
     const preset = e.target.closest('[data-qty]');
     if (preset) {
       const row = preset.closest('.hi-trade-row'), input = row.querySelector('input');
@@ -1813,6 +1833,13 @@
     renderHud();
   });
   $('marketCards').addEventListener('keydown', e => {
+    const tab = e.target.closest('[data-market-tab]');
+    if (tab && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      setMarketTab(tab.dataset.marketTab === 'sell' ? 'buy' : 'sell');
+      document.querySelector('[data-market-tab="' + marketTab + '"]').focus();
+      return;
+    }
     if (e.key !== 'Enter' || !e.target.matches('[data-trade-input]')) return;
     e.preventDefault();
     const button = e.target.closest('.hi-trade-row').querySelector('.hi-trade-go');

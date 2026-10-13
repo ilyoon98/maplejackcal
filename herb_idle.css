@@ -112,7 +112,7 @@
 .hi-btn.primary { border-color:transparent; background:#9b6bff; color:#160f2e; font-weight:800; }
 .hi-btn.primary:hover { background:#ab82ff; }
 .hi-btn.ghost { width:100%; margin-top:12px; background:none; color:var(--text-dim); font-size:.8rem; }
-.hi-btn:focus-visible, .hi-act:focus-visible, .hi-trade-row button:focus-visible, .hi-me > summary:focus-visible { outline:2px solid #d6c0ff; outline-offset:2px; }
+.hi-btn:focus-visible, .hi-act:focus-visible, .hi-trade-row button:focus-visible, .hi-market-tabs button:focus-visible, .hi-me > summary:focus-visible { outline:2px solid #d6c0ff; outline-offset:2px; }
 
 /* ---------------------------------------------------------------- 시세 */
 .hi-news { display:flex; align-items:center; gap:8px; min-height:20px; margin:-2px 0 4px; padding:8px 10px; border-radius:10px; background:#1d1e2e;
@@ -120,10 +120,14 @@
 .hi-news.fresh { animation:hi-news 1.6s ease-out; }
 @keyframes hi-news { 0%,30% { background:#3a2d63; color:#fff; } 100% { background:#1d1e2e; } }
 .hi-news b { color:var(--text); font-weight:700; }
-.hi-market-legend { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:9px 0 4px; font-size:.7rem; font-weight:800; text-align:center; }
-.hi-market-legend span { padding:6px; border-radius:7px; }
-.hi-market-legend .sell { color:var(--hi-bid); background:rgba(255,189,102,.08); }
-.hi-market-legend .buy { color:var(--hi-ask); background:rgba(102,214,195,.08); }
+.hi-market-tabs { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:9px 0 4px; padding:4px; border:1px solid #30324b; border-radius:10px; background:#10121f; }
+.hi-market-tabs button { display:flex; align-items:baseline; justify-content:center; gap:6px; min-width:0; height:34px; border:1px solid transparent; border-radius:7px; background:transparent; color:#777a99; font:inherit; cursor:pointer; }
+.hi-market-tabs button span { font-size:.76rem; font-weight:900; }
+.hi-market-tabs button small { font-size:.59rem; font-weight:700; }
+.hi-market-tabs button[aria-selected="true"] { border-color:#5a4b85; background:linear-gradient(135deg,#35275d,#272240); color:#f0e8ff; box-shadow:0 3px 10px rgba(0,0,0,.18); }
+.hi-market-tabs button[data-market-tab="sell"][aria-selected="true"] span { color:var(--hi-bid); }
+.hi-market-tabs button[data-market-tab="buy"][aria-selected="true"] span { color:var(--hi-ask); }
+.hi-market-pane[hidden] { display:none; }
 .hi-item { display:grid; grid-template-columns:minmax(0,1fr) 92px; gap:6px 10px; padding:9px 0; border-bottom:1px solid #26273d; }
 .hi-item:last-of-type { border-bottom:none; }
 .hi-item-head { display:flex; align-items:center; gap:8px; min-width:0; }

@@ -419,6 +419,19 @@ test('거래 UI는 1·10·최대 수량 바로가기와 접힌 수익 비교를 
   assert.match(css, /\.hi-item \{ display:grid/);
 });
 
+test('경매 단말기는 판매 3종과 구매 2종을 탭으로 나누고 선택을 기억한다', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.css'), 'utf8');
+  assert.match(ui, /SELL\.map\(itemCard\)/);
+  assert.match(ui, /BUY\.map\(itemCard\)/);
+  assert.match(ui, /role="tablist"/);
+  assert.match(ui, /role="tabpanel"/);
+  assert.match(ui, /herbIdleMarketTab/);
+  assert.match(ui, /ArrowLeft/);
+  assert.match(css, /\.hi-market-tabs/);
+  assert.match(css, /\.hi-market-pane\[hidden\]/);
+});
+
 test('달빛 전시품은 씨앗·오일·재물비 세 줄에서 각각 1→2→3으로 발견한다', () => {
   const s = fresh();
   const beforeEffects = Core.facilityEffects(s);
