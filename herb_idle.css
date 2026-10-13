@@ -205,20 +205,34 @@
 .hi-facility-owned small { overflow:hidden; color:#7f809e; font-size:.61rem; text-overflow:ellipsis; white-space:nowrap; }
 .hi-facility-owned em { color:#78c991; font-size:.59rem; font-style:normal; font-weight:800; }
 .hi-collection { margin-top:8px; padding:10px; border:1px solid #534879; border-radius:11px; background:linear-gradient(120deg,rgba(155,107,255,.11),rgba(42,36,75,.45)); }
-.hi-collection-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.hi-collection-head > div:first-child { display:flex; flex-direction:column; min-width:0; }
-.hi-collection-head small { color:#9183b7; font-size:.61rem; font-weight:800; }
-.hi-collection-head b { color:#eee7ff; font-size:.86rem; }
-.hi-collection-head em { color:#ffe286; font-style:normal; font-size:.68rem; }
-.hi-collection-slots { display:grid; grid-template-columns:repeat(6,28px); gap:3px; flex:0 0 auto; }
-.hi-collection-slot { display:grid; place-items:center; width:28px; height:31px; border:1px solid #3d3b55; border-radius:4px 4px 8px 8px; background:#171724; color:#565872; font-size:.75rem; font-weight:900; box-shadow:inset 0 -3px rgba(0,0,0,.18); }
-.hi-collection-slot img { width:22px; height:22px; object-fit:contain; filter:saturate(.95); }
+.hi-collection-title { display:flex; align-items:end; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.hi-collection-title > div { display:flex; flex-direction:column; }
+.hi-collection-title small { color:#9183b7; font-size:.61rem; font-weight:800; }
+.hi-collection-title b { color:#eee7ff; font-size:.86rem; }
+.hi-collection-title em { color:#ffe286; font-size:.72rem; font-style:normal; font-weight:900; }
+.hi-collection-board { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.hi-collection-track { min-width:0; padding:7px; border:1px solid #37364d; border-radius:8px; background:rgba(11,11,22,.36); }
+.hi-collection-track header { display:flex; align-items:center; gap:5px; min-width:0; }
+.hi-collection-track header img { width:24px; height:24px; flex:0 0 24px; object-fit:contain; }
+.hi-collection-track header div { display:flex; flex-direction:column; min-width:0; }
+.hi-collection-track header b { color:#e9e2fa; font-size:.69rem; }
+.hi-collection-track header small { color:#bca0ff; font-size:.59rem; font-weight:900; }
+.hi-collection-stack { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:3px; margin-top:6px; }
+.hi-collection-slot { position:relative; display:grid; place-items:center; min-width:0; height:38px; overflow:hidden; border:1px solid #3d3b55; border-radius:5px 5px 9px 9px; background:#171724; color:#565872; font-weight:900; box-shadow:inset 0 -3px rgba(0,0,0,.18); }
+.hi-collection-slot img { width:23px; height:23px; object-fit:contain; opacity:.16; filter:grayscale(1); }
+.hi-collection-slot > b { position:absolute; right:3px; bottom:1px; color:#62647d; font-size:.58rem; }
+.hi-collection-tier { position:absolute; left:3px; top:1px; z-index:1; color:#676980; font-size:.52rem; }
 .hi-collection-slot.found { border-color:#7663a8; background:#28213f; }
+.hi-collection-slot.found img { opacity:1; filter:none; }
+.hi-collection-slot.found > b { color:#8fe0a5; }
 .hi-collection-slot.next { border-color:#d0aa4f; color:#ffe286; animation:hi-collection-pulse 2s ease-in-out infinite; }
-.hi-collection p { display:flex; flex-direction:column; gap:1px; margin:8px 0 0; padding-top:7px; border-top:1px solid #333249; }
-.hi-collection p strong { color:#d9caff; font-size:.73rem; }
-.hi-collection p span { color:#888aa7; font-size:.65rem; }
-.hi-collection p.complete strong { color:#ffe286; }
+.hi-collection-slot.next img { opacity:.42; filter:none; }
+.hi-collection-slot.next > b { color:#ffe286; }
+.hi-collection-track p { display:flex; flex-direction:column; gap:1px; min-width:0; margin:6px 0 0; padding-top:5px; border-top:1px solid #302f45; }
+.hi-collection-track p strong,.hi-collection-track p span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hi-collection-track p strong { color:#d9caff; font-size:.6rem; }
+.hi-collection-track p span { color:#777993; font-size:.55rem; }
+.hi-collection-track p.complete strong { color:#ffe286; }
 @keyframes hi-collection-pulse { 50% { box-shadow:0 0 0 3px rgba(255,214,90,.09),inset 0 -3px rgba(0,0,0,.18); } }
 @media (prefers-reduced-motion:reduce) { .hi-collection-slot.next { animation:none; } }
 .hi-stats { display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin:12px 0 0; font-size:.8rem; }

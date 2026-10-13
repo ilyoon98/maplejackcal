@@ -400,22 +400,30 @@ test('거래 UI는 1·10·최대 수량 바로가기와 접힌 수익 비교를 
   assert.match(css, /\.hi-item \{ display:grid/);
 });
 
-test('달빛 전시품은 약초·오일·재물비 순서로 한 번씩만 발견한다', () => {
+test('달빛 전시품은 씨앗·오일·재물비 세 줄에서 각각 1→2→3으로 발견한다', () => {
   const s = fresh();
   const beforeEffects = Core.facilityEffects(s);
   const rates = {...C.COLLECTION_RATE}, events = [];
   C.COLLECTION_RATE.gather = C.COLLECTION_RATE.oil = C.COLLECTION_RATE.alchemy = 1;
-  assert.equal(Core.tryCollect(s, 'oil', e => events.push(e)), null, '현재 전시품 출처가 아니면 나오지 않는다');
-  Core.COLLECTIBLES.forEach(item => {
-    const found = Core.tryCollect(s, item.source, e => events.push(e));
-    assert.equal(found.item.name, item.name);
-  });
-  assert.equal(s.collection, Core.COLLECTIBLES.length);
+  Core.tryCollect(s, 'gather', e => events.push(e));
+  Core.tryCollect(s, 'gather', e => events.push(e));
+  assert.deepEqual(s.collection, {gather: 2, oil: 0, alchemy: 0}, '다른 줄과 무관하게 씨앗 줄이 진행된다');
+  Core.tryCollect(s, 'oil', e => events.push(e));
+  Core.tryCollect(s, 'alchemy', e => events.push(e));
+  Core.tryCollect(s, 'alchemy', e => events.push(e));
+  Core.tryCollect(s, 'alchemy', e => events.push(e));
+  Core.tryCollect(s, 'gather', e => events.push(e));
+  Core.tryCollect(s, 'oil', e => events.push(e));
+  Core.tryCollect(s, 'oil', e => events.push(e));
+  assert.deepEqual(s.collection, {gather: 3, oil: 3, alchemy: 3});
   assert.equal(Core.tryCollect(s, 'gather', () => {}), null, '완성 뒤에는 중복이 나오지 않는다');
-  assert.equal(events.filter(e => e.type === 'collect').length, Core.COLLECTIBLES.length);
+  assert.equal(events.filter(e => e.type === 'collect').length, 9);
   assert.deepEqual(Core.facilityEffects(s), beforeEffects);
   const loaded = Core.normalize(JSON.parse(JSON.stringify(s)));
-  assert.equal(loaded.collection, Core.COLLECTIBLES.length);
+  assert.deepEqual(loaded.collection, s.collection);
+  const old = JSON.parse(JSON.stringify(s));
+  old.collection = 5;
+  assert.deepEqual(Core.normalize(old).collection, {gather: 2, oil: 2, alchemy: 1}, '직렬 전시 저장본도 보존한다');
   Object.assign(C.COLLECTION_RATE, rates);
 });
 
@@ -427,7 +435,9 @@ test('수집 UI는 순차 전시와 활동별 확률·꾸미기 해금을 안내
   assert.match(html, /오일 만들기 3%/);
   assert.match(html, /재물 획득 비약 만들기 8%/);
   assert.match(ui, /달빛 전시대/);
-  assert.match(ui, /앞 전시품을 먼저 발견해야 해요/);
+  assert.match(ui, /같은 줄의/);
+  assert.match(ui, /hi-collection-board/);
+  assert.match(ui, /collectionTotal/);
   assert.doesNotMatch(ui + html, /patron|달빛 조합 후원/);
 });
 

@@ -54,8 +54,12 @@
     { name: '자동 증류기', effect: '오일 성공률 95% · 제작 1.25초' },
     { name: '달빛 연금실', effect: '재물비 6개 → 8개 · 제작 2.5초' }
   ];
-  const COLLECTION_ICON = ['보라약초.webp', '쥬니퍼베리씨앗오일.webp', '소형재물획득의비약.webp', '보라약초.webp', '쥬니퍼베리씨앗오일.webp', '소형재물획득의비약.webp'];
-  const SOURCE_LABEL = { gather: '약초 캐기 · 1%', oil: '오일 만들기 · 3%', alchemy: '재물 획득 비약 만들기 · 8%' };
+  const COLLECTION_SOURCES = ['gather', 'oil', 'alchemy'];
+  const COLLECTION_META = {
+    gather: { name: '씨앗', action: '약초 캐기', rate: '1%', icon: '쥬니퍼베리씨앗.webp' },
+    oil: { name: '오일', action: '오일 만들기', rate: '3%', icon: '쥬니퍼베리씨앗오일.webp' },
+    alchemy: { name: '재물비', action: '비약 만들기', rate: '8%', icon: '소형재물획득의비약.webp' }
+  };
   // 기록에는 거래·시세·전시품 발견만 남긴다. 일반 가공·채집은 화면 안 알림으로만 보여 준다.
   const LOG_KINDS = ['sell', 'buy', 'news', 'collect'];
   const IMG = {};
@@ -74,6 +78,9 @@
   let hudDirty = true, marketDirty = true, logDirty = true, newsFresh = false;
   let me = null;             // 불러온 내 캐릭터 {name, world, level, cls, image}
   let look = null;           // 그릴 준비가 끝난 캐릭터 이미지 {frames, anchor, headTop}
+
+  const collectionLevel = source => S && S.collection && typeof S.collection === 'object' ? (S.collection[source] || 0) : 0;
+  const collectionTotal = () => COLLECTION_SOURCES.reduce((sum, source) => sum + collectionLevel(source), 0);
 
   const newSeed = () => (Math.random() * 4294967296) >>> 0;
 
@@ -153,7 +160,7 @@
       const found = e.collection;
       addLog('전시품 발견 · ' + found.item.name + ' · ' + found.item.unlock + ' 해금', 'collect');
       toast('전시품 발견! ' + found.item.name + ' · ' + found.item.unlock + ' 해금');
-      if (found.index === COLLECTIBLES.length - 1) bg = paintBackground();
+      if (found.source === 'gather' && found.index === 2) bg = paintBackground();
       sparks(Core.posAt(S.actor, S.t).x, Core.posAt(S.actor, S.t).y - 50, '#ffd65a', 28, 150);
     } else if (e.type === 'news') {
       addLog(e.news.text + ' (' + newsHit(e.news) + ')', 'news');
@@ -217,7 +224,7 @@
     let gr = g.createLinearGradient(0, 0, 0, G);
     gr.addColorStop(0, '#100d2a'); gr.addColorStop(0.5, '#251c4d'); gr.addColorStop(0.85, '#4a3068'); gr.addColorStop(1, '#6a3f6e');
     g.fillStyle = gr; g.fillRect(0, 0, WORLD.w, G + 10);
-    if (S && S.collection >= 6) {
+    if (collectionLevel('gather') >= 3) {
       const aurora = g.createLinearGradient(90, 30, 850, 210);
       aurora.addColorStop(0, 'rgba(80,255,190,0)'); aurora.addColorStop(.35, 'rgba(80,255,190,.16)');
       aurora.addColorStop(.65, 'rgba(180,110,255,.2)'); aurora.addColorStop(1, 'rgba(180,110,255,0)');
@@ -324,7 +331,7 @@
     const big = e.seeds >= 4;
     floatText('+' + e.seeds, p.x, p.y - 62, big ? '#ffd65a' : '#d6ff9a', 'seed', big);
     if (big) sparks(p.x, p.y - 34, '#ffd65a', 12, 120);
-    if (S.collection >= 1) sparks(p.x, p.y - 28, '#ffe86b', 5, 75);
+    if (collectionLevel('gather') >= 1) sparks(p.x, p.y - 28, '#ffe86b', 5, 75);
   }
   function fxOil(e) {
     const st = STATIONS.oil;
@@ -445,7 +452,7 @@
         ctx.globalAlpha = a * 0.22; ctx.fillStyle = '#d9c4ff'; circ(x, y, 4.5);
         ctx.globalAlpha = a; ctx.fillStyle = '#f6efff'; circ(x, y, 1.2);
       });
-      if (S.collection >= 3) {
+      if (collectionLevel('alchemy') >= 1) {
         for (let i = 0; i < 5; i++) {
           const x = (now * (34 + i * 3) + i * 211) % 1120 - 80;
           const y = 28 + ((i * 47) % 120);
@@ -462,11 +469,12 @@
     const ladder = (x, top, bottom) => {
       ctx.save();
       ctx.globalAlpha = 0.5 + Math.sin(now * 1.8 + x) * 0.05;
-      ctx.strokeStyle = S.collection >= 4 ? '#79b85a' : '#8269b8'; ctx.lineWidth = S.collection >= 4 ? 4 : 3;
+      const dressed = collectionLevel('gather') >= 2;
+      ctx.strokeStyle = dressed ? '#79b85a' : '#8269b8'; ctx.lineWidth = dressed ? 4 : 3;
       line(x - 8, top, x - 8, bottom); line(x + 8, top, x + 8, bottom);
-      ctx.strokeStyle = S.collection >= 4 ? '#d8c06a' : '#b49adb'; ctx.lineWidth = 2;
+      ctx.strokeStyle = dressed ? '#d8c06a' : '#b49adb'; ctx.lineWidth = 2;
       for (let y = top + 9; y < bottom; y += 15) line(x - 7, y, x + 7, y);
-      if (S.collection >= 4) {
+      if (dressed) {
         ctx.fillStyle = '#8ed06d';
         for (let y = top + 16; y < bottom; y += 31) { ell(x - 11, y, 4, 2); ell(x + 11, y + 9, 4, 2); }
       }
@@ -498,12 +506,12 @@
     ctx.fillStyle = gr; circ(x, y, rx);
     ctx.restore();
   }
-  function flame(x, y, w, h, now) {
+  function flame(x, y, w, h, now, outer, inner) {
     const f = 0.85 + 0.12 * Math.sin(now * 17) + 0.07 * Math.sin(now * 29);
-    ctx.fillStyle = '#ff7a2f';
+    ctx.fillStyle = outer || '#ff7a2f';
     ctx.beginPath(); ctx.moveTo(x - w, y); ctx.quadraticCurveTo(x - w * 0.6, y - h * f * 0.7, x, y - h * f);
     ctx.quadraticCurveTo(x + w * 0.6, y - h * f * 0.7, x + w, y); ctx.fill();
-    ctx.fillStyle = '#ffd65a';
+    ctx.fillStyle = inner || '#ffd65a';
     ctx.beginPath(); ctx.moveTo(x - w * 0.5, y); ctx.quadraticCurveTo(x - w * 0.3, y - h * f * 0.4, x, y - h * f * 0.62);
     ctx.quadraticCurveTo(x + w * 0.3, y - h * f * 0.4, x + w * 0.5, y); ctx.fill();
   }
@@ -515,7 +523,8 @@
     ctx.translate(st.x, st.y);
     ctx.fillStyle = '#41445a'; rr(-30, -30, 60, 30, 5);
     ctx.fillStyle = '#555a73'; rr(-32, -33, 64, 7, 3);
-    if (S.collection >= 2) { ctx.fillStyle = '#b89aff'; rr(-27, -31, 54, 2, 1); }
+    const oilLevel = collectionLevel('oil');
+    if (oilLevel >= 1) { ctx.fillStyle = '#b89aff'; rr(-27, -31, 54, 2, 1); }
     ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1;
     [-24, -14].forEach((yy, r) => {
       line(-30, yy, 30, yy);
@@ -523,7 +532,7 @@
     });
     ctx.fillStyle = '#160f1c';
     ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(-11, -8); ctx.arc(0, -8, 11, Math.PI, 0); ctx.lineTo(11, 0); ctx.fill();
-    flame(0, -1, active ? 9 : 5, active ? 15 : 6, now);
+    flame(0, -1, active ? 9 : 5, active ? 15 : 6, now, oilLevel >= 2 ? '#7464e8' : '', oilLevel >= 2 ? '#d9d0ff' : '');
     ctx.fillStyle = '#8c4f24'; ell(0, -45, 25, 16);
     ctx.fillStyle = '#b8733a'; ell(0, -46, 23.5, 14.5);
     ctx.fillStyle = 'rgba(255,220,170,.35)'; ell(-9, -51, 7, 3.5);
@@ -540,6 +549,11 @@
     ctx.beginPath(); ctx.arc(-42, -11, 10.5, -1.25, Math.PI + 1.25, true); ctx.stroke();
     line(-45, -20.5, -45, -27); line(-39, -20.5, -39, -27);
     ctx.fillStyle = 'rgba(255,255,255,.55)'; ell(-46, -15, 1.8, 3.4);
+    if (oilLevel >= 3) {
+      ctx.strokeStyle = '#ffe28a'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(0, -46, 31, -2.8, -.3); ctx.stroke();
+      ctx.fillStyle = '#ffe9a8'; circ(29, -53, 2.2); circ(-28, -54, 2.2);
+    }
     ctx.restore();
     sign(st.x, st.y - 94, '씨앗 오일 제련', chosen);
   }
@@ -582,10 +596,18 @@
     ctx.fillStyle = '#4a2e18'; ctx.fillRect(-27, -13, 54, 3);
     ctx.fillStyle = '#8a5a33'; rr(-36, -37, 72, 7.5, 3);
     ctx.fillStyle = '#a8713f'; rr(-36, -37, 72, 2.6, 1.5);
-    if (S.collection >= 5) {
+    const alchemyLevel = collectionLevel('alchemy');
+    if (alchemyLevel >= 2) {
       ctx.strokeStyle = '#ffd65a'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.arc(0, -20, 31, Math.PI, Math.PI * 2); ctx.stroke();
       ctx.fillStyle = '#ffe99b'; circ(-31, -20, 2); circ(31, -20, 2);
+    }
+    if (alchemyLevel >= 3) {
+      ctx.fillStyle = '#fff0a6';
+      for (let i = 0; i < 3; i++) {
+        const a = now * .8 + i * Math.PI * 2 / 3;
+        circ(Math.cos(a) * 42, -24 + Math.sin(a) * 10, 2.2);
+      }
     }
     ctx.fillStyle = '#5d3699'; rr(-33, -43, 16, 6, 1.5);
     ctx.fillStyle = '#efe3c4'; ctx.fillRect(-31.5, -41.3, 13, 1.2); ctx.fillRect(-31.5, -39.2, 13, 1.2);
@@ -1056,13 +1078,22 @@
   }
 
   function renderCollection() {
-    const count = S.collection || 0, next = COLLECTIBLES[count];
-    const slots = COLLECTIBLES.map((item, i) => '<div class="hi-collection-slot ' + (i < count ? 'found' : i === count ? 'next' : 'locked') + '" title="' + esc(i < count ? item.name + ' · ' + item.unlock : i === count ? item.name : '앞 전시품을 먼저 발견해야 해요') + '">' +
-      (i < count ? '<img class="pix" src="icons/craft/' + COLLECTION_ICON[i] + '" alt="" width="24" height="24">' : '<span>' + (i === count ? '?' : '·') + '</span>') + '</div>').join('');
-    setHtml('collection', '<div class="hi-collection-head"><div><small>한 번씩만 발견하는 꾸미기 전시품</small><b>달빛 전시대 <em>' + count + '/' + COLLECTIBLES.length + '</em></b></div>' +
-      '<div class="hi-collection-slots">' + slots + '</div></div>' +
-      (next ? '<p><strong>다음 · ' + esc(next.name) + '</strong><span>' + esc(SOURCE_LABEL[next.source]) + ' · ' + esc(next.unlock) + '</span></p>'
-        : '<p class="complete"><strong>전시 완성</strong><span>모든 꾸미기가 약초밭에 적용됐어요.</span></p>'));
+    const total = collectionTotal();
+    const tracks = COLLECTION_SOURCES.map(source => {
+      const meta = COLLECTION_META[source], level = collectionLevel(source), rows = COLLECTIBLES[source];
+      const slots = rows.map((item, i) => {
+        const state = i < level ? 'found' : i === level ? 'next' : 'locked';
+        const title = i < level ? item.name + ' · ' + item.unlock : i === level ? item.name + ' · ' + meta.action + ' ' + meta.rate : '같은 줄의 ' + i + '단계를 먼저 발견해야 해요';
+        return '<div class="hi-collection-slot ' + state + '" title="' + esc(title) + '"><span class="hi-collection-tier">' + (i + 1) + '</span>' +
+          '<img class="pix" src="icons/craft/' + meta.icon + '" alt="" width="25" height="25"><b>' + (state === 'next' ? '?' : state === 'locked' ? '·' : '✓') + '</b></div>';
+      }).join('');
+      const next = rows[level];
+      return '<section class="hi-collection-track"><header><img class="pix" src="icons/craft/' + meta.icon + '" alt="" width="24" height="24"><div><b>' + meta.name + '</b><small>' + meta.rate + '</small></div></header>' +
+        '<div class="hi-collection-stack">' + slots + '</div><p class="' + (next ? '' : 'complete') + '">' +
+        (next ? '<strong>' + esc(next.name) + '</strong><span>' + esc(next.unlock) + '</span>' : '<strong>완성</strong><span>꾸미기 3종 적용</span>') + '</p></section>';
+    }).join('');
+    setHtml('collection', '<div class="hi-collection-title"><div><small>각 줄에서 1 → 2 → 3 순서로 발견</small><b>달빛 전시대</b></div><em>' + total + '/9</em></div>' +
+      '<div class="hi-collection-board">' + tracks + '</div>');
   }
 
   function renderHud() {

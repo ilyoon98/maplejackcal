@@ -77,15 +77,24 @@
   const SELL = ['seed', 'oil', 'elixir'];
   const BUY = ['crystal', 'stone'];
   const MODES = ['gather', 'oil', 'alchemy'];
-  // 앞 전시품을 발견해야 다음 전시품이 등장한다. 생산 보너스 대신 장면 꾸미기만 차례로 해금한다.
-  const COLLECTIBLES = [
-    { name: '달빛 네잎 약초', source: 'gather', unlock: '황금 채집 반짝임' },
-    { name: '보랏빛 오일 결정', source: 'oil', unlock: '수정 증류대' },
-    { name: '별무리 비약 병', source: 'alchemy', unlock: '별똥별 날씨' },
-    { name: '덩굴 사다리 표본', source: 'gather', unlock: '빛나는 덩굴 사다리' },
-    { name: '현자의 증류 코일', source: 'oil', unlock: '달빛 비약 작업대' },
-    { name: '새벽빛 농축액', source: 'alchemy', unlock: '오로라 밤하늘' }
-  ];
+  // 씨앗·오일·재물비는 서로 독립된 3단 전시 라인이다. 같은 라인에서 앞 전시품만 얻으면 다음 것이 열린다.
+  const COLLECTIBLES = {
+    gather: [
+      { name: '달빛 네잎 약초', unlock: '황금 채집 반짝임' },
+      { name: '은빛 덩굴 표본', unlock: '빛나는 덩굴 사다리' },
+      { name: '새벽 이슬 표본', unlock: '오로라 밤하늘' }
+    ],
+    oil: [
+      { name: '보랏빛 오일 결정', unlock: '수정 증류솥' },
+      { name: '청명한 증류 불꽃', unlock: '푸른 증류 불꽃' },
+      { name: '달빛 증류 코일', unlock: '달빛 증류 장치' }
+    ],
+    alchemy: [
+      { name: '별무리 비약 병', unlock: '별똥별 날씨' },
+      { name: '현자의 유리구슬', unlock: '빛나는 비약 작업대' },
+      { name: '황금 재물비 원액', unlock: '비약 궤도 장식' }
+    ]
+  };
 
   // items: 품목별로 더할 충격 범위(로그 단위). 소식은 1분 반쯤에 걸쳐 절반으로 줄어든다.
   const NEWS = [
@@ -308,11 +317,13 @@
   }
 
   function tryCollect(s, source, emit) {
-    const index = Math.min(COLLECTIBLES.length, count(s.collection));
-    const item = COLLECTIBLES[index];
-    if (!item || item.source !== source || rand(s) >= C.COLLECTION_RATE[source]) return null;
-    s.collection = index + 1;
-    const result = { index, item, count: s.collection };
+    const track = COLLECTIBLES[source];
+    if (!track || !s.collection || typeof s.collection !== 'object') return null;
+    const index = Math.min(track.length, count(s.collection[source]));
+    const item = track[index];
+    if (!item || rand(s) >= C.COLLECTION_RATE[source]) return null;
+    s.collection[source] = index + 1;
+    const result = { source, index, item, count: s.collection[source] };
     emit({ type: 'collect', collection: result });
     return result;
   }
@@ -595,7 +606,7 @@
       rng: (Number(seed) >>> 0) || 1,
       meso: C.START_MESO,
       facility: 0,
-      collection: 0,
+      collection: { gather: 0, oil: 0, alchemy: 0 },
       inv,
       mode: 'gather',
       batch: null,
@@ -622,7 +633,13 @@
     s.rng = num(raw.rng, 1) | 0;
     s.meso = Math.max(0, Math.floor(num(raw.meso, C.START_MESO)));
     s.facility = Math.min(C.FACILITY_COSTS.length, count(raw.facility));
-    s.collection = Math.min(COLLECTIBLES.length, count(raw.collection));
+    if (raw.collection && typeof raw.collection === 'object') {
+      MODES.forEach(k => { s.collection[k] = Math.min(COLLECTIBLES[k].length, count(raw.collection[k])); });
+    } else {
+      // 잠깐 배포됐던 6칸 직렬 전시 저장본은 얻은 순서대로 세 독립 라인에 돌려준다.
+      const oldOrder = ['gather', 'oil', 'alchemy', 'gather', 'oil', 'alchemy'];
+      oldOrder.slice(0, Math.min(oldOrder.length, count(raw.collection))).forEach(k => { s.collection[k]++; });
+    }
     if (raw.inv) KEYS.forEach(k => { s.inv[k] = count(raw.inv[k]); });
     if (raw.stats) {
       Object.keys(s.stats).forEach(k => { if (k !== 'sold') s.stats[k] = count(raw.stats[k]); });
