@@ -205,6 +205,26 @@ test('구매: 씨앗·오일·최상결·현자의 돌만 가능하고 메소가
   assert.equal(s.stats.income, 0);
 });
 
+test('채집소 증축: 10억·30억·100억을 순서대로 투자해 생산성이 오른다', () => {
+  const s = fresh();
+  s.meso = 14000000000;
+  assert.equal(Core.facilityCost(s), 1000000000);
+  assert.equal(Core.buyFacility(s).level, 1);
+  assert.equal(Core.facilityEffects(s).gatherTime, 1.6);
+  assert.equal(Core.facilityCost(s), 3000000000);
+  assert.equal(Core.buyFacility(s).level, 2);
+  assert.equal(Core.facilityEffects(s).oilRate, 0.95);
+  assert.equal(Core.facilityEffects(s).oilTime, 1.25);
+  assert.equal(Core.buyFacility(s).level, 3);
+  assert.equal(Core.facilityEffects(s).alchemyYield, 8);
+  assert.equal(Core.facilityEffects(s).alchemyTime, 2.5);
+  assert.equal(s.meso, 0);
+  assert.equal(s.stats.invested, 14000000000);
+  assert.equal(Core.facilityCost(s), 0);
+  assert.equal(Core.buyFacility(s), null);
+  assert.equal(Core.normalize(JSON.parse(JSON.stringify(s))).facility, 3);
+});
+
 test('필요한 만큼: 지금 오일을 다 재물비로 만들 때 더 사야 하는 재료 수', () => {
   const s = fresh();
   s.inv.oil = 23;           // 4번 만들 수 있음
@@ -356,6 +376,24 @@ test('거래 UI는 허용된 판매·구매만 숫자 입력으로 받는다', (
   assert.match(ui, /data-trade-input/);
   assert.doesNotMatch(ui, /btn\('sell', 100/);
   assert.doesNotMatch(ui, /btn\('buy', 100/);
+});
+
+test('거래 UI는 1·10·최대 수량 바로가기와 접힌 수익 비교를 제공한다', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.css'), 'utf8');
+  assert.match(ui, /data-qty="1"/);
+  assert.match(ui, /data-qty="10"/);
+  assert.match(ui, /data-qty="max"/);
+  assert.match(ui, /side === 'sell' \? S\.inv\[k\] : Math\.floor\(S\.meso \/ Core\.quote/);
+  assert.match(ui, /<details class="hi-compare-details">/);
+  assert.match(css, /\.hi-item \{ display:grid/);
+});
+
+test('메소 표시는 실제 메소 주머니 아이콘을 사용한다', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.css'), 'utf8');
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
+  assert.match(css, /메소주머니\.webp/);
+  assert.match(ui, /hi-worth-meso[^\n]+메소주머니\.webp/);
 });
 
 test('층 이동 위치: 실제 사다리까지 걷고 수직 이동한 뒤 목표로 걷는다', () => {

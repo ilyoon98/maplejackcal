@@ -56,7 +56,8 @@
     TICK: 3,                 // 시세가 바뀌는 간격(초)
     HISTORY: 120,            // 차트에 남기는 시세 개수 (6분)
     NEWS_CHANCE: 1 / 50,     // 시세 1번 바뀔 때 소식이 뜰 확률 (평균 2분 반에 1번)
-    OFFLINE_CAP: 8 * 3600    // 자리 비움은 최대 8시간까지만 진행
+    OFFLINE_CAP: 8 * 3600,   // 자리 비움은 최대 8시간까지만 진행
+    FACILITY_COSTS: [1000000000, 3000000000, 10000000000]
   };
 
   // spread: 기준 시세 양쪽에 붙는 매수·매도 호가 폭. beta: 다 같이 움직이는 흐름을 타는 정도,
@@ -273,15 +274,38 @@
     return '';
   }
 
+  function facilityCost(s) {
+    return C.FACILITY_COSTS[Math.max(0, Math.min(C.FACILITY_COSTS.length, count(s && s.facility)))] || 0;
+  }
+  function facilityEffects(s) {
+    const level = Math.max(0, Math.min(C.FACILITY_COSTS.length, count(s && s.facility)));
+    return {
+      level,
+      gatherTime: level >= 1 ? 1.6 : C.GATHER_TIME,
+      oilTime: level >= 2 ? 1.25 : C.OIL_TIME,
+      oilRate: level >= 2 ? 0.95 : C.OIL_RATE,
+      alchemyTime: level >= 3 ? 2.5 : C.ALCH_TIME,
+      alchemyYield: level >= 3 ? 8 : C.ALCH_YIELD
+    };
+  }
+  function buyFacility(s) {
+    const cost = facilityCost(s);
+    if (!cost || s.meso < cost) return null;
+    s.meso -= cost;
+    s.facility = Math.min(C.FACILITY_COSTS.length, count(s.facility) + 1);
+    s.stats.invested = count(s.stats.invested) + cost;
+    return { level: s.facility, cost, effects: facilityEffects(s) };
+  }
+
   // 재료는 시작할 때 넣고, 도중에 다른 일로 바꾸면 돌려준다.
   function startWork(s, kind) {
-    const a = s.actor;
+    const a = s.actor, effects = facilityEffects(s);
     a.phase = 'work';
     a.start = s.t;
     if (kind === 'gather') {
       a.face = HERBS[a.herb].x >= a.x ? 1 : -1;
       a.job = { kind, seed: 0, oil: 0, crystal: 0, stone: 0, meso: 0 };
-      a.end = s.t + C.GATHER_TIME;
+      a.end = s.t + effects.gatherTime;
       return;
     }
     const job = kind === 'oil'
@@ -290,7 +314,7 @@
     ['seed', 'oil', 'crystal', 'stone'].forEach(k => { s.inv[k] -= job[k]; });
     s.meso -= job.meso;
     a.job = job;
-    a.end = s.t + (kind === 'oil' ? C.OIL_TIME : C.ALCH_TIME);
+    a.end = s.t + (kind === 'oil' ? effects.oilTime : effects.alchemyTime);
   }
 
   function endBatch(s, reason, emit) {
@@ -351,7 +375,7 @@
       emit({ type: 'gather', herb: i, seeds: n });
     } else if (job.kind === 'oil') {
       // 실패하면 보라색 가루가 나오는데 쓸 데 없는 꽝이라 가방에 넣지 않고, 가루가 터져 잠시 기절한다.
-      const ok = rand(s) < C.OIL_RATE;
+      const ok = rand(s) < facilityEffects(s).oilRate;
       if (ok) s.inv.oil++;
       s.stats.oilTry++;
       if (ok) s.stats.oilOk++;
@@ -365,12 +389,13 @@
         return;
       }
     } else {
-      s.inv.elixir += C.ALCH_YIELD;
+      const made = facilityEffects(s).alchemyYield;
+      s.inv.elixir += made;
       s.stats.crafts++;
-      s.stats.elixirs += C.ALCH_YIELD;
+      s.stats.elixirs += made;
       s.stats.spent += job.meso;
-      if (s.batch) { s.batch.tries++; s.batch.made += C.ALCH_YIELD; s.batch.spent += job.meso; }
-      emit({ type: 'alchemy', made: C.ALCH_YIELD });
+      if (s.batch) { s.batch.tries++; s.batch.made += made; s.batch.spent += job.meso; }
+      emit({ type: 'alchemy', made });
     }
     plan(s, emit);
   }
@@ -500,11 +525,12 @@
   function seedValues(s) {
     const keep = 1 - C.FEE_PCT / 100;
     const bid = k => quote(s, k, 'bid');
-    const perOil = (C.ALCH_YIELD * bid('elixir') * keep - alchCost(s)) / C.ALCH_OILS;
+    const effects = facilityEffects(s);
+    const perOil = (effects.alchemyYield * bid('elixir') * keep - alchCost(s)) / C.ALCH_OILS;
     return {
       direct: bid('seed') * keep,
-      viaOil: (C.OIL_RATE * bid('oil') * keep - C.OIL_BOTTLE) / C.OIL_SEEDS,
-      viaElixir: (C.OIL_RATE * perOil - C.OIL_BOTTLE) / C.OIL_SEEDS,
+      viaOil: (effects.oilRate * bid('oil') * keep - C.OIL_BOTTLE) / C.OIL_SEEDS,
+      viaElixir: (effects.oilRate * perOil - C.OIL_BOTTLE) / C.OIL_SEEDS,
       oilDirect: bid('oil') * keep,
       oilViaElixir: perOil
     };
@@ -534,7 +560,7 @@
   function newStats() {
     const sold = {};
     SELL.forEach(k => { sold[k] = 0; });
-    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, sold };
+    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, invested: 0, sold };
   }
 
   function create(seed) {
@@ -545,6 +571,7 @@
       t: 0,
       rng: (Number(seed) >>> 0) || 1,
       meso: C.START_MESO,
+      facility: 0,
       inv,
       mode: 'gather',
       batch: null,
@@ -570,6 +597,7 @@
     s.t = Math.max(0, num(raw.t, 0));
     s.rng = num(raw.rng, 1) | 0;
     s.meso = Math.max(0, Math.floor(num(raw.meso, C.START_MESO)));
+    s.facility = Math.min(C.FACILITY_COSTS.length, count(raw.facility));
     if (raw.inv) KEYS.forEach(k => { s.inv[k] = count(raw.inv[k]); });
     if (raw.stats) {
       Object.keys(s.stats).forEach(k => { if (k !== 'sold') s.stats[k] = count(raw.stats[k]); });
@@ -637,7 +665,7 @@
 
   const API = {
     C, ITEMS, KEYS, SELL, BUY, MODES, WORLD, PLATFORMS, HERBS, STATIONS, NEWS,
-    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, posAt, seedValues, quote, rollSeeds, rand,
+    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, posAt, seedValues, quote, rollSeeds, rand,
     spriteAnchor
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

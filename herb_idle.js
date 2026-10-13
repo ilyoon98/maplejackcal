@@ -49,6 +49,11 @@
 
   const ICON = { seed: '쥬니퍼베리씨앗.webp', oil: '쥬니퍼베리씨앗오일.webp', elixir: '소형재물획득의비약.webp',
     crystal: '최상급아이템결정.webp', stone: '현자의돌.webp', powder: '보라색가루.webp' };
+  const FACILITIES = [
+    { name: '정교한 갈퀴', effect: '채집 시간 2초 → 1.6초' },
+    { name: '자동 증류기', effect: '오일 성공률 95% · 제작 1.25초' },
+    { name: '달빛 연금실', effect: '재물비 6개 → 8개 · 제작 2.5초' }
+  ];
   // 기록에는 거래와 시세 소식만 남긴다. 가공·채집 소식은 화면 안 알림으로만 보여 준다.
   const LOG_KINDS = ['sell', 'buy', 'news'];
   const IMG = {};
@@ -879,8 +884,11 @@
     const canSell = SELL.indexOf(k) >= 0, canBuy = BUY.indexOf(k) >= 0;
     const quote = (side, label, id) => '<div class="hi-quote ' + side + '"><small>' + label + '</small><b id="' + id + '_' + k + '">-</b></div>';
     const trade = (act, label) => '<div class="hi-trade-row ' + act + '" role="group" aria-label="' + esc(ITEMS[k].short) + ' ' + label + '">' +
-      '<span>' + label + '</span><input type="number" min="1" step="1" inputmode="numeric" placeholder="수량" aria-label="' + esc(ITEMS[k].short) + ' ' + label + ' 수량" data-trade-input="' + act + '-' + k + '" />' +
-      '<em>개</em><button type="button" data-' + act + '="' + k + '">' + label + '</button></div>';
+      '<span>' + label + '</span><div class="hi-qty"><button type="button" data-qty="1" data-side="' + act + '" data-key="' + k + '">1</button>' +
+      '<button type="button" data-qty="10" data-side="' + act + '" data-key="' + k + '">10</button>' +
+      '<button type="button" data-qty="max" data-side="' + act + '" data-key="' + k + '">최대</button>' +
+      '<input type="number" min="1" step="1" inputmode="numeric" placeholder="직접 입력" aria-label="' + esc(ITEMS[k].short) + ' ' + label + ' 수량" data-trade-input="' + act + '-' + k + '" /></div>' +
+      '<button type="button" class="hi-trade-go" data-' + act + '="' + k + '">' + label + '</button></div>';
     const quotes = (canSell ? quote('sell', '내 판매가', 'bid') : '') + (canBuy ? quote('buy', '내 구매가', 'ask') : '');
     return '<article class="hi-item" data-item="' + k + '">' +
       '<div class="hi-item-head">' +
@@ -890,15 +898,15 @@
       '</div>' +
       '<svg class="hi-chart" id="chart_' + k + '" viewBox="0 0 240 54" preserveAspectRatio="none" aria-hidden="true">' +
         '<line class="hi-base" x1="0" x2="240" y1="27" y2="27" /><path class="hi-area" d="" /><path class="hi-line" d="" /></svg>' +
-      '<div class="hi-quotes' + (canSell !== canBuy ? ' single' : '') + '">' + quotes + '</div>' +
       '<div class="hi-item-meta"><span id="vs_' + k + '"></span><span id="have_' + k + '"></span></div>' +
+      '<div class="hi-quotes' + (canSell !== canBuy ? ' single' : '') + '">' + quotes + '</div>' +
       (canSell ? trade('sell', '판매') : '') + (canBuy ? trade('buy', '구매') : '') +
     '</article>';
   }
   function buildMarket() {
     $('marketCards').innerHTML =
       '<div class="hi-market-legend"><span class="sell">판매 · 수수료 5%</span><span class="buy">구매 · 수수료 없음</span></div>' +
-      KEYS.map(itemCard).join('') + '<div class="hi-compare" id="compare"></div>';
+      KEYS.map(itemCard).join('') + '<details class="hi-compare-details"><summary>가공 수익 비교</summary><div class="hi-compare" id="compare"></div></details>';
   }
 
   function setText(id, text) { const n = $(id); if (n && n.textContent !== text) n.textContent = text; }
@@ -999,7 +1007,20 @@
     meso: () => '메소 부족'
   };
 
+  function renderFacility() {
+    const level = S.facility || 0, next = FACILITIES[level], cost = Core.facilityCost(S);
+    if (!next) {
+      setHtml('facility', '<div class="hi-facility-top"><span class="hi-facility-seal">MAX</span><div><b>채집소 증축 완료</b><small>세 설비가 모두 가동 중이에요.</small></div></div>');
+      return;
+    }
+    const steps = FACILITIES.map((row, i) => '<span class="' + (i < level ? 'done' : i === level ? 'now' : '') + '">' + (i + 1) + '</span>').join('');
+    setHtml('facility', '<div class="hi-facility-top"><div><small>메소 사용처 · ' + (level + 1) + '/3단계</small><b>' + esc(next.name) + '</b><span>' + esc(next.effect) + '</span></div>' +
+      '<div class="hi-facility-steps" aria-hidden="true">' + steps + '</div></div>' +
+      '<button type="button" id="facilityBuy"' + (S.meso < cost ? ' disabled' : '') + '><img class="pix" src="icons/home/메소주머니.webp" alt="" width="18" height="18">' + short(cost) + ' 투자</button>');
+  }
+
   function renderHud() {
+    const effects = Core.facilityEffects(S);
     setText('mesoValue', short(S.meso));
     const status = statusText();
     setHtml('statusText', '<img class="pix hi-status-icon" src="icons/' + status[0] + '" alt="" width="20" height="20">' + esc(status[1]));
@@ -1019,11 +1040,11 @@
       b.classList.toggle('short', m !== 'gather' && !!why);
     });
     const oilWhy = Core.shortage(S, 'oil'), rawAlchWhy = Core.shortage(S, 'alchemy'), alchWhy = Core.alchemyAutoShortage(S);
-    setText('act_oil', S.mode === 'oil' ? '씨앗 6 → 오일 1 (90%)'
+    setText('act_oil', S.mode === 'oil' ? '씨앗 6 → 오일 1 (' + Math.round(effects.oilRate * 100) + '%)'
       : oilWhy ? NEED[oilWhy]() : '씨앗 6 → 오일 · ' + fmt(timesLeft('oil')) + '번 가능');
-    setText('act_alchemy', S.mode === 'alchemy' ? '오일 5 → 재물비 6'
+    setText('act_alchemy', S.mode === 'alchemy' ? '오일 5 → 재물비 ' + effects.alchemyYield
       : alchWhy ? NEED[alchWhy]() : (rawAlchWhy === 'crystal' || rawAlchWhy === 'stone')
-        ? '부족 재료 자동 구매 · 오일 5 → 재물비 6' : '오일 5 → 재물비 6 · ' + fmt(timesLeft('alchemy')) + '번');
+        ? '부족 재료 자동 구매 · 오일 5 → 재물비 ' + effects.alchemyYield : '오일 5 → 재물비 ' + effects.alchemyYield + ' · ' + fmt(timesLeft('alchemy')) + '번');
     KEYS.forEach(k => {
       const have = S.inv[k];
       const extra = (k === 'crystal' || k === 'stone') ? ' · 필요 <b>' + fmt(Core.needFor(S, k)) + '</b>' : '';
@@ -1041,9 +1062,10 @@
     // 자산은 팔아서 손에 쥔 메소만 센다. 가방 속 재고는 시세 따라 값이 흔들려서 넣지 않는다.
     const gain = S.meso - C.START_MESO;
     setHtml('worth',
-      '<small>메소</small><b>' + short(S.meso) + ' 메소</b>' +
+      '<small>메소</small><b><img class="pix hi-worth-meso" src="icons/home/메소주머니.webp" alt="" width="24" height="24">' + short(S.meso) + ' 메소</b>' +
       '<span>시작 ' + short(C.START_MESO) + '에서 <em class="' + (gain > 0 ? 'hi-up' : gain < 0 ? 'hi-down' : '') + '">' +
         (gain > 0 ? '+' : '') + short(gain) + '</em></span>');
+    renderFacility();
     const st = S.stats;
     setHtml('stats', [
       ['채집', fmt(st.gathers) + '회'],
@@ -1052,7 +1074,8 @@
       ['재물비 제작', fmt(st.elixirs) + '개'],
       ['판매로 번 돈', short(st.income) + ' 메소'],
       ['재료 구입', short(st.bought) + ' 메소'],
-      ['오일병·빈병', short(st.spent) + ' 메소']
+      ['오일병·빈병', short(st.spent) + ' 메소'],
+      ['채집소 투자', short(st.invested || 0) + ' 메소']
     ].map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join(''));
     setText('playTime', '플레이 ' + dur(S.t));
   }
@@ -1588,7 +1611,32 @@
     chip.classList.remove('pulse'); void chip.offsetWidth; chip.classList.add('pulse');
   }
 
+  $('facility').addEventListener('click', e => {
+    const b = e.target.closest('#facilityBuy');
+    if (!b || paused) return;
+    step();
+    const next = FACILITIES[S.facility || 0], result = Core.buyFacility(S);
+    if (!result) { toast('다음 증축에 필요한 메소가 부족해요'); return; }
+    addLog('채집소 증축 · ' + next.name + ' · -' + short(result.cost), 'buy');
+    toast(next.name + ' 증축 완료! ' + next.effect);
+    pulseMeso();
+    hudDirty = marketDirty = true;
+    refresh();
+    save();
+  });
+
   $('marketCards').addEventListener('click', e => {
+    const preset = e.target.closest('[data-qty]');
+    if (preset) {
+      const row = preset.closest('.hi-trade-row'), input = row.querySelector('input');
+      const k = preset.dataset.key, side = preset.dataset.side;
+      const qty = preset.dataset.qty === 'max'
+        ? (side === 'sell' ? S.inv[k] : Math.floor(S.meso / Core.quote(S, k, 'ask')))
+        : Number(preset.dataset.qty);
+      input.value = Math.max(0, qty) || '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
     const b = e.target.closest('[data-sell], [data-buy]');
     if (!b || paused) return;
     step();
@@ -1622,7 +1670,7 @@
   $('marketCards').addEventListener('keydown', e => {
     if (e.key !== 'Enter' || !e.target.matches('[data-trade-input]')) return;
     e.preventDefault();
-    const button = e.target.closest('.hi-trade-row').querySelector('button');
+    const button = e.target.closest('.hi-trade-row').querySelector('.hi-trade-go');
     if (!button.disabled) button.click();
   });
 
