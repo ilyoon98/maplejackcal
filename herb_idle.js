@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   const Core = window.HerbIdleCore;
-  const { C, ITEMS, KEYS, SELL, BUY, WORLD, PLATFORMS, HERBS, STATIONS, COLLECTIBLES } = Core;
+  const { C, ITEMS, KEYS, SELL, BUY, WORLD, PLATFORMS, HERBS, STATIONS, COLLECTIBLES, DECOR_ITEMS } = Core;
   const STORE_KEY = 'herbIdleGame';
   const AWAY_MIN = 60;     // 이보다 오래(초) 비웠다 오면 정산 창
   const QUIET_MIN = 2;     // 이보다 길게 밀린 시간은 효과 없이 조용히 따라잡는다
@@ -81,6 +81,7 @@
 
   const collectionLevel = source => S && S.collection && typeof S.collection === 'object' ? (S.collection[source] || 0) : 0;
   const collectionTotal = () => COLLECTION_SOURCES.reduce((sum, source) => sum + collectionLevel(source), 0);
+  const decorOn = id => !!(S && Core.decorActive(S, id));
 
   const newSeed = () => (Math.random() * 4294967296) >>> 0;
 
@@ -332,6 +333,10 @@
     floatText('+' + e.seeds, p.x, p.y - 62, big ? '#ffd65a' : '#d6ff9a', 'seed', big);
     if (big) sparks(p.x, p.y - 34, '#ffd65a', 12, 120);
     if (collectionLevel('gather') >= 1) sparks(p.x, p.y - 28, '#ffe86b', 5, 75);
+    if (decorOn('butterfly')) {
+      for (let i = 0; i < 4; i++) addPart({ kind: 'leaf', x: p.x + rnd(-18, 18), y: p.y - rnd(18, 48), vx: rnd(-36, 36), vy: rnd(-85, -40), g: -5,
+        life: rnd(.9, 1.35), size: rnd(2.2, 3.4), color: i % 2 ? '#8fe9ff' : '#f4c9ff', rot: rnd(0, 6), vr: rnd(-12, 12) });
+    }
   }
   function fxOil(e) {
     const st = STATIONS.oil;
@@ -440,6 +445,13 @@
   }
 
   function drawSky(now) {
+    if (decorOn('dawnGarden')) {
+      const dawn = ctx.createLinearGradient(0, 0, 0, 245);
+      dawn.addColorStop(0, 'rgba(249,126,165,.20)'); dawn.addColorStop(.55, 'rgba(255,190,112,.12)'); dawn.addColorStop(1, 'rgba(255,220,136,0)');
+      ctx.fillStyle = dawn; ctx.fillRect(0, 0, WORLD.w, 250);
+      ctx.fillStyle = 'rgba(89,55,116,.22)';
+      ctx.beginPath(); ctx.moveTo(0, 225); ctx.quadraticCurveTo(135, 145, 280, 225); ctx.quadraticCurveTo(430, 155, 570, 225); ctx.quadraticCurveTo(750, 130, WORLD.w, 225); ctx.lineTo(WORLD.w, 265); ctx.lineTo(0, 265); ctx.fill();
+    }
     ctx.fillStyle = '#fff';
     STARS.forEach(s => {
       ctx.globalAlpha = 0.3 + 0.7 * Math.abs(Math.sin(now * s.s + s.p));
@@ -460,6 +472,13 @@
           line(x, y, x - 16, y + 8);
         }
       }
+      if (decorOn('purpleRain')) {
+        for (let i = 0; i < 22; i++) {
+          const x = (i * 47 + now * 58) % 1040 - 40, y = (i * 29 + now * 92) % 260;
+          ctx.globalAlpha = .18 + (i % 4) * .07; ctx.strokeStyle = i % 3 ? '#b991ff' : '#ffb9e9'; ctx.lineWidth = 1;
+          line(x, y, x - 5, y + 10);
+        }
+      }
     }
     ctx.globalAlpha = 1;
   }
@@ -469,13 +488,13 @@
     const ladder = (x, top, bottom) => {
       ctx.save();
       ctx.globalAlpha = 0.5 + Math.sin(now * 1.8 + x) * 0.05;
-      const dressed = collectionLevel('gather') >= 2;
-      ctx.strokeStyle = dressed ? '#79b85a' : '#8269b8'; ctx.lineWidth = dressed ? 4 : 3;
+      const gold = decorOn('goldLadder'), dressed = collectionLevel('gather') >= 2;
+      ctx.strokeStyle = gold ? '#d49a24' : dressed ? '#79b85a' : '#8269b8'; ctx.lineWidth = dressed || gold ? 4 : 3;
       line(x - 8, top, x - 8, bottom); line(x + 8, top, x + 8, bottom);
-      ctx.strokeStyle = dressed ? '#d8c06a' : '#b49adb'; ctx.lineWidth = 2;
+      ctx.strokeStyle = gold ? '#fff0a0' : dressed ? '#d8c06a' : '#b49adb'; ctx.lineWidth = 2;
       for (let y = top + 9; y < bottom; y += 15) line(x - 7, y, x + 7, y);
-      if (dressed) {
-        ctx.fillStyle = '#8ed06d';
+      if (dressed || gold) {
+        ctx.fillStyle = gold ? '#ffd65a' : '#8ed06d';
         for (let y = top + 16; y < bottom; y += 31) { ell(x - 11, y, 4, 2); ell(x + 11, y + 9, 4, 2); }
       }
       ctx.restore();
@@ -554,6 +573,11 @@
       ctx.beginPath(); ctx.arc(0, -46, 31, -2.8, -.3); ctx.stroke();
       ctx.fillStyle = '#ffe9a8'; circ(29, -53, 2.2); circ(-28, -54, 2.2);
     }
+    if (decorOn('royalBench')) {
+      ctx.strokeStyle = '#ffe68b'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-31, -33); ctx.quadraticCurveTo(0, -43, 31, -33); ctx.stroke();
+      ctx.fillStyle = '#fff1a8'; circ(-31, -33, 2.4); circ(31, -33, 2.4);
+    }
     ctx.restore();
     sign(st.x, st.y - 94, '씨앗 오일 제련', chosen);
   }
@@ -608,6 +632,11 @@
         const a = now * .8 + i * Math.PI * 2 / 3;
         circ(Math.cos(a) * 42, -24 + Math.sin(a) * 10, 2.2);
       }
+    }
+    if (decorOn('royalBench')) {
+      ctx.strokeStyle = '#ffe68b'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-38, -39); ctx.quadraticCurveTo(0, -56, 38, -39); ctx.stroke();
+      ctx.fillStyle = '#fff1a8'; circ(-38, -39, 2.4); circ(38, -39, 2.4); circ(0, -55, 3);
     }
     ctx.fillStyle = '#5d3699'; rr(-33, -43, 16, 6, 1.5);
     ctx.fillStyle = '#efe3c4'; ctx.fillRect(-31.5, -41.3, 13, 1.2); ctx.fillRect(-31.5, -39.2, 13, 1.2);
@@ -1085,7 +1114,7 @@
         const state = i < level ? 'found' : i === level ? 'next' : 'locked';
         const title = i < level ? item.name + ' · ' + item.unlock : i === level ? item.name + ' · ' + meta.action + ' ' + meta.rate : '같은 줄의 ' + i + '단계를 먼저 발견해야 해요';
         return '<div class="hi-collection-slot ' + state + '" title="' + esc(title) + '"><span class="hi-collection-tier">' + (i + 1) + '</span>' +
-          '<img class="pix" src="icons/craft/' + meta.icon + '" alt="" width="25" height="25"><b>' + (state === 'next' ? '?' : state === 'locked' ? '·' : '✓') + '</b></div>';
+          '<img class="pix" src="' + item.icon + '" alt="" width="25" height="25"><b>' + (state === 'next' ? '?' : state === 'locked' ? '·' : '✓') + '</b></div>';
       }).join('');
       const next = rows[level];
       return '<section class="hi-collection-track"><header><img class="pix" src="icons/craft/' + meta.icon + '" alt="" width="24" height="24"><div><b>' + meta.name + '</b><small>' + meta.rate + '</small></div></header>' +
@@ -1094,6 +1123,20 @@
     }).join('');
     setHtml('collection', '<div class="hi-collection-title"><div><small>각 줄에서 1 → 2 → 3 순서로 발견</small><b>달빛 전시대</b></div><em>' + total + '/9</em></div>' +
       '<div class="hi-collection-board">' + tracks + '</div>');
+  }
+
+  function renderDecorShop() {
+    const owned = DECOR_ITEMS.filter(item => Core.ownsDecor(S, item.id)).length;
+    const cards = DECOR_ITEMS.map(item => {
+      const has = Core.ownsDecor(S, item.id), on = Core.decorActive(S, item.id);
+      const action = has ? (on ? '장착 중' : '장착') : short(item.cost) + ' 구매';
+      return '<article class="hi-decor-card ' + (has ? 'owned' : '') + (on ? ' equipped' : '') + '">' +
+        '<img class="pix" src="' + item.icon + '" alt="" width="30" height="30"><div><b>' + esc(item.name) + '</b><small>' + esc(item.desc) + '</small>' +
+        '<em>' + (has ? '구매 완료 · 영구 보유' : short(item.cost) + ' 메소') + '</em></div>' +
+        '<button type="button" data-decor="' + item.id + '"' + (!has && S.meso < item.cost ? ' disabled' : '') + ' aria-pressed="' + on + '">' + action + '</button></article>';
+    }).join('');
+    setHtml('decorShop', '<details><summary><span><small>수익 보너스 없는 순수 치장</small><b>달빛 장식 상점</b></span><em>' + owned + '/' + DECOR_ITEMS.length + '</em></summary>' +
+      '<p class="hi-decor-note">전시품 꾸미기와 함께 적용됩니다. 산 장식은 버튼으로 켜고 끌 수 있어요.</p><div class="hi-decor-list">' + cards + '</div></details>');
   }
 
   function renderHud() {
@@ -1144,6 +1187,7 @@
         (gain > 0 ? '+' : '') + short(gain) + '</em></span>');
     renderFacility();
     renderCollection();
+    renderDecorShop();
     const st = S.stats;
     setHtml('stats', [
       ['채집', fmt(st.gathers) + '회'],
@@ -1153,7 +1197,8 @@
       ['판매로 번 돈', short(st.income) + ' 메소'],
       ['재료 구입', short(st.bought) + ' 메소'],
       ['오일병·빈병', short(st.spent) + ' 메소'],
-      ['채집소 투자', short(st.invested || 0) + ' 메소']
+      ['채집소 투자', short(st.invested || 0) + ' 메소'],
+      ['장식 구입', short(st.decorSpent || 0) + ' 메소']
     ].map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join(''));
     setText('playTime', '플레이 ' + dur(S.t));
   }
@@ -1700,6 +1745,27 @@
     toast(next.name + ' 증축 완료! ' + next.effect);
     pulseMeso();
     hudDirty = marketDirty = true;
+    refresh();
+    save();
+  });
+
+  $('decorShop').addEventListener('click', e => {
+    const b = e.target.closest('[data-decor]');
+    if (!b || paused) return;
+    step();
+    const id = b.dataset.decor, item = Core.decorItem(id);
+    if (!item) return;
+    if (!Core.ownsDecor(S, id)) {
+      const result = Core.buyDecor(S, id);
+      if (!result) { toast(item.name + ' 구매에 필요한 메소가 부족해요'); return; }
+      addLog('장식 구입 · ' + item.name + ' · -' + short(result.cost), 'buy');
+      toast(item.name + ' 구입 완료! 바로 장착했어요');
+      pulseMeso();
+    } else {
+      const result = Core.toggleDecor(S, id);
+      toast(item.name + (result.equipped ? ' 장착 완료' : ' 장착 해제'));
+    }
+    hudDirty = true;
     refresh();
     save();
   });

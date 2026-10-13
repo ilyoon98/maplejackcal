@@ -236,6 +236,25 @@ test('채집소 증축을 완료해도 구입한 세 설비와 효과를 계속 
   assert.match(css, /\.hi-facility-owned/);
 });
 
+test('메소 장식은 원하는 순서로 사고, 구입 뒤 장착·해제와 저장이 유지된다', () => {
+  const s = fresh();
+  s.meso = 20000000000;
+  const dawn = Core.buyDecor(s, 'dawnGarden');
+  assert.equal(dawn.cost, 10000000000);
+  assert.equal(Core.ownsDecor(s, 'dawnGarden'), true);
+  assert.equal(Core.decorActive(s, 'dawnGarden'), true);
+  assert.equal(Core.buyDecor(s, 'dawnGarden'), null, '중복 구매는 안 된다');
+  assert.equal(Core.toggleDecor(s, 'dawnGarden').equipped, false);
+  assert.equal(Core.decorActive(s, 'dawnGarden'), false);
+  assert.equal(Core.toggleDecor(s, 'dawnGarden').equipped, true);
+  assert.equal(Core.buyDecor(s, 'purpleRain').cost, 3000000000);
+  assert.equal(s.stats.decorSpent, 13000000000);
+  const loaded = Core.normalize(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(loaded.decor, s.decor);
+  assert.equal(loaded.stats.decorSpent, s.stats.decorSpent);
+  assert.equal(Core.buyDecor(s, 'not-an-item'), null);
+});
+
 test('필요한 만큼: 지금 오일을 다 재물비로 만들 때 더 사야 하는 재료 수', () => {
   const s = fresh();
   s.inv.oil = 23;           // 4번 만들 수 있음
@@ -439,6 +458,23 @@ test('수집 UI는 순차 전시와 활동별 확률·꾸미기 해금을 안내
   assert.match(ui, /hi-collection-board/);
   assert.match(ui, /collectionTotal/);
   assert.doesNotMatch(ui + html, /patron|달빛 조합 후원/);
+});
+
+test('전시품 9칸은 서로 다른 전용 아이콘을 쓰고 메소 장식 상점을 제공한다', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.html'), 'utf8');
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'herb_idle.css'), 'utf8');
+  const icons = Object.values(Core.COLLECTIBLES).flat().map(item => item.icon);
+  assert.equal(icons.length, 9);
+  assert.equal(new Set(icons).size, 9);
+  icons.forEach(icon => assert.ok(fs.statSync(path.join(__dirname, '..', icon)).size > 1000, icon));
+  assert.equal(Core.DECOR_ITEMS.length, 5);
+  assert.match(html, /id="decorShop"/);
+  assert.match(html, /달빛 장식 상점/);
+  assert.match(ui, /renderDecorShop/);
+  assert.match(ui, /Core\.buyDecor/);
+  assert.match(ui, /Core\.toggleDecor/);
+  assert.match(css, /\.hi-decor-card\.equipped/);
 });
 
 test('씨앗과 오일은 판매만 하고 최상결과 현자의 돌만 구매한다', () => {

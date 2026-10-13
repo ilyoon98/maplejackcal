@@ -80,21 +80,31 @@
   // 씨앗·오일·재물비는 서로 독립된 3단 전시 라인이다. 같은 라인에서 앞 전시품만 얻으면 다음 것이 열린다.
   const COLLECTIBLES = {
     gather: [
-      { name: '달빛 네잎 약초', unlock: '황금 채집 반짝임' },
-      { name: '은빛 덩굴 표본', unlock: '빛나는 덩굴 사다리' },
-      { name: '새벽 이슬 표본', unlock: '오로라 밤하늘' }
+      { name: '달빛 네잎 약초', unlock: '황금 채집 반짝임', icon: 'herb_idle_assets/collectibles/gather-1.png' },
+      { name: '은빛 덩굴 표본', unlock: '빛나는 덩굴 사다리', icon: 'herb_idle_assets/collectibles/gather-2.png' },
+      { name: '새벽 이슬 표본', unlock: '오로라 밤하늘', icon: 'herb_idle_assets/collectibles/gather-3.png' }
     ],
     oil: [
-      { name: '보랏빛 오일 결정', unlock: '수정 증류솥' },
-      { name: '청명한 증류 불꽃', unlock: '푸른 증류 불꽃' },
-      { name: '달빛 증류 코일', unlock: '달빛 증류 장치' }
+      { name: '보랏빛 오일 결정', unlock: '수정 증류솥', icon: 'herb_idle_assets/collectibles/oil-1.png' },
+      { name: '청명한 증류 불꽃', unlock: '푸른 증류 불꽃', icon: 'herb_idle_assets/collectibles/oil-2.png' },
+      { name: '달빛 증류 코일', unlock: '달빛 증류 장치', icon: 'herb_idle_assets/collectibles/oil-3.png' }
     ],
     alchemy: [
-      { name: '별무리 비약 병', unlock: '별똥별 날씨' },
-      { name: '현자의 유리구슬', unlock: '빛나는 비약 작업대' },
-      { name: '황금 재물비 원액', unlock: '비약 궤도 장식' }
+      { name: '별무리 비약 병', unlock: '별똥별 날씨', icon: 'herb_idle_assets/collectibles/alchemy-1.png' },
+      { name: '현자의 유리구슬', unlock: '빛나는 비약 작업대', icon: 'herb_idle_assets/collectibles/alchemy-2.png' },
+      { name: '황금 재물비 원액', unlock: '비약 궤도 장식', icon: 'herb_idle_assets/collectibles/alchemy-3.png' }
     ]
   };
+
+  // 전시품은 플레이 중 발견하는 꾸미기이고, 아래 상품은 모아 둔 메소로 사는 별도 치장품이다.
+  // 수익 보너스는 주지 않아 경제 밸런스와 무관하며, 구입 뒤 언제든 켜고 끌 수 있다.
+  const DECOR_ITEMS = [
+    { id: 'butterfly', category: 'effect', name: '달나비 채집광', cost: 300000000, icon: 'icons/home/행운의네잎클로버.webp', desc: '채집할 때 달나비가 피어나요' },
+    { id: 'goldLadder', category: 'ladder', name: '황금 덩굴 사다리', cost: 1000000000, icon: 'icons/home/사다리.webp', desc: '층 사이 사다리를 황금빛으로 바꿔요' },
+    { id: 'purpleRain', category: 'weather', name: '보랏빛 별비', cost: 3000000000, icon: 'icons/home/부서진별의파편.webp', desc: '밤하늘에 보랏빛 별비가 내려요' },
+    { id: 'royalBench', category: 'station', name: '왕실 연금 작업대', cost: 5000000000, icon: 'icons/craft/소형재물획득의비약레시피.webp', desc: '두 작업대를 금빛 장식으로 꾸며요' },
+    { id: 'dawnGarden', category: 'background', name: '새벽빛 정원', cost: 10000000000, icon: 'icons/home/황금단풍잎.webp', desc: '채집소 뒤에 새벽빛과 산등성이가 번져요' }
+  ];
 
   // items: 품목별로 더할 충격 범위(로그 단위). 소식은 1분 반쯤에 걸쳐 절반으로 줄어든다.
   const NEWS = [
@@ -314,6 +324,32 @@
     s.facility = Math.min(C.FACILITY_COSTS.length, count(s.facility) + 1);
     s.stats.invested = count(s.stats.invested) + cost;
     return { level: s.facility, cost, effects: facilityEffects(s) };
+  }
+
+  function decorItem(id) {
+    return DECOR_ITEMS.find(item => item.id === id) || null;
+  }
+  function ownsDecor(s, id) {
+    return !!(s && s.decor && Array.isArray(s.decor.owned) && s.decor.owned.indexOf(id) >= 0);
+  }
+  function decorActive(s, id) {
+    return ownsDecor(s, id) && Array.isArray(s.decor.equipped) && s.decor.equipped.indexOf(id) >= 0;
+  }
+  function buyDecor(s, id) {
+    const item = decorItem(id);
+    if (!item || ownsDecor(s, id) || s.meso < item.cost) return null;
+    s.meso -= item.cost;
+    s.decor.owned.push(id);
+    s.decor.equipped.push(id);
+    s.stats.decorSpent = count(s.stats.decorSpent) + item.cost;
+    return { item, cost: item.cost, equipped: true };
+  }
+  function toggleDecor(s, id) {
+    if (!ownsDecor(s, id)) return null;
+    const at = s.decor.equipped.indexOf(id);
+    if (at >= 0) s.decor.equipped.splice(at, 1);
+    else s.decor.equipped.push(id);
+    return { item: decorItem(id), equipped: at < 0 };
   }
 
   function tryCollect(s, source, emit) {
@@ -594,7 +630,7 @@
   function newStats() {
     const sold = {};
     SELL.forEach(k => { sold[k] = 0; });
-    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, invested: 0, sold };
+    return { gathers: 0, seeds: 0, oilTry: 0, oilOk: 0, crafts: 0, elixirs: 0, spent: 0, bought: 0, income: 0, invested: 0, decorSpent: 0, sold };
   }
 
   function create(seed) {
@@ -607,6 +643,7 @@
       meso: C.START_MESO,
       facility: 0,
       collection: { gather: 0, oil: 0, alchemy: 0 },
+      decor: { owned: [], equipped: [] },
       inv,
       mode: 'gather',
       batch: null,
@@ -639,6 +676,13 @@
       // 잠깐 배포됐던 6칸 직렬 전시 저장본은 얻은 순서대로 세 독립 라인에 돌려준다.
       const oldOrder = ['gather', 'oil', 'alchemy', 'gather', 'oil', 'alchemy'];
       oldOrder.slice(0, Math.min(oldOrder.length, count(raw.collection))).forEach(k => { s.collection[k]++; });
+    }
+    const validDecor = DECOR_ITEMS.map(item => item.id);
+    if (raw.decor && typeof raw.decor === 'object') {
+      s.decor.owned = Array.isArray(raw.decor.owned)
+        ? raw.decor.owned.filter((id, i, rows) => validDecor.indexOf(id) >= 0 && rows.indexOf(id) === i) : [];
+      s.decor.equipped = Array.isArray(raw.decor.equipped)
+        ? raw.decor.equipped.filter((id, i, rows) => s.decor.owned.indexOf(id) >= 0 && rows.indexOf(id) === i) : [];
     }
     if (raw.inv) KEYS.forEach(k => { s.inv[k] = count(raw.inv[k]); });
     if (raw.stats) {
@@ -706,8 +750,8 @@
   }
 
   const API = {
-    C, ITEMS, KEYS, SELL, BUY, MODES, WORLD, PLATFORMS, HERBS, STATIONS, NEWS, COLLECTIBLES,
-    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, tryCollect, posAt, seedValues, quote, rollSeeds, rand,
+    C, ITEMS, KEYS, SELL, BUY, MODES, WORLD, PLATFORMS, HERBS, STATIONS, NEWS, COLLECTIBLES, DECOR_ITEMS,
+    create, normalize, advance, setMode, sell, buy, needFor, alchCost, afterFee, shortage, alchemyAutoShortage, autoSupplyAlchemy, facilityCost, facilityEffects, buyFacility, decorItem, ownsDecor, decorActive, buyDecor, toggleDecor, tryCollect, posAt, seedValues, quote, rollSeeds, rand,
     spriteAnchor
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
