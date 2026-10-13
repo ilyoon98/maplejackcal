@@ -493,6 +493,8 @@ test('전시품 9칸은 서로 다른 전용 아이콘을 쓰고 메소 장식 �
   assert.match(ui, /let decorShopOpen = false/);
   assert.match(ui, /addEventListener\('toggle'/);
   assert.match(ui, /details\.open = decorShopOpen/);
+  assert.match(css, /\.hi-collection-board \{ display:grid; grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(css, /\.hi-collection-slot img \{ width:50px; height:50px/);
   assert.match(css, /\.hi-decor-card\.equipped/);
   assert.match(css, /\.hi-decor\[hidden\]/);
 });

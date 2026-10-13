@@ -1135,10 +1135,10 @@
         const state = i < level ? 'found' : i === level ? 'next' : 'locked';
         const title = i < level ? item.name + ' · ' + item.unlock : i === level ? item.name + ' · ' + meta.action + ' ' + meta.rate : '같은 줄의 ' + i + '단계를 먼저 발견해야 해요';
         return '<div class="hi-collection-slot ' + state + '" title="' + esc(title) + '"><span class="hi-collection-tier">' + (i + 1) + '</span>' +
-          '<img class="pix" src="' + item.icon + '" alt="" width="25" height="25"><b>' + (state === 'next' ? '?' : state === 'locked' ? '·' : '✓') + '</b></div>';
+          '<img class="pix" src="' + item.icon + '" alt="" width="50" height="50"><b>' + (state === 'next' ? '?' : state === 'locked' ? '·' : '✓') + '</b></div>';
       }).join('');
       const next = rows[level];
-      return '<section class="hi-collection-track"><header><img class="pix" src="icons/craft/' + meta.icon + '" alt="" width="24" height="24"><div><b>' + meta.name + '</b><small>' + meta.rate + '</small></div></header>' +
+      return '<section class="hi-collection-track"><header><img class="pix" src="icons/craft/' + meta.icon + '" alt="" width="34" height="34"><div><b>' + meta.name + '</b><small>' + meta.rate + '</small></div></header>' +
         '<div class="hi-collection-stack">' + slots + '</div><p class="' + (next ? '' : 'complete') + '">' +
         (next ? '<strong>' + esc(next.name) + '</strong><span>' + esc(next.unlock) + '</span>' : '<strong>완성</strong><span>꾸미기 3종 적용</span>') + '</p></section>';
     }).join('');
