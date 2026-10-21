@@ -1,6 +1,7 @@
 // 금요일 아침 썬데이 메이플 공지를 찾아 디스코드 웹후크로 공유한다.
 // 필요 환경변수: NEXON_API_KEY, DISCORD_WEBHOOK_URL
-// 선택: SUNDAY_POLL_MINUTES(공지가 아직 없을 때 기다리는 최대 시간, 기본 120), SUNDAY_DRY_RUN=1
+// 선택: SUNDAY_POLL_MINUTES(공지가 아직 없을 때 기다리는 최대 시간, 기본 120), SUNDAY_DRY_RUN=1,
+//       SUNDAY_TEST=1(날짜와 상관없이 목록에 남은 가장 최근 썬데이 메이플을 보내고, 없으면 연결 확인 메시지를 보낸다)
 'use strict';
 
 const Sunday = require('../sunday_event.js');
@@ -42,9 +43,17 @@ async function nexon(url, apiKey) {
   return response.json();
 }
 
-async function findEvent(apiKey, now) {
+function latestSundayEvent(events) {
+  return (Array.isArray(events) ? events : [])
+    .filter((event) => Sunday.isSundayTitle(event && event.title) && Number.isFinite(Date.parse(event.date_event_start)))
+    .sort((a, b) => Date.parse(b.date_event_start) - Date.parse(a.date_event_start))[0] || null;
+}
+
+async function findEvent(apiKey, now, test) {
   const data = await nexon(API_URL, apiKey);
-  const event = Sunday.safeEvent(Sunday.selectEvent(data.event_notice, latestFridayStart(now), now));
+  const event = Sunday.safeEvent(test
+    ? latestSundayEvent(data.event_notice)
+    : Sunday.selectEvent(data.event_notice, latestFridayStart(now), now));
   if (!event) return null;
   if (event.notice_id) {
     try {
@@ -61,24 +70,28 @@ async function main() {
   const apiKey = (process.env.NEXON_API_KEY || '').trim();
   const webhook = (process.env.DISCORD_WEBHOOK_URL || '').trim();
   const dryRun = process.env.SUNDAY_DRY_RUN === '1';
+  const test = process.env.SUNDAY_TEST === '1';
   if (!apiKey) throw new Error('NEXON_API_KEY가 필요합니다.');
   if (!webhook && !dryRun) throw new Error('DISCORD_WEBHOOK_URL이 필요합니다.');
 
-  const deadline = Date.now() + Number(process.env.SUNDAY_POLL_MINUTES || 120) * 60 * 1000;
+  const deadline = test ? 0 : Date.now() + Number(process.env.SUNDAY_POLL_MINUTES || 120) * 60 * 1000;
   let event = null;
   for (;;) {
-    try { event = await findEvent(apiKey, Date.now()); }
+    try { event = await findEvent(apiKey, Date.now(), test); }
     catch (err) { console.warn(err.message); }
     if (event || Date.now() + POLL_INTERVAL_MS > deadline) break;
     console.log('아직 이번 주 썬데이 메이플 공지가 없습니다. 5분 뒤 다시 확인합니다.');
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
-  if (!event) {
+  if (!event && !test) {
     console.log('이번 주 썬데이 메이플 공지를 찾지 못했습니다.');
     return;
   }
 
-  const payload = buildPayload(event);
+  const payload = event
+    ? buildPayload(event)
+    : { username: '썬데이 메이플 알리미', content: '🔧 테스트: 웹후크 연결 확인. 지금은 넥슨 공지 목록에 썬데이 메이플이 없어요.', allowed_mentions: { parse: [] } };
+  if (test && event) payload.content = '🔧 테스트 발송입니다 (가장 최근 썬데이 메이플 공지)';
   if (dryRun) {
     console.log(JSON.stringify(payload, null, 2));
     return;
@@ -89,11 +102,11 @@ async function main() {
     body: JSON.stringify(payload)
   });
   if (!response.ok) throw new Error(`Discord webhook ${response.status}: ${await response.text()}`);
-  console.log(`공유 완료: ${event.title} ${event.url}`);
+  console.log(event ? `공유 완료: ${event.title} ${event.url} (이미지 ${event.image_urls.length}장)` : '테스트 메시지 전송 완료');
 }
 
 if (require.main === module) {
   main().catch((err) => { console.error(err.message); process.exit(1); });
 }
 
-module.exports = { latestFridayStart, buildPayload };
+module.exports = { latestFridayStart, latestSundayEvent, buildPayload };

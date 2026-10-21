@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 1 * * 5' # 매주 금요일 10:00 KST
   workflow_dispatch:
+    inputs:
+      test:
+        description: '테스트 발송 (날짜와 상관없이 가장 최근 공지를 바로 보냄)'
+        type: boolean
+        default: true
 
 jobs:
   notify:
@@ -18,3 +23,4 @@ jobs:
         env:
           NEXON_API_KEY: ${{ secrets.MAPLE_API }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DDUSCIRD_WEBHHOK_URL }}
+          SUNDAY_TEST: ${{ inputs.test && '1' || '' }}
