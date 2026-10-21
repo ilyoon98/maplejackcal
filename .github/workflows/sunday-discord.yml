@@ -1,0 +1,20 @@
+name: 썬데이 메이플 디스코드 알림
+
+on:
+  schedule:
+    - cron: '0 1 * * 5' # 매주 금요일 10:00 KST
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/sunday_discord.cjs
+        env:
+          NEXON_API_KEY: ${{ secrets.MAPLE_API }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DDUSCIRD_WEBHHOK_URL }}

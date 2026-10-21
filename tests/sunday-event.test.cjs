@@ -59,3 +59,19 @@ test('상세 본문에서는 넥슨 HTTPS 이미지만 추출한다', () => {
     'https://ssl.nexon.com/banner.png'
   ]);
 });
+
+test('디스코드 알림은 금요일 10시 공지도 이번 주로 찾는다', () => {
+  const { latestFridayStart, buildPayload } = require('../tools/sunday_discord.cjs');
+  const now = Date.parse('2026-10-23T10:05:00+09:00');
+  assert.equal(latestFridayStart(now), Date.parse('2026-10-23T00:00:00+09:00'));
+  assert.equal(latestFridayStart(Date.parse('2026-10-22T23:59:00+09:00')), Date.parse('2026-10-16T00:00:00+09:00'));
+  const event = Sunday.safeEvent(Sunday.selectEvent([{
+    title: '썬데이 메이플', url: 'https://maplestory.nexon.com/News/Event/1234', notice_id: 1234,
+    date_event_start: '2026-10-25T00:00+09:00', date_event_end: '2026-10-25T23:59+09:00'
+  }], latestFridayStart(now), now));
+  event.image_urls = ['https://lwi.nexon.com/a.png', 'https://lwi.nexon.com/b.png'];
+  const payload = buildPayload(event);
+  assert.equal(payload.embeds.length, 2);
+  assert.match(payload.embeds[0].title, /썬데이 메이플/);
+  assert.equal(payload.embeds[1].image.url, 'https://lwi.nexon.com/b.png');
+});
