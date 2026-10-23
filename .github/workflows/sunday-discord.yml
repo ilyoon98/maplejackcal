@@ -2,7 +2,7 @@ name: 썬데이 메이플 디스코드 알림
 
 on:
   schedule:
-    - cron: '0 1 * * 5' # 매주 금요일 10:00 KST
+    - cron: '47 0 * * 5' # 매주 금요일 09:47 KST (정각은 GitHub 예약 실행이 몰려 밀리기 쉬움, 공지는 최대 2시간 기다림)
   workflow_dispatch:
     inputs:
       test:
