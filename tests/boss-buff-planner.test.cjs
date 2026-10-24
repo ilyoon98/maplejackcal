@@ -312,7 +312,7 @@ test('스크린샷 배율은 소수 둘째 자리와 1% 미만을 유지하고, 
     {name:'최초의 대적자', diff:'익스트림', mult:100},
     {name:'검은 마법사', diff:'익스트림', mult:100},
     {name:'윌', diff:'하드', mult:1006},
-  ]);
+  ].map(b => ({...b, on:true})));
   const row = (name, diff, value) => ({name, diff, value, score:1, scale:1.5, thumb:''});
   await engine.readShot([
     row('스우', '익스트림', 43.10), row('찬란한 흉성', '노멀', 26.13),
@@ -503,6 +503,25 @@ test('첨부 스크린샷을 넣으면 벨로나 60016%와 카링 14809%를 실�
   engine.reload();
   assert.equal(engine.bosses().find(b => b.name === '벨로나').mult, 176.4);
   assert.equal(engine.bosses().find(b => b.name === '카링').mult, 209.7);
+});
+
+test('스크린샷에서 내 목록에 없는 보스는 뒤로 접어 두고 기본으로 넣지 않는다', async () => {
+  const engine = loadPlanner();
+  engine.setBosses([
+    {name:'벨로나', diff:'이지', mult:100, on:true},
+    {name:'림보', diff:'노멀', mult:100, on:false, inList:false, registered:false},
+    {name:'카링', diff:'이지', mult:100, on:false, inList:false, registered:true},
+  ]);
+  const row = (name, diff, value) => ({name, diff, value, score:1, scale:1.25, thumb:''});
+  await engine.readShot([row('림보', '노멀', 10.85), row('벨로나', '이지', 207.1), row('카링', '이지', 244.7)]);
+  const html = engine.shotPreview();
+  assert.match(html, /내 보스 2개를 찾았습니다 · 내 목록에 없는 보스 1개/);
+  // 림보는 접힌 묶음 안에 있고, 내 보스 두 줄이 앞에 온다.
+  const others = html.indexOf('id="shotOthers"');
+  assert.ok(others > html.indexOf('value="207.1"') && others > html.indexOf('value="244.7"') && others < html.indexOf('value="10.85"'));
+  assert.doesNotMatch(html, /스크린샷에 없는 내 보스/);
+  engine.applyShot();
+  assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [207.1, 100, 244.7]);
 });
 
 test('저장 배지를 누르면 캐릭터 선택기에 같은 이름·서버를 전달하고 오래된 조회 정보를 지운다', () => {

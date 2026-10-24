@@ -136,3 +136,17 @@ test('작은 글꼴도 숫자에 잡음이 겹치면 기존 값을 추측하지 
   assert.equal(res[0].value, null);
   assert.equal(res[1].value, 51.98);
 });
+
+// 사용자가 제보한 125% 캡처(카드 90px). 10px 글꼴이라 9px·13px 표본 모두 오차가 한도를 넘었다.
+const shot125 = decodePng(path.join(__dirname, 'fixtures/boss_shot_125.png'));
+test('125% 캡처의 배율을 소수점 없이 끼워 넣지 않고 정확히 읽는다', () => {
+  const res = reader.analyze(shot125, reader.siteRefs());
+  assert.equal(res.length, 33);
+  assert.deepEqual(res.map(r => r.value), [
+    10.85, 32.41, 31.13, 60.66, 66.99, 75.95, 130.4, 160.1,
+    207.1, 244.7, 285.4, 384.0, 477.1, 584.3, 669.8, 1133,
+    1296, 1365, 1128, 1622, 779.4, 2266, 3118, 4164,
+    8162, 6826, 8500, 8109, 12164, 14656, 20309, 88842, 93526,
+  ]);
+  assert.deepEqual(res.slice(0, 3).map(r => [r.name, r.diff]), [['림보', '노멀'], ['감시자 칼로스', '카오스'], ['벨로나', '노멀']]);
+});
