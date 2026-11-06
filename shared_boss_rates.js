@@ -3,7 +3,7 @@
   var el=function(id){return document.getElementById(id);},catalog=window.RateCatalog,data=window.ScouterData,accounts=window.AccountCatalog,profiles=window.CharacterProfile,visual=window.BossIdentity,choices=catalog.choices(window.MapleBossDB);
   var store={snapshots:[],persistent:false},name='',rates=[],revision='',method='manual',stamp='',character=null,dirty=false,busy=false,version=0,profileController=null,profilePending=null,shotIds=new Set();
   var profileApi=profiles.client(fetch,function(){return window.NexonKey.get();});
-  var accountFilter='',groupEditId='',groupDirty=false,ownerDirty=false,toastTimer=null,ownSyncPending=null;
+  var accountFilter='',groupEditId='',groupDirty=false,ownerDirty=false,toastTimer=null,ownSyncPending=null,ownSyncKey='';
   var errors={RATE_DB_NOT_CONFIGURED:'공용 DB가 아직 연결되지 않았습니다.',RATE_CONFLICT:'다른 사람이 먼저 수정했습니다. 작성값은 유지했습니다. 목록을 새로고침한 뒤 캐릭터를 다시 선택하세요.',RATE_PIN_REQUIRED:'기록 비밀번호를 확인하세요.',RATE_INVALID:'닉네임과 배율을 확인하세요.',RATE_LIMIT:'저장 한도를 초과했습니다.',SCOUTER_BLOCKED:'환산 사이트가 서버 조회를 차단했습니다. 캡처 입력으로 등록할 수 있습니다.'};
   function node(tag,text){var n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;}
   function say(message,error){el('shared-status').textContent=message;el('shared-status').classList.toggle('shared-error',!!error);}
@@ -36,8 +36,8 @@
   async function syncOwnAccount(quiet){
     if(!window.NexonKey.has()){if(!quiet)toast('홈에서 API 키를 등록하세요.');return;}
     if(store.requiresPin&&!el('shared-pin').value){if(!quiet)toast('기록 비밀번호를 입력하세요.');return;}
-    if(ownSyncPending)return ownSyncPending;
-    var key=window.NexonKey.get(),abort=new AbortController(),timer=setTimeout(function(){abort.abort();},10000);
+    if(ownSyncPending)return ownSyncKey===window.NexonKey.get()?ownSyncPending:ownSyncPending.then(function(){return syncOwnAccount(quiet);});
+    var key=window.NexonKey.get(),abort=new AbortController(),timer=setTimeout(function(){abort.abort();},10000);ownSyncKey=key;
     ownSyncPending=(async function(){try{
       var result=await accounts.syncOwn(store,{fetch:fetch,newId:function(){return crypto.randomUUID();},pin:el('shared-pin').value,load:async function(){var rows=await window.NexonCharacters.fetch({signal:abort.signal});if(key!==window.NexonKey.get())throw new DOMException('Aborted','AbortError');return rows;}});
       var owner=el('shared-owner').value,label=el('shared-owner-label').value,keep=ownerDirty,previous=store.accountRevision,groupLabel=el('shared-group-label').value,checked=new Set(Array.from(el('shared-group-members').querySelectorAll('input:checked')).map(function(n){return n.value;}));store={...store,accounts:result.accounts,accountRevision:result.accountRevision};accountOptions();if(keep){el('shared-owner').value=owner;el('shared-owner-label').value=label;}if(groupDirty){el('shared-group-label').value=groupLabel;el('shared-group-members').querySelectorAll('input').forEach(function(n){n.checked=checked.has(n.value);});}if(previous!==store.accountRevision)try{localStorage.setItem('sharedBossRates.changed',String(Date.now()));}catch(e){}
