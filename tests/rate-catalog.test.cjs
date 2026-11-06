@@ -53,3 +53,9 @@ test('공용 API는 계정 저장 동작을 배율과 분리해 처리하고 그
  const handler=createHandler(createStore({command:backend()}),{}),body={action:'accounts',accounts:[{id:'group-one',label:'계정',characters:[{name:'본캐'}]}],expectedRevision:''};
  const saved=await call(handler,'POST',body);assert.equal(saved.status,200);assert.equal(saved.body.accounts[0].label,'계정');assert(saved.body.accountRevision);assert.equal((await call(handler)).body.accounts[0].characters[0].name,'본캐');assert.equal((await call(handler,'POST',body)).status,409);
 });
+test('내 계정 자동 동기화는 타인 계정을 유지하고 같은 데이터를 반복 저장하지 않는다',async()=>{
+ const account=require('../account_catalog.js'),command=backend(),store=createStore({command});await store.saveAccounts([{id:'friend',label:'친구',characters:[{name:'친구캐릭터'}]}],'');let writes=0;
+ const handler=createHandler(store,{}),fetchImpl=async(url,options={})=>{const method=options.method||'GET';if(method==='POST')writes++;const r=await call(handler,method,options.body&&JSON.parse(options.body));return {ok:r.status===200,json:async()=>r.body};};
+ const options={fetch:fetchImpl,load:async()=>[{name:'내캐릭터',accountId:'private-own',world:'루나',characterClass:'히어로',level:290}],newId:()=> 'mine'};
+ let doc=await account.syncOwn(await store.read(),options);assert.equal(doc.accounts.length,2);assert(doc.accounts.some(a=>a.id==='friend'));assert.equal(writes,1);doc=await account.syncOwn(doc,options);assert.equal(writes,1);assert.equal(account.accountId(doc,'내캐릭터'),'mine');
+});

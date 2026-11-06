@@ -1,60 +1,28 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>파티 보스 스케줄러</title>
-  <link rel="icon" href="favicon.png?v=2">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="party_boss_scheduler.css">
-  <link rel="stylesheet" href="site_ux.css">
-  <link rel="stylesheet" href="boss_identity.css">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>파티 보스 스케줄러</title><link rel="icon" href="favicon.png?v=2">
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="site_ux.css"><link rel="stylesheet" href="boss_workspace.css"><link rel="stylesheet" href="party_boss_scheduler.css"><link rel="stylesheet" href="boss_identity.css">
   <script src="site_header.js" defer></script><script src="site_nav.js" defer></script><script src="site_ux.js" defer></script>
-  <script src="nexon_key.js" defer></script>
-  <script src="nexon_characters.js" defer></script>
-  <script src="boss_db.js" defer></script>
-  <script src="scouter_data.js" defer></script>
-  <script src="rate_catalog.js" defer></script>
-  <script src="account_catalog.js" defer></script>
-  <script src="character_profile.js" defer></script><script src="boss_identity.js" defer></script>
-  <script src="party_boss_scheduler.js" defer></script>
+  <script src="nexon_key.js" defer></script><script src="nexon_characters.js" defer></script><script src="boss_db.js" defer></script><script src="scouter_data.js" defer></script><script src="rate_catalog.js" defer></script><script src="account_catalog.js" defer></script><script src="character_profile.js" defer></script><script src="boss_identity.js" defer></script><script src="party_boss_scheduler.js" defer></script>
 </head>
-<body>
-<main class="wrap party-app">
+<body><main class="wrap boss-app party-app">
   <div data-site-navigation></div>
-  <header class="party-page-header">
-    <div><h1>파티 보스 스케줄러</h1><p class="sub">계정별 캐릭터를 골라 보스 파티를 구성하세요.</p></div>
-    <span class="party-local">이 브라우저에 저장 · 공유 기능 준비 중</span>
-  </header>
-  <section class="party-search" aria-labelledby="search-title">
-    <div class="party-search-main">
-      <h2 id="search-title">공용 배율 캐릭터</h2>
-      <p id="party-key-state" class="party-note"></p>
-      <label class="party-field" for="party-account">계정</label><select id="party-account"><option value="">전체 계정</option></select>
-      <label class="party-field" for="party-saved-character">선택한 보스의 배율이 등록된 캐릭터</label>
-      <div class="party-search-row"><select id="party-saved-character" disabled><option value="">공용 캐릭터를 불러오는 중…</option></select><button id="party-reload-catalog" type="button">목록 새로고침</button></div>
-      <form id="party-search-form" class="party-search-row">
-        <label class="sr-only" for="party-character-name">캐릭터 닉네임</label>
-        <input id="party-character-name" maxlength="30" placeholder="등록된 캐릭터 닉네임 검색" required>
-        <button type="submit" class="party-primary" id="party-search-button">캐릭터 찾기</button>
-      </form>
-      <p id="party-search-status" class="party-note" role="status" aria-live="polite"></p>
-    </div>
-    <div id="party-character-preview" class="party-character-preview"><p class="party-note">캐릭터를 선택하면 현재 외형이 표시됩니다.</p></div>
-  </section>
-  <div class="party-board-head"><h2>파티 목록</h2><div class="party-search-row"><label for="party-view">보기</label><select id="party-view"><option value="all">저장한 전체 파티</option><option value="mine">내 캐릭터가 있는 파티</option></select><button id="party-create-toggle" class="party-primary" type="button" aria-expanded="false" aria-controls="party-create-form">파티 만들기</button></div></div>
-  <form id="party-create-form" class="party-create-form" hidden>
-    <div class="party-form-grid">
-      <label class="party-field">파티 이름 · 선택<input id="party-name" maxlength="60" placeholder="비우면 보스·난이도 이름으로 저장"></label>
-      <label class="party-field">보스 · 난이도<select id="party-boss" required></select></label>
-    </div>
-    <div class="party-draft-picker"><label class="party-field">계정<select id="party-draft-account"><option value="">전체 계정</option></select></label><label class="party-field">파티에 넣을 캐릭터<select id="party-draft-character"><option value="">캐릭터 선택</option></select></label><button id="party-draft-add" type="button">파티에 추가</button></div>
-    <div id="party-draft-members" class="party-draft-members"></div><p id="party-draft-status" class="party-note" role="status"></p>
-    <button class="party-primary" type="submit">파티 만들기 완료</button>
+  <header><h1>파티 보스 스케줄러</h1><p class="sub">공용 배율로 함께 갈 보스 파티를 구성하세요.</p></header>
+  <div class="party-board-head"><div><h2>파티 목록</h2><span class="party-local">이 기기에 저장</span></div><div class="party-board-actions"><label class="sr-only" for="party-view">보기</label><select id="party-view"><option value="all">전체 파티</option><option value="mine">내 캐릭터 파티</option></select><button id="party-create-toggle" class="boss-primary" type="button" aria-expanded="false" aria-controls="party-create-form">파티 만들기</button></div></div>
+  <form id="party-create-form" class="card party-create-form" hidden>
+    <div class="boss-section-head"><h2>새 파티</h2><button id="party-create-cancel" class="boss-icon-button" type="button" aria-label="파티 만들기 닫기">×</button></div>
+    <div class="party-form-grid"><label>보스 · 난이도<select id="party-boss" required></select></label><label>파티 이름 · 선택<input id="party-name" maxlength="60" placeholder="비우면 보스 이름 사용"></label></div>
+    <div class="party-draft-picker"><label>계정<select id="party-draft-account"><option value="">전체 계정</option></select></label><label>캐릭터<select id="party-draft-character"><option value="">캐릭터 선택</option></select></label><button id="party-draft-add" type="button">추가</button></div>
+    <div id="party-draft-members" class="party-draft-members"></div><p id="party-draft-status" class="boss-status" role="status"></p><div class="party-form-footer"><button class="boss-primary" type="submit">파티 저장</button></div>
   </form>
-  <p id="party-storage-status" class="party-note" role="status"></p>
-  <div class="party-board"><div id="party-list" class="party-list" aria-label="파티 목록"></div><section id="party-detail" class="party-detail" aria-label="선택한 파티"></section></div>
-  <p class="party-note">한 파티에는 같은 계정의 캐릭터를 한 명만 배치할 수 있습니다. 파티 구성은 이 브라우저에 저장됩니다.</p>
-</main>
-</body>
-</html>
+  <p id="party-storage-status" class="boss-status" role="status"></p>
+  <div class="party-board"><aside id="party-list" class="party-list" aria-label="파티 목록"></aside><div class="party-content"><section id="party-detail" class="card party-detail" aria-label="선택한 파티"></section>
+    <section class="card party-search" id="party-add-panel" aria-labelledby="search-title" hidden>
+      <div class="boss-section-head"><h2 id="search-title">파티원 추가</h2><button id="party-reload-catalog" class="boss-icon-button" type="button" aria-label="공용 캐릭터 새로고침" title="새로고침">↻</button></div>
+      <div class="party-add-row"><label>계정<select id="party-account"><option value="">전체 계정</option></select></label><label>캐릭터<select id="party-saved-character" disabled><option value="">불러오는 중…</option></select></label><button id="party-add-current" class="boss-primary" type="button" disabled>추가</button></div>
+      <p id="party-search-status" class="boss-status" role="status" aria-live="polite"></p><div id="party-character-preview" class="party-character-preview" hidden></div>
+    </section>
+  </div></div>
+  <footer class="boss-data-credit">Data based on NEXON Open API</footer>
+</main></body></html>

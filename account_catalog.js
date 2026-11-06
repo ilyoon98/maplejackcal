@@ -10,7 +10,7 @@
     var snapshots=store.snapshots||[],used=new Set(),out=(store.accounts||[]).map(function(a){return {id:a.id,customLabel:a.label||'',characters:a.characters.map(function(member){var name=typeof member==='string'?member:member.name;used.add(name);var snap=snapshots.find(function(s){return s.characterName===name;}),p=snap&&data.publicCharacter(snap.character,name),old=member.profile&&data.publicCharacter(member.profile,name);if(old&&(!p||old.updatedAt>p.updatedAt))p=old;if(p&&Date.now()-p.updatedAt>=30*86400000)p=null;return {name:name,profile:p,snapshot:snap||null};})};});
     var ungrouped=snapshots.filter(function(s){return !used.has(s.characterName);}).map(function(s){var p=data.publicCharacter(s.character,s.characterName);return {name:s.characterName,profile:p&&Date.now()-p.updatedAt<30*86400000?p:null,snapshot:s};});
     if(ungrouped.length)out.push({id:'',customLabel:'미분류 캐릭터',characters:ungrouped});
-    out.forEach(function(a){a.characters.sort(function(a,b){return (b.profile?b.profile.level:0)-(a.profile?a.profile.level:0)||a.name.localeCompare(b.name,'ko');});a.label=a.customLabel||(a.characters[0]?a.characters[0].name:'새 계정');});return out;
+    out.forEach(function(a){a.characters.sort(function(a,b){return (b.profile?b.profile.level:0)-(a.profile?a.profile.level:0)||a.name.localeCompare(b.name,'ko');});a.label=a.customLabel||(a.characters[0]?a.characters[0].name:'새 계정');});return out.filter(function(a){return a.characters.length||a.customLabel;});
   }
   function accountId(store,name){var found=(store.accounts||[]).find(function(a){return a.characters.some(function(c){return (typeof c==='string'?c:c.name)===name;});});return found?found.id:'character:'+name;}
   function conflict(store,members,name){var id=accountId(store,name);return members.some(function(m){return accountId(store,m.character.name)===id;});}
@@ -18,9 +18,18 @@
     var names=new Set(characters.map(function(c){return c.name;})),out=accounts.map(function(a){return {id:a.id,label:a.label,characters:a.characters.filter(function(c){return !names.has(c.name);})};}),target=out.find(function(a){return a.id===id;});if(!target){target={id:id,label:label,characters:[]};out.push(target);}target.label=label;target.characters=characters;return normalize(out);
   }
   function importOwn(store,rows,newId){
-    var groupsByPrivateId=new Map();rows.forEach(function(r){var id=r.accountId||'current';if(!groupsByPrivateId.has(id))groupsByPrivateId.set(id,[]);var p=data.publicCharacter({name:r.name,world:r.world,job:r.characterClass||'',level:r.level,image:'',updatedAt:Date.now()},r.name);if(p)groupsByPrivateId.get(id).push({name:r.name,profile:p});});
+    var known=new Map();groups(store).forEach(function(g){g.characters.forEach(function(c){if(c.profile)known.set(c.name,c.profile);});});
+    var groupsByPrivateId=new Map();rows.forEach(function(r){var id=r.accountId||'current';if(!groupsByPrivateId.has(id))groupsByPrivateId.set(id,[]);var p=data.publicCharacter({name:r.name,world:r.world,job:r.characterClass||'',level:r.level,image:'',updatedAt:Date.now()},r.name),old=known.get(r.name);if(p&&old){if(old.image)p={...p,image:old.image,updatedAt:old.updatedAt};else if(old.world===p.world&&old.job===p.job&&old.level===p.level&&Date.now()-old.updatedAt<86400000)p=old;}if(p)groupsByPrivateId.get(id).push({name:r.name,profile:p});});
     var accounts=normalize(store.accounts||[]);groupsByPrivateId.forEach(function(members){var current=accounts.find(function(a){return a.characters.some(function(c){return members.some(function(m){return m.name===c.name;});});});accounts=assign(accounts,current?current.id:newId(),current?current.label:'',members);});return accounts;
   }
   async function save(fetchImpl,accounts,revision,pin){var r=await fetchImpl('/api/boss-rates',{method:'POST',headers:{'Content-Type':'application/json','x-rate-pin':pin||''},body:JSON.stringify({action:'accounts',accounts:normalize(accounts),expectedRevision:revision||''})}),b=await r.json();if(!r.ok)throw new Error(b.error&&b.error.code||'RATE_STORE_UNAVAILABLE');return b;}
-  return {normalize:normalize,groups:groups,accountId:accountId,conflict:conflict,assign:assign,importOwn:importOwn,save:save};
+  async function syncOwn(store,options){
+    if(!store.persistent||store.requiresPin&&!options.pin)return store;var rows=await options.load();if(!Array.isArray(rows)||!rows.length)return store;
+    for(var attempt=0;attempt<2;attempt++){
+      var next=importOwn(store,rows,options.newId);if(JSON.stringify(next)===JSON.stringify(normalize(store.accounts||[])))return store;
+      try{var result=await save(options.fetch,next,store.accountRevision,options.pin);return {...store,...result};}
+      catch(e){if(e.message!=='RATE_CONFLICT'||attempt)throw e;var response=await options.fetch('/api/boss-rates',{cache:'no-store'});if(!response.ok)throw new Error('RATE_STORE_UNAVAILABLE');store=await response.json();}
+    }
+  }
+  return {normalize:normalize,groups:groups,accountId:accountId,conflict:conflict,assign:assign,importOwn:importOwn,save:save,syncOwn:syncOwn};
 });
