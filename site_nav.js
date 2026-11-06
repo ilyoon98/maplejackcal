@@ -3,13 +3,13 @@
 window.SiteNavigation = {
   categories: [
       ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','flame_calc.html','item_craft_calc.html','authentic_symbol_calc.html']],
-      ['보스', ['boss_income_calc.html','boss_buff_planner.html']],
+      ['보스', ['boss_income_calc.html','boss_buff_planner.html','party_boss_scheduler.html','shared_boss_rates.html']],
       ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','wealth_elixir_calc.html','coin_shop_calc.html']],
       ['강화 시뮬레이터', ['cube_play.html','starforce_play.html']],
       ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']],
       ['미니게임', ['herb_idle.html']]
     ],
-  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02' },
+  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02', 'party_boss_scheduler.html': '2026-11-07', 'shared_boss_rates.html': '2026-11-07' },
   newDays: 30,
   // 메뉴와 홈 카드에 쓰는 게임 아이템 아이콘. 새 페이지를 추가하면 여기에도 넣는다.
   icons: {
@@ -20,6 +20,8 @@ window.SiteNavigation = {
     'authentic_symbol_calc.html': 'icons/authentic/cernium.webp',
     'boss_income_calc.html': 'icons/home/강렬한힘의결정.webp',
     'boss_buff_planner.html': 'icons/home/익스트림레드.webp',
+    'party_boss_scheduler.html': 'icons/home/강렬한힘의결정.webp',
+    'shared_boss_rates.html': 'icons/home/강렬한힘의결정.webp',
     'cube_calc.html': 'icons/cube/레드.webp',
     'cube_option_calc.html': 'icons/cube/블랙.webp',
     'flame_calc.html': 'icons/coin-shop/영환불.webp',
@@ -140,6 +142,18 @@ window.SiteNavigation = {
       calcMenu.appendChild(elixirLink);
     }
     var playMenu = nav.querySelector('.site-menu[data-group="play"]');
+    [
+      ['party_boss_scheduler.html', '파티 보스 스케줄러', '캐릭터 외형 · 파티 배율 합산'],
+      ['shared_boss_rates.html', '공용 환산 배율', '확인해 저장한 보스별 배율']
+    ].forEach(function (page) {
+      if (!calcMenu || calcMenu.querySelector('a[href="' + page[0] + '"]')) return;
+      var link = document.createElement('a');
+      link.href = page[0];
+      link.className = 'site-menu-item';
+      link.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">' + page[1] + '</span><span class="site-menu-desc">' + page[2] + '</span></span>';
+      if (location.pathname.endsWith('/' + page[0])) link.classList.add('active');
+      calcMenu.appendChild(link);
+    });
     if (playMenu && !playMenu.querySelector('a[href="herb_idle.html"]')) {
       var herbLink = document.createElement('a');
       herbLink.href = 'herb_idle.html';

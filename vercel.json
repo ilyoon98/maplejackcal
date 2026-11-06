@@ -1,4 +1,11 @@
 {
-  "buildCommand": "node tools/build_coin_shop_data.js",
-  "outputDirectory": "."
+  "buildCommand": "node tools/build-site.cjs",
+  "outputDirectory": "public",
+  "functions": {
+    "api/scouter.js": {
+      "maxDuration": 60,
+      "memory": 2048,
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
+    }
+  }
 }

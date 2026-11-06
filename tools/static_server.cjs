@@ -15,6 +15,15 @@ const types = {
 http.createServer((req, res) => {
   let rel;
   try { rel = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch (e) { res.writeHead(400).end(); return; }
+  if (rel === '/api/scouter') {
+    Promise.resolve(require('../api/scouter.js')(req, res)).catch(() => {
+      if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json' });
+      if (!res.writableEnded) res.end(JSON.stringify({ error: { code: 'SCOUTER_UNAVAILABLE' } }));
+    });
+    return;
+  }
+  const segments = rel.split('/');
+  if (segments.some(segment => segment.startsWith('.')) || ['node_modules', 'server', 'api', 'tests', 'tools'].includes(segments[1])) { res.writeHead(404).end(); return; }
   const file = path.join(root, rel.endsWith('/') ? rel + 'index.html' : rel);
   if (!file.startsWith(root + path.sep) && file !== root) { res.writeHead(403).end(); return; }
   fs.readFile(file, (err, data) => {
