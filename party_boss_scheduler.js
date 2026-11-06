@@ -67,7 +67,7 @@
   function mount(win){
     var doc=win.document;if(!doc||!doc.getElementById('party-search-form'))return;
     var el=function(id){return doc.getElementById(id);},choices=catalog(win.MapleBossDB),parties=[],selected='',current=null,owned=new Set(),accountLoading=false,snapshots=Object.create(null),rateStates=Object.create(null);
-    var profileController=null,accountController=null,profileVersion=0,accountVersion=0;
+    var profileController=null,accountController=null,profileVersion=0,accountVersion=0,syncVersion=0;
     var api=client(win.fetch.bind(win),function(){return win.NexonKey&&win.NexonKey.get();});
     var multiplierApi=scouterClient(win.fetch.bind(win));
     try{var saved=JSON.parse(win.localStorage.getItem(STORAGE)||'{}');parties=restore(saved,choices);parties.forEach(function(p){p.members.forEach(function(m){var c=m.character,raw=saved.snapshots&&saved.snapshots[c.ocid],value=scouter.normalizeSnapshot(raw,c.name,'00000');if(value)snapshots[c.ocid]=value;});});}catch(e){}
@@ -151,7 +151,8 @@
     function keyChanged(){profileVersion++;if(profileController)profileController.abort();current=null;rateStates=Object.create(null);el('party-search-button').disabled=false;renderPreview();status('');loadAccount();}
     win.addEventListener('nexon-key-changed',keyChanged);
     async function syncSaved(){
-      try{var response=await win.fetch('/api/boss-rates',{cache:'no-store'});if(!response.ok)return;var saved=await response.json(),chars=new Map();parties.forEach(function(p){p.members.forEach(function(m){chars.set(m.character.ocid,m.character);});});if(current)chars.set(current.ocid,current);chars.forEach(function(c){var s=scouter.findShared(saved,c.name,'00000');if(s){snapshots[c.ocid]=s;applySnapshot(parties,c.ocid,s,true);rateStates[c.ocid]='ready';}});persist();renderBoard();renderPreview();}catch(e){}
+      var request=++syncVersion,version=profileVersion;
+      try{var response=await win.fetch('/api/boss-rates',{cache:'no-store'});if(!response.ok)return;var saved=await response.json();if(request!==syncVersion||version!==profileVersion)return;var chars=new Map();parties.forEach(function(p){p.members.forEach(function(m){chars.set(m.character.ocid,m.character);});});if(current)chars.set(current.ocid,current);chars.forEach(function(c){var s=scouter.findShared(saved,c.name,'00000');if(s){snapshots[c.ocid]=s;applySnapshot(parties,c.ocid,s,true);rateStates[c.ocid]='ready';}});persist();renderBoard();renderPreview();}catch(e){}
     }
     win.addEventListener('storage',function(e){if(win.NexonKey&&e.key===win.NexonKey.STORAGE_KEY)keyChanged();else if(e.key==='sharedBossRates.changed')syncSaved();});
     win.addEventListener('focus',syncSaved);

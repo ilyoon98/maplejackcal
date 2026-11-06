@@ -4,6 +4,7 @@
   var store={snapshots:[],persistent:false},name='',rates=[],revision='',method='manual',stamp='',dirty=false,busy=false,shot=[],version=0;
   var errors={RATE_DB_NOT_CONFIGURED:'공용 DB가 아직 연결되지 않았습니다. Vercel에서 Upstash를 연결해야 저장할 수 있습니다.',RATE_CONFLICT:'다른 사람이 먼저 수정했습니다. 작성값은 남겨 두었습니다. 목록 새로고침 후 해당 캐릭터를 다시 열어 최신 배율을 확인하세요.',RATE_PIN_REQUIRED:'기록 비밀번호를 확인하세요.',RATE_INVALID:'닉네임과 배율을 확인하세요.',RATE_LIMIT:'저장 한도를 초과했습니다.',SCOUTER_BLOCKED:'환산 사이트가 서버 조회를 차단했습니다. 아래 캡처 인식으로 입력할 수 있습니다.',SHOT_EMPTY:'반영할 카드를 선택하세요.',SHOT_DUPLICATE:'같은 보스·난이도를 중복 선택했습니다.',SHOT_REVIEW_REQUIRED:'선택한 카드의 보스·난이도와 숫자를 확인하세요.'};
   function node(tag,text){var n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;}
+  function bossLabel(id){var known=choices.find(function(c){return c.id===id;});if(known)return known.label;var parts=id.split('|'),boss=window.MapleBossDB[parts[0]],diff={Easy:'이지',Normal:'노멀',Hard:'하드',Chaos:'카오스',Extreme:'익스트림'};return (diff[parts[1]]||'')+' '+(boss?boss.Name:'보스 확인 필요');}
   function say(message,error){el('shared-status').textContent=message;el('shared-status').classList.toggle('shared-error',!!error);}
   function fail(e){say(errors[e.code]||errors[e.message]||'요청을 완료하지 못했습니다. 연결 상태를 확인하고 다시 시도하세요.',true);}
   function controls(){el('shared-fetch').disabled=busy||!name;el('shared-save').disabled=busy||!name||!rates.length||!store.persistent;el('shared-add').disabled=busy||!name;el('shared-image').disabled=busy||!name;el('shared-open').querySelector('button').disabled=busy;el('shared-character').disabled=busy;el('shared-refresh').disabled=busy;['shared-nickname','shared-add-boss','shared-confirm','shared-pin','shared-apply-shot'].forEach(function(id){el(id).disabled=busy;});document.querySelectorAll('#shared-rows input,#shared-rows button,#shared-review input,#shared-review select').forEach(function(n){n.disabled=busy;});}
@@ -13,9 +14,9 @@
   function render(){
     el('shared-name').textContent=name||'캐릭터를 선택하세요';el('shared-source').hidden=!name;if(name)el('shared-source').href=data.resultUrl(name,'00000');
     el('shared-table').hidden=!rates.length;el('shared-rows').replaceChildren();
-    rates.forEach(function(r){var tr=node('tr'),label=choices.find(function(c){return c.id===r.bossId;}),td=node('td'),input=node('input'),remove=node('button','삭제');
-      input.type='number';input.min='0';input.max='1000000000';input.step='0.01';input.value=r.percent===null?'':String(r.percent);input.setAttribute('aria-label',(label?label.label:r.bossId)+' 배율');input.addEventListener('input',function(){r.percent=input.value.trim()===''?null:Number(input.value);changed();});td.append(input);
-      remove.type='button';remove.addEventListener('click',function(){rates=rates.filter(function(v){return v!==r;});changed();render();});var action=node('td');action.append(remove);tr.append(node('td',label?label.label:r.bossId),td,node('td',r.eligibility||'—'),action);el('shared-rows').append(tr);
+    rates.forEach(function(r){var tr=node('tr'),label=bossLabel(r.bossId),td=node('td'),input=node('input'),remove=node('button','삭제'),eligibility=node('td',r.eligibility||'—');
+      input.type='number';input.min='0';input.max='1000000000';input.step='0.01';input.value=r.percent===null?'':String(r.percent);input.setAttribute('aria-label',label+' 배율');input.addEventListener('input',function(){r.percent=input.value.trim()===''?null:Number(input.value);r.eligibility='';eligibility.textContent='—';changed();});td.append(input);
+      remove.type='button';remove.addEventListener('click',function(){rates=rates.filter(function(v){return v!==r;});changed();render();});var action=node('td');action.append(remove);tr.append(node('td',label),td,eligibility,action);el('shared-rows').append(tr);
     });controls();
   }
   function open(value){
