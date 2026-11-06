@@ -14,7 +14,7 @@ function createHandler(store=createStore(),env=process.env){return async(req,res
     if(!body){let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>65536)return reply(413,{error:{code:'RATE_TOO_LARGE'}});}body=JSON.parse(raw);}
     if(typeof body==='string'){if(Buffer.byteLength(body)>65536)return reply(413,{error:{code:'RATE_TOO_LARGE'}});body=JSON.parse(body);}
     if(Buffer.byteLength(JSON.stringify(body))>65536)return reply(413,{error:{code:'RATE_TOO_LARGE'}});
-    reply(200,{snapshot:await store.save(body.snapshot,body.expectedRevision)});
-  }catch(e){const code=['RATE_DB_NOT_CONFIGURED','RATE_CONFLICT','RATE_INVALID','RATE_LIMIT'].includes(e.message)?e.message:e instanceof SyntaxError?'RATE_INVALID':'RATE_DB_UNAVAILABLE';reply(code==='RATE_CONFLICT'?409:code==='RATE_INVALID'?400:code==='RATE_LIMIT'?429:503,{error:{code}});}
+    reply(200,body.action==='accounts'?await store.saveAccounts(body.accounts,body.expectedRevision):{snapshot:await store.save(body.snapshot,body.expectedRevision)});
+  }catch(e){const code=['RATE_DB_NOT_CONFIGURED','RATE_CONFLICT','RATE_INVALID','ACCOUNT_INVALID','RATE_LIMIT'].includes(e.message)?e.message:e instanceof SyntaxError?'RATE_INVALID':'RATE_DB_UNAVAILABLE';reply(code==='RATE_CONFLICT'?409:['RATE_INVALID','ACCOUNT_INVALID'].includes(code)?400:code==='RATE_LIMIT'?429:503,{error:{code}});}
 };}
 module.exports=createHandler();module.exports.createHandler=createHandler;

@@ -15,6 +15,7 @@
   <script src="boss_db.js" defer></script>
   <script src="scouter_data.js" defer></script>
   <script src="rate_catalog.js" defer></script>
+  <script src="account_catalog.js" defer></script>
   <script src="character_profile.js" defer></script><script src="boss_identity.js" defer></script>
   <script src="party_boss_scheduler.js" defer></script>
 </head>
@@ -22,13 +23,14 @@
 <main class="wrap party-app">
   <div data-site-navigation></div>
   <header class="party-page-header">
-    <div><a href="index.html">메이플 계산기 모음</a> · <a href="shared_boss_rates.html">공용 저장 배율 보기</a><h1>파티 보스 스케줄러</h1><p class="sub">캐릭터 외형을 확인하고 함께 갈 보스 파티를 구성하세요.</p></div>
+    <div><h1>파티 보스 스케줄러</h1><p class="sub">계정별 캐릭터를 골라 보스 파티를 구성하세요.</p></div>
     <span class="party-local">이 브라우저에 저장 · 공유 기능 준비 중</span>
   </header>
   <section class="party-search" aria-labelledby="search-title">
     <div class="party-search-main">
       <h2 id="search-title">공용 배율 캐릭터</h2>
       <p id="party-key-state" class="party-note"></p>
+      <label class="party-field" for="party-account">계정</label><select id="party-account"><option value="">전체 계정</option></select>
       <label class="party-field" for="party-saved-character">선택한 보스의 배율이 등록된 캐릭터</label>
       <div class="party-search-row"><select id="party-saved-character" disabled><option value="">공용 캐릭터를 불러오는 중…</option></select><button id="party-reload-catalog" type="button">목록 새로고침</button></div>
       <form id="party-search-form" class="party-search-row">
@@ -43,15 +45,16 @@
   <div class="party-board-head"><h2>파티 목록</h2><div class="party-search-row"><label for="party-view">보기</label><select id="party-view"><option value="all">저장한 전체 파티</option><option value="mine">내 캐릭터가 있는 파티</option></select><button id="party-create-toggle" class="party-primary" type="button" aria-expanded="false" aria-controls="party-create-form">파티 만들기</button></div></div>
   <form id="party-create-form" class="party-create-form" hidden>
     <div class="party-form-grid">
-      <label class="party-field">파티 이름<input id="party-name" maxlength="60" placeholder="예: 금요일 저녁팟" required></label>
+      <label class="party-field">파티 이름 · 선택<input id="party-name" maxlength="60" placeholder="비우면 보스·난이도 이름으로 저장"></label>
       <label class="party-field">보스 · 난이도<select id="party-boss" required></select></label>
-      <label class="party-field">일정 · 선택<input id="party-schedule" maxlength="80" placeholder="예: 매주 금요일 21:00"></label>
     </div>
-    <button class="party-primary" type="submit">파티 저장</button>
+    <div class="party-draft-picker"><label class="party-field">계정<select id="party-draft-account"><option value="">전체 계정</option></select></label><label class="party-field">파티에 넣을 캐릭터<select id="party-draft-character"><option value="">캐릭터 선택</option></select></label><button id="party-draft-add" type="button">파티에 추가</button></div>
+    <div id="party-draft-members" class="party-draft-members"></div><p id="party-draft-status" class="party-note" role="status"></p>
+    <button class="party-primary" type="submit">파티 만들기 완료</button>
   </form>
   <p id="party-storage-status" class="party-note" role="status"></p>
   <div class="party-board"><div id="party-list" class="party-list" aria-label="파티 목록"></div><section id="party-detail" class="party-detail" aria-label="선택한 파티"></section></div>
-  <p class="party-note">다른 사람의 캐릭터도 공용 배율에 등록하면 파티에 추가할 수 있습니다. 선택한 보스·난이도의 배율이 있는 캐릭터를 표시하며, 개인 배율 합계는 참고값입니다. 파티 구성과 일정은 현재 이 브라우저에 저장됩니다.</p>
+  <p class="party-note">한 파티에는 같은 계정의 캐릭터를 한 명만 배치할 수 있습니다. 파티 구성은 이 브라우저에 저장됩니다.</p>
 </main>
 </body>
 </html>

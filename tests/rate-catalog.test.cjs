@@ -45,3 +45,11 @@ test('공유 프로필은 서버 저장·조회에도 유지하고 OCID와 키�
  const store=createStore({command:backend()}),raw=snapshot();raw.character={name:raw.characterName,world:'루나',job:'히어로',level:285,image:'https://open.api.nexon.com/static/maplestory/character/look/ABC123',updatedAt:Date.now(),ocid:'private-ocid',apiKey:'private-key'};
  await store.save(raw,'');const saved=(await store.read()).snapshots.find(s=>s.characterName===raw.characterName);assert.equal(saved.character.level,285);assert.equal(saved.character.world,'루나');assert.equal(saved.character.job,'히어로');assert(!JSON.stringify(saved).includes('private-'));
 });
+test('계정 묶음은 독립 서버에서 함께 읽고 동시 변경 충돌과 중복 소속은 거부한다',async()=>{
+ const command=backend(),a=createStore({command}),b=createStore({command});const first=await a.saveAccounts([{id:'group-one',label:'',characters:[{name:'계정본캐'},{name:'계정부캐'}]}],'');const read=await b.read();assert.equal(read.accounts.length,1);assert.equal(read.accountRevision,first.accountRevision);assert(read.snapshots[0].rates.length>0);
+ await b.saveAccounts([{id:'group-one',label:'수정',characters:[{name:'계정본캐'},{name:'계정부캐'}]}],first.accountRevision);await assert.rejects(a.saveAccounts(read.accounts,first.accountRevision),/RATE_CONFLICT/);await assert.rejects(a.saveAccounts([{id:'one',characters:[{name:'중복'}]},{id:'two',characters:[{name:'중복'}]}],''),/ACCOUNT_INVALID/);
+});
+test('공용 API는 계정 저장 동작을 배율과 분리해 처리하고 그룹 revision 충돌은 409로 반환한다',async()=>{
+ const handler=createHandler(createStore({command:backend()}),{}),body={action:'accounts',accounts:[{id:'group-one',label:'계정',characters:[{name:'본캐'}]}],expectedRevision:''};
+ const saved=await call(handler,'POST',body);assert.equal(saved.status,200);assert.equal(saved.body.accounts[0].label,'계정');assert(saved.body.accountRevision);assert.equal((await call(handler)).body.accounts[0].characters[0].name,'본캐');assert.equal((await call(handler,'POST',body)).status,409);
+});

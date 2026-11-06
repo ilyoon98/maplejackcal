@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="site_ux.css"><link rel="stylesheet" href="shared_boss_rates.css"><link rel="stylesheet" href="boss_identity.css">
   <script src="site_header.js" defer></script><script src="site_nav.js" defer></script><script src="site_ux.js" defer></script>
   <script src="boss_db.js" defer></script><script src="scouter_data.js" defer></script><script src="rate_catalog.js" defer></script>
+  <script src="account_catalog.js" defer></script><script src="nexon_characters.js" defer></script>
   <script src="nexon_key.js" defer></script><script src="character_profile.js" defer></script><script src="boss_identity.js" defer></script>
   <script src="boss_shot_reader.js" defer></script><script src="shared_boss_rates.js" defer></script>
 </head>
@@ -15,16 +16,21 @@
   <p id="shared-connection" class="shared-meta" role="status">공용 저장소 확인 중…</p>
   <section class="shared-panel" aria-labelledby="shared-editor-title">
     <h2 id="shared-editor-title">캐릭터 배율 설정</h2>
-    <div class="shared-actions"><label>캐릭터<select id="shared-character"><option value="">+ 새 캐릭터 추가</option></select></label><button id="shared-refresh" type="button">목록 새로고침</button></div>
-    <form id="shared-open" class="shared-actions"><label>새 캐릭터 닉네임<input id="shared-nickname" maxlength="30" placeholder="다른 사람도 닉네임으로 검색" required></label><button type="submit">캐릭터 검색</button></form>
-    <div id="shared-profile"></div><p id="shared-profile-status" class="shared-meta" role="status"></p>
-    <div class="shared-input-toggle" role="group" aria-label="배율 입력 방식"><button id="shared-mode-fetch" type="button" aria-pressed="true" aria-controls="shared-fetch-panel">환산 배율 불러오기</button><button id="shared-mode-capture" type="button" aria-pressed="false" aria-controls="shared-capture">환산 캡처 입력</button></div>
-    <div id="shared-fetch-panel"><p class="shared-meta">선택한 캐릭터 한 명의 배율을 불러옵니다. 조회가 안 되면 캡처 입력을 사용할 수 있습니다.</p><button id="shared-fetch" type="button" disabled>배율 불러오기</button></div>
-    <div class="shared-actions"><a id="shared-source" hidden target="_blank" rel="noopener noreferrer">환산 원본 보기</a><a href="party_boss_scheduler.html">파티 구성하기</a></div>
+    <div class="shared-actions"><label>계정<select id="shared-account"><option value="">전체 계정</option></select></label><label>캐릭터<select id="shared-character"><option value="">캐릭터 선택</option></select></label><button id="shared-refresh" type="button">새로고침</button></div>
+    <form id="shared-open" class="shared-actions shared-add-character"><label>새 캐릭터<input id="shared-nickname" maxlength="30" placeholder="추가할 캐릭터 닉네임" required></label><button type="submit" class="shared-primary">캐릭터 추가</button></form>
+    <details id="shared-account-editor"><summary>계정 관리 · 캐릭터 묶기</summary><p class="shared-meta">같은 계정의 캐릭터를 한 묶음으로 선택하세요. 계정 이름을 비우면 가장 레벨 높은 캐릭터 이름을 사용합니다.</p>
+      <div class="shared-actions"><label>편집할 계정<select id="shared-group-select"><option value="">새 계정 만들기</option></select></label><label>계정 이름 · 선택<input id="shared-group-label" maxlength="40" placeholder="자동: 가장 레벨 높은 캐릭터"></label><button id="shared-import-account" type="button">내 계정 캐릭터 불러오기</button></div>
+      <div id="shared-group-members" class="shared-group-members"></div><button id="shared-group-save" type="button" class="shared-primary">계정 묶음 저장</button><p id="shared-group-status" class="shared-meta" role="status"></p>
+    </details>
+    <div class="shared-hero"><div><div id="shared-profile"></div><p id="shared-profile-status" class="shared-meta" role="status"></p></div><div class="shared-character-tools">
+      <div class="shared-input-toggle" role="group" aria-label="배율 입력 방식"><button id="shared-mode-fetch" type="button" aria-pressed="true" aria-controls="shared-fetch-panel">환산 조회</button><button id="shared-mode-capture" type="button" aria-pressed="false" aria-controls="shared-capture">캡처 입력</button></div>
+      <div id="shared-fetch-panel"><button id="shared-fetch" type="button" disabled class="shared-primary">환산 배율 불러오기</button></div>
+      <a id="shared-source" class="shared-source-button" hidden target="_blank" rel="noopener noreferrer">환산 원문 보기 ↗</a>
+    </div></div>
+    <div id="shared-owner-fields" class="shared-actions"><label>이 캐릭터의 계정<select id="shared-owner"><option value="__new__">새 계정으로 묶기</option></select></label><label>계정 이름 · 선택<input id="shared-owner-label" maxlength="40" placeholder="자동: 가장 레벨 높은 캐릭터"></label></div>
     <p id="shared-status" class="shared-meta" role="status" aria-live="polite"></p>
-    <p id="shared-conditions" class="shared-meta">기본 프리셋 00000 · 보스 시간 20분 · 데스티니/유챔 확인 켬 · 추가 스펙 시뮬레이터 끔</p>
     <div id="shared-capture" hidden>
-      <p class="shared-meta">환산의 ‘전체 보기’에서 위 조건으로 캡처하세요. 닉네임은 위에서 지정합니다. 이미지는 기기에서만 분석하며 서버에 올리지 않습니다.</p>
+      <p class="shared-meta">환산에서 보스 시간 20분 · 기본 프리셋의 ‘전체 보기’를 캡처하세요. 이미지는 이 기기에서만 분석합니다.</p>
       <div id="shared-drop" class="shared-drop" tabindex="0"><label>이미지 선택<input id="shared-image" type="file" accept="image/png,image/jpeg,image/webp"></label><p>이미지를 여기에 끌어놓거나, 이 영역을 누른 뒤 Ctrl+V로 붙여넣으세요.</p></div>
       <p id="shared-shot-status" class="shared-meta" role="status"></p>
       <div id="shared-review" class="shared-shot-unresolved"></div>
@@ -32,6 +38,6 @@
     <div class="shared-scroll"><table id="shared-table" hidden><thead><tr><th>보스 · 난이도</th><th>배율 %</th><th>환산 표시</th><th>편집</th></tr></thead><tbody id="shared-rows"></tbody></table></div>
     <div class="shared-actions"><select id="shared-add-boss" aria-label="추가할 보스와 난이도"></select><button id="shared-add" type="button" disabled>배율 추가</button></div>
     <label id="shared-pin-label" hidden>기록 비밀번호<input id="shared-pin" type="password" autocomplete="current-password"></label>
-    <div class="shared-actions"><button id="shared-save" type="button" disabled>공용으로 저장</button><span id="shared-save-state" class="shared-meta">수정한 뒤 공용으로 저장하세요.</span></div>
+    <div class="shared-actions shared-save-bar"><button id="shared-save" type="button" disabled>공용으로 저장</button><span id="shared-save-state" class="shared-meta">수정한 뒤 공용으로 저장하세요.</span></div>
   </section>
-</main></body></html>
+</main><div id="shared-toast" class="shared-toast" role="status" aria-live="polite" hidden></div></body></html>
