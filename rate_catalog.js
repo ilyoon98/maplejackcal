@@ -20,11 +20,12 @@
   }
   function choices(db){return Object.keys(db||{}).filter(function(id){return ICON[id]&&db[id]&&typeof db[id].Name==='string';}).flatMap(function(id){return Object.keys(DIFF).filter(function(diff){return db[id][diff]&&Number(db[id][diff].CrystalPrice)>0;}).map(function(diff){return {id:id+'|'+diff,name:db[id].Name,diff:DIFF[diff],label:DIFF[diff]+' '+db[id].Name,icon:'icons/boss/'+ICON[id]+'.webp'};});});}
   function shotRows(rows,catalog){
+    var counts=new Map();(rows||[]).forEach(function(r){var matches=catalog.filter(function(c){return c.name===r.name&&c.diff===r.diff;});if(matches.length===1)counts.set(matches[0].id,(counts.get(matches[0].id)||0)+1);});
     var used=new Set();return (rows||[]).map(function(r){
       var matches=catalog.filter(function(c){return c.name===r.name&&c.diff===r.diff;}),id=matches.length===1?matches[0].id:'';
       var value=typeof r.value==='number'&&Number.isFinite(r.value)&&r.value>=0&&r.value<=1e9?r.value:null;
-      var selected=!!id&&value!==null&&r.sure===true&&!r.covered&&!used.has(id);if(selected)used.add(id);
-      return {bossId:id,value:value,selected:selected,thumb:typeof r.thumb==='string'&&/^data:image\/(?:jpeg|png);base64,/.test(r.thumb)?r.thumb:'',note:r.covered?'가려진 카드 · 직접 확인':!id?'보스·난이도 선택 필요':value===null?'숫자 확인 필요':!r.sure?'인식 불확실 · 직접 확인':'인식됨'};
+      var duplicate=id&&counts.get(id)>1,selected=!!id&&value!==null&&r.sure===true&&!r.covered&&!duplicate&&!used.has(id);if(selected)used.add(id);
+      return {bossId:id,value:value,selected:selected,thumb:typeof r.thumb==='string'&&/^data:image\/(?:jpeg|png);base64,/.test(r.thumb)?r.thumb:'',note:duplicate?'중복 카드 · 직접 확인':r.covered?'가려진 카드 · 직접 확인':!id?'보스·난이도 선택 필요':value===null?'숫자 확인 필요':!r.sure?'인식 불확실 · 직접 확인':'인식됨'};
     });
   }
   function applyShot(current,rows,catalog){

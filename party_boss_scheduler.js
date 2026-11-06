@@ -66,98 +66,82 @@
   }
   function mount(win){
     var doc=win.document;if(!doc||!doc.getElementById('party-search-form'))return;
-    var el=function(id){return doc.getElementById(id);},choices=catalog(win.MapleBossDB),parties=[],selected='',current=null,owned=new Set(),accountLoading=false,snapshots=Object.create(null),rateStates=Object.create(null);
-    var profileController=null,accountController=null,profileVersion=0,accountVersion=0,syncVersion=0;
-    var api=client(win.fetch.bind(win),function(){return win.NexonKey&&win.NexonKey.get();});
-    var multiplierApi=scouterClient(win.fetch.bind(win));
-    try{var saved=JSON.parse(win.localStorage.getItem(STORAGE)||'{}');parties=restore(saved,choices);parties.forEach(function(p){p.members.forEach(function(m){var c=m.character,raw=saved.snapshots&&saved.snapshots[c.ocid],value=scouter.normalizeSnapshot(raw,c.name,'00000');if(value)snapshots[c.ocid]=value;});});}catch(e){}
+    var el=function(id){return doc.getElementById(id);},choices=catalog(win.MapleBossDB),parties=[],selected='',current=null,owned=new Set(),shared={snapshots:[]},profileVersion=0,syncVersion=0,controller=null;
+    var profiles=win.CharacterProfile||(typeof module==='object'?require('./character_profile.js'):null),visual=win.BossIdentity||(typeof module==='object'?require('./boss_identity.js'):null);
+    var profileApi=profiles.client(win.fetch.bind(win),function(){return win.NexonKey&&win.NexonKey.get();});
+    try{var saved=JSON.parse(win.localStorage.getItem(STORAGE)||'{}');parties=restore(saved,choices);}catch(e){}
     function node(tag,cls,label){var n=doc.createElement(tag);if(cls)n.className=cls;if(label!=null)n.textContent=label;return n;}
     function status(message,error){el('party-search-status').textContent=message||'';el('party-search-status').classList.toggle('error',!!error);}
-    function persist(){try{var retained=Object.create(null);parties.forEach(function(p){p.members.forEach(function(m){if(snapshots[m.character.ocid])retained[m.character.ocid]=snapshots[m.character.ocid];});});win.localStorage.setItem(STORAGE,JSON.stringify({parties:parties,snapshots:retained}));el('party-storage-status').textContent='';}catch(e){el('party-storage-status').textContent='브라우저에 저장하지 못했습니다. 현재 화면에서만 유지됩니다.';}}
-    function snapshotFor(c){var s=snapshots[c.ocid];return s&&s.characterName===c.name?s:null;}
-    function makeMember(c,bossId){var s=snapshotFor(c),r=s&&s.rates.find(function(row){return row.bossId===bossId;});return {character:Object.assign({},c),rate:r?r.percent:null,rateMode:'auto',rateUpdatedAt:s?s.fetchedAt:''};}
-    function timeLabel(value){return new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+    function persist(){try{win.localStorage.setItem(STORAGE,JSON.stringify({parties:parties}));el('party-storage-status').textContent='';}catch(e){el('party-storage-status').textContent='브라우저에 저장하지 못했습니다.';}}
+    function snapshotFor(c){return scouter.findShared(shared,c.name,'00000');}
+    function makeMember(c,bossId){var snap=snapshotFor(c),r=snap&&snap.rates.find(function(row){return row.bossId===bossId;});return {character:{...c},rate:r?r.percent:null,rateMode:'auto',rateUpdatedAt:snap?snap.fetchedAt:''};}
+    function targetBoss(){var p=parties.find(function(p){return p.id===selected;});return !el('party-create-form').hidden?el('party-boss').value:p?p.bossId:'';}
+    function available(){var bossId=targetBoss();return shared.snapshots.filter(function(raw){var snap=scouter.findShared(shared,raw.characterName,'00000');return snap&&(!bossId||snap.rates.some(function(r){return r.bossId===bossId;}));});}
+    function candidates(){
+      var select=el('party-saved-character'),items=available(),bossId=targetBoss();select.replaceChildren();var placeholder=node('option','',items.length?'공용 캐릭터 선택':'이 보스의 등록 배율이 없습니다');placeholder.value='';select.append(placeholder);
+      items.forEach(function(s){var c=profiles.fresh(s.character,s.characterName),r=s.rates.find(function(r){return r.bossId===bossId;}),option=node('option','',s.characterName+(c?' · '+c.world+' · Lv.'+c.level:'')+(r?' · '+r.percent+'%':''));option.value=s.characterName;select.append(option);});select.disabled=!items.length;
+      if(current&&!items.some(function(s){return s.characterName===current.name;})){current=null;profileVersion++;if(controller)controller.abort();}
+      select.value=current?current.name:'';renderPreview();
+    }
     function portrait(c){
-      var box=node('div','party-portrait'),fallback=node('span','',c.image?'이미지 로딩 중':'외형 없음');box.appendChild(fallback);
-      // API 캐시가 30일 이상 된 이미지는 다시 검색하기 전까지 표시하지 않는다.
-      if(c.image&&Date.now()-c.updatedAt<30*86400000){var img=node('img');img.alt=c.name+' 캐릭터 외형';img.referrerPolicy='no-referrer';img.addEventListener('load',function(){fallback.hidden=true;});img.addEventListener('error',function(){img.hidden=true;fallback.hidden=false;fallback.textContent='외형 로드 실패';});img.src=c.image;box.appendChild(img);}else fallback.textContent=c.image?'외형 새로고침':'외형 없음';
-      return box;
+      var box=node('div','party-portrait'),fallback=node('span','',c.image?'이미지 로딩 중':'외형 미등록');box.append(fallback);
+      if(c.image&&Date.now()-c.updatedAt<30*86400000){var img=node('img');img.alt=c.name+' 캐릭터 외형';img.referrerPolicy='no-referrer';img.addEventListener('load',function(){fallback.hidden=true;});img.addEventListener('error',function(){img.hidden=true;fallback.hidden=false;fallback.textContent='외형 로드 실패';});img.src=c.image;box.append(img);}return box;
     }
     function renderPreview(){
-      var host=el('party-character-preview');host.replaceChildren();
-      if(!current){host.appendChild(node('p','party-note','캐릭터를 선택하면 현재 외형이 표시됩니다.'));return;}
-      host.append(portrait(current),node('strong','',current.name),node('p','party-note',current.world+' · Lv.'+current.level+' · '+current.job));
-      var s=snapshotFor(current),state=rateStates[current.ocid],note=node('p','party-note',state==='loading'?'환산 배율 조회 중…':state==='error'?(s?'환산 조회 실패 · 이전 조회값 유지':'환산 배율 조회 실패'):s?(s.storage==='public-json'?'공용 저장값 ':'환산 ')+s.rates.length+'개 · '+timeLabel(s.fetchedAt):'환산 배율 미조회');if(state==='error')note.classList.toggle('error',true);host.appendChild(note);
-      var link=node('a','','공용 배율 설정 · 캡처 입력');link.href='shared_boss_rates.html?'+new URLSearchParams({name:current.name});link.target='_blank';link.rel='noopener noreferrer';host.appendChild(link);
+      var host=el('party-character-preview');host.replaceChildren();if(!current){host.append(node('p','party-note','공용 배율 캐릭터를 선택하세요.'));return;}
+      var s=snapshotFor(current);host.append(portrait(current),node('strong','',current.name),node('p','party-note',current.level?current.world+' · Lv.'+current.level+' · '+current.job:'캐릭터 정보 미등록'),node('p','party-note',s?'공용 배율 '+s.rates.length+'개':'공용 배율 미등록'));
+      var link=node('a','','공용 배율 · 캐릭터 정보 설정');link.href='shared_boss_rates.html?'+new URLSearchParams({name:current.name});link.target='_blank';link.rel='noopener noreferrer';host.append(link);
     }
-    function visible(){return parties.filter(function(p){return el('party-view').value!=='mine'||p.members.some(function(m){return owned.has(m.character.ocid);});});}
+    function visible(){return parties.filter(function(p){return el('party-view').value!=='mine'||p.members.some(function(m){return owned.has(m.character.name);});});}
     function renderBoard(){
-      var list=el('party-list'),detail=el('party-detail'),shown=visible();list.replaceChildren();detail.replaceChildren();
-      if(!shown.some(function(p){return p.id===selected;}))selected=shown[0]?shown[0].id:'';
-      shown.forEach(function(p){var button=node('button'),s=summary(p.members),boss=choices.find(function(c){return c.id===p.bossId;});button.type='button';button.setAttribute('aria-pressed',String(p.id===selected));button.append(node('strong','',boss.label),node('span','',p.name),node('small','',(p.schedule||'일정 미정')+' · '+p.members.length+'/'+boss.max+'명'),node('small','',s.total.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%'+(s.missing?' + '+s.missing+'명 미입력':'')));button.addEventListener('click',function(){selected=p.id;renderBoard();});list.appendChild(button);});
-      var p=parties.find(function(item){return item.id===selected;});
-      if(!p){detail.appendChild(node('p','party-empty',el('party-view').value==='mine'?(accountLoading?'내 계정 캐릭터를 확인하는 중입니다.':'내 캐릭터가 포함된 파티가 없습니다. 계정 목록을 불러왔는지 확인하세요.'):'파티를 만들고 검색한 캐릭터를 추가하세요.'));return;}
-      var boss=choices.find(function(c){return c.id===p.bossId;}),s=summary(p.members),head=node('div','party-search-row'),add=node('button','party-primary','검색한 캐릭터 추가');add.type='button';add.disabled=!current;add.addEventListener('click',function(){
-        if(!current)return;
-        if(p.members.some(function(m){return m.character.ocid===current.ocid;})){status('이미 이 파티에 있는 캐릭터입니다.',true);return;}
-        if(p.members.length>=boss.max){status('이 보스·난이도는 최대 '+boss.max+'명까지 구성할 수 있습니다.',true);return;}
-        p.members.push(makeMember(current,p.bossId));persist();renderBoard();status(current.name+' 캐릭터를 파티에 추가했습니다.');
-      });head.append(node('h3','',boss.label+' · '+p.name),add);detail.appendChild(head);
-      var total=node('div','party-total'),values=node('div');values.append(node('p','party-note',p.members.some(function(m){return m.rateMode==='manual';})?'환산 / 직접 입력 배율 합계':'개인 환산 배율 합계'),node('output','',s.total.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%'));if(s.missing)values.appendChild(node('p','party-note',s.missing+'명 미조회·미입력 · 부분 합계'));total.append(values,node('span','party-note',p.schedule||'일정 미정'));detail.appendChild(total);
-      detail.appendChild(node('p','party-note','환산 기본 프리셋 · 보스 시간 20분 · 데스티니/유챔 확인 켬'));
-      if(!p.members.length)detail.appendChild(node('p','party-empty','캐릭터를 검색한 뒤 위 버튼으로 추가하세요.'));
-      p.members.forEach(function(m){var row=node('div','party-member'),info=node('div'),label=node('label'),input=node('input'),remove=node('button','','빼기');
-        info.append(node('strong','',m.character.name),node('p','',m.character.world+' · '+m.character.job));
-        var state=rateStates[m.character.ocid],snap=snapshotFor(m.character),sourceRow=snap&&snap.rates.find(function(r){return r.bossId===p.bossId;}),sourceLabel=m.rateMode==='manual'?'직접 입력':state==='loading'?'환산 조회 중':state==='error'?'조회 실패'+(m.rate===null?' · 미조회':' · 이전 값'):snap&&!sourceRow?'환산 미제공 보스·난이도':m.rateUpdatedAt?'환산 '+timeLabel(m.rateUpdatedAt):'환산 미조회';if(m.rateMode!=='manual'&&sourceRow&&sourceRow.eligibility)sourceLabel+=' · '+sourceRow.eligibility;info.appendChild(node('p','party-rate-source',sourceLabel));
-        label.append(node('output','',m.rate===null?'미등록':m.rate.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%'));var manage=node('a','','공용 배율 설정');manage.href='shared_boss_rates.html?'+new URLSearchParams({name:m.character.name});manage.target='_blank';manage.rel='noopener noreferrer';info.appendChild(manage);
-        remove.type='button';remove.setAttribute('aria-label',m.character.name+' 파티에서 빼기');remove.addEventListener('click',function(){p.members=p.members.filter(function(item){return item!==m;});persist();renderBoard();});row.append(portrait(m.character),info,label,remove);detail.appendChild(row);
+      var list=el('party-list'),detail=el('party-detail'),shown=visible();list.replaceChildren();detail.replaceChildren();if(!shown.some(function(p){return p.id===selected;}))selected=shown[0]?shown[0].id:'';
+      shown.forEach(function(p){var button=node('button'),sum=summary(p.members),boss=choices.find(function(c){return c.id===p.bossId;});button.type='button';button.setAttribute('aria-pressed',String(p.id===selected));var heading=node('strong');heading.append(visual.create(doc,p.bossId,win.MapleBossDB));button.append(heading,node('span','',p.name),node('small','',(p.schedule||'일정 미정')+' · '+p.members.length+'/'+boss.max+'명'),node('small','',sum.total.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%'+(sum.missing?' · '+sum.missing+'명 미등록':'')));button.addEventListener('click',function(){selected=p.id;candidates();renderBoard();});list.append(button);});
+      var p=parties.find(function(item){return item.id===selected;});if(!p){detail.append(node('p','party-empty',el('party-view').value==='mine'?'내 캐릭터가 있는 파티가 없습니다.':'파티를 만들고 공용 캐릭터를 추가하세요.'));return;}
+      var boss=choices.find(function(c){return c.id===p.bossId;}),sum=summary(p.members),head=node('div','party-search-row'),add=node('button','party-primary','선택한 캐릭터 추가');add.type='button';add.disabled=!current||!snapshotFor(current)||!snapshotFor(current).rates.some(function(r){return r.bossId===p.bossId;});
+      add.addEventListener('click',function(){if(!current)return;if(p.members.some(function(m){return m.character.name===current.name;})){status('이미 이 파티에 있는 캐릭터입니다.',true);return;}if(p.members.length>=boss.max){status('최대 '+boss.max+'명까지 구성할 수 있습니다.',true);return;}p.members.push(makeMember(current,p.bossId));persist();renderBoard();status(current.name+' 캐릭터를 추가했습니다.');});
+      var title=node('h3');title.append(visual.create(doc,p.bossId,win.MapleBossDB),node('span','',p.name));head.append(title,add);detail.append(head);
+      var total=node('div','party-total'),values=node('div');values.append(node('p','party-note','개인 환산 배율 합계'),node('output','',sum.total.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%'));if(sum.missing)values.append(node('p','party-note',sum.missing+'명 배율 미등록 · 부분 합계'));total.append(values,node('span','party-note',p.schedule||'일정 미정'));detail.append(total);
+      p.members.forEach(function(m){var row=node('div','party-member'),info=node('div'),remove=node('button','','빼기');info.append(node('strong','',m.character.name),node('p','',m.character.level?m.character.world+' · Lv.'+m.character.level+' · '+m.character.job:'캐릭터 정보 미등록'),node('p','party-rate-source',m.rateUpdatedAt?'공용 저장 배율':'이전 저장값'));
+        var manage=node('a','','공용 배율 설정');manage.href='shared_boss_rates.html?'+new URLSearchParams({name:m.character.name});manage.target='_blank';manage.rel='noopener noreferrer';info.append(manage);
+        remove.type='button';remove.setAttribute('aria-label',m.character.name+' 파티에서 빼기');remove.addEventListener('click',function(){p.members=p.members.filter(function(item){return item!==m;});persist();renderBoard();});row.append(portrait(m.character),info,node('output','',m.rate===null?'미등록':m.rate.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%'),remove);detail.append(row);
       });
     }
-    async function loadScouter(c,version,signal){
-      if(signal&&signal.aborted||rateStates[c.ocid]==='loading')return;rateStates[c.ocid]='loading';renderPreview();renderBoard();
-      try{var snapshot=await multiplierApi.load(c.name,signal);if(version!==profileVersion||!current||current.ocid!==c.ocid)return;snapshots[c.ocid]=snapshot;applySnapshot(parties,c.ocid,snapshot,true);rateStates[c.ocid]='ready';persist();status(c.name+' 공용 저장 배율 '+snapshot.rates.length+'개를 반영했습니다. 조회 시각: '+timeLabel(snapshot.fetchedAt));}
-      catch(e){if(version!==profileVersion||e.name==='AbortError')return;rateStates[c.ocid]='error';status(e.message==='RATE_NOT_SAVED'?'이 캐릭터의 공용 배율이 없거나 30일 이상 지났습니다. ‘공용 배율 설정’에서 저장하세요.':'공용 배율을 읽지 못했습니다. 연결을 확인하세요. 기존 배율은 유지됩니다.',true);}
-      finally{if(version===profileVersion){renderPreview();renderBoard();}}
+    async function choose(name){
+      var snap=scouter.findShared(shared,name,'00000');if(!snap){status('공용 환산 배율에서 먼저 캐릭터를 등록하세요.',true);return;}
+      var version=++profileVersion;if(controller)controller.abort();controller=new AbortController();
+      var publicInfo=profiles.fresh(snap.character,name);current=publicInfo?{...publicInfo,ocid:'shared:'+name}:{ocid:'shared:'+name,name:name,world:'',job:'',level:0,image:'',updatedAt:0};
+      el('party-saved-character').value=name;el('party-character-name').value=name;renderPreview();renderBoard();status(name+' 공용 배율을 선택했습니다.');
+      if(!publicInfo&&win.NexonKey&&win.NexonKey.has()){
+        try{var info=await profileApi.load(name,controller.signal);if(version!==profileVersion)return;current={...info,ocid:'shared:'+name};parties.forEach(function(p){p.members.forEach(function(m){if(m.character.name===name)m.character={...info,ocid:m.character.ocid};});});persist();renderPreview();renderBoard();}catch(e){if(version!==profileVersion||e.name==='AbortError')return;status(name+' 배율을 선택했습니다. 캐릭터 정보는 공용 배율 관리에서 등록할 수 있습니다.');}
+      }
     }
-    async function search(target){
-      if(current&&rateStates[current.ocid]==='loading')delete rateStates[current.ocid];
-      if(profileController)profileController.abort();profileController=new AbortController();var signal=profileController.signal,version=++profileVersion;current=null;renderPreview();renderBoard();status('캐릭터 외형을 불러오는 중…');el('party-search-button').disabled=true;
-      try{var c=await api.load(target,signal);if(version!==profileVersion)return;current=c;el('party-character-name').value=c.name;
-        parties.forEach(function(p){p.members.forEach(function(m){if(m.character.ocid===c.ocid)m.character=Object.assign({},c);});});persist();renderPreview();renderBoard();await loadScouter(c,version,signal);
-      }catch(e){if(version!==profileVersion||e.name==='AbortError')return;var msg=e.message==='API_KEY_REQUIRED'?'홈에서 넥슨 Open API 키를 등록하세요.':e.code==='OPENAPI00005'?'API 키가 유효하지 않습니다. 홈에서 키를 확인하세요.':e.code==='OPENAPI00007'?'API 호출 한도를 초과했습니다. 잠시 후 다시 검색하세요.':'캐릭터를 불러오지 못했습니다. 닉네임·API 키·네트워크를 확인하세요.';status(msg,true);
-      }finally{if(version===profileVersion)el('party-search-button').disabled=false;}
-    }
-    async function loadAccount(){
-      if(accountController)accountController.abort();accountController=new AbortController();var signal=accountController.signal,version=++accountVersion;
-      owned=new Set();accountLoading=true;var select=el('party-my-character');select.replaceChildren(node('option','','계정 캐릭터를 불러오는 중…'));select.disabled=true;renderBoard();
-      var has=win.NexonKey&&win.NexonKey.has();el('party-key-state').replaceChildren(doc.createTextNode(has?'홈에 등록한 API 키를 사용합니다. ':'API 키가 필요합니다. '));var link=node('a','',has?'키 변경':'홈에서 API 키 등록');link.href='index.html#apiKey';el('party-key-state').appendChild(link);
-      try{var chars=await win.NexonCharacters.fetch({signal:signal});if(version!==accountVersion)return;select.replaceChildren();var placeholder=node('option','','내 캐릭터 선택');placeholder.value='';select.appendChild(placeholder);
-        chars.forEach(function(c){owned.add(c.ocid);var option=node('option','',c.world+' · '+c.name+' · Lv.'+c.level);option.value=c.ocid;option.dataset.name=c.name;select.appendChild(option);});select.disabled=!chars.length;
-        if(!chars.length)status('이 계정에서 조회할 수 있는 캐릭터가 없습니다.');
-        if(!current&&chars[0]){select.value=chars[0].ocid;search({ocid:chars[0].ocid});}
-      }catch(e){if(version!==accountVersion||e.name==='AbortError')return;select.replaceChildren(node('option','','계정 목록 조회 불가 · 닉네임 검색 가능'));if(has)status('계정 목록을 불러오지 못했습니다. 닉네임 검색은 계속 사용할 수 있습니다.',true);
-      }finally{if(version===accountVersion){accountLoading=false;renderBoard();}}
-    }
-    choices.forEach(function(c){var option=node('option','',c.label+' · 최대 '+c.max+'명');option.value=c.id;el('party-boss').appendChild(option);});
-    el('party-search-form').addEventListener('submit',function(e){e.preventDefault();var name=el('party-character-name').value.trim();if(name)search({name:name});});
-    el('party-my-character').addEventListener('change',function(){if(this.value)search({ocid:this.value});});
-    el('party-reload-account').addEventListener('click',loadAccount);
-    el('party-view').addEventListener('change',renderBoard);
-    el('party-create-toggle').addEventListener('click',function(){var form=el('party-create-form');form.hidden=!form.hidden;this.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)el('party-name').focus();});
-    el('party-create-form').addEventListener('submit',function(e){e.preventDefault();if(parties.length>=200){status('이 브라우저에는 최대 200개 파티를 저장할 수 있습니다.',true);return;}
-      var p={id:win.crypto.randomUUID(),name:text(el('party-name').value,60),bossId:el('party-boss').value,schedule:text(el('party-schedule').value,80),members:current?[makeMember(current,el('party-boss').value)]:[]};
-      if(!p.name||!choices.some(function(c){return c.id===p.bossId;}))return;parties.push(p);selected=p.id;el('party-view').value='all';persist();renderBoard();e.target.reset();e.target.hidden=true;el('party-create-toggle').setAttribute('aria-expanded','false');
-    });
-    function keyChanged(){profileVersion++;if(profileController)profileController.abort();current=null;rateStates=Object.create(null);el('party-search-button').disabled=false;renderPreview();status('');loadAccount();}
-    win.addEventListener('nexon-key-changed',keyChanged);
     async function syncSaved(){
-      var request=++syncVersion,version=profileVersion;
-      try{var response=await win.fetch('/api/boss-rates',{cache:'no-store'});if(!response.ok)return;var saved=await response.json();if(request!==syncVersion||version!==profileVersion)return;var chars=new Map();parties.forEach(function(p){p.members.forEach(function(m){chars.set(m.character.ocid,m.character);});});if(current)chars.set(current.ocid,current);chars.forEach(function(c){var s=scouter.findShared(saved,c.name,'00000');if(s){snapshots[c.ocid]=s;applySnapshot(parties,c.ocid,s,true);rateStates[c.ocid]='ready';}});persist();renderBoard();renderPreview();}catch(e){}
+      var request=++syncVersion;
+      try{var response=await win.fetch('/api/boss-rates',{cache:'no-store'});if(!response.ok)throw new Error();var store=await response.json();if(request!==syncVersion)return;if(store.schemaVersion!==1||!Array.isArray(store.snapshots))throw new Error();shared=store;
+        parties.forEach(function(p){p.members.forEach(function(m){var snap=snapshotFor(m.character);if(!snap)return;var info=profiles.fresh(snap.character,m.character.name);if(info)m.character={...info,ocid:m.character.ocid};applySnapshot([p],m.character.ocid,snap,true);});});
+        if(current){var s=snapshotFor(current),info=s&&profiles.fresh(s.character,current.name);if(info)current={...info,ocid:current.ocid};}
+        persist();renderBoard();candidates();renderBoard();
+      }catch(e){if(request===syncVersion)status('공용 캐릭터 목록을 불러오지 못했습니다. 기존 파티는 유지됩니다.',true);}
     }
-    win.addEventListener('storage',function(e){if(win.NexonKey&&e.key===win.NexonKey.STORAGE_KEY)keyChanged();else if(e.key==='sharedBossRates.changed')syncSaved();});
-    win.addEventListener('focus',syncSaved);
-    if(win.setInterval)win.setInterval(function(){if(!doc.hidden)syncSaved();},30000);
-    renderBoard();loadAccount();syncSaved();
+    async function loadMine(){
+      owned.clear();if(!win.NexonKey||!win.NexonKey.has()){status('내 캐릭터 필터는 홈에서 API 키를 등록하면 사용할 수 있습니다.',true);return;}
+      try{var chars=await win.NexonCharacters.fetch();chars.forEach(function(c){owned.add(c.name);});renderBoard();candidates();}catch(e){status('내 계정 확인에 실패했습니다. 공용 캐릭터 선택은 계속 사용할 수 있습니다.',true);}
+    }
+    var supported=new Set(win.RateCatalog.choices(win.MapleBossDB).map(function(c){return c.id;}));choices.filter(function(c){return supported.has(c.id);}).forEach(function(c){var option=node('option','',c.label+' · 최대 '+c.max+'명');option.value=c.id;el('party-boss').append(option);});
+    if(el('party-boss').options)visual.picker(doc,el('party-boss'),win.MapleBossDB);
+    el('party-search-form').addEventListener('submit',function(e){e.preventDefault();var name=el('party-character-name').value.trim();if(available().some(function(s){return s.characterName===name;}))choose(name);else status('선택한 보스의 공용 배율이 없는 캐릭터입니다. 공용 환산 배율에서 등록하세요.',true);});
+    el('party-saved-character').addEventListener('change',function(){if(this.value)choose(this.value);else{profileVersion++;if(controller)controller.abort();current=null;renderPreview();renderBoard();}});
+    el('party-reload-catalog').addEventListener('click',syncSaved);el('party-boss').addEventListener('change',function(){candidates();renderBoard();});
+    el('party-view').addEventListener('change',function(){if(this.value==='mine')loadMine();renderBoard();candidates();});
+    el('party-create-toggle').addEventListener('click',function(){var form=el('party-create-form');form.hidden=!form.hidden;this.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)el('party-name').focus();candidates();renderBoard();});
+    el('party-create-form').addEventListener('submit',function(e){e.preventDefault();if(parties.length>=200){status('최대 200개 파티를 저장할 수 있습니다.',true);return;}
+      var bossId=el('party-boss').value,snap=current&&snapshotFor(current),p={id:win.crypto.randomUUID(),name:text(el('party-name').value,60),bossId:bossId,schedule:text(el('party-schedule').value,80),members:snap&&snap.rates.some(function(r){return r.bossId===bossId;})?[makeMember(current,bossId)]:[]};
+      if(!p.name||!choices.some(function(c){return c.id===p.bossId;}))return;parties.push(p);selected=p.id;el('party-view').value='all';persist();e.target.reset();e.target.hidden=true;el('party-create-toggle').setAttribute('aria-expanded','false');renderBoard();candidates();renderBoard();
+    });
+    el('party-key-state').replaceChildren(node('span','','내 계정과 관계없이 공용 배율에 등록된 캐릭터를 선택합니다. '));var register=node('a','','캐릭터 등록 · 배율 설정');register.href='shared_boss_rates.html';el('party-key-state').append(register);
+    win.addEventListener('nexon-key-changed',function(){profileVersion++;if(controller)controller.abort();if(current)choose(current.name);if(el('party-view').value==='mine')loadMine();});
+    win.addEventListener('storage',function(e){if(e.key==='sharedBossRates.changed')syncSaved();});win.addEventListener('focus',syncSaved);if(win.setInterval)win.setInterval(function(){if(!doc.hidden)syncSaved();},30000);
+    renderBoard();renderPreview();syncSaved();
   }
   return {imageUrl:imageUrl,profile:profile,summary:summary,catalog:catalog,restore:restore,client:client,scouterClient:scouterClient,applySnapshot:applySnapshot,mount:mount};
 });
