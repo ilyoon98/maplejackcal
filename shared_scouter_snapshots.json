@@ -1,0 +1,584 @@
+{
+  "schemaVersion": 1,
+  "snapshots": [
+    {
+      "schemaVersion": 1,
+      "characterName": "토끼털쇼타",
+      "preset": "00000",
+      "sourceUrl": "https://maplescouter.com/ko/result?name=%ED%86%A0%EB%81%BC%ED%84%B8%EC%87%BC%ED%83%80&preset=00000",
+      "fetchedAt": "2026-11-06T15:34:35.183Z",
+      "conditions": {
+        "view": "all",
+        "bossTimeMinutes": 20,
+        "destinyChampion": true,
+        "simulation": false
+      },
+      "rates": [
+        {
+          "bossId": "Baldrix|Extreme",
+          "percent": 0,
+          "eligibility": "입장 불가능"
+        },
+        {
+          "bossId": "Limbo|Extreme",
+          "percent": 0,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "Jupiter|Hard",
+          "percent": 0,
+          "eligibility": "입장 불가능"
+        },
+        {
+          "bossId": "Kaling|Extreme",
+          "percent": 1.16,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "TheFirstAdversary|Extreme",
+          "percent": 1.74,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "KalosTheGuardian|Extreme",
+          "percent": 3.66,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "Baldrix|Hard",
+          "percent": 0.2,
+          "eligibility": "입장 불가능"
+        },
+        {
+          "bossId": "Bellona|Hard",
+          "percent": 0.31,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "Limbo|Hard",
+          "percent": 2.13,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "RadiantMalefic|Hard",
+          "percent": 0.41,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "Jupiter|Normal",
+          "percent": 0.3,
+          "eligibility": "입장 불가능"
+        },
+        {
+          "bossId": "TheFirstAdversary|Hard",
+          "percent": 12.87,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "Baldrix|Normal",
+          "percent": 0.44,
+          "eligibility": "입장 불가능"
+        },
+        {
+          "bossId": "Kaling|Hard",
+          "percent": 13.37,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "ChosenSeren|Extreme",
+          "percent": 15.39,
+          "eligibility": "파티 최소컷"
+        },
+        {
+          "bossId": "BlackMage|Extreme",
+          "percent": 18.96,
+          "eligibility": "파티 최소컷"
+        },
+        {
+          "bossId": "Limbo|Normal",
+          "percent": 4.23,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "KalosTheGuardian|Chaos",
+          "percent": 20.91,
+          "eligibility": "파티 최소컷"
+        },
+        {
+          "bossId": "Bellona|Normal",
+          "percent": 17.02,
+          "eligibility": "불가능"
+        },
+        {
+          "bossId": "Kaling|Normal",
+          "percent": 39.25,
+          "eligibility": "파티격 가능"
+        },
+        {
+          "bossId": "RadiantMalefic|Normal",
+          "percent": 42.26,
+          "eligibility": "파티격 가능"
+        },
+        {
+          "bossId": "Lotus|Extreme",
+          "percent": 49.68,
+          "eligibility": "파티 최소컷"
+        },
+        {
+          "bossId": "TheFirstAdversary|Normal",
+          "percent": 89.58,
+          "eligibility": "파티격 가능"
+        },
+        {
+          "bossId": "KalosTheGuardian|Normal",
+          "percent": 109,
+          "eligibility": "솔플 최소컷"
+        },
+        {
+          "bossId": "Bellona|Easy",
+          "percent": 129.5,
+          "eligibility": "솔플 가능"
+        },
+        {
+          "bossId": "Kaling|Easy",
+          "percent": 166,
+          "eligibility": "솔플 가능"
+        },
+        {
+          "bossId": "ChosenSeren|Hard",
+          "percent": 195.5,
+          "eligibility": "솔플 가능"
+        },
+        {
+          "bossId": "TheFirstAdversary|Easy",
+          "percent": 258.9,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "KalosTheGuardian|Easy",
+          "percent": 318.6,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "BlackMage|Hard",
+          "percent": 397.3,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "ChosenSeren|Normal",
+          "percent": 455.7,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "VerusHilla|Hard",
+          "percent": 770.5,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Dunkel|Hard",
+          "percent": 881,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Dusk|Chaos",
+          "percent": 928.4,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "GuardianAngelSlime|Chaos",
+          "percent": 767.2,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Will|Hard",
+          "percent": 1103,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Lucid|Hard",
+          "percent": 519.8,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "VerusHilla|Normal",
+          "percent": 1541,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Damien|Hard",
+          "percent": 2120,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Lotus|Hard",
+          "percent": 2831,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Dunkel|Normal",
+          "percent": 5550,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Dusk|Normal",
+          "percent": 4642,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Lucid|Normal",
+          "percent": 5780,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Will|Normal",
+          "percent": 5514,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Will|Easy",
+          "percent": 8272,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Lucid|Easy",
+          "percent": 9966,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "GuardianAngelSlime|Normal",
+          "percent": 13810,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Lotus|Normal",
+          "percent": 60413,
+          "eligibility": "솔플 여유컷"
+        },
+        {
+          "bossId": "Damien|Normal",
+          "percent": 63599,
+          "eligibility": "솔플 여유컷"
+        }
+      ],
+      "storage": "public-json",
+      "captureMethod": "browser-dom",
+      "observedPageTime": "2026-11-07T00:32:51+09:00",
+      "rowCount": 60,
+      "unmapped": [
+        "/bossIcon/destiny_bardrix.png",
+        "/bossIcon/destiny_limbo.png",
+        "/bossIcon/destiny_adversary.png",
+        "/bossIcon/destiny_kaling.png",
+        "/bossIcon/destiny_kalos.png",
+        "/bossIcon/destiny_seren.png",
+        "/bossIcon/champion_kalos.png",
+        "/bossIcon/champion_seren.png",
+        "/bossIcon/champion_blackMage.png",
+        "/bossIcon/champion_verusHilla.png",
+        "/bossIcon/champion_lotus.png"
+      ],
+      "sourceRows": [
+        [
+          "/bossIcon/extreme_bardrix.png",
+          0,
+          "입장 불가능"
+        ],
+        [
+          "/bossIcon/extreme_limbo.png",
+          0,
+          "불가능"
+        ],
+        [
+          "/bossIcon/hard_jupiter.png",
+          0,
+          "입장 불가능"
+        ],
+        [
+          "/bossIcon/extreme_kaling.png",
+          1.16,
+          "불가능"
+        ],
+        [
+          "/bossIcon/extreme_adversary.png",
+          1.74,
+          "불가능"
+        ],
+        [
+          "/bossIcon/extreme_kalos.png",
+          3.66,
+          "불가능"
+        ],
+        [
+          "/bossIcon/destiny_bardrix.png",
+          0.2,
+          "입장 불가능"
+        ],
+        [
+          "/bossIcon/hard_bardrix.png",
+          0.2,
+          "입장 불가능"
+        ],
+        [
+          "/bossIcon/hard_bellona.png",
+          0.31,
+          "불가능"
+        ],
+        [
+          "/bossIcon/destiny_limbo.png",
+          2.13,
+          "불가능"
+        ],
+        [
+          "/bossIcon/hard_limbo.png",
+          2.13,
+          "불가능"
+        ],
+        [
+          "/bossIcon/hard_maleficStar.png",
+          0.41,
+          "불가능"
+        ],
+        [
+          "/bossIcon/normal_jupiter.png",
+          0.3,
+          "입장 불가능"
+        ],
+        [
+          "/bossIcon/destiny_adversary.png",
+          10.29,
+          "불가능"
+        ],
+        [
+          "/bossIcon/hard_adversary.png",
+          12.87,
+          "불가능"
+        ],
+        [
+          "/bossIcon/normal_bardrix.png",
+          0.44,
+          "입장 불가능"
+        ],
+        [
+          "/bossIcon/hard_kaling.png",
+          13.37,
+          "불가능"
+        ],
+        [
+          "/bossIcon/extreme_seren.png",
+          15.39,
+          "파티 최소컷"
+        ],
+        [
+          "/bossIcon/extreme_blackMage.png",
+          18.96,
+          "파티 최소컷"
+        ],
+        [
+          "/bossIcon/destiny_kaling.png",
+          16.05,
+          "불가능"
+        ],
+        [
+          "/bossIcon/normal_limbo.png",
+          4.23,
+          "불가능"
+        ],
+        [
+          "/bossIcon/destiny_kalos.png",
+          20.91,
+          "불가능"
+        ],
+        [
+          "/bossIcon/chaos_kalos.png",
+          20.91,
+          "파티 최소컷"
+        ],
+        [
+          "/bossIcon/normal_bellona.png",
+          17.02,
+          "불가능"
+        ],
+        [
+          "/bossIcon/destiny_seren.png",
+          38.97,
+          "불가능"
+        ],
+        [
+          "/bossIcon/normal_kaling.png",
+          39.25,
+          "파티격 가능"
+        ],
+        [
+          "/bossIcon/normal_maleficStar.png",
+          42.26,
+          "파티격 가능"
+        ],
+        [
+          "/bossIcon/extreme_lotus.png",
+          49.68,
+          "파티 최소컷"
+        ],
+        [
+          "/bossIcon/champion_kalos.png",
+          76.27,
+          "불가능"
+        ],
+        [
+          "/bossIcon/normal_adversary.png",
+          89.58,
+          "파티격 가능"
+        ],
+        [
+          "/bossIcon/normal_kalos.png",
+          109,
+          "솔플 최소컷"
+        ],
+        [
+          "/bossIcon/easy_bellona.png",
+          129.5,
+          "솔플 가능"
+        ],
+        [
+          "/bossIcon/champion_seren.png",
+          136.4,
+          "솔플 가능"
+        ],
+        [
+          "/bossIcon/easy_kaling.png",
+          166,
+          "솔플 가능"
+        ],
+        [
+          "/bossIcon/hard_seren.png",
+          195.5,
+          "솔플 가능"
+        ],
+        [
+          "/bossIcon/easy_adversary.png",
+          258.9,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/champion_blackMage.png",
+          295.1,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/easy_kalos.png",
+          318.6,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/hard_blackMage.png",
+          397.3,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/normal_seren.png",
+          455.7,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/champion_verusHilla.png",
+          539.4,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/hard_verusHilla.png",
+          770.5,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/hard_darknell.png",
+          881,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/chaos_gloom.png",
+          928.4,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/chaos_slime.png",
+          767.2,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/hard_will.png",
+          1103,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/hard_lucid.png",
+          519.8,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/normal_verusHilla.png",
+          1541,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/champion_lotus.png",
+          1982,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/hard_damien.png",
+          2120,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/hard_lotus.png",
+          2831,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/normal_darknell.png",
+          5550,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/normal_gloom.png",
+          4642,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/normal_lucid.png",
+          5780,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/normal_will.png",
+          5514,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/easy_will.png",
+          8272,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/easy_lucid.png",
+          9966,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/normal_slime.png",
+          13810,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/normal_lotus.png",
+          60413,
+          "솔플 여유컷"
+        ],
+        [
+          "/bossIcon/normal_damien.png",
+          63599,
+          "솔플 여유컷"
+        ]
+      ]
+    }
+  ]
+}

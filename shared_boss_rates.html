@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>공용 환산 배율</title>
+  <link rel="icon" href="favicon.png?v=2">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .shared-wrap{max-width:1000px}.shared-wrap a{color:var(--accent)}.shared-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;margin-top:20px}.shared-panel h2{margin:14px 0 6px}.shared-meta{color:var(--text-dim);font-size:.88rem;line-height:1.8}.shared-panel select{max-width:100%;min-width:210px;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px}.shared-table{width:100%;border-collapse:collapse;margin-top:20px}.shared-table th,.shared-table td{text-align:left;padding:12px 8px;border-bottom:1px solid var(--border);overflow-wrap:anywhere}.shared-table th{color:var(--text-dim);font-size:.8rem}.shared-table td:nth-child(2),.shared-table th:nth-child(2){text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.shared-table td:nth-child(3){font-size:.84rem;color:var(--text-dim)}.shared-panel :focus-visible{outline:2px solid var(--accent);outline-offset:3px}[hidden]{display:none!important}@media(max-width:520px){.shared-panel{padding:14px}.shared-table th,.shared-table td{padding:10px 5px;font-size:.82rem}}
+  </style>
+  <script src="boss_db.js" defer></script>
+  <script src="scouter_data.js" defer></script>
+  <script src="shared_boss_rates.js" defer></script>
+</head>
+<body>
+<main class="wrap shared-wrap">
+  <header><a href="index.html">메이플 계산기 모음</a><h1>공용 환산 배율</h1><p class="sub">실제 확인해 저장한 배율을 로그인·API 키 없이 볼 수 있습니다.</p></header>
+  <section class="shared-panel" aria-labelledby="shared-name">
+    <label for="shared-character">저장된 캐릭터</label>
+    <select id="shared-character" disabled><option>불러오는 중…</option></select>
+    <h2 id="shared-name">공용 저장값</h2>
+    <p id="shared-status" class="shared-meta" role="status" aria-live="polite">저장된 배율을 불러오는 중입니다.</p>
+    <p id="shared-conditions" class="shared-meta"></p>
+    <a id="shared-source" hidden target="_blank" rel="noopener noreferrer">환산 원본 보기</a>
+    <table class="shared-table" id="shared-table" hidden>
+      <thead><tr><th scope="col">보스 · 난이도</th><th scope="col">배율</th><th scope="col">환산 표시</th></tr></thead>
+      <tbody id="shared-rows"></tbody>
+    </table>
+    <p class="shared-meta">조회 시점의 저장값이며 실시간 갱신값은 아닙니다. 파티에서는 같은 보스·난이도의 개인 배율을 합산합니다.</p>
+  </section>
+</main>
+</body>
+</html>
