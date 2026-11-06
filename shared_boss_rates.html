@@ -1,34 +1,36 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>공용 환산 배율</title>
-  <link rel="icon" href="favicon.png?v=2">
-  <link rel="stylesheet" href="style.css">
-  <style>
-    .shared-wrap{max-width:1000px}.shared-wrap a{color:var(--accent)}.shared-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;margin-top:20px}.shared-panel h2{margin:14px 0 6px}.shared-meta{color:var(--text-dim);font-size:.88rem;line-height:1.8}.shared-panel select{max-width:100%;min-width:210px;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px}.shared-table{width:100%;border-collapse:collapse;margin-top:20px}.shared-table th,.shared-table td{text-align:left;padding:12px 8px;border-bottom:1px solid var(--border);overflow-wrap:anywhere}.shared-table th{color:var(--text-dim);font-size:.8rem}.shared-table td:nth-child(2),.shared-table th:nth-child(2){text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.shared-table td:nth-child(3){font-size:.84rem;color:var(--text-dim)}.shared-panel :focus-visible{outline:2px solid var(--accent);outline-offset:3px}[hidden]{display:none!important}@media(max-width:520px){.shared-panel{padding:14px}.shared-table th,.shared-table td{padding:10px 5px;font-size:.82rem}}
-  </style>
-  <script src="boss_db.js" defer></script>
-  <script src="scouter_data.js" defer></script>
-  <script src="shared_boss_rates.js" defer></script>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>공용 환산 배율</title><link rel="icon" href="favicon.png?v=2">
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="site_ux.css"><link rel="stylesheet" href="shared_boss_rates.css">
+  <script src="site_header.js" defer></script><script src="site_nav.js" defer></script><script src="site_ux.js" defer></script>
+  <script src="boss_db.js" defer></script><script src="scouter_data.js" defer></script><script src="rate_catalog.js" defer></script>
+  <script src="boss_shot_reader.js" defer></script><script src="shared_boss_rates.js" defer></script>
 </head>
-<body>
-<main class="wrap shared-wrap">
-  <header><a href="index.html">메이플 계산기 모음</a> · <a href="party_boss_scheduler.html">파티 구성하기</a><h1>공용 환산 배율</h1><p class="sub">실제 확인해 저장한 배율을 로그인·API 키 없이 볼 수 있습니다.</p></header>
-  <section class="shared-panel" aria-labelledby="shared-name">
-    <label for="shared-character">저장된 캐릭터</label>
-    <select id="shared-character" disabled><option>불러오는 중…</option></select>
-    <h2 id="shared-name">공용 저장값</h2>
-    <p id="shared-status" class="shared-meta" role="status" aria-live="polite">저장된 배율을 불러오는 중입니다.</p>
-    <p id="shared-conditions" class="shared-meta"></p>
-    <a id="shared-source" hidden target="_blank" rel="noopener noreferrer">환산 원본 보기</a>
-    <table class="shared-table" id="shared-table" hidden>
-      <thead><tr><th scope="col">보스 · 난이도</th><th scope="col">배율</th><th scope="col">환산 표시</th></tr></thead>
-      <tbody id="shared-rows"></tbody>
-    </table>
-    <p class="shared-meta">조회 시점의 저장값이며 실시간 갱신값은 아닙니다. 파티에서는 같은 보스·난이도의 개인 배율을 합산합니다.</p>
+<body><main class="wrap shared-wrap">
+  <div data-site-navigation></div>
+  <header><h1>공용 환산 배율</h1><p class="sub">캐릭터별 배율을 저장하면 파티에서 같은 보스·난이도로 합산합니다.</p></header>
+  <p id="shared-connection" class="shared-meta" role="status">공용 저장소 확인 중…</p>
+  <section class="shared-panel" aria-labelledby="shared-editor-title">
+    <h2 id="shared-editor-title">캐릭터 배율 설정</h2>
+    <div class="shared-actions"><label>저장된 캐릭터<select id="shared-character"><option value="">새 캐릭터</option></select></label><button id="shared-refresh" type="button">목록 새로고침</button></div>
+    <form id="shared-open" class="shared-actions"><label>닉네임<input id="shared-nickname" maxlength="30" placeholder="예: 토끼털쇼타" required></label><button type="submit">캐릭터 열기</button></form>
+    <h3 id="shared-name">캐릭터를 선택하세요</h3>
+    <div class="shared-actions"><button id="shared-fetch" type="button" disabled>환산 배율 불러오기</button><a id="shared-source" hidden target="_blank" rel="noopener noreferrer">환산 원본 보기</a><a href="party_boss_scheduler.html">파티 구성하기</a></div>
+    <p id="shared-status" class="shared-meta" role="status" aria-live="polite"></p>
+    <p id="shared-conditions" class="shared-meta">기본 프리셋 00000 · 보스 시간 20분 · 데스티니/유챔 확인 켬 · 추가 스펙 시뮬레이터 끔</p>
+    <details id="shared-capture"><summary>환산 캡처로 배율 입력</summary>
+      <p class="shared-meta">환산의 ‘전체 보기’에서 위 조건으로 캡처하세요. 닉네임은 위에서 지정합니다. 이미지는 기기에서만 분석하며 서버에 올리지 않습니다.</p>
+      <div id="shared-drop" class="shared-drop" tabindex="0"><label>이미지 선택<input id="shared-image" type="file" accept="image/png,image/jpeg,image/webp"></label><p>이미지를 여기에 끌어놓거나, 이 영역을 누른 뒤 Ctrl+V로 붙여넣으세요.</p></div>
+      <p id="shared-shot-status" class="shared-meta" role="status"></p>
+      <div class="shared-scroll"><table id="shared-review-table" hidden><thead><tr><th>반영</th><th>캡처</th><th>보스 · 난이도</th><th>배율 %</th><th>확인</th></tr></thead><tbody id="shared-review"></tbody></table></div>
+      <button id="shared-apply-shot" type="button" hidden>선택한 배율 반영</button>
+    </details>
+    <div class="shared-scroll"><table id="shared-table" hidden><thead><tr><th>보스 · 난이도</th><th>배율 %</th><th>환산 표시</th><th>편집</th></tr></thead><tbody id="shared-rows"></tbody></table></div>
+    <div class="shared-actions"><select id="shared-add-boss" aria-label="추가할 보스와 난이도"></select><button id="shared-add" type="button" disabled>배율 추가</button></div>
+    <label class="shared-confirm"><input id="shared-confirm" type="checkbox"> 위 계산 조건과 배율을 확인했습니다.</label>
+    <label id="shared-pin-label" hidden>기록 비밀번호<input id="shared-pin" type="password" autocomplete="current-password"></label>
+    <div class="shared-actions"><button id="shared-save" type="button" disabled>공용으로 저장</button><span id="shared-save-state" class="shared-meta">수정한 뒤 공용으로 저장하세요.</span></div>
   </section>
-</main>
-</body>
-</html>
+</main></body></html>

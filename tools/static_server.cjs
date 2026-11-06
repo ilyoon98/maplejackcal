@@ -15,8 +15,8 @@ const types = {
 http.createServer((req, res) => {
   let rel;
   try { rel = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch (e) { res.writeHead(400).end(); return; }
-  if (rel === '/api/scouter') {
-    Promise.resolve(require('../api/scouter.js')(req, res)).catch(() => {
+  if (rel === '/api/scouter' || rel === '/api/boss-rates') {
+    Promise.resolve(require(rel === '/api/scouter' ? '../api/scouter.js' : '../api/boss-rates.js')(req, res)).catch(() => {
       if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json' });
       if (!res.writableEnded) res.end(JSON.stringify({ error: { code: 'SCOUTER_UNAVAILABLE' } }));
     });

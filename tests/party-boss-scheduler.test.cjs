@@ -63,7 +63,7 @@ function pageHarness({fetch,characters=[],saved={}}){
   crypto:{randomUUID:()=> 'new-party'},addEventListener:(name,fn)=>{handlers[name]=fn;}};
  app.mount(win);
  function find(host,tag){return host.children.flatMap(n=>[...(n.tag===tag?[n]:[]),...find(n,tag)]);}
- return {ids,store,find,changeKey(value){key=value;handlers['nexon-key-changed']();}};
+ return {ids,store,find,handlers,changeKey(value){key=value;handlers['nexon-key-changed']();}};
 }
 const settle=async()=>{await new Promise(setImmediate);await new Promise(setImmediate);};
 
@@ -90,28 +90,27 @@ test('느린 이전 검색이나 API 키 변경 전의 결과가 현재 캐릭�
 function scouterSnapshot(name='내캐릭터',rates=[{bossId:'Lotus|Extreme',percent:49.68},{bossId:'TheFirstAdversary|Normal',percent:89.58}]){
  return {schemaVersion:1,characterName:name,preset:'00000',sourceUrl:require('../scouter_data.js').resultUrl(name,'00000'),fetchedAt:new Date().toISOString(),conditions:{view:'all',bossTimeMinutes:20,destinyChampion:true,simulation:false},rates};
 }
-function rateButton(page){return page.find(page.ids['party-character-preview'],'button').find(b=>b.textContent.includes('배율')&&b.textContent.includes('불러오기'));}
-test('검색만으로는 환산을 호출하지 않고 버튼을 누른 한 캐릭터만 불러와 합산하며 수동값·이전값을 유지한다',async()=>{
- const c=app.profile(basic(),'mine1');let fail=false;const calls=[];
- const page=pageHarness({characters:[{ocid:'mine1',name:'내캐릭터'}],saved:{parties:[{id:'suu',name:'스우팟',bossId:'Lotus|Extreme',members:[{character:c,rate:null},{character:{...c,ocid:'other'},rate:25}]},{id:'adversary',name:'대적자팟',bossId:'TheFirstAdversary|Normal',members:[{character:c,rate:null}]}]},fetch:async(url,options)=>{
-  calls.push({url,options});if(url.startsWith('/api/scouter'))return {ok:!fail,json:async()=>fail?{error:{code:'SCOUTER_BLOCKED'}}:scouterSnapshot()};return {ok:true,json:async()=>basic()};
+test('캐릭터 검색은 공용 배율만 반영하고 파티 합산·포커스 동기화·실패 시 이전값 유지',async()=>{
+ const c=app.profile(basic(),'mine1');let fail=false,value=49.68;const calls=[];
+ const page=pageHarness({characters:[{ocid:'mine1',name:'내캐릭터'}],saved:{parties:[{id:'suu',name:'스우팟',bossId:'Lotus|Extreme',members:[{character:c,rate:900,rateMode:'manual'},{character:{...c,ocid:'other',name:'다른캐릭터'},rate:25}]},{id:'adversary',name:'대적자팟',bossId:'TheFirstAdversary|Normal',members:[{character:c,rate:null}]}]},fetch:async(url,options)=>{
+  calls.push({url,options});if(url==='/api/boss-rates')return {ok:!fail,json:async()=>({schemaVersion:1,snapshots:[scouterSnapshot('내캐릭터',[{bossId:'Lotus|Extreme',percent:value},{bossId:'TheFirstAdversary|Normal',percent:89.58}])]})};
+  assert(!url.startsWith('/api/scouter'));return {ok:true,json:async()=>basic()};
  }});
- await settle();assert.equal(calls.filter(c=>c.url.startsWith('/api/scouter')).length,0);
- const button=rateButton(page);button.fire('click');button.fire('click');await settle();
- let stored=JSON.parse(page.store.get('partyBossScheduler.v1'));assert.equal(stored.parties[0].members[0].rate,49.68);assert.equal(stored.parties[1].members[0].rate,89.58);assert(page.ids['party-detail'].textContent.includes('74.68%'));
- assert.equal(calls.filter(c=>c.url.startsWith('/api/scouter')).length,1);assert.equal(calls.find(c=>c.url.startsWith('/api/scouter')).options.headers,undefined);
- const input=page.find(page.ids['party-detail'],'input')[0];input.value='70';input.fire('change');
- page.ids['party-my-character'].value='mine1';page.ids['party-my-character'].fire('change');await settle();assert.equal(calls.filter(c=>c.url.startsWith('/api/scouter')).length,1);rateButton(page).fire('click');await settle();stored=JSON.parse(page.store.get('partyBossScheduler.v1'));assert.equal(stored.parties[0].members[0].rate,70);assert.equal(stored.parties[0].members[0].rateMode,'manual');
- const auto=page.find(page.ids['party-detail'],'button').find(b=>b.textContent==='환산값 사용');auto.fire('click');assert(page.ids['party-detail'].textContent.includes('74.68%'));
- fail=true;page.ids['party-my-character'].fire('change');await settle();rateButton(page).fire('click');await settle();stored=JSON.parse(page.store.get('partyBossScheduler.v1'));assert.equal(stored.parties[0].members[0].rate,49.68);assert(page.ids['party-search-status'].textContent.includes('접근을 차단'));assert(page.ids['party-detail'].textContent.includes('이전 값'));
+ await settle();let stored=JSON.parse(page.store.get('partyBossScheduler.v1'));
+ assert.equal(stored.parties[0].members[0].rate,49.68);assert.equal(stored.parties[1].members[0].rate,89.58);assert(page.ids['party-detail'].textContent.includes('74.68%'));
+ assert.equal(page.find(page.ids['party-detail'],'input').length,0);assert.equal(page.find(page.ids['party-character-preview'],'button').length,0);
+ assert(page.find(page.ids['party-character-preview'],'a').some(a=>a.href.includes('shared_boss_rates.html?')));
+ value=60;await page.handlers.focus();await settle();stored=JSON.parse(page.store.get('partyBossScheduler.v1'));assert.equal(stored.parties[0].members[0].rate,60);assert(page.ids['party-detail'].textContent.includes('85%'));
+ fail=true;page.ids['party-my-character'].value='mine1';page.ids['party-my-character'].fire('change');await settle();stored=JSON.parse(page.store.get('partyBossScheduler.v1'));assert.equal(stored.parties[0].members[0].rate,60);assert(page.ids['party-search-status'].textContent.includes('공용 배율을 읽지 못했습니다'));
+ assert(calls.filter(c=>c.url==='/api/boss-rates').every(c=>!c.options.headers));
 });
-test('늦게 도착한 이전 캐릭터의 환산 응답은 현재 화면이나 저장한 파티에 반영하지 않는다',async()=>{
- let resolveSlow;const slow=new Promise(r=>{resolveSlow=r;});const c=app.profile(basic('느린캐릭터'),'slow');
+
+test('늦게 도착한 이전 캐릭터의 공용 배율 응답은 현재 화면이나 저장한 파티에 반영하지 않는다',async()=>{
+ let resolveSlow;const slow=new Promise(r=>{resolveSlow=r;});let requests=0;const c=app.profile(basic('느린캐릭터'),'slow');
  const page=pageHarness({saved:{parties:[{id:'p1',name:'스우팟',bossId:'Lotus|Extreme',members:[{character:c,rate:null}]}]},fetch:async url=>{
-  const u=new URL(url,'http://localhost');if(u.pathname==='/api/scouter'){const name=u.searchParams.get('name');return name==='느린캐릭터'?slow:{ok:true,json:async()=>scouterSnapshot(name)};}
+  const u=new URL(url,'http://localhost');if(u.pathname==='/api/boss-rates'){requests++;return requests===2?slow:{ok:true,json:async()=>({schemaVersion:1,snapshots:[scouterSnapshot('빠른캐릭터')]})};}
   if(u.pathname.endsWith('/id'))return {ok:true,json:async()=>({ocid:u.searchParams.get('character_name')==='느린캐릭터'?'slow':'fast'})};return {ok:true,json:async()=>basic(u.searchParams.get('ocid')==='slow'?'느린캐릭터':'빠른캐릭터')};
  }});
- await settle();page.ids['party-character-name'].value='느린캐릭터';page.ids['party-search-form'].fire('submit');await settle();rateButton(page).fire('click');await settle();page.ids['party-character-name'].value='빠른캐릭터';page.ids['party-search-form'].fire('submit');await settle();resolveSlow({ok:true,json:async()=>scouterSnapshot('느린캐릭터')});await settle();
+ await settle();page.ids['party-character-name'].value='느린캐릭터';page.ids['party-search-form'].fire('submit');await settle();page.ids['party-character-name'].value='빠른캐릭터';page.ids['party-search-form'].fire('submit');await settle();resolveSlow({ok:true,json:async()=>({schemaVersion:1,snapshots:[scouterSnapshot('느린캐릭터')]})});await settle();
  assert(page.ids['party-character-preview'].textContent.includes('빠른캐릭터'));assert.equal(JSON.parse(page.store.get('partyBossScheduler.v1')).parties[0].members[0].rate,null);
- page.ids['party-character-name'].value='느린캐릭터';page.ids['party-search-form'].fire('submit');await settle();assert.equal(rateButton(page).disabled,false);
 });

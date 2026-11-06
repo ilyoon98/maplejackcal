@@ -73,6 +73,7 @@
   });
 
   // 작은 캡처의 안티앨리어싱 글꼴: 획의 진하기를 보존한 9px 표본(같은 숫자의 픽셀 위치 변형 포함).
+  // 네 번째 값이 있으면 그 높이(px)의 표본이다.
   var SMALL_SAMPLES = [
     ["0",6,"ALX//9YkjP9rMe/G1s4TAKXv770LAHP/770LAHP/1sYOAJz3nP9aIe/GAM7//+cuAAAhMQAA"],
     ["1",4,"ALX/nN7e95yMCu+cAADvnAAA75wAAO+cAADvnAAA75wAAAAA"],
@@ -106,12 +107,25 @@
     ["6",7,"ALX//95KAJz3YzHezhPerTFaMVIE78739/dzAP/eGADG5x3vpQAAnO+Mve8uIdbecyHe///vSgAAACExAAAA"],
     ["8",7,"AJT///+MBUL/jAKl/z9a/1UAc/9FALX31vetCiHn3qXe5y617y4AAPecnP9aAGv/jADO////vRYAAABKBAAA"],
     ["8",6,"AM7//+dKpfc5Id7OtecdAL3WId7n1vdrc/+9rfe9570LAIT/1t4hALX/Su////eMAAAhQgAA"],
-    [".",2,"RwAdAAAAAAAAAAAApST/ewAA"]
+    [".",2,"RwAdAAAAAAAAAAAApST/ewAA"],
+    // 125% 캡처(카드 90px)의 10px 글꼴. 9px 표본을 늘리면 획 위치가 어긋나 오차가 한도를 넘는다.
+    ["0",7,"AP////8AAAD/AAD//wD//wAAAP///wAAAAD///8AAAAA////AAAAAP///wAAAAD/////AAAA/////wAA//8AAP////8AAA==",10],
+    ["1",4,"AAD/////////AP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//w==",10],
+    ["2",7,"AP////8AAP//AAD//wD/AAAAAP8AAAAAAAD/AAAAAAD//wAAAAD//wAAAAD//wAAAAD//wAAAAD//wAAAAAA/////////w==",10],
+    ["3",7,"AP////8AAP//AAD//wD//wAAAP//AAAAAAD/AAAA/////wAAAP////8AAAAAAAD///8AAAAA/////wAAAP//AP//////AA==",10],
+    ["4",7,"AAAAAP//AAAAAP///wAAAP////8AAAD/AP//AAD//wD//wAA/wAA//8A/wAAAP//AP////////8AAAAA//8AAAAAAP//AA==",10],
+    ["5",7,"AP//////AP//AAAAAAD//wAAAAAA//8A/wAAAP///////wD//wAAAP//AAAAAAD///8AAAAA/////wAA//8AAP////8AAA==",10],
+    ["6",7,"AAD/////AAD//wAA/wD//wAAAP///wAA/wAAAP8A/////wD//wAAAP///wAAAAAA//8AAAAA/////wAAAP//AP//////AA==",10],
+    ["7",6,"////////AAAAAAD/AAAAAP//AAAAAP8AAAAA//8AAAAA/wAAAAD//wAAAAD/AAAAAP//AAAA//8AAAAA",10],
+    ["8",7,"AP////8AAP//AAD//wD//wAAAP////8AAAD/AAD//////wD///8A//8A/wAAAAD///8AAAAA/////wAAAP//AP//////AA==",10],
+    ["9",7,"AP////8AAP//AAD//wD/AAAAAP///wAAAAD/////AAAA//8A/////wD/AAD//wD///8AAAAA/////wAA//8AAP////8AAA==",10],
+    [".",2,"AAAAAAAAAAAAAAAAAAAAAP////8=",10],
+    ["%",10,"AP///wAAAAD/AP8AAP8AAAD/AAD/AAD/AAD//wAA/wAA/wAA/wAAAAD//wAA/wAAAAAAAAAA//8A//8AAAAAAP8AAP8A/wAAAP8AAP8AAP8AAP8AAAD//wD/AP//AAAAAP///w==",10]
   ];
   var SMALL_TEMPLATES = SMALL_SAMPLES.map(function (sample, i) {
     var raw = atob(sample[2]), bits = new Float32Array(raw.length);
     for (var j = 0; j < raw.length; j++) bits[j] = raw.charCodeAt(j) / 255;
-    return {ch:sample[0], w:sample[1], h:9, bits:bits, variant:i + 1};
+    return {ch:sample[0], w:sample[1], h:sample[3] || 9, bits:bits, variant:i + 1};
   });
 
   // 그 사이트의 초상화 서명(tests/fixtures/boss_shot_1.png에서 뽑은 signature(), int8·base64).

@@ -1,0 +1,43 @@
+'use strict';
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const catalog=require('../rate_catalog.js');const {createStore,redisCommand,WRITE}=require('../server/rate-store.cjs');
+const {createHandler}=require('../api/boss-rates.js');
+function snapshot(name='테스트캐릭터',percent=49.68){return catalog.snapshot(name,[{bossId:'Lotus|Extreme',percent}],'manual');}
+function backend(){const db=new Map();return async args=>{
+ if(args[0]==='HVALS')return [...(db.get(args[1])||new Map()).values()];
+ assert.equal(args[0],'EVAL');assert.equal(args[1],WRITE);const [, , ,key,id,expected,value,seedRevision]=args;let entries=db.get(key);if(!entries){entries=new Map();db.set(key,entries);}const old=entries.get(id);if((old?JSON.parse(old).revision:seedRevision)!==expected)return 0;entries.set(id,value);return 1;
+};}
+async function call(handler,method='GET',body,headers={}){let output;const res={setHeader(){},end(s){output=JSON.parse(s);}};await handler({method,url:'/api/boss-rates',body,headers:{'content-type':'application/json',...headers}},res);return {status:res.statusCode,body:output};}
+test('독립 서버 인스턴스가 같은 DB 값을 읽고 동일 캐릭터의 충돌은 거부한다',async()=>{
+ const command=backend(),a=createStore({command}),b=createStore({command});const first=await a.save(snapshot(),'');
+ const fromB=(await b.read()).snapshots.find(s=>s.characterName==='테스트캐릭터');assert.equal(fromB.rates[0].percent,49.68);assert.equal(fromB.revision,first.revision);
+ const results=await Promise.allSettled([a.save(snapshot('테스트캐릭터',50),first.revision),b.save(snapshot('테스트캐릭터',60),first.revision)]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.find(r=>r.status==='rejected').reason.message,'RATE_CONFLICT');
+ await b.save(snapshot('다른캐릭터',0),'');assert.equal((await a.read()).snapshots.find(s=>s.characterName==='다른캐릭터').rates[0].percent,0);
+});
+test('기존 공개 배율은 초기값으로 유지하고 서버에서 수정한 값이 우선한다',async()=>{
+ const a=createStore({command:backend()});const seed=(await a.read()).snapshots[0];assert.equal(seed.revision,'seed');await a.save({...seed,rates:[{bossId:'Lotus|Extreme',percent:55}]},'seed');assert.equal((await a.read()).snapshots[0].rates[0].percent,55);
+});
+test('DB 미설정은 읽기 전용으로 표시하고 저장 성공을 반환하지 않는다',async()=>{
+ const handler=createHandler(createStore({command:null}),{});const read=await call(handler);assert.equal(read.status,200);assert.equal(read.body.persistent,false);assert(read.body.snapshots.length);
+ const write=await call(handler,'POST',{snapshot:snapshot(),expectedRevision:''});assert.equal(write.status,503);assert.equal(write.body.error.code,'RATE_DB_NOT_CONFIGURED');
+});
+test('서버는 계산 조건·중복·악성값·과대 본문을 거부하고 DB 오류를 숨긴다',async()=>{
+ const handler=createHandler(createStore({command:backend()}),{});for(const s of [{...snapshot(),conditions:{bossTimeMinutes:30}},{...snapshot(),rates:[{bossId:'Lotus|Extreme',percent:-1}]},{...snapshot(),rates:[...snapshot().rates,...snapshot().rates]}])assert.equal((await call(handler,'POST',{snapshot:s,expectedRevision:''})).status,400);
+ assert.equal((await call(handler,'POST',{padding:'x'.repeat(70000)})).status,413);
+ const bad=createHandler({read(){throw new Error('secret-db-token');}},{});const output=await call(bad);assert.equal(output.status,503);assert(!JSON.stringify(output).includes('secret-db-token'));
+});
+test('교차 출처 쓰기와 잘못된 PIN을 거부하며 올바른 PIN만 쓴다',async()=>{
+ const handler=createHandler(createStore({command:backend()}),{RATE_EDIT_PIN:'test-pin'});const body={snapshot:snapshot(),expectedRevision:''};assert.equal((await call(handler,'POST',body,{'sec-fetch-site':'cross-site'})).status,403);assert.equal((await call(handler,'POST',body)).status,401);assert.equal((await call(handler,'POST',body,{'x-rate-pin':'test-pin'})).status,200);
+});
+test('Upstash 주소·토큰은 서버의 Authorization 헤더에만 있고 오류로 노출하지 않는다',async()=>{
+ let request;const command=redisCommand({UPSTASH_REDIS_REST_URL:'https://example.upstash.io',UPSTASH_REDIS_REST_TOKEN:'test-secret'},async(url,options)=>{request={url,options};return {ok:true,json:async()=>({result:[]})};});await command(['HVALS','maplejackcal:boss-rates:v1']);assert.equal(request.options.headers.Authorization,'Bearer test-secret');assert(!request.options.body.includes('test-secret'));assert.equal(redisCommand({}),null);
+});
+test('캡처 검토는 가려짐·불확실·미인식·중복을 자동 선택하지 않고 누락을 0으로 만들지 않는다',()=>{
+ const choices=catalog.choices(require('../boss_db.json')),raw=[{name:'스우',diff:'익스트림',value:0,sure:true},{name:'스우',diff:'익스트림',value:60,sure:true},{name:'카링',diff:'하드',value:null,sure:true},{name:'루시드',diff:'노멀',value:50,sure:false},{name:'윌',diff:'하드',value:10,sure:true,covered:true}];const rows=catalog.shotRows(raw,choices);assert.deepEqual(rows.map(r=>r.selected),[true,false,false,false,false]);const old=[{bossId:'Damien|Hard',percent:100}];assert.deepEqual(catalog.applyShot(old,rows,choices),[...old,{bossId:'Lotus|Extreme',percent:0,eligibility:''}]);rows[1].selected=true;assert.throws(()=>catalog.applyShot(old,rows,choices),/SHOT_DUPLICATE/);
+});
+test('실제 캡처의 카드들을 공용 배율 보스·난이도에 연결한다',()=>{
+ require('../boss_shot_reader.js');const {decodePng}=require('./helpers/png-rgba.cjs');const reader=globalThis.BossShotReader;const result=reader.analyze(decodePng(require('node:path').join(__dirname,'fixtures/boss_shot_1.png')),reader.siteRefs());const rows=catalog.shotRows(result,catalog.choices(require('../boss_db.json')));assert.equal(rows.length,47);assert(rows.filter(r=>r.selected).length>=40);assert.equal(rows.find(r=>r.bossId==='Lotus|Extreme').value,41.22);assert.equal(rows.find(r=>r.bossId==='Kaling|Extreme').selected,false);
+});
+test('공용 저장 클라이언트는 실패를 성공으로 취급하지 않고 로컬 초안으로 공용 값을 대체하지 않는다',async()=>{
+ await assert.rejects(catalog.saveShared(async()=>({ok:false,json:async()=>({error:{code:'RATE_CONFLICT'}})}),snapshot(),'old'),/RATE_CONFLICT/);const store={schemaVersion:1,persistent:true,snapshots:[snapshot()]};const s=await catalog.readSaved('테스트캐릭터',async url=>{assert.equal(url,'/api/boss-rates');return {ok:true,json:async()=>store};},{getItem(){throw new Error('must not read local drafts');}});assert.equal(s.rates[0].percent,49.68);
+});

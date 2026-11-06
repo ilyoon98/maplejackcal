@@ -62,9 +62,9 @@ test('수집기는 전체 보기 결과와 캐릭터·조건을 검증하고 성
  const blocked=browserHarness(raw,403);await assert.rejects(scrape('토끼털쇼타','00000',blocked.options),e=>e.code==='SCOUTER_BLOCKED');assert.equal(blocked.state().closed,true);
 });
 test('배율 클라이언트는 넥슨 키를 수집 서버에 보내지 않고 캐릭터가 일치하는 결과만 받는다',async()=>{
- let options;const api=party.scouterClient(async(url,opts)=>{options=opts;assert.equal(new URL(url,'http://local').searchParams.get('name'),'토끼털쇼타');return {ok:true,json:async()=>snapshot()};});
+ let options;const api=party.scouterClient(async(url,opts)=>{options=opts;assert.equal(url,'/api/boss-rates');return {ok:true,json:async()=>({schemaVersion:1,snapshots:[snapshot()]})};});
  assert.equal((await api.load('토끼털쇼타')).rates[0].percent,49.68);assert.equal(options.headers,undefined);
- const mismatch=party.scouterClient(async()=>({ok:true,json:async()=>snapshot('다른캐릭터')}));await assert.rejects(mismatch.load('토끼털쇼타'),/SCOUTER_INVALID_RESPONSE/);
+ const mismatch=party.scouterClient(async()=>({ok:true,json:async()=>({schemaVersion:1,snapshots:[snapshot('다른캐릭터')]})}));await assert.rejects(mismatch.load('토끼털쇼타'),/RATE_NOT_SAVED/);
 });
 test('캐릭터의 자동 배율은 파티별 보스 난이도에 맞춰 반영하고 수동값·다른 캐릭터는 보존한다',()=>{
  const member=(ocid,mode='auto',rate=null)=>({character:{ocid},rateMode:mode,rate});
@@ -92,7 +92,7 @@ test('이번 실제 브라우저 기록은 60행·지원 배율 49개이며 가�
 });
 test('두 독립 클라이언트는 공용 JSON에서 같은 실측값을 읽고 서버 수집을 호출하지 않는다',async()=>{
  const store=require('../shared_scouter_snapshots.json');const urls=[];
- const fetch=async(url,options)=>{urls.push(url);assert.equal(url,'/shared_scouter_snapshots.json');assert.equal(options.headers,undefined);return {ok:true,json:async()=>structuredClone(store)};};
+ const fetch=async(url,options)=>{urls.push(url);assert.equal(url,'/api/boss-rates');assert.equal(options.headers,undefined);return {ok:true,json:async()=>structuredClone(store)};};
  const a=await party.scouterClient(fetch).load('토끼털쇼타'),b=await party.scouterClient(fetch).load('토끼털쇼타');
  assert.deepEqual(a,b);assert.equal(a.storage,'public-json');assert.equal(urls.length,2);
 });

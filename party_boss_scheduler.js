@@ -54,18 +54,13 @@
   }
   function scouterClient(fetchImpl){return {load:async function(name,signal){
     if(!scouter.validName(name))throw new Error('SCOUTER_BAD_INPUT');
-    try{
-      var sharedResponse=await fetchImpl('/shared_scouter_snapshots.json',{signal:signal});
-      if(sharedResponse.ok){var shared=scouter.findShared(await sharedResponse.json(),name,'00000');if(shared)return shared;}
-    }catch(e){if(e.name==='AbortError')throw e;}
-    var response=await fetchImpl('/api/scouter?'+new URLSearchParams({name:name,preset:'00000'}),{signal:signal});
-    var body;try{body=await response.json();}catch(e){throw new Error('SCOUTER_UNAVAILABLE');}
-    if(!response.ok){var error=new Error('SCOUTER_FAILED');error.code=body&&body.error&&body.error.code;throw error;}
-    var result=scouter.normalizeSnapshot(body,name,'00000');if(!result)throw new Error('SCOUTER_INVALID_RESPONSE');return result;
+    var response=await fetchImpl('/api/boss-rates',{signal:signal,cache:'no-store'});
+    if(!response.ok)throw new Error('RATE_STORE_UNAVAILABLE');
+    var result=scouter.findShared(await response.json(),name,'00000');if(!result)throw new Error('RATE_NOT_SAVED');return result;
   }};}
-  function applySnapshot(parties,ocid,snapshot){
+  function applySnapshot(parties,ocid,snapshot,canonical){
     parties.forEach(function(p){var row=snapshot.rates.find(function(r){return r.bossId===p.bossId;});p.members.forEach(function(m){
-      if(m.character.ocid!==ocid||m.rateMode==='manual')return;
+      if(m.character.ocid!==ocid||m.rateMode==='manual'&&!canonical)return;
       m.rate=row?row.percent:null;m.rateMode='auto';m.rateUpdatedAt=snapshot.fetchedAt;
     });});
   }
@@ -93,8 +88,7 @@
       if(!current){host.appendChild(node('p','party-note','캐릭터를 선택하면 현재 외형이 표시됩니다.'));return;}
       host.append(portrait(current),node('strong','',current.name),node('p','party-note',current.world+' · Lv.'+current.level+' · '+current.job));
       var s=snapshotFor(current),state=rateStates[current.ocid],note=node('p','party-note',state==='loading'?'환산 배율 조회 중…':state==='error'?(s?'환산 조회 실패 · 이전 조회값 유지':'환산 배율 조회 실패'):s?(s.storage==='public-json'?'공용 저장값 ':'환산 ')+s.rates.length+'개 · '+timeLabel(s.fetchedAt):'환산 배율 미조회');if(state==='error')note.classList.toggle('error',true);host.appendChild(note);
-      var link=node('a','','환산 원본 보기');link.href=scouter.resultUrl(current.name,'00000');link.target='_blank';link.rel='noopener noreferrer';host.appendChild(link);
-      var retry=node('button','',s?'환산 배율 다시 불러오기':'환산 배율 불러오기');retry.type='button';retry.disabled=state==='loading';retry.addEventListener('click',function(){if(current)loadScouter(current,profileVersion,profileController&&profileController.signal);});host.appendChild(retry);
+      var link=node('a','','공용 배율 설정 · 캡처 입력');link.href='shared_boss_rates.html?'+new URLSearchParams({name:current.name});link.target='_blank';link.rel='noopener noreferrer';host.appendChild(link);
     }
     function visible(){return parties.filter(function(p){return el('party-view').value!=='mine'||p.members.some(function(m){return owned.has(m.character.ocid);});});}
     function renderBoard(){
@@ -115,22 +109,21 @@
       p.members.forEach(function(m){var row=node('div','party-member'),info=node('div'),label=node('label'),input=node('input'),remove=node('button','','빼기');
         info.append(node('strong','',m.character.name),node('p','',m.character.world+' · '+m.character.job));
         var state=rateStates[m.character.ocid],snap=snapshotFor(m.character),sourceRow=snap&&snap.rates.find(function(r){return r.bossId===p.bossId;}),sourceLabel=m.rateMode==='manual'?'직접 입력':state==='loading'?'환산 조회 중':state==='error'?'조회 실패'+(m.rate===null?' · 미조회':' · 이전 값'):snap&&!sourceRow?'환산 미제공 보스·난이도':m.rateUpdatedAt?'환산 '+timeLabel(m.rateUpdatedAt):'환산 미조회';if(m.rateMode!=='manual'&&sourceRow&&sourceRow.eligibility)sourceLabel+=' · '+sourceRow.eligibility;info.appendChild(node('p','party-rate-source',sourceLabel));
-        input.type='number';input.min='0';input.max='1000000000';input.step='0.01';input.placeholder='미조회';input.value=m.rate===null?'':String(m.rate);input.setAttribute('aria-label',m.character.name+' 배율');input.addEventListener('change',function(){m.rate=rate(input.value);m.rateMode='manual';m.rateUpdatedAt='';persist();renderBoard();});label.append(input,doc.createTextNode('%'));
-        if(m.rateMode==='manual'&&sourceRow){var useAuto=node('button','','환산값 사용');useAuto.type='button';useAuto.addEventListener('click',function(){m.rateMode='auto';applySnapshot(parties,m.character.ocid,snap);persist();renderBoard();});info.appendChild(useAuto);}
+        label.append(node('output','',m.rate===null?'미등록':m.rate.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%'));var manage=node('a','','공용 배율 설정');manage.href='shared_boss_rates.html?'+new URLSearchParams({name:m.character.name});manage.target='_blank';manage.rel='noopener noreferrer';info.appendChild(manage);
         remove.type='button';remove.setAttribute('aria-label',m.character.name+' 파티에서 빼기');remove.addEventListener('click',function(){p.members=p.members.filter(function(item){return item!==m;});persist();renderBoard();});row.append(portrait(m.character),info,label,remove);detail.appendChild(row);
       });
     }
     async function loadScouter(c,version,signal){
       if(signal&&signal.aborted||rateStates[c.ocid]==='loading')return;rateStates[c.ocid]='loading';renderPreview();renderBoard();
-      try{var snapshot=await multiplierApi.load(c.name,signal);if(version!==profileVersion||!current||current.ocid!==c.ocid)return;snapshots[c.ocid]=snapshot;applySnapshot(parties,c.ocid,snapshot);rateStates[c.ocid]='ready';persist();status(c.name+' '+(snapshot.storage==='public-json'?'공용 저장 배율 ':'환산 배율 ')+snapshot.rates.length+'개를 불러왔습니다. 조회 시각: '+timeLabel(snapshot.fetchedAt));}
-      catch(e){if(version!==profileVersion||e.name==='AbortError')return;rateStates[c.ocid]='error';var message=e.code==='SCOUTER_BLOCKED'?'환산 사이트가 수집 서버의 접근을 차단했습니다.':e.code==='SCOUTER_BUSY'?'환산 조회 요청이 많습니다. 잠시 후 다시 조회하세요.':e.code==='SCOUTER_CONDITIONS_CHANGED'?'환산 계산 조건이 달라 배율을 반영하지 않았습니다.':'환산 배율을 가져오지 못했습니다. 서버 연결을 확인하고 다시 조회하세요.';if(win.location&&win.location.protocol==='file:')message='자동 배율 조회는 사이트 주소 또는 npm start로 연 페이지에서 사용할 수 있습니다.';status(message+' 기존 배율은 유지됩니다.',true);}
+      try{var snapshot=await multiplierApi.load(c.name,signal);if(version!==profileVersion||!current||current.ocid!==c.ocid)return;snapshots[c.ocid]=snapshot;applySnapshot(parties,c.ocid,snapshot,true);rateStates[c.ocid]='ready';persist();status(c.name+' 공용 저장 배율 '+snapshot.rates.length+'개를 반영했습니다. 조회 시각: '+timeLabel(snapshot.fetchedAt));}
+      catch(e){if(version!==profileVersion||e.name==='AbortError')return;rateStates[c.ocid]='error';status(e.message==='RATE_NOT_SAVED'?'이 캐릭터의 공용 배율이 없거나 30일 이상 지났습니다. ‘공용 배율 설정’에서 저장하세요.':'공용 배율을 읽지 못했습니다. 연결을 확인하세요. 기존 배율은 유지됩니다.',true);}
       finally{if(version===profileVersion){renderPreview();renderBoard();}}
     }
     async function search(target){
       if(current&&rateStates[current.ocid]==='loading')delete rateStates[current.ocid];
       if(profileController)profileController.abort();profileController=new AbortController();var signal=profileController.signal,version=++profileVersion;current=null;renderPreview();renderBoard();status('캐릭터 외형을 불러오는 중…');el('party-search-button').disabled=true;
       try{var c=await api.load(target,signal);if(version!==profileVersion)return;current=c;el('party-character-name').value=c.name;
-        parties.forEach(function(p){p.members.forEach(function(m){if(m.character.ocid===c.ocid)m.character=Object.assign({},c);});});persist();renderPreview();renderBoard();status(c.name+' 외형을 불러왔습니다. 필요할 때 ‘환산 배율 불러오기’를 누르세요.');
+        parties.forEach(function(p){p.members.forEach(function(m){if(m.character.ocid===c.ocid)m.character=Object.assign({},c);});});persist();renderPreview();renderBoard();await loadScouter(c,version,signal);
       }catch(e){if(version!==profileVersion||e.name==='AbortError')return;var msg=e.message==='API_KEY_REQUIRED'?'홈에서 넥슨 Open API 키를 등록하세요.':e.code==='OPENAPI00005'?'API 키가 유효하지 않습니다. 홈에서 키를 확인하세요.':e.code==='OPENAPI00007'?'API 호출 한도를 초과했습니다. 잠시 후 다시 검색하세요.':'캐릭터를 불러오지 못했습니다. 닉네임·API 키·네트워크를 확인하세요.';status(msg,true);
       }finally{if(version===profileVersion)el('party-search-button').disabled=false;}
     }
@@ -157,8 +150,13 @@
     });
     function keyChanged(){profileVersion++;if(profileController)profileController.abort();current=null;rateStates=Object.create(null);el('party-search-button').disabled=false;renderPreview();status('');loadAccount();}
     win.addEventListener('nexon-key-changed',keyChanged);
-    win.addEventListener('storage',function(e){if(win.NexonKey&&e.key===win.NexonKey.STORAGE_KEY)keyChanged();});
-    renderBoard();loadAccount();
+    async function syncSaved(){
+      try{var response=await win.fetch('/api/boss-rates',{cache:'no-store'});if(!response.ok)return;var saved=await response.json(),chars=new Map();parties.forEach(function(p){p.members.forEach(function(m){chars.set(m.character.ocid,m.character);});});if(current)chars.set(current.ocid,current);chars.forEach(function(c){var s=scouter.findShared(saved,c.name,'00000');if(s){snapshots[c.ocid]=s;applySnapshot(parties,c.ocid,s,true);rateStates[c.ocid]='ready';}});persist();renderBoard();renderPreview();}catch(e){}
+    }
+    win.addEventListener('storage',function(e){if(win.NexonKey&&e.key===win.NexonKey.STORAGE_KEY)keyChanged();else if(e.key==='sharedBossRates.changed')syncSaved();});
+    win.addEventListener('focus',syncSaved);
+    if(win.setInterval)win.setInterval(function(){if(!doc.hidden)syncSaved();},30000);
+    renderBoard();loadAccount();syncSaved();
   }
   return {imageUrl:imageUrl,profile:profile,summary:summary,catalog:catalog,restore:restore,client:client,scouterClient:scouterClient,applySnapshot:applySnapshot,mount:mount};
 });

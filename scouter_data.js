@@ -28,7 +28,9 @@
     var seen=new Set(),rates=[];
     for(var row of raw.rates){if(!row||typeof row.bossId!=='string'||!Object.values(BOSS).some(function(b){return Object.values(DIFFICULTY).some(function(d){return row.bossId===b+'|'+d;});})||seen.has(row.bossId)||percent(row.percent)===null)return null;seen.add(row.bossId);rates.push({bossId:row.bossId,percent:row.percent,eligibility:typeof row.eligibility==='string'?row.eligibility.slice(0,30):''});}
     var snapshot={schemaVersion:1,characterName:name,preset:preset,sourceUrl:raw.sourceUrl,fetchedAt:raw.fetchedAt,conditions:{view:'all',bossTimeMinutes:20,destinyChampion:true,simulation:false},rates:rates};
-    if(raw.storage==='public-json')snapshot.storage='public-json';return snapshot;
+    if(['public-json','local-edit','shared-server'].includes(raw.storage))snapshot.storage=raw.storage;
+    if(['browser-dom','screenshot','manual'].includes(raw.captureMethod))snapshot.captureMethod=raw.captureMethod;
+    return snapshot;
   }
   function findShared(store,name,preset){
     if(!store||store.schemaVersion!==1||!Array.isArray(store.snapshots))return null;
