@@ -426,8 +426,10 @@
       if (control) control.focus({preventScroll:true});
     }
   }
+  // 스케줄러에 등록했거나 목록에 넣은 '내 보스'.
+  function isMine(b) { return !!(b && (b.registered || b.inList || b.on)); }
   function visibleBosses() {
-    return state.bosses.filter(function (b) { return state.showAllBosses || b.registered || b.inList || b.on; });
+    return state.bosses.filter(function (b) { return state.showAllBosses || isMine(b); });
   }
   function trim(v) {
     return String(Math.abs(v - Math.round(v)) < 0.005 ? Math.round(v) : Math.round(v * 10) / 10);
@@ -958,12 +960,15 @@
         if (taken[idx]) { shotUnknown.push(row); return; }
         taken[idx] = true;
         row.idx = idx;
-        row.on = r.value != null;
+        // 내 보스가 아니면 접어 두고 기본으로 넣지 않는다.
+        row.other = !isMine(state.bosses[idx]);
+        row.on = r.value != null && !row.other;
         shotRows.push(row);
       });
-      shotRows.sort(function (a, b) { return a.idx - b.idx; }); // 목록 순서대로.
-      var odd = list.some(function (r) { return r.scale > 1.03 && r.scale < 1.4; });
-      var unread = shotRows.filter(function (r) { return r.value == null; }).length;
+      // 내 보스 먼저, 같은 묶음 안에서는 목록 순서대로.
+      shotRows.sort(function (a, b) { return (a.other - b.other) || (a.idx - b.idx); });
+      var odd = list.some(function (r) { return r.scale > 1.03 && r.scale < 1.4 && r.value == null && !r.covered; });
+      var unread = shotRows.filter(function (r) { return r.value == null && !r.other; }).length;
       var covered = list.filter(function (r) { return r.covered; }).length;
       setShotStatus('카드 ' + list.length + '장을 읽었습니다. 확인 후 ‘선택한 배율 넣기’를 누르세요.' +
         (unread ? ' 배율을 확실히 읽지 못한 보스 ' + unread + '개는 직접 입력하세요.' : '') +
@@ -986,8 +991,10 @@
       name = '<div class="shot-pick-boss">' +
         '<button type="button" class="shot-pick-btn" data-shot="pick" data-i="' + i + '" aria-haspopup="listbox" aria-expanded="' + open + '">' +
           (b ? bossChip(b) : '<span class="shot-bname dim">보스 선택</span>') + '<span class="shot-caret">▾</span></button>' +
-        (open ? '<div class="shot-menu" role="listbox">' + state.bosses.map(function (x, k) {
-          return '<button type="button" role="option" class="shot-opt" data-shot="choose" data-i="' + i + '" data-k="' + k + '" aria-selected="' + (k === row.idx) + '">' + bossChip(x) + '</button>';
+        (open ? '<div class="shot-menu" role="listbox">' + state.bosses.map(function (x, k) { return k; }).sort(function (a, c) {
+          return isMine(state.bosses[c]) - isMine(state.bosses[a]) || a - c;
+        }).map(function (k) {
+          return '<button type="button" role="option" class="shot-opt" data-shot="choose" data-i="' + i + '" data-k="' + k + '" aria-selected="' + (k === row.idx) + '">' + bossChip(state.bosses[k]) + '</button>';
         }).join('') + '</div>' : '') +
         '</div>';
     } else name = '<div class="shot-fixed">' + bossChip(b) + '</div>';
@@ -1001,12 +1008,18 @@
   function renderShot() {
     var found = Object.create(null);
     shotRows.concat(shotUnknown).forEach(function (r) { if (r.idx >= 0) found[r.idx] = true; });
-    var missing = state.bosses.filter(function (b, k) { return !found[k]; }).map(function (b) { return b.name + ' ' + b.diff; });
-    var html = '<div class="shot-summary">목록 보스 ' + shotRows.length + '개를 찾았습니다' +
-      (shotOutside ? ' · 목록에 없는 보스 ' + shotOutside + '개는 뺐습니다' : '') + '</div>';
-    html += shotRows.map(function (row, i) { return shotRowHtml(row, i, 'list'); }).join('');
-    if (!shotRows.length) html += '<p class="empty">스크린샷에서 목록에 있는 보스를 찾지 못했습니다.</p>';
-    if (missing.length) html += '<p class="shot-skip">스크린샷에 없는 목록 보스: ' + esc(missing.join(' · ')) + '</p>';
+    var missing = state.bosses.filter(function (b, k) { return !found[k] && isMine(b); }).map(function (b) { return b.name + ' ' + b.diff; });
+    var mine = shotRows.filter(function (r) { return !r.other; }).length, others = shotRows.length - mine;
+    var html = '<div class="shot-summary">내 보스 ' + mine + '개를 찾았습니다' +
+      (others ? ' · 내 목록에 없는 보스 ' + others + '개는 아래에 접어 두었습니다' : '') + '</div>';
+    // 내 보스가 앞에 오도록 정렬해 두었으므로 인덱스 그대로 앞뒤로 나눈다.
+    html += shotRows.slice(0, mine).map(function (row, i) { return shotRowHtml(row, i, 'list'); }).join('');
+    if (!mine) html += '<p class="empty">스크린샷에서 내 보스를 찾지 못했습니다.</p>';
+    if (missing.length) html += '<p class="shot-skip">스크린샷에 없는 내 보스: ' + esc(missing.join(' · ')) + '</p>';
+    if (others) {
+      html += '<details class="shot-skip" id="shotOthers"' + (shotOthersOpen ? ' open' : '') + '><summary>내 목록에 없는 보스 ' + others + '개 (필요하면 체크해서 넣기)</summary>' +
+        shotRows.slice(mine).map(function (row, j) { return shotRowHtml(row, mine + j, 'list'); }).join('') + '</details>';
+    }
     if (shotUnknown.length) {
       html += '<details class="shot-skip" id="shotUnknown"' + (shotRows.length && shotOpen < 0 && !shotUnknownOpen ? '' : ' open') + '><summary>알아보지 못한 카드 ' + shotUnknown.length + '장 (직접 고르기)</summary>' +
         shotUnknown.map(function (row, i) { return shotRowHtml(row, i, 'unknown'); }).join('') + '</details>';
@@ -1016,12 +1029,12 @@
     shotResult.innerHTML = html;
     shotResult.hidden = false;
   }
-  var shotUnknownOpen = false;
+  var shotUnknownOpen = false, shotOthersOpen = false;
   function applyShot() {
     var set = 0, unread = 0;
     shotRows.concat(shotUnknown).forEach(function (row) {
       var b = state.bosses[row.idx];
-      if (b && row.value == null) unread++;
+      if (b && row.value == null && !row.other) unread++;
       if (!row.on || !b || !(row.value > 0)) return;
       b.mult = Math.max(0.01, row.value);
       set++;
@@ -1041,6 +1054,7 @@
   });
   shotResult.addEventListener('toggle', function (e) {
     if (e.target.id === 'shotUnknown') shotUnknownOpen = e.target.open;
+    else if (e.target.id === 'shotOthers') shotOthersOpen = e.target.open;
   }, true);
   shotResult.addEventListener('click', function (e) {
     var t = e.target.closest('button');
