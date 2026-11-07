@@ -47,6 +47,10 @@
   const goalSummary = byId('accessory-goal-summary');
   const resultTable = byId('accessory-result-table');
   const resultRows = byId('accessory-result-rows');
+  const resultGap = byId('accessory-result-gap');
+  const gapMetrics = byId('accessory-gap-metrics');
+  const gapNext = byId('accessory-gap-next');
+  const gapSuggestions = byId('accessory-gap-suggestions');
 
   function load(key) {
     try {
@@ -95,6 +99,7 @@
         <span class="accessory-slot-label">${slotLabels[slot]}</span>
         <span class="accessory-slot-short">${shortLabels[slot]}</span>
         <small></small>
+        <span class="accessory-slot-ownership" hidden></span>
       </button>
     `;
   }).join('');
@@ -168,6 +173,27 @@
     });
   }
 
+  function renderSlotButtons() {
+    buttons.forEach((button, slot) => {
+      const drop = countLines(rows[slot], 'drop');
+      const meso = countLines(rows[slot], 'meso');
+      const index = combos.findIndex(option => option.drop === drop && option.meso === meso);
+      const combo = combos[index];
+      const owned = prices[slot][index - 1]?.owned;
+      const ownedCount = prices[slot].filter(entry => entry.owned).length;
+      const badge = button.querySelector('.accessory-slot-ownership');
+      const ownership = owned ? '보유 중' : ownedCount ? `보유 조합 ${ownedCount}개 등록` : '';
+      const description = [slots[slot], combo.label, ownership].filter(Boolean).join(' · ');
+      button.setAttribute('aria-label', description);
+      button.title = description;
+      button.dataset.option = combo.badge;
+      button.dataset.owned = owned ? 'equipped' : ownedCount ? 'registered' : '';
+      button.querySelector('small').textContent = combo.badge;
+      badge.textContent = owned ? '보유 중' : `보유 ${ownedCount}`;
+      badge.hidden = !ownedCount;
+    });
+  }
+
   function renderOptions() {
     const lines = rows.flat();
     const empty = countLines(lines, '');
@@ -195,16 +221,7 @@
     else if (missing > empty) status.textContent = `빈 줄이 ${missing - empty}줄 부족합니다. 목표를 넘긴 옵션을 바꾸면 두 목표를 채울 수 있어요.`;
     else status.textContent = `선택한 옵션을 유지하고 빈 줄에 ${missing}줄을 채웁니다.`;
 
-    buttons.forEach((button, slot) => {
-      const drop = countLines(rows[slot], 'drop');
-      const meso = countLines(rows[slot], 'meso');
-      const combo = combos.find(option => option.drop === drop && option.meso === meso);
-      const description = `${slots[slot]} · ${combo.label}`;
-      button.setAttribute('aria-label', description);
-      button.title = description;
-      button.dataset.option = combo.badge;
-      button.querySelector('small').textContent = combo.badge;
-    });
+    renderSlotButtons();
     renderLineButtons();
   }
 
@@ -267,10 +284,11 @@
     renderPriceErrors();
   }
 
-  function findLowestPrice(candidates, dropGoal, mesoGoal) {
+  function findPlans(candidates, dropGoal, mesoGoal) {
     // Rates beyond the requested goal are equivalent when comparing prices.
+    // A registered plan wins over any plan that still needs a price for the same totals.
     const key = (drop, meso) => drop * (mesoGoal + 1) + meso;
-    let states = new Map([[0, { drop: 0, meso: 0, cost: 0n, picks: [] }]]);
+    let states = new Map([[0, { drop: 0, meso: 0, missing: 0, cost: 0n, picks: [] }]]);
     for (const choices of candidates) {
       const next = new Map();
       for (const state of states.values()) {
@@ -278,47 +296,80 @@
           const drop = Math.min(dropGoal, state.drop + choice.drop);
           const meso = Math.min(mesoGoal, state.meso + choice.meso);
           const index = key(drop, meso);
-          const cost = state.cost + choice.price;
+          const missing = state.missing + Number(choice.price === null);
+          const cost = state.cost + (choice.price ?? 0n);
           const previous = next.get(index);
-          if (!previous || cost < previous.cost) {
-            next.set(index, { drop, meso, cost, picks: [...state.picks, choice] });
+          if (!previous || missing < previous.missing || (missing === previous.missing && cost < previous.cost)) {
+            next.set(index, { drop, meso, missing, cost, picks: [...state.picks, choice] });
           }
         }
       }
       states = next;
     }
-    return states.get(key(dropGoal, mesoGoal));
+    return Array.from(states.values());
+  }
+
+  function renderShortfall(plans, goalPlan) {
+    const closest = plans.filter(plan => plan.missing === 0).reduce((nearest, plan) => {
+      const matched = plan.drop + plan.meso;
+      const nearestMatched = nearest.drop + nearest.meso;
+      return matched > nearestMatched || (matched === nearestMatched && plan.cost < nearest.cost) ? plan : nearest;
+    });
+    gapMetrics.innerHTML = metrics.map(({ kind, cap, target }) => {
+      const actual = Math.min(cap, closest.picks.reduce((sum, pick) => sum + pick[kind], 0) * lineValue);
+      const goal = Number(target.value);
+      const deficit = Math.max(0, goal - actual);
+      const label = kind === 'drop' ? '드랍률' : '메소 획득량';
+      return `<div>
+        <dt>${label}</dt>
+        <dd><strong>${actual}%</strong> / ${goal}%</dd>
+        <dd class="accessory-gap-status" data-shortfall="${deficit > 0}">${deficit ? `${deficit}%p 부족 · ${deficit / lineValue}줄` : '목표 달성'}</dd>
+      </div>`;
+    }).join('');
+    gapNext.textContent = `최소 ${goalPlan.missing}개 추가 등록 예시`;
+    gapSuggestions.innerHTML = goalPlan.picks.map((choice, slot) => choice.price === null ? `
+      <li><button type="button" class="ux-button" data-suggest-slot="${slot}" data-suggest-option="${choice.option}">
+        <span>${slots[slot]} · ${choice.label}</span><span>가격 입력 →</span>
+      </button></li>` : '').join('');
   }
 
   function renderResult() {
     const [dropTarget, mesoTarget] = metrics.map(({ target }) => Number(target.value));
     goalSummary.textContent = `목표 드랍 ${dropTarget}% · 메획 ${mesoTarget}%`;
-    const candidates = prices.map(slotPrices => {
-      const choices = [{ ...combos[0], price: 0n }];
-      pricedCombos.forEach((combo, index) => {
-        const { value, owned } = slotPrices[index];
-        const price = owned ? 0n : parsePrice(value);
-        if (owned || price) choices.push({ ...combo, price, owned });
-      });
-      return choices;
-    });
-    const registered = candidates.reduce((total, choices) => total + choices.length - 1, 0);
-    best = findLowestPrice(candidates, dropTarget / lineValue, mesoTarget / lineValue);
+    const candidates = prices.map(slotPrices => [
+      { ...combos[0], price: 0n },
+      ...pricedCombos.map((combo, option) => {
+        const { value, owned } = slotPrices[option];
+        const price = owned ? 0n : (parsePrice(value) || null);
+        return { ...combo, option, price, owned };
+      })
+    ]);
+    const registered = candidates.reduce((total, choices) => total + choices.filter(choice => choice.price !== null).length - 1, 0);
+    const dropGoal = dropTarget / lineValue;
+    const mesoGoal = mesoTarget / lineValue;
+    const plans = findPlans(candidates, dropGoal, mesoGoal);
+    const goalPlan = plans.find(plan => plan.drop === dropGoal && plan.meso === mesoGoal);
+    best = goalPlan?.missing === 0 ? goalPlan : undefined;
     apply.hidden = resultTable.hidden = !best;
+    resultGap.hidden = Boolean(best || !registered || !goalPlan);
 
     if (!best) {
       resultStatus.textContent = registered
-        ? `등록한 후보로 두 목표를 함께 달성할 수 없습니다. 다른 조합을 더 등록하세요. (${registered} / ${slots.length * pricedCombos.length}개 등록)`
+        ? `등록한 후보로 두 목표를 함께 달성할 수 없습니다. (${registered} / ${slots.length * pricedCombos.length}개 등록)`
         : '가격이나 보유 장비를 등록하면 최저가 조합을 확인할 수 있습니다.';
+      if (!resultGap.hidden) renderShortfall(plans, goalPlan);
       return;
     }
 
     resultStatus.textContent = `최저 합계 ${koreanAmount(best.cost)}`;
-    resultRows.innerHTML = best.picks.map(({ label, badge, price, owned }, slot) => `
-      <tr>
-        <th scope="row">${slots[slot]}</th>
+    const displayRows = best.picks.map((choice, slot) => ({ ...choice, slot, group: choice.owned ? 0 : choice.badge ? 1 : 2 }));
+    displayRows.sort((a, b) => a.group - b.group);
+    resultRows.innerHTML = displayRows.map(({ label, badge, price, owned, slot }) => `
+      <tr data-status="${owned ? 'owned' : badge ? 'buy' : 'empty'}">
+        <th scope="row"><span class="accessory-result-slot">${slots[slot]}${badge ? `
+          <span class="accessory-result-badge">${owned ? '✓ 보유 중' : '구매'}</span>` : ''}</span></th>
         <td>${label}</td>
-        <td>${owned ? '보유 중' : badge ? koreanAmount(price) : '—'}</td>
+        <td>${badge ? koreanAmount(price) : '—'}</td>
       </tr>
     `).join('');
   }
@@ -401,8 +452,17 @@
       const entry = prices[selected][index];
       entry.owned = !entry.owned;
       renderPriceInputs();
+      renderSlotButtons();
       updatePrices();
     });
+  });
+  gapSuggestions.addEventListener('click', event => {
+    const button = event.target.closest('[data-suggest-slot]');
+    if (!button) return;
+    selectSlot(Number(button.dataset.suggestSlot));
+    const input = priceInputs[Number(button.dataset.suggestOption)];
+    input.focus();
+    input.select();
   });
   complete.addEventListener('click', () => {
     if (complete.getAttribute('aria-disabled') === 'true') return;
