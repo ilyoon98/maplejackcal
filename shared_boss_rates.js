@@ -3,7 +3,7 @@
   var el=function(id){return document.getElementById(id);},catalog=window.RateCatalog,data=window.ScouterData,accounts=window.AccountCatalog,profiles=window.CharacterProfile,visual=window.BossIdentity,choices=catalog.choices(window.MapleBossDB);
   var store={snapshots:[],persistent:false},name='',rates=[],revision='',method='manual',stamp='',character=null,dirty=false,busy=false,version=0,profileController=null,profilePending=null,shotIds=new Set(),destinyChampion=false;
   var profileApi=profiles.client(fetch,function(){return window.NexonKey.get();});
-  var accountFilter='',groupEditId=null,groupLabelDraft=null,groupRepresentativeDraft=null,groupEdits=new Map(),ownerDirty=false,toastTimer=null,ownSyncPending=null,ownSyncKey='';
+  var accountFilter='',groupEditId=null,groupLabelDraft=null,groupEdits=new Map(),ownerDirty=false,toastTimer=null,ownSyncPending=null,ownSyncKey='';
   var errors={RATE_DB_NOT_CONFIGURED:'공용 DB가 아직 연결되지 않았습니다.',RATE_CONFLICT:'다른 사람이 먼저 수정했습니다. 작성값은 유지했습니다. 목록을 새로고침한 뒤 캐릭터를 다시 선택하세요.',RATE_PIN_REQUIRED:'기록 비밀번호를 확인하세요.',RATE_INVALID:'닉네임과 배율을 확인하세요.',RATE_LIMIT:'저장 한도를 초과했습니다.',SCOUTER_BLOCKED:'환산 사이트가 서버 조회를 차단했습니다. 캡처 입력으로 등록할 수 있습니다.'};
   function node(tag,text){var n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;}
   function say(message,error){el('shared-status').textContent=message;el('shared-status').classList.toggle('shared-error',!!error);}
@@ -38,7 +38,7 @@
     var owner=el('shared-owner');owner.replaceChildren();option(owner,'__unassigned__','미분류');allGroups().filter(function(g){return g.id;}).forEach(function(g){option(owner,g.id,g.label);});option(owner,'__new__','새 계정');
     var id=accounts.accountId(accountStore(),name);owner.value=Array.from(owner.options).some(function(o){return o.value===id;})?id:accountFilter&&Array.from(owner.options).some(function(o){return o.value===accountFilter;})?accountFilter:'__unassigned__';ownerLabel();el('shared-owner-fields').hidden=!name;
   }
-  function ownerLabel(){var a=(accountStore().accounts||[]).find(function(a){return a.id===el('shared-owner').value;}),group=allGroups().find(function(g){return a&&g.id===a.id;});el('shared-owner-label').value=a?a.label:'';el('shared-owner-label').placeholder=group?.label||name||'대표 캐릭터 이름 사용';el('shared-owner-summary').textContent=group?group.label+' · 계정 변경':'계정 미분류 · 설정';}
+  function ownerLabel(){var a=(accountStore().accounts||[]).find(function(a){return a.id===el('shared-owner').value;}),group=allGroups().find(function(g){return a&&g.id===a.id;});el('shared-owner-label').value=a?a.label:'';el('shared-owner-label').placeholder=group?.label||name||'비우면 자동으로 지정';el('shared-owner-summary').textContent=group?group.label+' · 계정 변경':'계정 미분류 · 설정';}
   function selectedGroup(){return (store.accounts||[]).find(function(a){return a.id===groupEditId;});}
   function groupCandidates(groups){
     var minLevel=window.NexonCharacters.MIN_LEVEL;
@@ -64,9 +64,6 @@
     var roster=el('shared-group-members'),results=el('shared-group-results'),search=el('shared-group-search');
     var query=search.value.trim().toLocaleLowerCase('ko-KR'),focused=document.activeElement,replacement;
     var focusedName=roster.contains(focused)||results.contains(focused)?focused.value:'';
-    var account=selectedGroup(),representative=groupRepresentativeDraft??account?.representative??'';
-    var hasRepresentative=groupEdits.get(representative)??account?.characters.some(function(c){return c.name===representative;});
-    el('shared-group-label').placeholder=hasRepresentative?representative:'비우면 자동으로 지정';
     roster.replaceChildren();results.replaceChildren();
     candidates.forEach(function(c){
       var existing=Boolean(groupEditId&&c.group.id===groupEditId),included=groupEdits.get(c.name)??existing;
@@ -82,15 +79,8 @@
       var verb=included?'빼기':existing?'되돌리기':moving?'이동':'추가',action=node('button',verb);
       action.type='button';action.value=c.name;action.dataset.groupAction=included?'remove':'add';action.disabled=busy;
       action.className='ux-button';action.setAttribute('aria-label',c.name+' '+verb);
-      row.append(info);
-      if(included){
-        var label=node('label'),check=node('input');label.className='shared-group-representative';
-        check.type='checkbox';check.name='group-representative';check.value=c.name;check.checked=representative===c.name;check.disabled=busy;
-        check.setAttribute('aria-label',c.name+' 대표 캐릭터');label.append(check,'대표');row.append(label);
-        if(c.name===focusedName&&focused.type==='checkbox')replacement=check;
-      }
-      row.append(action);(inRoster?roster:results).append(row);
-      if(c.name===focusedName&&!replacement)replacement=action;
+      row.append(info,action);(inRoster?roster:results).append(row);
+      if(c.name===focusedName)replacement=action;
     });
     el('shared-group-empty').hidden=roster.childElementCount>0;
     el('shared-group-search-status').textContent=!candidates.length?'레벨이 확인된 260레벨 이상 등록 캐릭터가 없습니다.':
@@ -119,7 +109,7 @@
     el('shared-fetch').disabled=busy||!name;el('shared-save').disabled=busy||!name||!rates.length||!store.persistent;el('shared-add').disabled=busy||!name;el('shared-image').disabled=busy||!name;el('shared-open').querySelector('button').disabled=busy;
     ['shared-character','shared-account','shared-owner','shared-owner-label','shared-group-select','shared-group-label','shared-group-search','shared-refresh','shared-nickname','shared-add-boss','shared-pin','shared-mode-fetch','shared-mode-capture'].forEach(function(id){el(id).disabled=busy;});el('shared-import-account').disabled=busy||!!ownSyncPending;
     el('shared-group-save').disabled=busy||!!ownSyncPending||!store.persistent||groupEditId===null;
-    document.querySelectorAll('#shared-rows input,#shared-rows button,.shared-group-members button,.shared-group-representative input,.boss-picker button,.boss-picker summary').forEach(function(n){if(n.tagName==='SUMMARY')n.inert=busy;else n.disabled=busy;});
+    document.querySelectorAll('#shared-rows input,#shared-rows button,.shared-group-members button,.boss-picker button,.boss-picker summary').forEach(function(n){if(n.tagName==='SUMMARY')n.inert=busy;else n.disabled=busy;});
   }
   function saveState(message,phase=''){
     el('shared-save-bar').dataset.state=phase;
@@ -189,15 +179,9 @@
   el('shared-owner').addEventListener('change',function(){ownerLabel();dirty=true;ownerDirty=true;saveState('계정 변경 · 저장 전');});el('shared-owner-label').addEventListener('input',function(){dirty=true;ownerDirty=true;saveState('계정 이름 변경 · 저장 전');});
   el('shared-group-select').addEventListener('change',async function(){
     var target=this.value,previous=groupEditId;
-    if((groupEdits.size||groupLabelDraft!==null||groupRepresentativeDraft!==null)&&(!await confirmDraft('다른 공용 계정을 수정할까요?','계정 변경')||previous!==groupEditId||busy)){this.value=groupEditId;return;}
+    if((groupEdits.size||groupLabelDraft!==null)&&(!await confirmDraft('다른 공용 계정을 수정할까요?','계정 변경')||previous!==groupEditId||busy)){this.value=groupEditId;return;}
     if(!Array.from(this.options).some(function(option){return option.value===target;})){this.value=groupEditId;return;}
-    groupEditId=target;groupEdits.clear();groupLabelDraft=null;groupRepresentativeDraft=null;el('shared-group-search').value='';groupStatus('');renderGroupEditor();controls();
-  });
-  el('shared-group-members').addEventListener('change',function(e){
-    if(e.target.name!=='group-representative')return;
-    var representative=e.target.checked?e.target.value:'';
-    groupRepresentativeDraft=representative===(selectedGroup()?.representative??'')?null:representative;
-    groupStatus('');renderGroupMembers();
+    groupEditId=target;groupEdits.clear();groupLabelDraft=null;el('shared-group-search').value='';groupStatus('');renderGroupEditor();controls();
   });
   el('shared-group-search').addEventListener('input',function(){renderGroupMembers();});
   el('shared-account-editor').addEventListener('click',function(e){
@@ -218,8 +202,8 @@
     var id=groupEditId||crypto.randomUUID(),label=(groupLabelDraft??account?.label??'').trim();
     busy=true;groupStatus('공용 계정 저장 중…');controls();
     try{
-      await persistAccounts(accounts.assign(store.accounts||[],id,label,Array.from(members.values()),groupRepresentativeDraft??undefined));
-      groupEditId=id;groupEdits.clear();groupLabelDraft=null;groupRepresentativeDraft=null;el('shared-group-search').value='';accountOptions();groupStatus('공용 계정에 저장했습니다.');
+      await persistAccounts(accounts.assign(store.accounts||[],id,label,Array.from(members.values())));
+      groupEditId=id;groupEdits.clear();groupLabelDraft=null;el('shared-group-search').value='';accountOptions();groupStatus('공용 계정에 저장했습니다.');
       try{localStorage.setItem('sharedBossRates.changed',String(Date.now()));}catch(e){}
     }catch(e){
       groupStatus(e.message==='RATE_CONFLICT'?'다른 사람이 먼저 저장했습니다. 작성값은 유지했습니다. 목록을 새로고침한 뒤 다시 저장하세요.':errors[e.message]||'공용 계정을 저장하지 못했습니다. 다시 시도하세요.',true);

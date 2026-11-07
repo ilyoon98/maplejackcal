@@ -59,9 +59,6 @@
 .shared-wrap .shared-group-members .shared-group-pending{color:var(--accent)}
 .shared-wrap .shared-group-name{margin-top:12px}
 .shared-wrap #shared-group-name-note{margin:6px 0 12px}
-.shared-wrap .shared-group-row .shared-group-representative{display:flex;align-items:center;justify-content:center;gap:4px;min-width:48px;min-height:44px;cursor:pointer}
-.shared-wrap .shared-group-representative input{width:16px;height:16px;min-height:0;accent-color:var(--accent-strong)}
-.shared-wrap .shared-group-representative:has(:checked){color:var(--text);font-weight:700}
 .shared-wrap #shared-group-save{min-height:44px}
 @media(max-width:540px){
   .shared-hero{flex-wrap:wrap}

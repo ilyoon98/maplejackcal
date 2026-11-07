@@ -22,7 +22,7 @@
         <label>관리할 계정<select id="shared-group-select"><option value=":pick" disabled selected>계정을 선택하세요</option></select></label>
         <div id="shared-group-fields" hidden>
           <label class="shared-group-name">계정 이름 (선택)<input id="shared-group-label" maxlength="40" placeholder="비우면 자동으로 지정" aria-describedby="shared-group-name-note"></label>
-          <p id="shared-group-name-note" class="boss-status">이름을 비우면 대표 캐릭터 이름을 사용합니다. 대표를 고르지 않으면 가장 레벨이 높은 캐릭터 이름을 사용합니다.</p>
+          <p id="shared-group-name-note" class="boss-status">이름을 비우면 가장 레벨이 높은 캐릭터의 닉네임을 사용합니다.</p>
           <fieldset class="shared-group-roster">
             <legend>소속 캐릭터</legend>
             <div id="shared-group-members" class="shared-group-members"></div>
@@ -43,7 +43,7 @@
     </aside>
     <section class="card shared-panel" aria-label="캐릭터 배율">
       <div class="shared-hero"><div><div id="shared-profile"></div><p id="shared-profile-status" class="boss-status" role="status"></p></div><div class="shared-character-tools"><a id="shared-source" class="boss-button" hidden target="_blank" rel="noopener noreferrer">환산 원문 ↗</a></div></div>
-      <details id="shared-owner-settings" class="boss-details shared-owner-settings"><summary id="shared-owner-summary">계정 설정</summary><div id="shared-owner-fields" class="shared-owner-fields"><label>소속 계정<select id="shared-owner"><option value="__unassigned__">미분류</option></select></label><label>이름 · 선택<input id="shared-owner-label" maxlength="40" placeholder="대표 캐릭터 이름 사용"></label></div></details>
+      <details id="shared-owner-settings" class="boss-details shared-owner-settings"><summary id="shared-owner-summary">계정 설정</summary><div id="shared-owner-fields" class="shared-owner-fields"><label>소속 계정<select id="shared-owner"><option value="__unassigned__">미분류</option></select></label><label>이름 · 선택<input id="shared-owner-label" maxlength="40" placeholder="비우면 자동으로 지정"></label></div></details>
       <div class="shared-input-toolbar"><div class="shared-input-toggle" role="group" aria-label="배율 입력 방식"><button id="shared-mode-capture" type="button" aria-pressed="true" aria-controls="shared-capture">캡처 입력</button><button id="shared-mode-fetch" type="button" aria-pressed="false" aria-controls="shared-fetch-panel">환산 조회</button></div><div id="shared-fetch-panel" hidden><button id="shared-fetch" class="boss-primary" type="button" disabled>배율 불러오기</button></div></div>
       <p id="shared-status" class="boss-status" role="status" aria-live="polite"></p>
       <div id="shared-capture">

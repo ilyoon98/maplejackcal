@@ -243,8 +243,8 @@ test('공용 계정은 키 없이 등록된 260 이상 캐릭터로 편집하고
   assert.equal(candidates().filter(n=>n.textContent==='빼기').length,2);assert(p.calls.every(c=>c.url==='/api/boss-rates'));
  }finally{p.close();}
 });
-test('새 계정 이름을 바로 입력하고 한 명만 대표로 선택해 자동 이름에 사용한다',async()=>{
- const high=snapshot('높은캐릭터'),low=snapshot('대표후보');high.character.level=297;low.character.level=270;
+test('새 계정 이름을 비우면 소속 캐릭터 중 가장 높은 레벨의 닉네임을 사용한다',async()=>{
+ const high=snapshot('높은캐릭터'),low=snapshot('낮은캐릭터');high.character.level=297;low.character.level=270;
  const p=await boot('shared_boss_rates',{snapshots:[high,low]});try{
   select(p.w,'shared-group-select','');
   const name=p.doc.querySelector('#shared-group-label');assert.equal(name.closest('#shared-group-fields').hidden,false);
@@ -252,15 +252,13 @@ test('새 계정 이름을 바로 입력하고 한 명만 대표로 선택해 �
   for(const s of [high,low]){
    type(p.w,'shared-group-search',s.characterName);p.doc.querySelector('#shared-group-results button').click();
   }
-  const representative=value=>p.doc.querySelector('#shared-group-members input[value="'+value+'"]');
-  representative(high.characterName).click();representative(low.characterName).click();
-  assert.equal(representative(high.characterName).checked,false);assert.equal(representative(low.characterName).checked,true);
-  assert.equal(name.placeholder,low.characterName);
+  assert.equal(p.doc.querySelector('#shared-group-members input[type="checkbox"]'),null);
   p.doc.querySelector('#shared-group-save').click();await settle();
   const body=JSON.parse(p.calls.find(c=>c.options.method==='POST').options.body);
-  assert.equal(body.accounts[0].representative,low.characterName);assert.equal(body.accounts[0].label,'');
-  assert.equal(p.doc.querySelector('#shared-group-select option:checked').textContent,low.characterName);
-  p.doc.querySelector('#shared-refresh').click();await settle();assert.equal(representative(low.characterName).checked,true);
+  assert.equal(body.accounts[0].label,'');
+  assert.equal(p.doc.querySelector('#shared-group-select option:checked').textContent,high.characterName);
+  p.doc.querySelector('#shared-refresh').click();await settle();
+  assert.equal(p.doc.querySelector('#shared-group-select option:checked').textContent,high.characterName);
  }finally{p.close();}
 });
 test('내 계정 불러오기는 비공개 계정 ID와 OCID를 공용 요청에 넣지 않는다',async()=>{
