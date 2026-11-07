@@ -7,6 +7,7 @@
   'use strict';
   var STORAGE='partyBossScheduler.v1';
   var BASE='https://open.api.nexon.com/maplestory/v1';
+  var SHARE_COLORS=['#75adff','#59d8ad','#ffc46b','#c39bfa','#ff849d','#efe879'];
   function text(v,n){return typeof v==='string'?v.trim().slice(0,n||100):'';}
   var imageUrl=scouter.imageUrl;
   function profile(raw,ocid){
@@ -157,7 +158,7 @@
       fillAccounts('party-draft-account');fillCharacters('party-draft-character',el('party-draft-account').value,bossId,el('party-draft-character').value);
       var host=el('party-draft-members'),members=draftRoster(bossId);host.replaceChildren();
       el('party-draft-summary').replaceChildren(totals(members,boss.max,false));
-      host.append(...memberCards(members,function(m,index){draftMembers.splice(index,1);draftStatus('');renderDraft();}));
+      host.append(...memberCards(members,damageShares(members),function(m,index){draftMembers.splice(index,1);draftStatus('');renderDraft();}));
       el('party-draft-add').disabled=!el('party-draft-character').value;
     }
     function draftRoster(bossId){
@@ -195,10 +196,28 @@
       footer.append(node('span','party-member-count',members.length+' / '+max+'명'));
       box.append(footer);return box;
     }
-    function memberCards(members,onRemove){
+    function damageShares(members){
       var sum=summary(members);
+      return sum.missing||sum.total<=0?null:members.map(function(m){return rate(m.rate)/sum.total*100;});
+    }
+    function damageChart(members,shares){
+      var section=node('section','party-share-chart'),title=node('h4','','예상 딜 비중');
+      title.id='party-share-title';section.setAttribute('aria-labelledby',title.id);section.append(title);
+      var bar=node('div','party-share-bar'),legend=node('ul','party-share-legend');
+      bar.setAttribute('aria-hidden','true');
+      members.forEach(function(m,index){
+        var share=shares[index],color=SHARE_COLORS[index%SHARE_COLORS.length];
+        var segment=node('span','party-share-segment'),entry=node('li'),marker=node('span','party-share-marker');
+        segment.style.width=share+'%';segment.style.backgroundColor=color;
+        marker.style.backgroundColor=color;marker.setAttribute('aria-hidden','true');
+        entry.append(marker,node('span','party-share-name',m.character.name),node('strong','party-share-value',percentLabel(share)));
+        bar.append(segment);legend.append(entry);
+      });
+      section.append(bar,legend);return section;
+    }
+    function memberCards(members,shares,onRemove){
       return members.map(function(m,index){
-        var share=!sum.missing&&sum.total>0?percentLabel(m.rate/sum.total*100):'—';
+        var share=shares?percentLabel(shares[index]):'—';
         return memberCard(m,share,function(){onRemove(m,index);});
       });
     }
@@ -284,9 +303,11 @@
       header.append(title,actions);
       headingHost.append(header);
       detail.append(totals(p.members,boss.max,false));
+      var shares=damageShares(p.members);
+      if(shares)detail.append(damageChart(p.members,shares));
       if(p.members.some(function(m,i){return accounts.conflict(shared,p.members.slice(0,i),m.character.name);}))detail.append(node('p','party-note account-error','계정 묶음이 변경되어 같은 계정의 캐릭터가 중복되었습니다. 한 명을 빼주세요.'));
       var roster=node('div','party-members');
-      roster.append(...memberCards(p.members,function(m){updateMembers(p,p.members.filter(function(item){return item!==m;}));}));
+      roster.append(...memberCards(p.members,shares,function(m){updateMembers(p,p.members.filter(function(item){return item!==m;}));}));
       detail.append(roster);
     }
     async function choose(name){

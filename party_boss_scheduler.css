@@ -53,6 +53,16 @@
 .party-verdict.overkill{color:#ffd99d;background:#4d3522}
 .party-verdict.pending{color:#e3d6ac;background:#373225}
 
+.party-share-chart{margin:0 0 16px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
+.party-share-chart h4{margin:0 0 10px;font-size:.93rem;color:var(--text)}
+.party-share-bar{display:flex;height:14px;overflow:hidden;border-radius:5px;background:var(--card)}
+.party-share-segment{flex:none;box-shadow:inset -1px 0 #0004}
+.party-share-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:10px 0 0;padding:0;list-style:none}
+.party-share-legend li{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;font-size:.82rem}
+.party-share-marker{flex:none;width:10px;height:10px;border-radius:3px}
+.party-share-name{overflow-wrap:anywhere}
+.party-share-value{white-space:nowrap;font-variant-numeric:tabular-nums}
+
 .party-members{display:grid;gap:10px}
 .party-member{
   --portrait-size:142px;

@@ -55,11 +55,21 @@ test('파티원 세 명의 예상 딜 비중을 표시하고 파티원을 빼면
   }
   const shares=id=>[...p.doc.querySelectorAll('#'+id+' .party-member-metrics .party-metric:nth-child(2) .party-metric-value')].map(n=>n.textContent);
   assert.deepEqual(shares('party-detail'),['30.97%','31.76%','37.28%']);
+  const legend=cls=>[...p.doc.querySelectorAll('.party-share-legend .'+cls)].map(n=>n.textContent);
+  const segments=[...p.doc.querySelectorAll('.party-share-segment')];
+  const colors=segments.map(n=>n.style.backgroundColor);
+  assert.deepEqual(legend('party-share-name'),['첫번째','두번째','세번째']);
+  assert.deepEqual(legend('party-share-value'),shares('party-detail'));
+  assert.equal(new Set(colors).size,3);
+  assert.deepEqual([...p.doc.querySelectorAll('.party-share-marker')].map(n=>n.style.backgroundColor),colors);
+  assert(Math.abs(segments.reduce((sum,n)=>sum+parseFloat(n.style.width),0)-100)<0.001);
   p.doc.querySelector('.party-edit').click();
   p.doc.querySelector('#party-draft-members .party-member:last-child .party-remove').click();
   assert.deepEqual(shares('party-draft-members'),['49.37%','50.63%']);
   p.doc.querySelector('#party-create-cancel').click();
   assert.deepEqual(shares('party-detail'),['30.97%','31.76%','37.28%']);
+  p.doc.querySelector('#party-detail .party-member:last-child .party-remove').click();
+  assert.deepEqual(legend('party-share-value'),['49.37%','50.63%']);
  }finally{p.close();}
 });
 test('기존 파티 수정은 파티원과 ID를 유지하고 변경한 보스의 배율만 합산한다',async()=>{
@@ -81,6 +91,7 @@ test('기존 파티 수정은 파티원과 ID를 유지하고 변경한 보스�
   assert.equal(form.hidden,true);assert.equal(stored().id,party.id);assert.equal(stored().name,'하드 윌');assert.equal(stored().bossId,'Will|Hard');
   assert.deepEqual(stored().members.map(m=>[m.character.name,m.rate]),[['다른사람',77],['스우전용',null]]);
   assert(p.doc.querySelector('#party-detail').textContent.includes('1명 미등록'));
+  assert.equal(p.doc.querySelector('.party-share-chart'),null);
   assert.deepEqual([...p.doc.querySelectorAll('#party-detail .party-member-metrics .party-metric:nth-child(2) .party-metric-value')].map(n=>n.textContent),['—','—']);
   edit();type(p.w,'party-name','새 금요팟');p.doc.querySelector('#party-draft-members .party-member:last-child .party-remove').click();
   form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
