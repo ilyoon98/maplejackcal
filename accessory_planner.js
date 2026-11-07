@@ -23,10 +23,12 @@
   ];
   const pricedCombos = combos.slice(1);
   const lineValue = 20;
-  const maxPriceLength = 24;
+  const mesoPerEok = 100000000n;
+  // A legacy 24-digit meso price may gain a decimal point when shown in eok.
+  const maxPriceLength = 25;
   const maxFormattedPriceLength = maxPriceLength + Math.floor((maxPriceLength - 1) / 3);
   const storageKey = 'accessoryPlanner.v1';
-  const priceKey = 'accessoryPlanner.prices.v2';
+  const priceKey = 'accessoryPlanner.prices.v3';
   const goalKey = 'accessoryPlanner.goals.v1';
   const { koreanAmount } = window.MoneyInput;
   const byId = id => document.getElementById(id);
@@ -37,6 +39,8 @@
   const lineCount = byId('accessory-line-count');
   const lineEditor = byId('accessory-lines');
   const priceEditor = byId('accessory-prices');
+  const ownedOptions = byId('accessory-owned-options');
+  const ownedSummary = byId('accessory-owned-summary');
   const apply = byId('accessory-apply');
   const resultTitle = byId('accessory-result-title');
   const resultStatus = byId('accessory-result-status');
@@ -67,18 +71,19 @@
     const value = savedLines[slot * 2 + index];
     return value === 'drop' || value === 'meso' ? value : '';
   }));
-  const savedPrices = load(priceKey);
-  const useLegacyPrices = savedPrices.length === 0;
-  const storedPrices = useLegacyPrices ? load('accessoryPlanner.prices.v1') : savedPrices;
+  const storedVersions = [load(priceKey), load('accessoryPlanner.prices.v2'), load('accessoryPlanner.prices.v1')];
+  const versionIndex = storedVersions.findIndex(version => version.length > 0);
+  const storedPrices = storedVersions[versionIndex] || [];
   const prices = slots.map((_, slot) => {
     const saved = Array.isArray(storedPrices[slot]) ? storedPrices[slot] : [];
     return pricedCombos.map((_, index) => {
       const entry = saved[index];
-      const raw = useLegacyPrices ? entry : entry?.value;
+      const raw = versionIndex === 2 ? entry : entry?.value;
       const value = typeof raw === 'string' ? raw.slice(0, maxFormattedPriceLength) : '';
-      const amount = parsePrice(value);
-      if (useLegacyPrices && amount === 0n) return { value: '', owned: true };
-      return { value: amount === null ? value : formatPrice(value), owned: entry?.owned === true };
+      const owned = entry?.owned === true;
+      if (versionIndex <= 0) return { value: formatPrice(value), owned };
+      const amount = parsePrice(value, true);
+      return { value: amount ? formatEok(amount) : '', owned: owned || (versionIndex === 2 && amount === 0n) };
     });
   });
 
@@ -106,36 +111,39 @@
     </div>
   `).join('');
   const lineButtons = Array.from(lineEditor.children, group => group.querySelectorAll('button'));
-  // Keep ownership controls reachable before the continuous price entry sequence.
-  priceEditor.innerHTML = pricedCombos.map((combo, index) => `
-    <button type="button" class="ux-button accessory-owned" style="--price-row: ${index + 1}" aria-label="${combo.label} 보유">
+  ownedOptions.innerHTML = pricedCombos.map(combo => `
+    <button type="button" class="ux-button accessory-owned">
       <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <path class="accessory-owned-plus" d="M8 4v8M4 8h8"/>
         <path class="accessory-owned-check" d="m4 8 2.5 2.5L12 5"/>
       </svg>
-      보유
+      ${combo.label}
     </button>
-  `).join('') + pricedCombos.map((combo, index) => `
-    <label class="accessory-price" style="--price-row: ${index + 1}">
+  `).join('');
+  priceEditor.innerHTML = pricedCombos.map((combo, index) => `
+    <label class="accessory-price">
       <span id="accessory-price-option-${index}">${combo.label}</span>
-      <input type="text" maxlength="${maxFormattedPriceLength}" autocomplete="off" spellcheck="false" aria-labelledby="accessory-slot-title accessory-price-option-${index}" aria-errormessage="accessory-price-error">
+      <span class="accessory-price-entry">
+        <input type="text" inputmode="decimal" maxlength="${maxFormattedPriceLength}" autocomplete="off" spellcheck="false" aria-labelledby="accessory-slot-title accessory-price-option-${index}" aria-describedby="accessory-price-unit-${index}" aria-errormessage="accessory-price-error">
+        <span id="accessory-price-unit-${index}">억 메소</span>
+      </span>
     </label>
-  `).join('') + '<p class="accessory-price-error" id="accessory-price-error" hidden>0보다 큰 가격을 메소 숫자 또는 12.5억 형식으로 입력하세요.</p>';
+  `).join('') + '<p class="accessory-price-error" id="accessory-price-error" hidden>억 메소 단위로 0보다 큰 수를 입력하세요. 소수점 아래 최대 8자리까지 입력할 수 있습니다.</p>';
   const priceInputs = Array.from(priceEditor.querySelectorAll('input'));
-  const ownedButtons = Array.from(priceEditor.querySelectorAll('.accessory-owned'));
+  const ownedButtons = Array.from(ownedOptions.querySelectorAll('button'));
   const priceError = priceEditor.querySelector('.accessory-price-error');
 
   const savedGoals = load(goalKey);
   const metrics = Array.from(document.querySelectorAll('.accessory-metric'), (card, index) => {
-    const cap = Number(card.dataset.cap);
-    const target = card.querySelector('select');
-    const values = Array.from({ length: cap / lineValue + 1 }, (_, step) => step * lineValue);
-    target.innerHTML = values.map(value => `<option value="${value}">${value}%</option>`).join('');
-    target.value = String(values.includes(savedGoals[index]) ? savedGoals[index] : cap);
+    const target = card.querySelector('input[type="range"]');
+    const cap = Number(target.max);
+    const saved = savedGoals[index];
+    if (Number.isInteger(saved) && saved >= 0 && saved <= cap && saved % lineValue === 0) target.value = String(saved);
     return {
       kind: card.dataset.kind,
       cap,
       target,
+      targetValue: card.querySelector('.accessory-target-value'),
       progress: card.querySelector('progress'),
       score: card.querySelector('strong'),
       detail: card.querySelector('.accessory-detail')
@@ -167,11 +175,13 @@
     const missing = missingLines(lines).length;
     lineCount.textContent = `사용 ${lines.length - empty} / ${lines.length}줄 · 2줄 장비 ${double}개`;
 
-    for (const { kind, cap, target, progress, score, detail } of metrics) {
+    for (const { kind, cap, target, targetValue, progress, score, detail } of metrics) {
       const goal = Number(target.value);
       const total = countLines(lines, kind) * lineValue;
       const applied = Math.min(total, cap);
       const shortfall = goal - applied;
+      targetValue.textContent = `${goal}%`;
+      target.setAttribute('aria-valuetext', `${goal}%`);
       score.textContent = `${applied}%`;
       progress.value = goal === 0 ? 100 : Math.min(100, applied / goal * 100);
       if (total > cap) detail.textContent = `옵션 합계 ${total}% · 상한 ${total - cap}%p 초과`;
@@ -200,22 +210,29 @@
 
   function formatPrice(value) {
     if (value.replaceAll(',', '').length > maxPriceLength) return value;
-    const match = /^(\s*)([\d,]+)((?:\.\d*)?\s*(?:억\s*)?)$/.exec(value);
-    if (!match) return value;
-    const [, prefix, whole, suffix] = match;
+    const match = /^(\s*)([\d,]*)(\.\d*)?\s*(?:억(?:\s*메소)?\s*)?$/.exec(value);
+    if (!match || (!match[2] && !match[3])) return value;
+    const [, prefix, whole, fraction = ''] = match;
     const grouped = whole.replaceAll(',', '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return prefix + grouped + suffix;
+    return prefix + grouped + fraction;
   }
 
-  function parsePrice(input) {
+  function parsePrice(input, legacy = false) {
     const value = input.trim();
-    if (value.replaceAll(',', '').length > maxPriceLength) return null;
-    const match = /^(\d+|\d{1,3}(?:,\d{3})+)(?:\.(\d{1,8}))?\s*(억)?$/.exec(value);
-    if (!match) return null;
+    if (value.replaceAll(',', '').length > (legacy ? 24 : maxPriceLength)) return null;
+    const match = /^(\d+|\d{1,3}(?:,\d{3})+)?(?:\.(\d{0,8}))?\s*(억)?$/.exec(value);
+    if (!match || (!match[1] && !match[2])) return null;
     const [, whole, fraction, unit] = match;
-    const digits = whole.replaceAll(',', '');
-    if (unit) return BigInt(digits + (fraction || '').padEnd(8, '0'));
-    return fraction ? null : BigInt(digits);
+    if (legacy && (!whole || fraction === '')) return null;
+    const digits = (whole || '0').replaceAll(',', '');
+    if (legacy && !unit) return fraction ? null : BigInt(digits);
+    return BigInt(digits + (fraction || '').padEnd(8, '0'));
+  }
+
+  function formatEok(amount) {
+    const whole = String(amount / mesoPerEok);
+    const fraction = String(amount % mesoPerEok).padStart(8, '0').replace(/0+$/, '');
+    return formatPrice(fraction ? `${whole}.${fraction}` : whole);
   }
 
   function renderPriceErrors() {
@@ -229,13 +246,16 @@
   }
 
   function renderPriceInputs() {
+    const ownedLabels = [];
     priceInputs.forEach((input, index) => {
       const { value, owned } = prices[selected][index];
       input.value = owned ? '' : value;
-      input.placeholder = owned ? '0 메소' : '';
+      input.placeholder = owned ? '0' : '';
       input.disabled = owned;
       ownedButtons[index].setAttribute('aria-pressed', String(owned));
+      if (owned) ownedLabels.push(pricedCombos[index].label);
     });
+    ownedSummary.textContent = ownedLabels.length > 1 ? `${ownedLabels.length}개 등록` : ownedLabels[0] || '미등록';
   }
 
   function selectSlot(slot) {
@@ -314,7 +334,7 @@
     renderResult();
   }
 
-  metrics.forEach(({ target }) => target.addEventListener('change', () => {
+  metrics.forEach(({ target }) => target.addEventListener('input', () => {
     save(goalKey, metrics.map(metric => Number(metric.target.value)));
     renderOptions();
     renderResult();
@@ -333,7 +353,7 @@
       const value = input.value;
       const formatted = formatPrice(value);
       if (formatted !== value) {
-        let remaining = value.slice(0, input.selectionStart).replaceAll(',', '').length;
+        let remaining = Math.min(value.slice(0, input.selectionStart).replaceAll(',', '').length, formatted.replaceAll(',', '').length);
         let caret = 0;
         while (remaining > 0) {
           if (formatted[caret] !== ',') remaining--;

@@ -25,24 +25,26 @@
     <section class="card accessory-summary" aria-labelledby="accessory-summary-title">
       <h2 id="accessory-summary-title">장비에서 적용되는 옵션</h2>
       <div class="accessory-metrics">
-        <div class="accessory-metric" data-kind="drop" data-cap="100">
+        <div class="accessory-metric" data-kind="drop">
           <h3>아이템 드랍률</h3>
           <p class="accessory-score"><strong>0%</strong> <span>상한 100%</span></p>
           <progress aria-label="아이템 드랍률 목표 달성도" max="100" value="0"></progress>
           <p class="accessory-detail" role="status">100%p 부족 · 5줄</p>
           <label class="accessory-target">
             <span>목표</span>
-            <select aria-label="목표 아이템 드랍률"></select>
+            <span class="accessory-target-value" aria-hidden="true">100%</span>
+            <input type="range" min="0" max="100" step="20" value="100" aria-label="목표 아이템 드랍률" aria-valuetext="100%">
           </label>
         </div>
-        <div class="accessory-metric" data-kind="meso" data-cap="200">
+        <div class="accessory-metric" data-kind="meso">
           <h3>메소 획득량</h3>
           <p class="accessory-score"><strong>0%</strong> <span>상한 200%</span></p>
           <progress aria-label="메소 획득량 목표 달성도" max="100" value="0"></progress>
           <p class="accessory-detail" role="status">200%p 부족 · 10줄</p>
           <label class="accessory-target">
             <span>목표</span>
-            <select aria-label="목표 메소 획득량"></select>
+            <span class="accessory-target-value" aria-hidden="true">200%</span>
+            <input type="range" min="0" max="200" step="20" value="200" aria-label="목표 메소 획득량" aria-valuetext="200%">
           </label>
         </div>
       </div>
@@ -68,7 +70,12 @@
         <div class="accessory-editor" aria-labelledby="accessory-slot-title" role="group">
           <h3 id="accessory-slot-title">반지 1</h3>
           <div class="accessory-lines" id="accessory-lines"></div>
-          <h4>옵션 조합별 가격 (메소)</h4>
+          <details class="ux-details accessory-ownership">
+            <summary>보유 장비 <span id="accessory-owned-summary">미등록</span></summary>
+            <p class="accessory-hint">이 부위에서 실제로 가진 옵션 조합을 선택하세요.</p>
+            <div id="accessory-owned-options" role="group" aria-label="보유 장비 옵션 조합"></div>
+          </details>
+          <h4>옵션 조합별 매물 가격</h4>
           <div id="accessory-prices"></div>
         </div>
       </div>
@@ -93,7 +100,8 @@
         <li>목표는 20% 단위로 선택합니다. 장비 상한인 드랍 100%와 메획 200%를 함께 채우려면 15줄이 필요합니다.</li>
         <li>자동 배치는 기존 옵션을 유지하고, 옵션이 하나도 없는 장비부터 1줄씩 채웁니다.</li>
         <li>Enter 또는 Tab으로 다음 가격 칸을 입력할 수 있습니다. 귀걸이의 마지막 가격 칸에서 Enter를 누르면 최저가 조합으로 이동합니다.</li>
-        <li>최저가 조합은 가격을 입력했거나 보유 중인 후보에서 찾습니다. 보유 장비의 추가 비용은 0메소입니다. 각 부위는 비워 두거나 한 조합만 선택합니다. 상한을 넘는 옵션도 후보로 비교합니다.</li>
+        <li>매물 가격은 억 메소 단위입니다. 17은 17억 메소, 0.1은 1천만 메소입니다.</li>
+        <li>최저가 조합은 부위마다 보유 장비와 등록한 매물 가격을 비교합니다. 실제 보유한 옵션 조합은 추가 비용 0메소로 계산하며, 부위마다 최대 한 개를 선택합니다.</li>
         <li>목표, 배치, 가격, 보유 여부는 이 브라우저에 저장됩니다.</li>
       </ul>
     </section>
