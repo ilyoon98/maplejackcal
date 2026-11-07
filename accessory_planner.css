@@ -198,13 +198,6 @@
   white-space: nowrap;
 }
 
-.accessory-owned svg { flex: none; width: 18px; height: 18px; padding: 2px; border-radius: 50%; background: #2b3544; }
-.accessory-owned:hover { border-color: #68788e; color: var(--text); }
-.accessory-owned-check,
-.accessory-owned[aria-pressed="true"] .accessory-owned-plus { display: none; }
-.accessory-owned[aria-pressed="true"] { border-color: #467a65; background: #17352d; color: #b3ead1; }
-.accessory-owned[aria-pressed="true"] svg { background: #285445; }
-.accessory-owned[aria-pressed="true"] .accessory-owned-check { display: inline; }
 
 .accessory-price input { text-align: right; font-variant-numeric: tabular-nums; }
 .accessory-price input:disabled { background: #131d1a; border-color: #31493f; }

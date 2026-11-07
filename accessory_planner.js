@@ -114,12 +114,9 @@
   const lineButtons = Array.from(lineEditor.children, group => group.querySelectorAll('button'));
   // Keep ownership controls before the continuous price-entry sequence in tab order.
   priceEditor.innerHTML = pricedCombos.map((combo, index) => `
-    <button type="button" class="ux-button accessory-owned" style="--price-row: ${index + 1}" aria-label="${combo.label} 보유">
-      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <path class="accessory-owned-plus" d="M8 4v8M4 8h8"/>
-        <path class="accessory-owned-check" d="m4 8 2.5 2.5L12 5"/>
-      </svg>
-      보유
+    <button type="button" class="ux-button ux-toggle accessory-owned" role="switch" style="--price-row: ${index + 1}" aria-label="${combo.label} 보유">
+      <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+      <span class="switch-state" aria-hidden="true"></span>
     </button>
   `).join('') + pricedCombos.map((combo, index) => `
     <label class="accessory-price" style="--price-row: ${index + 1}">
@@ -229,7 +226,8 @@
       input.value = owned ? '' : value;
       input.placeholder = owned ? '0' : '';
       input.disabled = owned;
-      ownedButtons[index].setAttribute('aria-pressed', String(owned));
+      ownedButtons[index].setAttribute('aria-checked', String(owned));
+      ownedButtons[index].querySelector('.switch-state').textContent = owned ? '보유' : '미보유';
     });
   }
 
@@ -460,9 +458,11 @@
     input.focus();
     input.select();
   });
-  reset.addEventListener('click', () => {
+  reset.addEventListener('click', async () => {
     if (reset.getAttribute('aria-disabled') === 'true') return;
-    if (!window.confirm('장신구 9부위의 선호 옵션을 모두 지울까요?')) return;
+    const title = '장신구 선호 옵션을 초기화할까요?';
+    const message = '장신구 9부위에 등록한 선호 옵션을 지웁니다.';
+    if (!(window.SiteUX ? await window.SiteUX.confirm(title, message, '선호 초기화') : window.confirm(title + '\n' + message))) return;
     preferences.forEach(lines => lines.fill(''));
     updatePreferences();
   });

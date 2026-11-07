@@ -36,7 +36,7 @@
       <button type="button" data-days="7" aria-pressed="false">최근 7일</button>
       <button type="button" data-days="30" aria-pressed="false">최근 30일</button>
       <button type="button" data-days="365" aria-pressed="false">최근 1년</button>
-      <button type="button" data-days="all" aria-pressed="false">전체 · 최근 2년</button>
+      <button type="button" data-days="all" aria-pressed="false">전체 (최근 2년)</button>
     </div><div class="history-fields history-account-fields">
       <div class="history-filter-field"><span>서버</span><details id="historyWorld" class="history-multi-filter"><summary id="historyWorldSummary">전체 서버</summary><div class="history-filter-menu"><label class="history-filter-all"><input id="historyWorldAll" type="checkbox" data-select-all checked>전체 서버</label><div id="historyWorldOptions"></div></div></details></div>
       <div class="history-filter-field"><span>내 캐릭터</span><details id="historyCharacterSelect" class="history-multi-filter"><summary id="historyCharacterSummary">전체 캐릭터</summary><div class="history-filter-menu"><label class="history-filter-all"><input id="historyCharacterAll" type="checkbox" data-select-all checked>전체 캐릭터</label><div id="historyCharacterOptions"></div></div></details></div>
@@ -74,18 +74,18 @@
         <div id="itemComparison" class="history-comparison" role="status">목표 달성 분석 후 기대비용 대비 이득·손해를 표시합니다.</div>
         <div id="itemEvents" class="history-event-badges"></div>
         <div class="history-session"><label for="sessionSelect">연속 강화 구간 선택</label><select id="sessionSelect"></select><p class="history-note">별 흐름·이벤트·강화 조건으로 나눈 후보입니다. 같은 장비인지 확인하세요. 구간 선택은 목표 분석에만 적용하며 상단 총합은 전체 기록을 유지합니다.</p></div>
-        <details id="rangeSettings"><summary>고급 · 같은 이름의 장비 기록 나누기</summary>
+        <details id="rangeSettings"><summary>같은 이름의 장비 기록 나누기</summary>
         <p class="history-note">같은 이름의 장비 여러 개가 섞였을 때만 사용하세요. 기본은 전체 기록입니다. 기록은 오래된 순입니다.</p>
         <div class="history-tools"><label>시작 순번 <input id="rangeFrom" type="number" min="1" value="1"></label><label>종료 순번 <input id="rangeTo" type="number" min="1" value="1"></label><button id="rangeApply" type="button">구간 적용</button></div>
         </details>
         <p id="rangeSummary" class="history-note"></p>
-        <details id="analysisSettings"><summary>레벨·개인 할인 수정 / 목표 달성 분석</summary>
+        <details id="analysisSettings"><summary>레벨과 할인 수정 및 목표 분석</summary>
           <p class="history-note">이벤트 할인과 파괴방지는 기록에서 자동 반영합니다. 수정한 레벨·할인·대체 장비값은 같은 이름 장비의 전체 기록에 적용하고 이 브라우저에 저장합니다. 대체 장비값은 파괴 횟수만큼 상단 총합에 더하며 복구 메소는 제외합니다.</p>
           <form id="analysisForm">
             <div class="history-fields">
               <label>장비 레벨<input id="itemLevel" type="number" min="1" max="300" required placeholder="예: 200"></label>
               <label>목표 별<input id="itemGoal" type="number" min="1" max="30" required value="22"></label>
-              <label>파괴 1회 대체 장비값 · 메소<input id="itemSpare" type="number" min="0" max="1000000000000000" step="1" required value="0"></label>
+              <label>파괴 1회 대체 장비값 (메소)<input id="itemSpare" type="number" min="0" max="1000000000000000" step="1" required value="0"></label>
               <label>MVP 할인<select id="itemMvp"><option value="0">없음</option><option value="0.03">실버 3%</option><option value="0.05">골드 5%</option><option value="0.1">다이아 10%</option></select></label>
             </div>
             <div class="history-checks"><label><input type="checkbox" id="itemPc">PC방 할인</label></div>

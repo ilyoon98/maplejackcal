@@ -1,12 +1,74 @@
 /* Presentation only: reuse existing inputs/results; never calculate game probabilities or costs. */
 (function () {
   'use strict';
+  let activeConfirm;
+  const toastTimers = new WeakMap();
+  window.SiteUX = {
+    confirm(title, message, action = '초기화') {
+      if (activeConfirm) return Promise.resolve(false);
+      const dialog = document.createElement('dialog');
+      if (typeof dialog.showModal !== 'function') return Promise.resolve(window.confirm([title, message].filter(Boolean).join('\n')));
+      const opener = document.activeElement;
+      dialog.className = 'ux-confirm';
+      dialog.setAttribute('aria-labelledby', 'ux-confirm-title');
+      dialog.innerHTML = '<h2 id="ux-confirm-title"></h2><p id="ux-confirm-message"></p><form method="dialog"><button class="ux-button" value="cancel" autofocus>취소</button><button class="ux-button ux-danger" value="accept"></button></form>';
+      dialog.querySelector('h2').textContent = title;
+      const explanation = dialog.querySelector('p');
+      explanation.textContent = message || '';
+      explanation.hidden = !message;
+      if (message) dialog.setAttribute('aria-describedby', explanation.id);
+      dialog.querySelector('[value="accept"]').textContent = action;
+      document.body.append(dialog);
+      activeConfirm = dialog;
+      return new Promise(resolve => {
+        dialog.addEventListener('close', () => {
+          const accepted = dialog.returnValue === 'accept';
+          dialog.remove();
+          activeConfirm = null;
+          if (opener?.isConnected) opener.focus();
+          resolve(accepted);
+        }, { once: true });
+        dialog.showModal();
+      });
+    },
+    toast(host, message, tone = 'success') {
+      clearTimeout(toastTimers.get(host));
+      const opener = document.activeElement;
+      const text = document.createElement('span');
+      text.textContent = (tone === 'success' ? '완료. ' : '안내. ') + message;
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'ux-button ux-toast-close';
+      close.setAttribute('aria-label', '알림 닫기');
+      close.textContent = '×';
+      const hide = () => {
+        clearTimeout(toastTimers.get(host));
+        if (host.contains(document.activeElement) && opener?.isConnected) opener.focus();
+        host.hidden = true;
+      };
+      close.addEventListener('click', hide);
+      host.classList.add('ux-toast');
+      host.dataset.tone = tone;
+      host.hidden = false;
+      host.replaceChildren(text, close);
+      toastTimers.set(host, setTimeout(hide, 4000));
+    }
+  };
   function init() {
     const q = (s, r = document) => r.querySelector(s);
     const qa = (s, r = document) => Array.from(r.querySelectorAll(s));
     const basename = location.pathname.split('/').pop() || 'index.html';
     const page = basename.endsWith('.html') ? basename : basename + '.html';
     document.body.dataset.uxPage = page;
+    function focusAnchor() {
+      const target = document.getElementById(location.hash.slice(1));
+      const heading = target?.matches('h1,h2,h3') ? target : target?.querySelector('h1,h2,h3,summary');
+      if (!heading) return;
+      heading.setAttribute('tabindex', '-1');
+      heading.focus({ preventScroll: true });
+    }
+    window.addEventListener('hashchange', focusAnchor);
+    if (location.hash) focusAnchor();
     const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; };
     const text = s => q(s)?.textContent.trim() || '';
     const setText = (n, value) => { if (n && n.textContent !== value) n.textContent = value; };
@@ -202,7 +264,7 @@
       const detail=make('details','ux-details'); const summary=make('summary','','파괴방지 손익분기표');
       detail.append(summary,table,comparison); q('#safeguardChips').after(detail);
       const result=q('#resMeso').closest('.sf-panel'); result.id='expectedResultCard'; const note=make('p','ux-scope');q('.sf-metrics',result).before(note);
-      const update=()=>{const empty=!Number(q('#spareInput').value.replaceAll(',',''));setText(note,empty?'노작값 0 · 파괴 시 장비 구매 비용 제외':'입력한 노작값을 파괴 비용에 포함');};q('#spareInput').addEventListener('input',update);new MutationObserver(update).observe(q('#resMeso'),{childList:true,subtree:true,characterData:true});update();
+      const update=()=>{const empty=!Number(q('#spareInput').value.replaceAll(',',''));setText(note,empty?'노작값은 0메소로 계산합니다.':'입력한 노작값을 파괴 비용에 포함합니다.');};q('#spareInput').addEventListener('input',update);new MutationObserver(update).observe(q('#resMeso'),{childList:true,subtree:true,characterData:true});update();
     }
 
     // Mobile result shortcut reads the existing rendered output, never recomputes it.
@@ -210,7 +272,7 @@
       'item_craft_calc.html':['.ic-result','#resAvg','평균 제작 비용'],
       'cube_option_calc.html':['.cube-layout > aside','#resMeso','평균 비용'],
       'cube_calc.html':['.cube-layout > aside','#expectedCost','평균 비용'],
-      'starforce_calc.html':['.sf-layout > aside','#resMeso','평균 비용'],
+      'starforce_calc.html':['#expectedResultCard','.sf-result-value','기대 메소'],
       'flame_calc.html':['.fc-result','#flameExpectedCost','평균 메소 비용','#flameResult [data-result-status]'],
       'hunting_calc.html':['#hunt-result','#results:not([hidden]) #fragments','솔 에르다 조각(개)','#inputError:not([hidden]) [data-result-status]'],
       'accessory_planner.html':['.accessory-result','#accessory-result-status','조합 결과'],
@@ -229,6 +291,10 @@
       const [target, source, label, status] = config; const bar = make('div','ux-result-dock'); const go = make('button','ux-dock-main'); go.type='button';
       const caption = make('span','ux-dock-caption',label); const val = make('strong'); const action = make('span','ux-dock-action','결과 보기'); go.append(caption,val,action); bar.append(go); document.body.append(bar); document.body.classList.add('ux-has-dock');
       const dest=q(target); if(!dest.id) dest.id='ux-result'; go.setAttribute('aria-controls',dest.id);
+      if (page === 'starforce_calc.html' && 'IntersectionObserver' in window) {
+        bar.hidden = true;
+        new IntersectionObserver(([entry]) => { bar.hidden = entry.isIntersecting; }).observe(dest);
+      }
       go.addEventListener('click',()=>{ dest.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'}); dest.setAttribute('tabindex','-1'); dest.focus({preventScroll:true}); });
       const update=()=> { let value=text(source); if(page==='boss_buff_planner.html') value='전체 동선 / 버프 한 번'; if(page==='starforce_play.html') value+='★'; if(page!=='wealth_elixir_calc.html' && q('#verdictBox') && !q('#verdictBox').classList.contains('hidden')) {value=text('#verdictValue');setText(caption,page==='trade_margin_calc.html'?'총 순이익':'실수령 차이');} else setText(caption,label); setText(val,value||(status && text(status))||'조건을 입력하세요'); };
       new MutationObserver(update).observe(dest,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','hidden']}); update();

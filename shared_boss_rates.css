@@ -14,7 +14,6 @@
 .shared-save-bar[data-state=saved] .shared-save-state{color:var(--good);font-size:.86rem;font-weight:700}
 .shared-save-bar[data-state=saved] #shared-save{background:#216a48;border-color:#216a48}
 .shared-save-bar[data-state=error] .shared-save-state{color:var(--bad)}
-#shared-toast{inset:16px auto auto 50%;transform:translateX(-50%);width:max-content;text-align:center}
 @media(max-width:440px){
   .shared-save-bar{flex-wrap:wrap}
   .shared-save-bar>div:last-child{flex-wrap:wrap;margin-left:auto;justify-content:flex-end}

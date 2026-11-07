@@ -132,6 +132,11 @@
   let toastTimer = 0;
   function toast(msg) {
     const t = $('toast');
+    if (window.SiteUX) {
+      if (t.parentElement !== document.body) document.body.append(t);
+      window.SiteUX.toast(t, msg, 'info');
+      return;
+    }
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
@@ -2036,8 +2041,11 @@
 
   $('awayOk').addEventListener('click', () => $('awayBox').classList.add('hidden'));
 
-  $('hiReset').addEventListener('click', () => {
-    if (paused || !confirm('처음부터 다시 시작할까요?\n메소·가방·기록이 모두 지워집니다.')) return;
+  $('hiReset').addEventListener('click', async () => {
+    if (paused) return;
+    const title = '처음부터 다시 시작할까요?';
+    const message = '메소, 가방, 게임 기록을 모두 지웁니다.';
+    if (!(window.SiteUX ? await window.SiteUX.confirm(title, message, '게임 초기화') : confirm(title + '\n' + message)) || paused) return;
     S = Core.create(newSeed());
     log = [];
     wallAt = Date.now();

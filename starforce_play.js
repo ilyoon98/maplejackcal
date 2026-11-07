@@ -172,7 +172,8 @@
   function chip(label, active, onClick, cls) {
     var b = document.createElement('button');
     b.type = 'button';
-    b.className = 'sf-chip' + (active ? ' active' : '') + (cls ? ' ' + cls : '');
+    b.className = 'ux-button ux-choice sf-chip' + (active ? ' active' : '') + (cls ? ' ' + cls : '');
+    b.setAttribute('aria-pressed', String(active));
     b.textContent = label;
     b.addEventListener('click', onClick);
     return b;
@@ -461,7 +462,12 @@
     });
     $('autoBtn').addEventListener('click', toggleAuto);
     $('nextBtn').addEventListener('click', nextRun);
-    $('resetBtn').addEventListener('click', function () { stopAuto(); restart(); });
+    $('resetBtn').addEventListener('click', async function () {
+      stopAuto();
+      const title = '스타포스 시뮬레이션을 초기화할까요?';
+      const message = '현재 세션의 강화 기록과 가상 지출을 지웁니다.';
+      if (window.SiteUX ? await window.SiteUX.confirm(title, message) : confirm(title + '\n' + message)) restart();
+    });
     refresh();
   });
 })();

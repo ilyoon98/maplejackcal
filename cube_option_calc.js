@@ -133,7 +133,7 @@ function resetGoals(){ state.sets = [{ rows:[] }]; state.active = 0; }
 function renderTabs(){
   $('kindTabs').innerHTML = TABS.map(([key, label]) => {
     const icon = CUBES[Object.keys(CUBES).find(k => CUBES[k].tab === key)].icon.slice(0, 1);
-    return `<button type="button" class="rank-chip tab-chip ${state.tab === key ? 'active' : ''}" data-tab="${key}">${iconImg(icon)}<span>${label}</span></button>`;
+    return `<button type="button" class="rank-chip tab-chip ux-choice ${state.tab === key ? 'active' : ''}" aria-pressed="${state.tab === key}" data-tab="${key}">${iconImg(icon)}<span>${label}</span></button>`;
   }).join('');
 }
 
@@ -141,7 +141,7 @@ function renderParts(){
   $('partGroups').innerHTML = PART_GROUPS.map(([title, parts]) => `
     <div class="part-group">
       <div class="part-group-title">${title}</div>
-      <div class="part-chips">${parts.map(p => `<button type="button" class="part-chip ${p === state.part ? 'active' : ''}" data-part="${esc(p)}" title="${esc(p)}">${esc(PART_SHORT[p] || p)}</button>`).join('')}</div>
+      <div class="part-chips">${parts.map(p => `<button type="button" class="part-chip ux-choice ${p === state.part ? 'active' : ''}" aria-pressed="${p === state.part}" data-part="${esc(p)}" title="${esc(p)}">${esc(PART_SHORT[p] || p)}</button>`).join('')}</div>
     </div>`).join('');
 }
 
@@ -153,7 +153,7 @@ function renderLevels(){
   const rest = list.filter(hidden);
   // 펼치지 않았어도 지금 고른 구간이 숨은 쪽이면 보여준다
   const open = showAllLevels || (cur && hidden(cur));
-  const card = b => `<button type="button" class="level-card ${b === cur ? 'active' : ''}" data-level="${b.min}">${b.min === b.max ? b.min : `${b.min}~${b.max}`}<small>레벨</small></button>`;
+  const card = b => `<button type="button" class="level-card ${b === cur ? 'active' : ''}" aria-pressed="${b === cur}" data-level="${b.min}">${b.min === b.max ? b.min : `${b.min}~${b.max}`}<small>레벨</small></button>`;
   $('levelCards').innerHTML = `
     <div class="level-row">${common.map(card).join('') || '<span class="tiny">120레벨 이상 구간이 없는 부위예요. 아래에서 골라주세요.</span>'}</div>
     ${rest.length ? `<button type="button" class="more-toggle" id="levelMore">${open ? '다른 레벨 구간 접기 ▴' : `다른 레벨 구간 펼치기 (${rest.length}) ▾`}</button>
@@ -162,7 +162,7 @@ function renderLevels(){
 
 function renderCubes(){
   $('cubeChoices').innerHTML = Object.entries(CUBES).filter(([, c]) => c.tab === state.tab).map(([k, c]) => `
-    <button type="button" class="cube-choice ${k === state.cube ? 'active' : ''} ${c.icon.length > 1 ? 'pair-icon' : ''}" data-cube="${k}">
+    <button type="button" class="cube-choice ${k === state.cube ? 'active' : ''} ${c.icon.length > 1 ? 'pair-icon' : ''}" aria-pressed="${k === state.cube}" data-cube="${k}">
       <span class="cube-choice-head">${iconImg(c.icon)}<strong>${esc(c.name)}</strong></span>
     </button>`).join('');
 }

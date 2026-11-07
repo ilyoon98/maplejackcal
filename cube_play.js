@@ -85,7 +85,7 @@ function stageExpectedCost(i){
 function renderTabs(){
   const row=$('kindTabs'); if(!row) return; row.innerHTML='';
   [['normal','잠재능력'],['additional','에디셔널 잠재능력']].forEach(([key,label])=>{
-    const b=document.createElement('button'); b.className='rank-chip tab-chip'+(state.tab===key?' active':''); b.innerHTML=`${iconImg(CUBE_ICON[key==='normal'?'black':'addReset'])}<span>${label}</span>`;
+    const b=document.createElement('button'); b.type='button'; b.className='rank-chip tab-chip ux-choice'+(state.tab===key?' active':''); b.setAttribute('aria-pressed',String(state.tab===key)); b.innerHTML=`${iconImg(CUBE_ICON[key==='normal'?'black':'addReset'])}<span>${label}</span>`;
     b.onclick=()=>{ if(state.tab===key) return; stopAuto(); state.tab=key; const first=Object.keys(CUBES).find(k=>CUBES[k].kind===key); state.cube=first;
       // 탭을 바꿔도 고른 현재 등급은 그대로 두고, 그 큐브가 감당 못 할 때만 레어로 내린다.
       state.startRank = maxTo(first)>state.startRank ? state.startRank : 0;
@@ -96,7 +96,7 @@ function renderTabs(){
 function renderRanks(){
   const row=$('rankGoalRow'); row.innerHTML='<span class="rank-row-label">현재 등급</span>';
   RANKS.slice(0,3).forEach((name,i)=>{
-    const b=document.createElement('button'); b.className='rank-chip'+(state.startRank===i?' active':'');
+    const b=document.createElement('button'); b.type='button'; b.className='rank-chip ux-choice'+(state.startRank===i?' active':''); b.setAttribute('aria-pressed',String(state.startRank===i));
     b.style.setProperty('--chip-color', RANK_COLORS[i]); b.textContent=name;
     b.onclick=()=>{ stopAuto(); state.from=i; state.startRank=i; resetSession(); renderAll(); };
     row.appendChild(b);
@@ -107,6 +107,7 @@ function renderChoices(){
   Object.entries(CUBES).filter(([,d])=>d.kind===state.tab).forEach(([key,d])=>{
     const b=document.createElement('button');
     b.className='cube-choice'+(key===state.cube?' active':'')+(CUBE_ICON[key].length>1?' pair-icon':'');
+    b.type='button'; b.setAttribute('aria-pressed',String(key===state.cube));
     const note = d.p.slice(Math.min(state.startRank,d.p.length)).map(p=>pct(effP(p))).join(' / ');
     b.innerHTML=`<div class="cube-choice-head">${iconImg(CUBE_ICON[key])}<strong>${d.name}</strong></div><small>${note}</small>`;
     b.onclick=()=>{
@@ -277,7 +278,13 @@ function renderPercentiles(){
   box.innerHTML=parts.join('');
 }
 function renderAll(){ ensureValidCube(); renderTabs(); renderRanks(); renderChoices(); renderLevelRow(); renderSim(); }
-$('autoBtn').onclick=toggleAuto; $('resetBtn').onclick=resetSim;
+$('autoBtn').onclick=toggleAuto;
+$('resetBtn').onclick=async function () {
+  stopAuto();
+  const title = '큐브 시뮬레이션을 초기화할까요?';
+  const message = '현재 세션의 사용 횟수와 가상 지출을 지웁니다.';
+  if (window.SiteUX ? await window.SiteUX.confirm(title, message) : confirm(title + '\n' + message)) resetSim();
+};
 $('retryBtn').onclick=resolveRetry; $('nextBtn').onclick=resolveNext;
 $('miracleCheckbox').onchange=e=>{state.miracle=e.target.checked;renderAll();};
 // 아이템 레벨이 큐브 1회 메소를 정한다. 판이 도는 중에 바꾸면 기준이 섞이므로 세션을 초기화한다

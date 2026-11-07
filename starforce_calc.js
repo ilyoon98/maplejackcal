@@ -265,12 +265,24 @@
     } catch (e) {}
   }
 
-  function chip(label, active, onClick, cls) {
+  function control(className, onClick) {
     var b = document.createElement('button');
     b.type = 'button';
-    b.className = 'sf-chip' + (active ? ' active' : '') + (cls ? ' ' + cls : '');
+    b.className = className;
+    b.addEventListener('click', function () {
+      var group = b.parentElement;
+      var focused = b === document.activeElement;
+      var index = focused && group ? Array.from(group.children).indexOf(b) : -1;
+      onClick();
+      if (index >= 0) group.children[index]?.focus();
+    });
+    return b;
+  }
+
+  function chip(label, active, onClick, cls) {
+    var b = control('ux-button ux-choice sf-chip' + (cls ? ' ' + cls : ''), onClick);
     b.textContent = label;
-    b.addEventListener('click', onClick);
+    b.setAttribute('aria-pressed', String(active));
     return b;
   }
 
@@ -295,7 +307,7 @@
     ev.appendChild(chip('PC방 5%', state.pcRoom, function () { state.pcRoom = !state.pcRoom; refresh(); }));
     ev.appendChild(chip('비용 30% 할인', state.discount30, function () { state.discount30 = !state.discount30; refresh(); }));
     ev.appendChild(chip('파괴확률 30% 감소', state.destroyDown30, function () { state.destroyDown30 = !state.destroyDown30; refresh(); }));
-    ev.appendChild(chip('5·10·15성 100%', state.lucky5, function () { state.lucky5 = !state.lucky5; refresh(); }));
+    ev.appendChild(chip('5, 10, 15성 100%', state.lucky5, function () { state.lucky5 = !state.lucky5; refresh(); }));
     ev.appendChild(chip('복구 메소 20% 할인', state.recoveryDiscount20, function () {
       state.recoveryDiscount20 = !state.recoveryDiscount20; refresh();
     }));
@@ -311,10 +323,11 @@
     });
     $('safeguardHint').textContent = state.autoSafeguard ? '노작값에 맞춰 선택했어요. 직접 바꾸려면 자동을 꺼 주세요.' : '파괴방지를 켤 구간을 선택하세요.';
     D.PROTECT_STARS.forEach(function (s) {
-      var button = chip(s + '→' + (s+1) + '성 · ' + (state.safeguard[s] ? 'ON' : 'OFF'), !!state.safeguard[s], function () {
+      var label = s + ' → ' + (s+1) + '성';
+      var button = switchControl(label + ' 파괴방지', !!state.safeguard[s], function () {
         if (state.autoSafeguard) return;
         state.safeguard[s] = !state.safeguard[s]; refresh();
-      });
+      }, label);
       button.disabled = state.autoSafeguard;
       sg.appendChild(button);
     });
@@ -329,17 +342,21 @@
     $('startInput').max = $('goalInput').max = D.maxStarForLevel(state.level);
     $('spareInput').value = state.spare ? state.spare.toLocaleString('en-US') : '';
 
-    $('viewStep').classList.toggle('active', state.view === 'step');
-    $('viewCum').classList.toggle('active', state.view === 'cum');
+    $('viewStep').setAttribute('aria-pressed', String(state.view === 'step'));
+    $('viewCum').setAttribute('aria-pressed', String(state.view === 'cum'));
   }
 
   function renderResult(res) {
+    var valid = res.rows.length > 0;
+    var compact = mesoText(res.total.meso);
+    var exact = Math.round(res.total.meso).toLocaleString('ko-KR') + ' 메소';
     $('resMeso').dataset.expectedUsage = res.total.meso;
-    $('resMeso').textContent = mesoText(res.total.meso);
-    $('resMesoSub').textContent = Math.round(res.total.meso).toLocaleString('ko-KR') + ' 메소';
-    $('resDestroy').textContent = num(res.total.destroys, 2) + ' 회';
-    $('resTries').textContent = num(res.total.tries, 1) + ' 회';
-    $('resRange').textContent = state.start + '성 → ' + state.goal + '성 · Lv.' + state.level + ' 장비';
+    $('resMeso').textContent = valid ? compact.replace(/ 메소$/, '') : '—';
+    $('resMesoUnit').hidden = !valid;
+    $('resMesoSub').textContent = valid && compact !== exact ? exact : '';
+    $('resDestroy').textContent = valid ? num(res.total.destroys, 2) + ' 회' : '—';
+    $('resTries').textContent = valid ? num(res.total.tries, 1) + ' 회' : '—';
+    $('resRange').textContent = valid ? state.level + '레벨 장비, ' + state.start + '성 → ' + state.goal + '성' : '목표 성을 시작 성보다 높게 설정하세요.';
 
 
     var tb = $('stepTable');
@@ -417,14 +434,21 @@
       : '노작값 0 메소 기준입니다. 실제 대체 장비값을 입력하면 판정이 달라질 수 있습니다.';
   }
 
-  function renderSwitch(id, label, on, toggle) {
-    var host = $(id);
-    host.innerHTML = '';
-    var button = chip(on ? 'ON' : 'OFF', on, toggle, 'sf-switch');
+  function switchControl(label, on, toggle, caption) {
+    var button = control('ux-button ux-toggle sf-switch', toggle);
     button.setAttribute('role', 'switch');
     button.setAttribute('aria-checked', String(on));
     button.setAttribute('aria-label', label);
-    host.appendChild(button);
+    button.innerHTML = '<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>' +
+      (caption ? '<span aria-hidden="true">' + caption + '</span>' : '') +
+      '<span class="switch-state" aria-hidden="true">' + (on ? '켜짐' : '꺼짐') + '</span>';
+    return button;
+  }
+
+  function renderSwitch(id, label, on, toggle) {
+    var host = $(id);
+    host.innerHTML = '';
+    host.appendChild(switchControl(label, on, toggle));
   }
 
   function renderStrategy(opts, res) {

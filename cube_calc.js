@@ -70,7 +70,7 @@ function expectedPlan(cube){
 function renderTabs(){
   const row=$('kindTabs'); if(!row) return; row.innerHTML='';
   [['normal','잠재능력'],['additional','에디셔널 잠재능력']].forEach(([key,label])=>{
-    const b=document.createElement('button'); b.className='rank-chip tab-chip'+(state.tab===key?' active':''); b.innerHTML=`${iconImg(CUBE_ICON[key==='normal'?'black':'addReset'])}<span>${label}</span>`;
+    const b=document.createElement('button'); b.type='button'; b.className='rank-chip tab-chip ux-choice'+(state.tab===key?' active':''); b.setAttribute('aria-pressed',String(state.tab===key)); b.innerHTML=`${iconImg(CUBE_ICON[key==='normal'?'black':'addReset'])}<span>${label}</span>`;
     b.onclick=()=>{ if(state.tab===key) return; state.tab=key; const first=Object.keys(CUBES).find(k=>CUBES[k].kind===key); state.cube=first; state.actual={}; renderAll(); };
     row.appendChild(b);
   });
@@ -81,7 +81,7 @@ function renderRanks(){
   curGroup.innerHTML='<div class="rank-group-label">현재</div>';
   const curChips=document.createElement('div'); curChips.className='rank-row';
   RANKS.slice(0,3).forEach((name,i)=>{
-    const b=document.createElement('button'); b.className='rank-chip'+(state.from===i?' active':'');
+    const b=document.createElement('button'); b.type='button'; b.className='rank-chip ux-choice'+(state.from===i?' active':''); b.setAttribute('aria-pressed',String(state.from===i));
     b.style.setProperty('--chip-color', RANK_COLORS[i]); b.textContent=name;
     b.disabled=i>=maxTo(state.cube);
     if(b.disabled) b.title='선택한 큐브로 이 등급에서 등급업할 수 없습니다.';
@@ -98,7 +98,7 @@ function renderRanks(){
   const goalChips=document.createElement('div'); goalChips.className='rank-row';
   RANKS.slice(1).forEach((name,idx)=>{
     const i=idx+1, disabled=i<=state.from || i>maxTo(state.cube);
-    const b=document.createElement('button'); b.className='rank-chip'+(state.to===i?' active':'')+(disabled?' disabled':'');
+    const b=document.createElement('button'); b.type='button'; b.className='rank-chip ux-choice'+(state.to===i?' active':'')+(disabled?' disabled':''); b.setAttribute('aria-pressed',String(state.to===i));
     b.style.setProperty('--chip-color', RANK_COLORS[i]); b.textContent=name;
     b.disabled=disabled;
     if(i>maxTo(state.cube)) b.title='다른 큐브를 먼저 선택하세요.';
@@ -123,6 +123,7 @@ function renderChoices(){
   Object.entries(CUBES).filter(([,d])=>d.kind===state.tab).forEach(([key,d])=>{
     const b=document.createElement('button');
     b.className='cube-choice'+(key===state.cube?' active':'')+(CUBE_ICON[key].length>1?' pair-icon':'');
+    b.type='button'; b.setAttribute('aria-pressed',String(key===state.cube));
     b.innerHTML=`<div class="cube-choice-head">${iconImg(CUBE_ICON[key])}<strong>${d.name}</strong></div>`;
     b.onclick=()=>{
       state.cube=key;

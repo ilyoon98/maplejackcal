@@ -14,64 +14,54 @@
 <title>스타포스 기댓값 계산기</title>
 <link rel="stylesheet" href="style.css" />
 <style>
-  .sf-page { --sf-gold:#f3c969; --sf-cyan:#55d9ff; --sf-red:#ff7a6b; --sf-panel:#171827; }
+  .sf-page { --sf-gold:#f3c969; --sf-cyan:#55d9ff; --sf-red:#ff7a6b; }
   .sf-hero { margin:22px 0 14px; padding:26px 28px; border:1px solid #3b3a2e; border-radius:18px;
              background: radial-gradient(circle at 86% 8%, rgba(243,201,105,.20), transparent 36%), linear-gradient(135deg,#1b1a22,#13141e 70%); }
   .eyebrow { color:var(--sf-cyan); font-size:.72rem; letter-spacing:.16em; font-weight:800; text-transform:uppercase; }
   .sf-hero h1 { margin:8px 0 8px; font-size:clamp(1.7rem,4vw,2.7rem); letter-spacing:-.045em; }
   .sf-hero p { max-width:780px; margin:0; color:var(--text-dim); font-size:.9rem; }
 
-  .sf-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,.85fr); gap:18px; align-items:start; }
-  .sf-panel { background:var(--sf-panel); border:1px solid #2d2e48; border-radius:14px; padding:18px; margin-top:16px; }
+  .sf-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,.85fr); grid-template-areas:"settings result" "settings details"; grid-template-rows:auto 1fr; gap:16px; align-items:start; }
+  .sf-settings { grid-area:settings; }
+  .sf-result-details { grid-area:details; }
+  .sf-layout > * { min-width:0; }
+  .sf-panel { background:var(--card); border:1px solid var(--border); border-radius:var(--ui-card-radius); padding:20px; margin-top:16px; }
+  .sf-settings > .sf-panel:first-child, .sf-result-details > :first-child, .sf-expected { margin-top:0; }
   .sf-panel h2 { margin:0 0 13px; font-size:1rem; }
   .sf-panel h3 { margin:18px 0 8px; color:#c9c8e9; font-size:.85rem; }
   .sf-panel h2 + .sub-label, .sf-panel h3:first-child { margin-top:0; }
   .sub-label { color:var(--text-dim); font-size:.78rem; margin:16px 0 7px; }
 
-  .sf-chips { display:flex; flex-wrap:wrap; gap:6px; }
-  .sf-chip { padding:7px 12px; border:1px solid #373854; background:#20213a; color:var(--text);
-             border-radius:9px; cursor:pointer; font:inherit; font-size:.82rem; }
-  .sf-chip:hover { border-color:var(--sf-gold); }
-  .sf-chip.active { background:var(--sf-gold); border-color:transparent; color:#15131e; font-weight:800; }
-  .sf-chip:focus-visible { outline:2px solid var(--sf-cyan); outline-offset:3px; }
-  .sf-chip:disabled { cursor:default; opacity:.65; }
+  .sf-chips { display:flex; flex-wrap:wrap; gap:8px; }
   .sf-setting { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:12px 0; }
   .sf-setting strong { font-size:.88rem; }
   .sf-setting p { margin:4px 0 0; }
   .sf-setting-group { border-top:1px solid #373854; margin-top:16px; padding-top:4px; }
-  .sf-switch { min-width:76px; border-radius:999px; font-weight:800; }
-  .sf-switch::before { content:''; display:inline-block; width:10px; height:10px; margin-right:8px; border-radius:50%; background:currentColor; }
+  .sf-switch { min-width:110px; }
   .sf-action-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
   .sf-recovery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .sf-action-card { display:flex; flex-direction:column; gap:7px; padding:12px; background:#20213a; border:1px solid #373854; border-radius:9px; }
-  .sf-action-card span { color:var(--text-dim); font-size:.74rem; }
-  .sf-action-card strong { font-size:.88rem; }
-  .sf-action-card.is-on { border-color:#55d9ff66; }
-  .sf-action-card.is-on strong { color:var(--sf-cyan); }
-  .sf-chip.sf-chip-level { min-width:64px; text-align:center; font-size:.95rem; font-weight:800; }
-  .sf-chip-preset { border-style:dashed; color:var(--sf-cyan); }
-  .sf-chip-preset.active { color:#15131e; }
+  .sf-action-card { display:flex; flex-direction:column; gap:8px; padding:12px; background:var(--bg); border:1px solid var(--border); border-radius:var(--ui-control-radius); }
+  .sf-action-card span { color:var(--ux-muted); font-size:.8125rem; }
+  .sf-action-card strong { font-size:.875rem; }
+  .sf-action-card.is-on { border-color:var(--accent); }
+  .sf-action-card.is-on strong { color:var(--ux-focus); }
+  .sf-chip.sf-chip-level { min-width:64px; text-align:center; }
 
   .sf-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; }
   .sf-field label { display:block; color:var(--text-dim); font-size:.76rem; margin-bottom:5px; }
   .sf-field input { width:100%; background:#11141a; border:1px solid var(--border); color:var(--text);
                     border-radius:8px; padding:9px 10px; font:inherit; font-size:.95rem; }
-  .sf-field input:focus { outline:none; border-color:var(--sf-gold); }
-
-  .sf-metrics { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
-  .sf-metric { background:linear-gradient(135deg,#292a48,#20213a); border:1px solid #3c3d64; border-radius:12px; padding:14px; }
-  .sf-metric.wide { grid-column:1 / -1; }
-  .sf-metric .label { color:#a9abc7; font-size:.76rem; }
-  .sf-metric .value { font-size:1.5rem; font-weight:900; margin-top:5px; color:var(--sf-gold); line-height:1.15; word-break:break-all; }
-  .sf-metric.danger .value { color:var(--sf-red); font-size:1.25rem; }
-  .sf-metric .sub { color:var(--text-dim); font-size:.74rem; margin-top:4px; }
+  .sf-expected { grid-area:result; border-color:var(--accent); }
+  .sf-result-value { margin:0; line-height:1.2; }
+  .sf-result-value output { color:var(--accent); font-size:var(--ux-result-size); font-weight:750; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  .sf-result-value small { font-size:.875rem; color:var(--ux-muted); }
+  .sf-result-range { margin:8px 0 4px; }
+  .sf-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+  .sf-metric .label { color:var(--ux-muted); font-size:.8125rem; }
+  .sf-metric .value { font-size:1.125rem; font-weight:700; overflow-wrap:anywhere; }
 
   .panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:13px; flex-wrap:wrap; }
   .panel-head h2 { margin:0; }
-  .sf-toggle { display:flex; gap:4px; background:#1b1c2d; border:1px solid #2c2d46; border-radius:9px; padding:3px; }
-  .sf-toggle button { border:none; background:none; color:var(--text-dim); border-radius:7px;
-                      padding:5px 11px; cursor:pointer; font:inherit; font-size:.78rem; }
-  .sf-toggle button.active { background:#2f3050; color:var(--sf-gold); font-weight:700; }
 
   .sf-table { width:100%; border-collapse:collapse; font-size:.8rem; }
   .sf-table th, .sf-table td { padding:8px 6px; text-align:right; border-bottom:1px solid #2b2c41; white-space:nowrap; }
@@ -96,7 +86,7 @@
   #refPanel[open] summary::before { transform:rotate(90deg); }
   #refPanel .sf-scroll { margin-top:14px; }
 
-  @media(max-width:960px){ .sf-layout{ grid-template-columns:1fr; } }
+  @media(max-width:960px){ .sf-layout{ grid-template-columns:minmax(0,1fr); grid-template-areas:"result" "settings" "details"; grid-template-rows:auto; } }
   @media(max-width:520px){ .sf-hero{padding:22px 18px;} .sf-panel{padding:14px;} }
 </style>
 <link rel="stylesheet" href="site_ux.css">
@@ -113,13 +103,23 @@
   <header class="sf-hero">
     <div class="eyebrow">STARFORCE / EXPECTED VALUE</div>
     <h1>스타포스 기댓값 계산기</h1>
-    <p>목표 성까지 들어가는 <b>기대 메소 · 기대 파괴 횟수 · 기대 강화 시도</b>를 계산합니다. 노작값에 맞춰 파괴방지와 확정 복구를 선택하고, 복구 후 다시 강화하는 비용까지 포함합니다.</p>
+    <p>목표 성까지 드는 기대 메소를 확인하세요. 파괴방지와 복구 조건을 바꾸면 결과가 바로 갱신됩니다.</p>
   </header>
 
   <main class="sf-layout">
-    <section>
+    <section class="sf-panel sf-expected" id="expectedResultCard" aria-labelledby="expectedResultTitle">
+      <h2 id="expectedResultTitle">기대 메소</h2>
+      <p class="sf-result-value"><output id="resMeso">—</output> <small id="resMesoUnit" aria-hidden="true">메소</small></p>
+      <p class="sf-result-range" id="resRange"></p>
+      <p class="tiny" id="resMesoSub"></p>
+      <div class="sf-metrics">
+        <div class="sf-metric"><div class="label">기대 파괴 횟수</div><div class="value" id="resDestroy">—</div></div>
+        <div class="sf-metric"><div class="label">기대 강화 시도</div><div class="value" id="resTries">—</div></div>
+      </div>
+    </section>
+    <section class="sf-settings" aria-label="강화 조건">
       <div class="sf-panel">
-        <h2>01 · 장비</h2>
+        <h2>장비</h2>
         <div class="sub-label">장비 레벨</div>
         <div class="sf-chips" id="levelChips"></div>
         <div class="sf-fields" style="margin-top:12px;">
@@ -143,12 +143,12 @@
       </div>
 
       <div class="sf-panel">
-        <h2>02 · 할인 · 이벤트</h2>
+        <h2>할인과 이벤트</h2>
         <div class="sub-label">MVP 등급 <span class="tiny">(17성 미만 구간에만 적용)</span></div>
         <div class="sf-chips" id="mvpChips"></div>
         <div class="sf-setting sf-setting-group"><div><strong>샤타포스</strong><p class="tiny">강화 비용 30% 할인 + 파괴확률 30% 감소</p></div><div id="shiningSwitch"></div></div>
-        <div class="sub-label">개별 할인 · 이벤트</div>
-        <div class="sf-chips" id="eventChips"></div>
+        <div class="sub-label">개별 할인과 이벤트</div>
+        <div class="sf-chips" id="eventChips" role="group" aria-label="개별 할인과 이벤트"></div>
         <div data-ux-help="할인·이벤트 적용 기준"><p class="tiny" style="margin:12px 0 0;">
           · MVP·PC방 할인은 17성 미만 구간에만, 서로 <b>더해서</b> 적용됩니다.<br>
           · 비용 30% 할인은 모든 구간에 적용되지만 <b>파괴방지 추가 비용에는 붙지 않습니다</b>.<br>
@@ -157,7 +157,7 @@
       </div>
 
       <div class="sf-panel">
-        <h2>03 · 파괴방지 · 복구</h2>
+        <h2>파괴방지와 복구</h2>
         <div class="sf-setting"><strong>자동 파괴방지</strong><div id="safeguardSwitch"></div></div>
         <p class="tiny" id="safeguardHint"></p>
         <div class="sf-chips" id="safeguardChips"></div>
@@ -168,35 +168,16 @@
       <div class="sf-panel">
         <div class="panel-head">
           <h2>구간별 상세</h2>
-          <div class="sf-toggle">
-            <button type="button" id="viewStep" class="active">단계별</button>
-            <button type="button" id="viewCum">누적</button>
+          <div class="sf-chips" role="group" aria-label="구간별 보기 방식">
+            <button type="button" id="viewStep" class="ux-button ux-choice" aria-pressed="true">단계별</button>
+            <button type="button" id="viewCum" class="ux-button ux-choice" aria-pressed="false">누적</button>
           </div>
         </div>
-        <details class="ux-details"><summary>구간별 비용·파괴·시도 보기</summary><div class="sf-scroll" id="stepTable"></div></details>
+        <details class="ux-details"><summary>구간별 비용과 시도 횟수 보기</summary><div class="sf-scroll" id="stepTable"></div></details>
       </div>
     </section>
 
-    <aside>
-      <div class="sf-panel">
-        <h2>기대값</h2>
-        <div class="sf-metrics">
-          <div class="sf-metric wide">
-            <div class="label">기대 메소 <span id="resRange" class="tiny"></span></div>
-            <div class="value" id="resMeso">-</div>
-            <div class="sub" id="resMesoSub"></div>
-          </div>
-          <div class="sf-metric danger">
-            <div class="label">기대 파괴 횟수</div>
-            <div class="value" id="resDestroy">-</div>
-          </div>
-          <div class="sf-metric">
-            <div class="label">기대 강화 시도</div>
-            <div class="value" id="resTries">-</div>
-          </div>
-        </div>
-      </div>
-
+    <aside class="sf-result-details" aria-label="강화 결과 상세">
       <div class="sf-panel" aria-labelledby="strategyTitle">
         <h2 id="strategyTitle">추천 강화 방식</h2>
         <div class="panel-head"><h3>파괴방지</h3><span class="tiny" id="safeguardMode"></span></div>
@@ -216,10 +197,10 @@
       </details>
 
       <details class="sf-panel" id="refPanel">
-        <summary>성별 확률 · 강화 비용표</summary>
+        <summary>성별 확률과 강화 비용</summary>
         <div class="sf-scroll" id="rateTable"></div>
         <p class="tiny" style="margin:12px 0 0;">
-          현재 설정(레벨·할인·이벤트·파괴방지)이 반영된 값입니다. 시작~목표 구간은 노란색.<br>
+          현재 설정(레벨·할인·이벤트·파괴방지)이 반영된 값입니다. 시작 성에서 목표 성까지의 구간은 노란색으로 표시합니다.<br>
           확률은 스타캐치가 자동 적용된 실제 적용 확률이고, 실패 시 성급 하락은 없습니다.
           파괴 후에는 선택한 복구 방법에 따라 12성 또는 흔적의 성급으로 복구합니다.
         </p>

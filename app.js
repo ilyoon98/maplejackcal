@@ -145,6 +145,7 @@ function renderSwitchGroup(container, items, { defaultActive, onChange }) {
       const isActive = active.has(el.dataset.key);
       el.classList.toggle('active', isActive);
       el.setAttribute('aria-checked', String(isActive));
+      el.querySelector('.switch-state').textContent = isActive ? '켜짐' : '꺼짐';
     });
   }
 
@@ -155,8 +156,9 @@ function renderSwitchGroup(container, items, { defaultActive, onChange }) {
     el.dataset.key = item.key;
     el.setAttribute('role', 'switch');
     el.innerHTML = `
-      <span class="switch-track"><span class="switch-thumb"></span></span>
+      <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
       <span class="switch-text">${item.title}${item.subtitle ? `<span class="switch-sub">${item.subtitle}</span>` : ''}</span>
+      <span class="switch-state" aria-hidden="true"></span>
     `;
     el.addEventListener('click', () => {
       if (active.has(item.key)) active.delete(item.key);

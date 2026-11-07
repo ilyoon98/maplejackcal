@@ -182,7 +182,7 @@
       </section>
 
       <section class="bt-card">
-        <details class="ux-details"><summary>일반·피버 확률표</summary>
+        <details class="ux-details"><summary>일반 및 피버 확률표</summary>
         <p class="bt-card-sub">메이플스토리 캐시샵 공식 확률 공지 기준입니다.</p>
         <div class="prob-tables">
           <table class="prob-table"><caption>일반 확률 (기댓값 <span id="evNormal">-</span>개)</caption><thead><tr><th>아이템</th><th>확률</th></tr></thead><tbody id="tableNormal"></tbody></table>
@@ -491,9 +491,11 @@
       updateCostHint();
     };
   });
-  $('resetBtn').onclick = () => {
+  $('resetBtn').onclick = async () => {
     if (auto.running) finishAuto(null);
-    if (!confirm('현재 세션 기록을 모두 초기화할까요?')) return;
+    const title = '부티크 뽑기 기록을 초기화할까요?';
+    const message = '현재 세션의 뽑기 횟수, 티켓, 가상 지출을 지웁니다.';
+    if (!(window.SiteUX ? await window.SiteUX.confirm(title, message) : confirm(title + '\n' + message))) return;
     Object.assign(state, {pulls:0, fevers:0, tickets:0, spent:0, expected:0, variance:0, last:null, lastBatch:[]});
     $('autoProgress').style.width = '0%';
     $('autoNote').textContent = '대기 중';

@@ -630,8 +630,10 @@
   function diffBadge(diff, attrs) {
     return '<span class="diff-badge ' + (DIFF_CLASS[diff] || '') + '"' + (attrs || '') + '>' + esc(diff) + '</span>';
   }
-  document.getElementById('resetBtn').addEventListener('click', function () {
-    if (!confirm('입력한 배율을 모두 초기값으로 되돌릴까요?')) return;
+  document.getElementById('resetBtn').addEventListener('click', async function () {
+    const title = '보스 동선 설정을 초기화할까요?';
+    const message = '입력한 배율과 보스 선택을 기본값으로 되돌립니다.';
+    if (!(window.SiteUX ? await window.SiteUX.confirm(title, message) : confirm(title + '\n' + message))) return;
     state = defaultState();
     moveInput.value = trim(state.moveMin);
     slackInput.value = trim(state.slackPct);

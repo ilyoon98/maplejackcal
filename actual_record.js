@@ -34,7 +34,8 @@
       '<p id="actualAttempts" class="actual-verdict" role="status" aria-live="polite" hidden></p>' +
       '<p id="actualPercentile" class="actual-verdict" role="status" aria-live="polite"></p>' +
       '<p id="actualHint" class="actual-hint"></p>';
-    anchor.after(panel);
+    if (page === 'starforce_calc.html') document.querySelector('.sf-result-details').prepend(panel);
+    else anchor.after(panel);
     if (anchor.id === 'expectedResultCard') {
       panel.classList.add('actual-record-standalone');
       const heading = document.createElement('h2'); heading.id='actualRecordTitle'; heading.textContent='내 기록 비교';

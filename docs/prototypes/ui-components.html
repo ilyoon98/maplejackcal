@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>메이플 계산기 공통 UI 미리보기</title>
+  <link rel="stylesheet" href="../../style.css">
+  <style>
+    .spec { --muted: #aeb7c7; --edge: #68758a; --focus: #9fc7ff; --selected: #2b4366;
+      --info-bg: #20344e; --info: #b9d4fd; --success-bg: #17352d; --success: #b3ead1;
+      --warning-bg: #2d271b; --warning: #f5cb79; --error-bg: #342322; --error: #ffab94;
+      color-scheme: dark; font-size: .9375rem; line-height: 1.6; }
+    .spec h1 { margin: 0 0 8px; font-size: 1.875rem; line-height: 1.35; font-weight: 750; }
+    .spec h2 { margin: 0 0 12px; font-size: 1.125rem; }
+    .spec h3, .spec legend { margin: 0 0 8px; color: var(--text); font-size: 1rem; font-weight: 700; }
+    .spec p { margin: 0 0 8px; }
+    .spec p:last-child { margin-bottom: 0; }
+    .spec .sub, .spec small { color: var(--muted); font-size: .8125rem; font-weight: 400; }
+    .spec a { color: var(--accent); text-underline-offset: 3px; }
+    .spec :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    .spec [tabindex="-1"] { scroll-margin-top: 16px; }
+    .spec .card { margin: 0; padding: 20px; min-width: 0; }
+    .spec .spec-grid, .spec .spec-pair { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .spec .spec-grid { margin-top: 16px; align-items: start; }
+    .spec .spec-wide { grid-column: 1 / -1; }
+    .spec .stack { display: grid; gap: 16px; }
+    .spec .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .spec nav { margin-top: 12px; }
+    .spec nav a { display: inline-flex; min-height: 44px; padding: 8px 10px; align-items: center; }
+    .spec .swatches { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+    .spec .swatch { min-height: 66px; padding: 8px; border: 1px solid var(--edge); border-radius: 8px; background: var(--swatch); color: var(--ink,var(--text)); }
+    .spec .swatch code { display: block; font-size: .75rem; }
+    .spec button, .spec :is(input,select):not(:where([type="range"],[type="radio"],[type="checkbox"])) {
+      min-height: 44px; border: 1px solid var(--edge); border-radius: 8px; background-color: var(--bg); color: var(--text); font: inherit; padding: 8px 12px; }
+    .spec button { background: #202735; font-size: .875rem; font-weight: 650; cursor: pointer; }
+    .spec button:not(:disabled,[aria-disabled="true"]):hover { border-color: var(--accent); filter: none; }
+    .spec button:not(:disabled,[aria-disabled="true"]):active { filter: brightness(.86); }
+    .spec .primary { width: auto; background: var(--accent-strong); border-color: var(--accent-strong); color: #0b0d12; }
+    .spec .choice[aria-pressed="true"] { background: var(--selected); border-color: var(--accent); }
+    .spec .choice span { display: inline-block; width: 1em; margin-inline-end: 4px; visibility: hidden; }
+    .spec .choice[aria-pressed="true"] span { visibility: visible; }
+    .spec :is(:disabled,[aria-disabled="true"]) { opacity: .55; cursor: default; }
+    .spec fieldset { min-width: 0; border: 0; margin: 0; padding: 0; }
+    .spec .check, .spec .switch { display: flex; align-items: center; min-height: 44px; gap: 8px; cursor: pointer; }
+    .spec input:is([type="radio"],[type="checkbox"]) { width: 18px; height: 18px; margin: 0; accent-color: var(--accent-strong); }
+    .spec .switch { position: relative; }
+    .spec .switch input { position: absolute; opacity: 0; }
+    .spec .track { display: inline-flex; flex: none; align-items: center; width: 36px; height: 22px; padding: 2px; border: 1px solid var(--edge); border-radius: 20px; background: #202735; }
+    .spec .track::before { content: ""; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); }
+    .spec .switch input:checked + .track { justify-content: flex-end; border-color: var(--accent); background: var(--selected); }
+    .spec .switch input:checked + .track::before { background: var(--accent); }
+    .spec .switch input:focus-visible + .track { outline: 3px solid var(--focus); outline-offset: 3px; }
+    .spec .switch input:checked ~ .off, .spec .switch input:not(:checked) ~ .on { display: none; }
+    .spec .field { display: grid; gap: 6px; margin: 0; }
+    .spec .field > label { margin: 0; color: var(--text); font-size: .875rem; font-weight: 650; }
+    .spec .field :is(input, select) { width: 100%; min-width: 0; }
+    .spec .unit { display: flex; align-items: center; gap: 8px; }
+    .spec .unit small { flex: none; white-space: nowrap; }
+    .spec select { appearance: none; padding-inline-end: 32px; cursor: pointer;
+      background-image: var(--arrow, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='m1 1 5 5 5-5' stroke='%23aeb7c7' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")); background-repeat: no-repeat; background-position: right 12px center; }
+    .spec select:open { border-color: var(--accent); --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='m1 6 5-5 5 5' stroke='%239fc7ff' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); }
+    .spec .field [aria-invalid="true"] { border-color: var(--error); }
+    .spec .field .error-text { color: var(--error); }
+    .spec input[readonly] { background: var(--card); }
+    .spec input[type="range"] { height: 44px; margin: 0; accent-color: var(--accent-strong); }
+    .spec .result { border-color: var(--accent); }
+    .spec button.choice.card { text-align: left; }
+    .spec button.choice.card small { display: block; margin-top: 6px; }
+    .spec .number { color: var(--accent); font-size: 2rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .spec details { padding-top: 8px; border-top: 1px solid var(--border); }
+    .spec summary { min-height: 44px; padding: 8px 0; cursor: pointer; font-weight: 650; }
+    .spec details[open] > summary { color: var(--accent); }
+    .spec .message { padding: 8px 12px; border-radius: 8px; color: var(--ink); background: var(--fill); }
+    .spec .message strong { display: block; font-size: .875rem; }
+    .spec .success { --ink: var(--success); --fill: var(--success-bg); }
+    .spec .info { --ink: var(--info); --fill: var(--info-bg); }
+    .spec .warning { --ink: var(--warning); --fill: var(--warning-bg); }
+    .spec .error { --ink: var(--error); --fill: var(--error-bg); }
+    .spec .danger { background: var(--error-bg); color: var(--error); border-color: var(--error); }
+    .spec dialog { width: min(560px,calc(100% - 32px)); max-height: calc(100dvh - 32px); padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); color: var(--text); }
+    .spec dialog::backdrop { background: rgb(0 0 0 / .65); }
+    .spec dialog form { margin-top: 16px; justify-content: flex-end; }
+    .spec .toast { position: fixed; z-index: 2; inset: auto 16px calc(16px + env(safe-area-inset-bottom)) auto; width: min(400px,calc(100% - 32px)); display: flex; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 8px 24px #0007; }
+    .spec [hidden] { display: none !important; }
+    .spec .toast button { min-width: 44px; }
+    .spec .tip-host { position: relative; width: max-content; }
+    .spec .tooltip { position: absolute; z-index: 1; inset: auto auto calc(100% + 8px) 0; width: min(240px,calc(100vw - 64px)); padding: 8px 12px; border: 1px solid var(--edge); border-radius: 8px; background: var(--card); color: var(--muted); font-size: .8125rem; }
+    .spec progress { width: 100%; accent-color: var(--accent-strong); }
+    .spec .badge { padding: 2px 8px; border-radius: 99px; background: var(--success-bg); color: var(--success); font-size: .75rem; font-weight: 650; }
+    .spec .table-scroll { overflow-x: auto; }
+    .spec table { width: 100%; border-collapse: collapse; }
+    .spec :is(th,td) { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+    .spec :is(th,td):last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    .spec [role="tab"][aria-selected="true"] { box-shadow: inset 0 -3px var(--accent); }
+    @media (forced-colors: active) { .spec select { appearance: auto; background-image: none; } }
+    @media (min-width: 1100px) { .spec .swatches { grid-template-columns: repeat(9,minmax(0,1fr)); } }
+    @media (max-width: 700px) {
+      .spec h1 { font-size: 1.375rem; }
+      .spec .spec-grid, .spec .spec-pair { grid-template-columns: minmax(0,1fr); }
+      .spec .card, .spec dialog { padding: 16px; }
+      .spec .field :is(input,select) { font-size: 1rem; }
+      .spec .number { font-size: 1.625rem; }
+    }
+    @media (max-width: 420px) { .spec .swatches { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+  </style>
+</head>
+<body>
+  <main class="wrap spec" id="spec">
+    <header class="card">
+      <h1>메이플 계산기 공통 UI 미리보기</h1>
+      <p class="sub">조작 전후의 모양과 글자 위계를 비교하는 검토 화면입니다.</p>
+      <nav class="row" aria-label="구성 요소 바로가기">
+        <a href="#palette">팔레트</a><a href="#buttons">버튼과 선택</a><a href="#fields">입력칸</a><a href="#cards">카드</a><a href="#feedback">알림과 팝업</a>
+      </nav>
+    </header>
+    <div class="spec-grid">
+      <section class="card spec-wide" aria-labelledby="palette">
+        <h2 id="palette" tabindex="-1">팔레트</h2>
+        <div class="swatches">
+          <div class="swatch" style="--swatch:#0f1115">바탕과 입력<code>#0F1115</code></div>
+          <div class="swatch" style="--swatch:#171a21">카드와 팝업<code>#171A21</code></div>
+          <div class="swatch" style="--swatch:#202735">보조 버튼<code>#202735</code></div>
+          <div class="swatch" style="--swatch:#4c8dff;--ink:#0b0d12">주요 행동<code>#4C8DFF</code></div>
+          <div class="swatch" style="--swatch:#2b4366">선택<code>#2B4366</code></div>
+          <div class="swatch" style="--swatch:#20344e;--ink:#b9d4fd">정보<code>#B9D4FD</code></div>
+          <div class="swatch" style="--swatch:#17352d;--ink:#b3ead1">성공<code>#B3EAD1</code></div>
+          <div class="swatch" style="--swatch:#2d271b;--ink:#f5cb79">주의<code>#F5CB79</code></div>
+          <div class="swatch" style="--swatch:#342322;--ink:#ffab94">오류<code>#FFAB94</code></div>
+        </div>
+      </section>
+      <section class="card stack" aria-labelledby="buttons">
+        <div><h2 id="buttons" tabindex="-1">버튼과 선택</h2><p class="sub">눌림은 잠깐 표시되고 선택은 다음 조작까지 남습니다.</p></div>
+        <div class="row"><button class="primary" type="button" data-toast="success">예시 저장</button><button type="button" data-toast="info">안내 보기</button><button type="button" disabled>저장할 변경 없음</button></div>
+        <div class="row" role="group" aria-label="결과 필터">
+          <button class="choice" type="button" aria-pressed="true"><span aria-hidden="true">✓</span>전체</button>
+          <button class="choice" type="button" aria-pressed="false"><span aria-hidden="true">✓</span>보유만 보기</button>
+        </div>
+        <label class="switch"><input type="checkbox" role="switch"><span class="track" aria-hidden="true"></span>자동 저장 <small class="off" aria-hidden="true">꺼짐</small><small class="on" aria-hidden="true">켜짐</small></label>
+        <div class="spec-pair">
+          <fieldset><legend>하나만 선택</legend><label class="check"><input type="radio" name="priority" checked>최저 비용</label><label class="check"><input type="radio" name="priority">보유 우선</label></fieldset>
+          <fieldset><legend>여러 항목 선택</legend><label class="check"><input type="checkbox" id="all-options">전체 선택</label><label class="check"><input class="item-option" type="checkbox" checked>반지</label><label class="check"><input class="item-option" type="checkbox">펜던트</label></fieldset>
+        </div>
+      </section>
+      <section class="card stack" aria-labelledby="fields">
+        <div><h2 id="fields" tabindex="-1">입력칸</h2><p class="sub">라벨과 단위는 입력값 가까이에 둡니다.</p></div>
+        <div class="field"><label for="demo-select">장비 부위</label><select id="demo-select"><option>반지</option><option>펜던트</option><option>귀걸이</option></select></div>
+        <div class="field"><label for="normal-price">매물 가격</label><div class="unit"><input id="normal-price" inputmode="decimal" value="17" aria-describedby="price-unit price-hint"><small id="price-unit">억 메소</small></div><small id="price-hint">0.1억 메소는 1천만 메소입니다.</small></div>
+        <div class="field"><label for="error-price">가격 검증 예시</label><input id="error-price" inputmode="decimal" value="-5" aria-invalid="true" aria-describedby="price-error"><small class="error-text" id="price-error">입력 오류. 0보다 큰 가격을 입력하세요.</small></div>
+        <div class="field"><label for="readonly-cost">조회한 금액</label><input id="readonly-cost" value="1억 2,000만 메소" readonly></div>
+        <div class="field"><label for="locked-price">보유 장비의 매물 가격</label><input id="locked-price" disabled value="0" aria-describedby="locked-reason"><small id="locked-reason">보유 장비의 추가 비용은 0메소입니다.</small></div>
+        <div class="field"><label for="goal">목표 드랍률 <output id="goal-value" for="goal">100%</output></label><input id="goal" type="range" min="0" max="200" step="20" value="100" aria-valuetext="100%"></div>
+      </section>
+      <section class="card spec-wide stack" aria-labelledby="cards">
+        <h2 id="cards" tabindex="-1">카드와 글자 위계</h2>
+        <div class="spec-pair">
+          <article class="card"><h3>기본 카드</h3><p>등록한 장비와 가격을 확인합니다.</p><small>가격을 바꾸면 결과가 바로 갱신됩니다.</small></article>
+          <article class="card result"><h3>대표 결과 카드</h3><p><strong class="number">4억 2,000만</strong> 메소</p><small>보유 장비를 포함한 예상 구매 합계</small></article>
+          <article class="card"><h3>펼칠 수 있는 카드</h3><details><summary>부위별 조합 상세</summary><div class="table-scroll"><table><thead><tr><th scope="col">부위</th><th scope="col">추가 비용</th></tr></thead><tbody><tr><th scope="row">반지 <span class="badge">보유</span></th><td>0 메소</td></tr><tr><th scope="row">펜던트</th><td>4억 2,000만 메소</td></tr></tbody></table></div></details></article>
+          <article class="card"><h3>비활성 카드</h3><p>비교할 장비를 등록하세요.</p><button type="button" disabled>비교 시작</button></article>
+        </div>
+        <div class="spec-pair" role="group" aria-label="추천 조합 선택">
+          <button class="card choice" type="button" aria-pressed="true"><span aria-hidden="true">✓</span>보유 우선 조합<small>이미 보유한 장신구부터 적용합니다.</small></button>
+          <button class="card choice" type="button" aria-pressed="false"><span aria-hidden="true">✓</span>가격 우선 조합<small>구매 비용을 기준으로 정렬합니다.</small></button>
+        </div>
+        <div class="row" role="tablist" aria-label="결과 보기 방식">
+          <button type="button" role="tab" id="tab-summary" aria-selected="true" aria-controls="tab-summary-panel">요약</button>
+          <button type="button" role="tab" id="tab-progress" aria-selected="false" aria-controls="tab-progress-panel" tabindex="-1">진행률</button>
+        </div>
+        <div role="tabpanel" id="tab-summary-panel" aria-labelledby="tab-summary" tabindex="0">장신구 9부위 중 3부위를 등록했습니다.</div>
+        <div role="tabpanel" id="tab-progress-panel" aria-labelledby="tab-progress" tabindex="0" hidden><label for="progress">장신구 등록 3 / 9</label><progress id="progress" value="3" max="9"></progress></div>
+      </section>
+      <section class="card spec-wide stack" aria-labelledby="feedback">
+        <div><h2 id="feedback" tabindex="-1">알림과 팝업</h2><p class="sub">완료는 토스트로, 바로 고쳐야 하는 문제는 화면 안에서 알립니다.</p></div>
+        <div class="spec-pair"><div class="message warning"><strong>주의</strong>등록한 후보가 부족합니다. 장비나 가격을 추가하세요.</div><div class="message error"><strong>조회 실패</strong>입력값을 확인한 뒤 다시 조회하세요.</div></div>
+        <div class="row"><button type="button" data-toast="success">저장 토스트 보기</button><button type="button" id="open-dialog">초기화 확인창 열기</button></div>
+        <div class="tip-host"><button type="button" id="tip-button" aria-describedby="tip">툴팁 보기</button><span class="tooltip" id="tip" role="tooltip" hidden>장비 상세의 옵션은 등록 시점 기준입니다.</span></div>
+      </section>
+    </div>
+    <dialog id="reset-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
+      <h2 id="dialog-title">장신구 선호를 초기화할까요?</h2>
+      <p id="dialog-description">9부위의 선호 옵션을 지웁니다.</p>
+      <form method="dialog" class="row"><button value="cancel" autofocus>취소</button><button value="reset" class="danger">선호 초기화</button></form>
+    </dialog>
+    <aside class="toast message success" id="toast" hidden><div role="status" id="toast-text"></div><button type="button" id="close-toast" aria-label="알림 닫기">×</button></aside>
+  </main>
+  <script>
+    const gallery = document.getElementById('spec');
+    const find = selector => gallery.querySelector(selector);
+    const all = selector => [...gallery.querySelectorAll(selector)];
+    all('.choice').forEach(button => button.addEventListener('click', () => {
+      button.closest('[role="group"]').querySelectorAll('.choice').forEach(choice => choice.setAttribute('aria-pressed', String(choice === button)));
+    }));
+    const master = find('#all-options');
+    const items = all('.item-option');
+    function updateMaster() {
+      const checked = items.filter(item => item.checked).length;
+      master.checked = checked === items.length;
+      master.indeterminate = checked > 0 && checked < items.length;
+    }
+    master.addEventListener('change', () => items.forEach(item => { item.checked = master.checked; }));
+    items.forEach(item => item.addEventListener('change', updateMaster));
+    updateMaster();
+    const price = find('#error-price');
+    price.addEventListener('input', () => {
+      const valid = /^(?:\d+(?:\.\d{0,8})?|\.\d{1,8})$/.test(price.value) && Number(price.value) > 0;
+      price.setAttribute('aria-invalid', String(!valid));
+      find('#price-error').hidden = valid;
+    });
+    const range = find('#goal');
+    range.addEventListener('input', () => {
+      const value = range.value + '%';
+      find('#goal-value').value = value;
+      range.setAttribute('aria-valuetext', value);
+    });
+    const tabs = all('[role="tab"]');
+    function selectTab(selected) {
+      tabs.forEach(tab => {
+        tab.setAttribute('aria-selected', String(tab === selected));
+        tab.tabIndex = tab === selected ? 0 : -1;
+        document.getElementById(tab.getAttribute('aria-controls')).hidden = tab !== selected;
+      });
+    }
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => selectTab(tab));
+      tab.addEventListener('keydown', event => {
+        const target = {ArrowLeft: tabs[(index - 1 + tabs.length) % tabs.length], ArrowRight: tabs[(index + 1) % tabs.length], Home: tabs[0], End: tabs.at(-1)}[event.key];
+        if (!target) return;
+        event.preventDefault();
+        selectTab(target);
+        target.focus();
+      });
+    });
+    const toast = find('#toast');
+    let timer;
+    let toastOpener;
+    function hideToast() {
+      clearTimeout(timer);
+      if (toast.contains(document.activeElement)) toastOpener?.focus();
+      toast.hidden = true;
+      find('#toast-text').replaceChildren();
+    }
+    function showToast(kind, opener, message) {
+      clearTimeout(timer);
+      toastOpener = opener;
+      toast.className = 'toast message ' + kind;
+      toast.hidden = false;
+      const heading = document.createElement('strong');
+      heading.textContent = kind === 'success' ? '완료' : '안내';
+      find('#toast-text').replaceChildren(heading, message);
+      timer = setTimeout(hideToast, 4000);
+    }
+    all('[data-toast]').forEach(button => button.addEventListener('click', () => {
+      const kind = button.dataset.toast;
+      showToast(kind, button, kind === 'success' ? '예시 설정을 저장했습니다.' : '옵션을 선택하면 결과가 갱신됩니다.');
+    }));
+    find('#close-toast').addEventListener('click', hideToast);
+    const tipButton = find('#tip-button');
+    const tip = find('#tip');
+    ['pointerenter', 'focus', 'click'].forEach(event => tipButton.addEventListener(event, () => { tip.hidden = false; }));
+    tipButton.closest('.tip-host').addEventListener('pointerleave', () => { if (document.activeElement !== tipButton) tip.hidden = true; });
+    tipButton.addEventListener('blur', () => { tip.hidden = true; });
+    tipButton.addEventListener('keydown', event => { if (event.key === 'Escape') tip.hidden = true; });
+    const dialog = find('#reset-dialog');
+    const dialogOpener = find('#open-dialog');
+    dialogOpener.addEventListener('click', () => { dialog.returnValue = ''; dialog.showModal(); });
+    dialog.addEventListener('close', () => {
+      dialogOpener.focus();
+      if (dialog.returnValue === 'reset') showToast('success', dialogOpener, '예시 초기화를 확인했습니다.');
+    });
+    function focusAnchor() {
+      const heading = document.getElementById(location.hash.slice(1));
+      if (heading?.matches('h2[tabindex="-1"]')) heading.focus({preventScroll: true});
+    }
+    addEventListener('hashchange', focusAnchor);
+    all('nav a').forEach(link => link.addEventListener('click', () => {
+      if (link.hash === location.hash) focusAnchor();
+    }));
+    focusAnchor();
+  </script>
+</body>
+</html>

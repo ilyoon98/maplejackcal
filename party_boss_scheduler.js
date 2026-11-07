@@ -288,8 +288,9 @@
       editButton.addEventListener('click',function(){openEditor(p);});
       var deleteButton=node('button','party-delete','파티 삭제');
       deleteButton.type='button';
-      deleteButton.addEventListener('click',function(){
-        if(!win.confirm('“'+p.name+'” 파티를 삭제할까요?'))return;
+      deleteButton.addEventListener('click',async function(){
+        var title='“'+p.name+'” 파티를 삭제할까요?';
+        if(!(win.SiteUX?await win.SiteUX.confirm(title,'이 파티의 보스와 파티원 목록을 지웁니다.','파티 삭제'):win.confirm(title)))return;
         var remaining=parties.filter(function(party){return party.id!==p.id;});
         if(!persist(remaining))return;
         parties=remaining;

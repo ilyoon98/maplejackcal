@@ -112,10 +112,12 @@
     manualButton.setAttribute('role', 'switch');
     manualButton.setAttribute('aria-checked', 'false');
     manualButton.setAttribute('aria-label', '직접 검색 사용');
-    var modeSwitch = create('span', 'nx-mode-switch');
+    var modeSwitch = create('span', 'switch-track');
     modeSwitch.setAttribute('aria-hidden', 'true');
-    modeSwitch.appendChild(create('span', 'nx-mode-thumb'));
-    manualButton.append(modeSwitch, create('span', 'nx-mode-label', '직접 검색'));
+    modeSwitch.appendChild(create('span', 'switch-thumb nx-mode-thumb'));
+    var modeStatus = create('span', 'switch-state', '꺼짐');
+    modeStatus.setAttribute('aria-hidden', 'true');
+    manualButton.append(modeSwitch, create('span', 'nx-mode-label', '직접 검색'), modeStatus);
     modeBar.appendChild(manualButton);
     var fields = create('div', 'nx-character-fields');
     var worldLabel = create('label', 'nx-character-field');
@@ -149,6 +151,7 @@
       host.classList.toggle('is-manual', manual);
       input.hidden = !manual;
       manualButton.setAttribute('aria-checked', manual ? 'true' : 'false');
+      modeStatus.textContent = manual ? '켜짐' : '꺼짐';
       if (typeof options.onModeChange === 'function') options.onModeChange(manual);
       if (manual) {
         input.removeAttribute('data-account-ocid');
