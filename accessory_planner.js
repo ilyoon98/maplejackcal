@@ -27,24 +27,20 @@
   // A legacy 24-digit meso price may gain a decimal point when shown in eok.
   const maxPriceLength = 25;
   const maxFormattedPriceLength = maxPriceLength + Math.floor((maxPriceLength - 1) / 3);
-  const storageKey = 'accessoryPlanner.v1';
+  const preferenceKey = 'accessoryPlanner.preferences.v1';
   const priceKey = 'accessoryPlanner.prices.v3';
   const goalKey = 'accessoryPlanner.goals.v1';
   const { koreanAmount } = window.MoneyInput;
   const byId = id => document.getElementById(id);
   const sheet = byId('accessory-slots');
-  const complete = byId('accessory-complete');
   const reset = byId('accessory-reset');
-  const status = byId('accessory-status');
-  const lineCount = byId('accessory-line-count');
+  const preferenceCount = byId('accessory-preference-count');
   const lineEditor = byId('accessory-lines');
   const priceEditor = byId('accessory-prices');
-  const ownedOptions = byId('accessory-owned-options');
-  const ownedSummary = byId('accessory-owned-summary');
-  const apply = byId('accessory-apply');
   const resultTitle = byId('accessory-result-title');
   const resultStatus = byId('accessory-result-status');
   const goalSummary = byId('accessory-goal-summary');
+  const preferenceStatus = byId('accessory-preference-status');
   const resultTable = byId('accessory-result-table');
   const resultRows = byId('accessory-result-rows');
   const resultGap = byId('accessory-result-gap');
@@ -70,8 +66,8 @@
     }
   }
 
-  const savedLines = load(storageKey);
-  const rows = slots.map((_, slot) => [0, 1].map(index => {
+  const savedLines = load(preferenceKey);
+  const preferences = slots.map((_, slot) => [0, 1].map(index => {
     const value = savedLines[slot * 2 + index];
     return value === 'drop' || value === 'meso' ? value : '';
   }));
@@ -116,17 +112,17 @@
     </div>
   `).join('');
   const lineButtons = Array.from(lineEditor.children, group => group.querySelectorAll('button'));
-  ownedOptions.innerHTML = pricedCombos.map(combo => `
-    <button type="button" class="ux-button accessory-owned">
+  // Keep ownership controls before the continuous price-entry sequence in tab order.
+  priceEditor.innerHTML = pricedCombos.map((combo, index) => `
+    <button type="button" class="ux-button accessory-owned" style="--price-row: ${index + 1}" aria-label="${combo.label} 보유">
       <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <path class="accessory-owned-plus" d="M8 4v8M4 8h8"/>
         <path class="accessory-owned-check" d="m4 8 2.5 2.5L12 5"/>
       </svg>
-      ${combo.label}
+      보유
     </button>
-  `).join('');
-  priceEditor.innerHTML = pricedCombos.map((combo, index) => `
-    <label class="accessory-price">
+  `).join('') + pricedCombos.map((combo, index) => `
+    <label class="accessory-price" style="--price-row: ${index + 1}">
       <span id="accessory-price-option-${index}">${combo.label}</span>
       <span class="accessory-price-entry">
         <input type="text" inputmode="decimal" maxlength="${maxFormattedPriceLength}" autocomplete="off" spellcheck="false" aria-labelledby="accessory-slot-title accessory-price-option-${index}" aria-describedby="accessory-price-unit-${index}" aria-errormessage="accessory-price-error">
@@ -135,7 +131,7 @@
     </label>
   `).join('') + '<p class="accessory-price-error" id="accessory-price-error" hidden>억 메소 단위로 0보다 큰 수를 입력하세요. 소수점 아래 최대 8자리까지 입력할 수 있습니다.</p>';
   const priceInputs = Array.from(priceEditor.querySelectorAll('input'));
-  const ownedButtons = Array.from(ownedOptions.querySelectorAll('button'));
+  const ownedButtons = Array.from(priceEditor.querySelectorAll('.accessory-owned'));
   const priceError = priceEditor.querySelector('.accessory-price-error');
 
   const savedGoals = load(goalKey);
@@ -148,42 +144,31 @@
       kind: card.dataset.kind,
       cap,
       target,
-      targetValue: card.querySelector('.accessory-target-value'),
-      progress: card.querySelector('progress'),
-      score: card.querySelector('strong'),
-      detail: card.querySelector('.accessory-detail')
+      targetValue: card.querySelector('.accessory-target-value')
     };
   });
   let selected = 0;
-  let best;
-
-  function countLines(lines, kind) {
-    return lines.filter(line => line === kind).length;
-  }
-
-  function missingLines(lines) {
-    return metrics.flatMap(({ kind, target }) =>
-      Array(Math.max(0, Number(target.value) / lineValue - countLines(lines, kind))).fill(kind)
-    );
+  function preferenceIndex(lines) {
+    const drop = lines.filter(line => line === 'drop').length;
+    const meso = lines.filter(line => line === 'meso').length;
+    return combos.findIndex(option => option.drop === drop && option.meso === meso);
   }
 
   function renderLineButtons() {
     lineButtons.forEach((choices, index) => {
-      choices.forEach(choice => choice.setAttribute('aria-pressed', String(choice.value === rows[selected][index])));
+      choices.forEach(choice => choice.setAttribute('aria-pressed', String(choice.value === preferences[selected][index])));
     });
   }
 
   function renderSlotButtons() {
     buttons.forEach((button, slot) => {
-      const drop = countLines(rows[slot], 'drop');
-      const meso = countLines(rows[slot], 'meso');
-      const index = combos.findIndex(option => option.drop === drop && option.meso === meso);
+      const index = preferenceIndex(preferences[slot]);
       const combo = combos[index];
       const owned = prices[slot][index - 1]?.owned;
       const ownedCount = prices[slot].filter(entry => entry.owned).length;
       const badge = button.querySelector('.accessory-slot-ownership');
       const ownership = owned ? '보유 중' : ownedCount ? `보유 조합 ${ownedCount}개 등록` : '';
-      const description = [slots[slot], combo.label, ownership].filter(Boolean).join(' · ');
+      const description = [slots[slot], index ? `선호 ${combo.label}` : '선호 없음', ownership].filter(Boolean).join(' · ');
       button.setAttribute('aria-label', description);
       button.title = description;
       button.dataset.option = combo.badge;
@@ -194,33 +179,10 @@
     });
   }
 
-  function renderOptions() {
-    const lines = rows.flat();
-    const empty = countLines(lines, '');
-    const double = rows.filter(row => row.every(Boolean)).length;
-    const missing = missingLines(lines).length;
-    lineCount.textContent = `사용 ${lines.length - empty} / ${lines.length}줄 · 2줄 장비 ${double}개`;
-
-    for (const { kind, cap, target, targetValue, progress, score, detail } of metrics) {
-      const goal = Number(target.value);
-      const total = countLines(lines, kind) * lineValue;
-      const applied = Math.min(total, cap);
-      const shortfall = goal - applied;
-      targetValue.textContent = `${goal}%`;
-      target.setAttribute('aria-valuetext', `${goal}%`);
-      score.textContent = `${applied}%`;
-      progress.value = goal === 0 ? 100 : Math.min(100, applied / goal * 100);
-      if (total > cap) detail.textContent = `옵션 합계 ${total}% · 상한 ${total - cap}%p 초과`;
-      else if (shortfall > 0) detail.textContent = `${shortfall}%p 부족 · ${shortfall / lineValue}줄`;
-      else detail.textContent = '목표 달성';
-    }
-
-    complete.setAttribute('aria-disabled', String(missing === 0 || missing > empty));
-    reset.setAttribute('aria-disabled', String(empty === lines.length));
-    if (missing === 0) status.textContent = '드랍과 메획 목표를 모두 달성했습니다.';
-    else if (missing > empty) status.textContent = `빈 줄이 ${missing - empty}줄 부족합니다. 목표를 넘긴 옵션을 바꾸면 두 목표를 채울 수 있어요.`;
-    else status.textContent = `선택한 옵션을 유지하고 빈 줄에 ${missing}줄을 채웁니다.`;
-
+  function renderPreferences() {
+    const count = preferences.filter(lines => lines.some(Boolean)).length;
+    preferenceCount.textContent = `선호 ${count} / ${slots.length}부위`;
+    reset.setAttribute('aria-disabled', String(count === 0));
     renderSlotButtons();
     renderLineButtons();
   }
@@ -263,16 +225,13 @@
   }
 
   function renderPriceInputs() {
-    const ownedLabels = [];
     priceInputs.forEach((input, index) => {
       const { value, owned } = prices[selected][index];
       input.value = owned ? '' : value;
       input.placeholder = owned ? '0' : '';
       input.disabled = owned;
       ownedButtons[index].setAttribute('aria-pressed', String(owned));
-      if (owned) ownedLabels.push(pricedCombos[index].label);
     });
-    ownedSummary.textContent = ownedLabels.length > 1 ? `${ownedLabels.length}개 등록` : ownedLabels[0] || '미등록';
   }
 
   function selectSlot(slot) {
@@ -284,11 +243,17 @@
     renderPriceErrors();
   }
 
+  function comparePlans(a, b) {
+    if (a.missing !== b.missing) return a.missing - b.missing;
+    if (a.preferred !== b.preferred) return b.preferred - a.preferred;
+    if (a.cost === b.cost) return 0;
+    return a.cost < b.cost ? -1 : 1;
+  }
+
   function findPlans(candidates, dropGoal, mesoGoal) {
     // Rates beyond the requested goal are equivalent when comparing prices.
-    // A registered plan wins over any plan that still needs a price for the same totals.
     const key = (drop, meso) => drop * (mesoGoal + 1) + meso;
-    let states = new Map([[0, { drop: 0, meso: 0, missing: 0, cost: 0n, picks: [] }]]);
+    let states = new Map([[0, { drop: 0, meso: 0, missing: 0, preferred: 0, cost: 0n, picks: [] }]]);
     for (const choices of candidates) {
       const next = new Map();
       for (const state of states.values()) {
@@ -296,11 +261,15 @@
           const drop = Math.min(dropGoal, state.drop + choice.drop);
           const meso = Math.min(mesoGoal, state.meso + choice.meso);
           const index = key(drop, meso);
-          const missing = state.missing + Number(choice.price === null);
-          const cost = state.cost + (choice.price ?? 0n);
+          const plan = {
+            drop, meso,
+            missing: state.missing + Number(choice.price === null),
+            preferred: state.preferred + Number(Boolean(choice.preferred)),
+            cost: state.cost + (choice.price ?? 0n)
+          };
           const previous = next.get(index);
-          if (!previous || missing < previous.missing || (missing === previous.missing && cost < previous.cost)) {
-            next.set(index, { drop, meso, missing, cost, picks: [...state.picks, choice] });
+          if (!previous || comparePlans(plan, previous) < 0) {
+            next.set(index, { ...plan, picks: [...state.picks, choice] });
           }
         }
       }
@@ -309,17 +278,21 @@
     return Array.from(states.values());
   }
 
+  function appliedRate(picks, { kind, cap }) {
+    return Math.min(cap, picks.reduce((sum, pick) => sum + pick[kind], 0) * lineValue);
+  }
+
   function renderShortfall(plans, goalPlan) {
     const closest = plans.filter(plan => plan.missing === 0).reduce((nearest, plan) => {
       const matched = plan.drop + plan.meso;
       const nearestMatched = nearest.drop + nearest.meso;
-      return matched > nearestMatched || (matched === nearestMatched && plan.cost < nearest.cost) ? plan : nearest;
+      return matched > nearestMatched || (matched === nearestMatched && comparePlans(plan, nearest) < 0) ? plan : nearest;
     });
-    gapMetrics.innerHTML = metrics.map(({ kind, cap, target }) => {
-      const actual = Math.min(cap, closest.picks.reduce((sum, pick) => sum + pick[kind], 0) * lineValue);
-      const goal = Number(target.value);
+    gapMetrics.innerHTML = metrics.map(metric => {
+      const actual = appliedRate(closest.picks, metric);
+      const goal = Number(metric.target.value);
       const deficit = Math.max(0, goal - actual);
-      const label = kind === 'drop' ? '드랍률' : '메소 획득량';
+      const label = metric.kind === 'drop' ? '드랍률' : '메소 획득량';
       return `<div>
         <dt>${label}</dt>
         <dd><strong>${actual}%</strong> / ${goal}%</dd>
@@ -336,12 +309,15 @@
   function renderResult() {
     const [dropTarget, mesoTarget] = metrics.map(({ target }) => Number(target.value));
     goalSummary.textContent = `목표 드랍 ${dropTarget}% · 메획 ${mesoTarget}%`;
-    const candidates = prices.map(slotPrices => [
+    const preferred = preferences.map(preferenceIndex);
+    const requested = preferred.filter(Boolean).length;
+    resultTitle.textContent = requested ? '선호 반영 최저가 조합' : '최저가 조합';
+    const candidates = prices.map((slotPrices, slot) => [
       { ...combos[0], price: 0n },
       ...pricedCombos.map((combo, option) => {
         const { value, owned } = slotPrices[option];
         const price = owned ? 0n : (parsePrice(value) || null);
-        return { ...combo, option, price, owned };
+        return { ...combo, option, price, owned, preferred: preferred[slot] === option + 1 };
       })
     ]);
     const registered = candidates.reduce((total, choices) => total + choices.filter(choice => choice.price !== null).length - 1, 0);
@@ -349,8 +325,9 @@
     const mesoGoal = mesoTarget / lineValue;
     const plans = findPlans(candidates, dropGoal, mesoGoal);
     const goalPlan = plans.find(plan => plan.drop === dropGoal && plan.meso === mesoGoal);
-    best = goalPlan?.missing === 0 ? goalPlan : undefined;
-    apply.hidden = resultTable.hidden = !best;
+    const best = goalPlan?.missing === 0 ? goalPlan : undefined;
+    resultTable.hidden = !best;
+    preferenceStatus.hidden = !best || requested === 0;
     resultGap.hidden = Boolean(best || !registered || !goalPlan);
 
     if (!best) {
@@ -362,21 +339,34 @@
     }
 
     resultStatus.textContent = `최저 합계 ${koreanAmount(best.cost)}`;
+    const [dropApplied, mesoApplied] = metrics.map(metric => appliedRate(best.picks, metric));
+    if (dropApplied !== dropTarget || mesoApplied !== mesoTarget) {
+      goalSummary.textContent += ` / 조합 드랍 ${dropApplied}% · 메획 ${mesoApplied}%`;
+    }
+    if (requested) {
+      const unmatched = preferred.flatMap((index, slot) => {
+        if (!index || best.picks[slot].preferred) return [];
+        const choice = candidates[slot][index];
+        return `${slots[slot]} ${choice.label}${choice.price === null ? ' (가격 미등록)' : ''}`;
+      });
+      preferenceStatus.textContent = `선호 ${best.preferred} / ${requested}부위 반영${unmatched.length ? ` · 미반영 ${unmatched.join(', ')}` : ''}`;
+    }
     const displayRows = best.picks.map((choice, slot) => ({ ...choice, slot, group: choice.owned ? 0 : choice.badge ? 1 : 2 }));
     displayRows.sort((a, b) => a.group - b.group);
-    resultRows.innerHTML = displayRows.map(({ label, badge, price, owned, slot }) => `
+    resultRows.innerHTML = displayRows.map(({ label, badge, price, owned, preferred, slot }) => `
       <tr data-status="${owned ? 'owned' : badge ? 'buy' : 'empty'}">
         <th scope="row"><span class="accessory-result-slot">${slots[slot]}${badge ? `
-          <span class="accessory-result-badge">${owned ? '✓ 보유 중' : '구매'}</span>` : ''}</span></th>
+          <span class="accessory-result-badge">${owned ? '✓ 보유 중' : '구매'}</span>` : ''}${preferred ? '<span class="accessory-result-preferred">선호</span>' : ''}</span></th>
         <td>${label}</td>
         <td>${badge ? koreanAmount(price) : '—'}</td>
       </tr>
     `).join('');
   }
 
-  function updateOptions() {
-    save(storageKey, rows.flat());
-    renderOptions();
+  function updatePreferences() {
+    save(preferenceKey, preferences.flat());
+    renderPreferences();
+    renderResult();
   }
 
   function updatePrices() {
@@ -385,16 +375,23 @@
     renderResult();
   }
 
+  function renderGoals() {
+    metrics.forEach(({ target, targetValue }) => {
+      targetValue.textContent = `${target.value}%`;
+      target.setAttribute('aria-valuetext', targetValue.textContent);
+    });
+  }
+
   metrics.forEach(({ target }) => target.addEventListener('input', () => {
     save(goalKey, metrics.map(metric => Number(metric.target.value)));
-    renderOptions();
+    renderGoals();
     renderResult();
   }));
   buttons.forEach((button, slot) => button.addEventListener('click', () => selectSlot(slot)));
   lineButtons.forEach((choices, index) => {
     choices.forEach(choice => choice.addEventListener('click', () => {
-      rows[selected][index] = choice.value;
-      updateOptions();
+      preferences[selected][index] = choice.value;
+      updatePreferences();
     }));
   });
   priceInputs.forEach((input, index) => {
@@ -464,35 +461,14 @@
     input.focus();
     input.select();
   });
-  complete.addEventListener('click', () => {
-    if (complete.getAttribute('aria-disabled') === 'true') return;
-
-    // Use one line on each empty item before adding another two-line item.
-    const available = rows.flatMap(row => row.flatMap((line, index) =>
-      line ? [] : [{ row, index, first: index === 0 && !row[1] }]
-    ));
-    available.sort((a, b) => Number(b.first) - Number(a.first));
-    missingLines(rows.flat()).forEach((kind, index) => {
-      const target = available[index];
-      target.row[target.index] = kind;
-    });
-    updateOptions();
-  });
   reset.addEventListener('click', () => {
     if (reset.getAttribute('aria-disabled') === 'true') return;
-    rows.forEach(row => row.fill(''));
-    updateOptions();
-  });
-  apply.addEventListener('click', () => {
-    if (!best) return;
-    best.picks.forEach(({ drop, meso }, slot) => {
-      rows[slot] = [...Array(drop).fill('drop'), ...Array(meso).fill('meso'), '', ''].slice(0, 2);
-    });
-    updateOptions();
-    buttons[selected].focus();
+    preferences.forEach(lines => lines.fill(''));
+    updatePreferences();
   });
 
-  renderOptions();
+  renderGoals();
+  renderPreferences();
   selectSlot(0);
   renderResult();
 })();
