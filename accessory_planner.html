@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>장신구 맞추기</title>
+  <link rel="icon" href="favicon.png?v=2">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="site_ux.css">
+  <link rel="stylesheet" href="accessory_planner.css">
+  <script src="site_header.js" defer></script>
+  <script src="site_nav.js" defer></script>
+  <script src="site_ux.js" defer></script>
+  <script src="money_input.js" defer></script>
+  <script src="accessory_planner.js" defer></script>
+</head>
+<body>
+  <main class="wrap accessory-planner">
+    <div data-site-navigation></div>
+    <header>
+      <h1>장신구 맞추기</h1>
+      <p class="sub">장신구 9부위의 드랍·메획을 배치하고, 입력한 가격으로 두 목표를 채우는 최저가 조합을 찾으세요.</p>
+    </header>
+
+    <section class="card accessory-summary" aria-labelledby="accessory-summary-title">
+      <h2 id="accessory-summary-title">장비에서 적용되는 옵션</h2>
+      <div class="accessory-metrics" aria-live="polite" aria-atomic="true">
+        <div class="accessory-metric" data-kind="drop">
+          <h3>아이템 드랍률</h3>
+          <p class="accessory-score"><strong>0%</strong> <span> / 100%</span></p>
+          <progress aria-label="아이템 드랍률 달성도" max="100" value="0"></progress>
+          <p class="accessory-detail">100%p 부족 · 5줄</p>
+        </div>
+        <div class="accessory-metric" data-kind="meso">
+          <h3>메소 획득량</h3>
+          <p class="accessory-score"><strong>0%</strong> <span> / 200%</span></p>
+          <progress aria-label="메소 획득량 달성도" max="200" value="0"></progress>
+          <p class="accessory-detail">200%p 부족 · 10줄</p>
+        </div>
+      </div>
+      <div class="accessory-fill">
+        <button class="ux-button accessory-primary" id="accessory-complete" type="button" aria-describedby="accessory-status">빈 줄로 목표 채우기</button>
+        <p id="accessory-status" role="status"></p>
+      </div>
+    </section>
+
+    <section class="card accessory-sheet" aria-labelledby="accessory-sheet-title">
+      <div class="accessory-sheet-head">
+        <div>
+          <h2 id="accessory-sheet-title">장비창</h2>
+          <p id="accessory-line-count">사용 0 / 18줄 · 2줄 장비 0개</p>
+        </div>
+        <button class="ux-button" id="accessory-reset" type="button">옵션 초기화</button>
+      </div>
+      <div class="accessory-workspace">
+        <div>
+          <p class="accessory-hint">장신구 칸을 눌러 옵션과 가격을 입력하세요.</p>
+          <div id="accessory-slots" class="accessory-inventory" role="group" aria-label="장신구 선택"></div>
+        </div>
+        <div class="accessory-editor" aria-labelledby="accessory-slot-title" role="group">
+          <h3 id="accessory-slot-title">반지 1</h3>
+          <div class="accessory-lines" id="accessory-lines"></div>
+          <h4>옵션 조합별 가격 (메소)</h4>
+          <div id="accessory-prices"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card accessory-result" aria-labelledby="accessory-result-title">
+      <div class="accessory-sheet-head">
+        <h2 id="accessory-result-title" tabindex="-1">최저가 조합</h2>
+        <button class="ux-button accessory-primary" id="accessory-apply" type="button" hidden>장비창에 적용</button>
+      </div>
+      <p id="accessory-result-status" role="status"></p>
+      <p class="accessory-hint">장비 드랍 100% · 메획 200% 기준</p>
+      <table id="accessory-result-table" hidden>
+        <thead><tr><th scope="col">부위</th><th scope="col">옵션</th><th scope="col">가격</th></tr></thead>
+        <tbody id="accessory-result-rows"></tbody>
+      </table>
+    </section>
+
+    <section data-ux-help="장신구 맞추기 기준">
+      <ul>
+        <li>장신구마다 최대 2줄까지 고를 수 있고, 각 줄은 드랍률 또는 메획을 20%p 올립니다.</li>
+        <li>장비에서 적용되는 상한은 드랍 100%와 메획 200%입니다. 두 목표를 함께 채우려면 15줄이 필요하므로 9부위 중 최소 6부위는 2줄을 사용합니다.</li>
+        <li>자동 배치는 기존 옵션을 유지하고, 옵션이 하나도 없는 장비부터 1줄씩 채웁니다.</li>
+        <li>Enter 또는 Tab으로 다음 가격 칸을 입력할 수 있습니다. 귀걸이의 마지막 가격 칸에서 Enter를 누르면 최저가 조합으로 이동합니다.</li>
+        <li>최저가 조합은 가격을 입력했거나 보유 중인 후보에서 찾습니다. 보유 장비의 추가 비용은 0메소입니다. 각 부위는 비워 두거나 한 조합만 선택합니다. 상한을 넘는 옵션도 후보로 비교합니다.</li>
+        <li>입력한 배치, 가격, 보유 여부는 이 브라우저에 저장됩니다.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

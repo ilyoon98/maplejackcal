@@ -4,12 +4,12 @@ window.SiteNavigation = {
   categories: [
       ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','flame_calc.html','item_craft_calc.html','authentic_symbol_calc.html']],
       ['보스', ['boss_income_calc.html','boss_buff_planner.html','party_boss_scheduler.html','shared_boss_rates.html']],
-      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','wealth_elixir_calc.html','coin_shop_calc.html']],
+      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','accessory_planner.html','wealth_elixir_calc.html','coin_shop_calc.html']],
       ['강화 시뮬레이터', ['cube_play.html','starforce_play.html']],
       ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']],
       ['미니게임', ['herb_idle.html']]
     ],
-  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02', 'party_boss_scheduler.html': '2026-11-07', 'shared_boss_rates.html': '2026-11-07' },
+  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02', 'party_boss_scheduler.html': '2026-11-07', 'shared_boss_rates.html': '2026-11-07', 'accessory_planner.html': '2026-11-07' },
   newDays: 30,
   // 메뉴와 홈 카드에 쓰는 게임 아이템 아이콘. 새 페이지를 추가하면 여기에도 넣는다.
   icons: {
@@ -29,6 +29,7 @@ window.SiteNavigation = {
     'trade_margin_calc.html': 'icons/home/메소주머니.webp',
     'meso_market_calc.html': 'icons/home/메이플포인트.webp',
     'hunting_calc.html': 'icons/home/솔에르다조각.webp',
+    'accessory_planner.html': 'icons/coin-shop/이벤트링.webp',
     'wealth_elixir_calc.html': 'icons/craft/소형재물획득의비약.webp',
     'coin_shop_calc.html': 'icons/home/반짝이는메이플코인.webp',
     'cube_play.html': 'icons/cube/명장.webp',
@@ -144,7 +145,8 @@ window.SiteNavigation = {
     var playMenu = nav.querySelector('.site-menu[data-group="play"]');
     [
       ['party_boss_scheduler.html', '파티 보스 스케줄러', '캐릭터 외형 · 파티 배율 합산'],
-      ['shared_boss_rates.html', '공용 환산 배율', '확인해 저장한 보스별 배율']
+      ['shared_boss_rates.html', '공용 환산 배율', '확인해 저장한 보스별 배율'],
+      ['accessory_planner.html', '장신구 맞추기', '9부위 드랍·메획 최저가 조합']
     ].forEach(function (page) {
       if (!calcMenu || calcMenu.querySelector('a[href="' + page[0] + '"]')) return;
       var link = document.createElement('a');

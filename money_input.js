@@ -19,6 +19,7 @@
     return parts.join(' ') + ' ' + unit;
   }
   if (typeof module !== 'undefined' && module.exports) { module.exports = { koreanAmount }; return; }
+  window.MoneyInput = { koreanAmount };
   function init() {
     const page = location.pathname.split('/').pop();
     const fields = {
