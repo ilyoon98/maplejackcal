@@ -35,21 +35,31 @@ test('환산 차단 시 작성 배율을 유지하며 캡처 영역에 포커스
   assert(url.startsWith('/api/scouter?'));return {ok:false,json:async()=>({error:{code:'SCOUTER_BLOCKED'}})};
  }});try{
   const row=p.doc.querySelector('#shared-rows input');row.value='136.47';row.dispatchEvent(new p.w.Event('input',{bubbles:true}));
-  assert.equal(p.doc.querySelector('.shared-damage').textContent,'1.36배');
+  p.doc.querySelector('#shared-mode-fetch').click();assert.equal(p.doc.querySelector('#shared-capture').hidden,true);
   p.doc.querySelector('#shared-fetch').click();await settle();
   assert.equal(p.doc.querySelector('#shared-capture').hidden,false);
   assert.equal(p.doc.activeElement.id,'shared-drop');assert.equal(row.value,'136.47');
   assert.match(p.doc.querySelector('#shared-status').textContent,/차단/);
  }finally{p.close();}
 });
-test('파티 목록과 상세는 환산 합계, 100% 기준 배수, 판정을 같이 표시한다',async()=>{
- const saved=snapshot();saved.rates[0].percent=136.47;
- const p=await boot('party_boss_scheduler',{snapshots:[saved],parties:[{id:'p1',name:'테스트',bossId:'Lotus|Extreme',members:[{character:{...saved.character,ocid:'shared:'+saved.characterName},rate:136.47}]}]});try{
+test('파티원 세 명의 예상 딜 비중을 표시하고 파티원을 빼면 다시 계산한다',async()=>{
+ const rates=[42.26,43.34,50.87],snapshots=['첫번째','두번째','세번째'].map((name,index)=>{
+  const saved=snapshot(name);saved.rates[1].percent=rates[index];return saved;
+ });
+ const members=snapshots.map((s,index)=>({character:{...s.character,ocid:'shared:'+s.characterName},rate:rates[index]}));
+ const p=await boot('party_boss_scheduler',{snapshots,parties:[{id:'p1',name:'테스트',bossId:'Will|Hard',members}]});try{
   for(const id of ['party-list','party-detail']){
    const totals=p.doc.querySelector('#'+id+' .party-totals');
-   assert.deepEqual([...totals.querySelectorAll('.party-metric-value')].map(n=>n.textContent),['136.47%','1.36배']);
+   assert.equal(totals.querySelector('.party-metric-value').textContent,'136.47%');
    assert.equal(totals.querySelector('.party-verdict').textContent,'클리어 가능');
   }
+  const shares=id=>[...p.doc.querySelectorAll('#'+id+' .party-member-metrics .party-metric:nth-child(2) .party-metric-value')].map(n=>n.textContent);
+  assert.deepEqual(shares('party-detail'),['30.97%','31.76%','37.28%']);
+  p.doc.querySelector('.party-edit').click();
+  p.doc.querySelector('#party-draft-members .party-member:last-child .party-remove').click();
+  assert.deepEqual(shares('party-draft-members'),['49.37%','50.63%']);
+  p.doc.querySelector('#party-create-cancel').click();
+  assert.deepEqual(shares('party-detail'),['30.97%','31.76%','37.28%']);
  }finally{p.close();}
 });
 test('기존 파티 수정은 파티원과 ID를 유지하고 변경한 보스의 배율만 합산한다',async()=>{
@@ -71,6 +81,7 @@ test('기존 파티 수정은 파티원과 ID를 유지하고 변경한 보스�
   assert.equal(form.hidden,true);assert.equal(stored().id,party.id);assert.equal(stored().name,'하드 윌');assert.equal(stored().bossId,'Will|Hard');
   assert.deepEqual(stored().members.map(m=>[m.character.name,m.rate]),[['다른사람',77],['스우전용',null]]);
   assert(p.doc.querySelector('#party-detail').textContent.includes('1명 미등록'));
+  assert.deepEqual([...p.doc.querySelectorAll('#party-detail .party-member-metrics .party-metric:nth-child(2) .party-metric-value')].map(n=>n.textContent),['—','—']);
   edit();type(p.w,'party-name','새 금요팟');p.doc.querySelector('#party-draft-members .party-member:last-child .party-remove').click();
   form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
   assert.equal(stored().name,'새 금요팟');assert.equal(stored().members[0].rate,77);assert.equal(stored().members.length,1);
@@ -104,7 +115,8 @@ test('최신 계정 정보에 외형이 빠져 있어도 저장된 공식 외형
 });
 test('캡처 토글·붙여넣기는 확실한 카드만 즉시 반영하고 불확실한 기존 배율과 나머지 값은 유지한다',async()=>{
  const p=await boot('shared_boss_rates',{shot:[{name:'스우',diff:'익스트림',value:41.22,sure:true},{name:'윌',diff:'하드',value:999,sure:false}]});try{
-  p.doc.querySelector('#shared-mode-capture').click();assert.equal(p.doc.querySelector('#shared-mode-capture').getAttribute('aria-pressed'),'true');assert.equal(p.doc.querySelector('#shared-capture').hidden,false);assert(p.doc.querySelector('#shared-fetch-panel').hidden);
+  assert.equal(p.doc.querySelector('#shared-mode-capture').getAttribute('aria-pressed'),'true');assert.equal(p.doc.querySelector('#shared-capture').hidden,false);assert(p.doc.querySelector('#shared-fetch-panel').hidden);
+  assert.equal(p.doc.querySelectorAll('.shared-capture-steps li').length,4);
   const e=new p.w.Event('paste',{bubbles:true,cancelable:true});e.clipboardData={items:[{kind:'file',getAsFile:()=>new p.w.Blob(['fake-pixels'],{type:'image/png'})}]};p.doc.querySelector('#shared-drop').dispatchEvent(e);await settle();
   const inputs=[...p.doc.querySelectorAll('#shared-rows input')];assert.equal(inputs[0].value,'41.22');assert.equal(inputs[1].value,'77');assert(p.doc.querySelector('#shared-shot-status').textContent.includes('1개 배율 자동 반영'));assert(p.doc.querySelector('#shared-review').textContent.includes('기존 값 유지'));assert.equal(p.calls.filter(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).length,0);
   p.doc.querySelector('#shared-save').click();await settle();const saved=JSON.parse(p.calls.find(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).options.body).snapshot;assert.equal(saved.captureMethod,'screenshot');assert.equal(saved.rates[0].percent,41.22);assert.equal(saved.rates[1].percent,77);

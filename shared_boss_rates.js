@@ -78,11 +78,11 @@
     renderProfile();el('shared-source').hidden=!name;if(name)el('shared-source').href=data.resultUrl(name,'00000');
     el('shared-table').hidden=!rates.length;el('shared-rate-count').textContent=rates.length?String(rates.length):'';el('shared-rows').replaceChildren();
     rates.forEach(function(r){var tr=node('tr'),td=node('td'),input=node('input'),remove=node('button','×'),boss=node('td');boss.append(visual.create(document,r.bossId,window.MapleBossDB));if(shotIds.has(r.bossId))tr.className='shared-shot-applied';
-      var amount=node('div'),suffix=node('span','%'),damage=node('span',catalog.damageLabel(r.percent));
-      amount.className='shared-rate-amount';suffix.setAttribute('aria-hidden','true');damage.className='shared-damage';
+      var amount=node('div'),suffix=node('span','%');
+      amount.className='shared-rate-amount';suffix.setAttribute('aria-hidden','true');
       input.type='number';input.min='0';input.max='1000000000';input.step='0.01';input.value=r.percent===null?'':String(r.percent);input.setAttribute('aria-label',boss.textContent+' 환산 배율 %');
-      input.addEventListener('input',function(){r.percent=input.value.trim()===''?null:Number(input.value);r.eligibility='';damage.textContent=catalog.damageLabel(r.percent);changed();});
-      amount.append(input,suffix);td.append(amount,damage);
+      input.addEventListener('input',function(){r.percent=input.value.trim()===''?null:Number(input.value);r.eligibility='';changed();});
+      amount.append(input,suffix);td.append(amount);
       remove.type='button';remove.setAttribute('aria-label',boss.textContent+' 삭제');remove.addEventListener('click',function(){rates=rates.filter(function(v){return v!==r;});changed();render();});var action=node('td');action.append(remove);tr.append(boss,td,action);el('shared-rows').append(tr);
     });controls();
   }

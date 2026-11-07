@@ -157,7 +157,7 @@
       fillAccounts('party-draft-account');fillCharacters('party-draft-character',el('party-draft-account').value,bossId,el('party-draft-character').value);
       var host=el('party-draft-members'),members=draftRoster(bossId);host.replaceChildren();
       el('party-draft-summary').replaceChildren(totals(members,boss.max,false));
-      members.forEach(function(m,index){host.append(memberCard(m,function(){draftMembers.splice(index,1);draftStatus('');renderDraft();}));});
+      host.append(...memberCards(members,function(m,index){draftMembers.splice(index,1);draftStatus('');renderDraft();}));
       el('party-draft-add').disabled=!el('party-draft-character').value;
     }
     function draftRoster(bossId){
@@ -186,19 +186,27 @@
     }
     function totals(members,max,compact){
       var sum=summary(members),known=members.length>sum.missing;
-      var box=node('span',compact?'party-totals compact':'party-totals'),numbers=node('span','party-metrics'),footer=node('span','party-metrics-footer');
+      var box=node('span',compact?'party-totals compact':'party-totals'),footer=node('span','party-metrics-footer');
       var verdict=sum.missing?['pending','판정 대기']:members.length?clearStatus(Math.round(sum.total*100)/100):null;
       var badge=verdict?node('span','party-verdict '+verdict[0],verdict[1]):null;
-      numbers.append(metric('환산 합계',known?percentLabel(sum.total):'—',compact?null:badge),metric(compact?'데미지 배수':'데미지 배수 (100% = 1배)',known?win.RateCatalog.damageLabel(sum.total):'—'));
+      box.append(metric('환산 합계',known?percentLabel(sum.total):'—',compact?null:badge));
       if(compact&&badge)footer.append(badge);
       if(sum.missing)footer.append(node('span','party-note',sum.missing+'명 미등록'));
       footer.append(node('span','party-member-count',members.length+' / '+max+'명'));
-      box.append(numbers,footer);return box;
+      box.append(footer);return box;
     }
-    function memberCard(m,onRemove){
+    function memberCards(members,onRemove){
+      var sum=summary(members);
+      return members.map(function(m,index){
+        var share=!sum.missing&&sum.total>0?percentLabel(m.rate/sum.total*100):'—';
+        return memberCard(m,share,function(){onRemove(m,index);});
+      });
+    }
+    function memberCard(m,share,onRemove){
       var c=m.character,row=node('div','party-member'),info=profiles.renderInfo(doc,c,c.name),metrics=node('div','party-member-metrics');
       info.append(node('p','party-account-label',accountName(c.name)));
-      metrics.append(metric('환산 배율',m.rate===null?'미등록':percentLabel(m.rate)),metric('데미지 배수',win.RateCatalog.damageLabel(m.rate)));
+      metrics.append(metric('환산 배율',m.rate===null?'미등록':percentLabel(m.rate)));
+      if(share!==undefined)metrics.append(metric('예상 딜 비중',share));
       row.append(portrait(c),info,metrics);
       if(onRemove){
         var remove=node('button','party-remove','빼기');remove.type='button';remove.setAttribute('aria-label',c.name+' 파티에서 빼기');
@@ -278,7 +286,7 @@
       detail.append(totals(p.members,boss.max,false));
       if(p.members.some(function(m,i){return accounts.conflict(shared,p.members.slice(0,i),m.character.name);}))detail.append(node('p','party-note account-error','계정 묶음이 변경되어 같은 계정의 캐릭터가 중복되었습니다. 한 명을 빼주세요.'));
       var roster=node('div','party-members');
-      p.members.forEach(function(m){roster.append(memberCard(m,function(){updateMembers(p,p.members.filter(function(item){return item!==m;}));}));});
+      roster.append(...memberCards(p.members,function(m){updateMembers(p,p.members.filter(function(item){return item!==m;}));}));
       detail.append(roster);
     }
     async function choose(name){

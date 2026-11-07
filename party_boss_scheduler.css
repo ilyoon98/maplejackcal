@@ -33,7 +33,7 @@
 
 .party-totals{display:block;margin:16px 0;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
 .party-totals.compact{margin:12px 0 0;padding:10px}
-.party-metrics,.party-member-metrics{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.party-member-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .party-metric{display:grid;gap:4px;min-width:0}
 .party-metric-line{display:flex;align-items:center;flex-wrap:wrap;gap:5px 10px;min-width:0}
 .party-metric-label{font-size:.78rem;color:var(--text-dim);font-weight:600}
@@ -41,7 +41,7 @@
   color:var(--text);font-size:2.12rem;font-weight:800;line-height:1.12;
   font-variant-numeric:tabular-nums;overflow-wrap:anywhere
 }
-.party-totals .party-metric:first-child .party-metric-value{color:var(--accent)}
+.party-totals .party-metric-value,.party-member-metrics .party-metric:nth-child(2) .party-metric-value{color:var(--accent)}
 .party-totals.compact .party-metric-value{font-size:1.36rem}
 .party-totals.compact .party-metric-label{font-size:.72rem}
 .party-metrics-footer{display:flex;align-items:center;flex-wrap:wrap;gap:6px 9px;margin-top:11px}
