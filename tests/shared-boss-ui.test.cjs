@@ -128,9 +128,10 @@ test('캡처 토글·붙여넣기는 확실한 카드만 즉시 반영하고 불
  const p=await boot('shared_boss_rates',{shot:[{name:'스우',diff:'익스트림',value:41.22,sure:true},{name:'윌',diff:'하드',value:999,sure:false}]});try{
   assert.equal(p.doc.querySelector('#shared-mode-capture').getAttribute('aria-pressed'),'true');assert.equal(p.doc.querySelector('#shared-capture').hidden,false);assert(p.doc.querySelector('#shared-fetch-panel').hidden);
   assert.equal(p.doc.querySelectorAll('.shared-capture-steps li').length,4);
+  assert.match(p.doc.querySelector('.shared-capture-steps li').textContent,/내 기준보기.*전체 보기.*데스티니\/유챔 확인.*OFF/);
   const e=new p.w.Event('paste',{bubbles:true,cancelable:true});e.clipboardData={items:[{kind:'file',getAsFile:()=>new p.w.Blob(['fake-pixels'],{type:'image/png'})}]};p.doc.querySelector('#shared-drop').dispatchEvent(e);await settle();
   const inputs=[...p.doc.querySelectorAll('#shared-rows input')];assert.equal(inputs[0].value,'41.22');assert.equal(inputs[1].value,'77');assert(p.doc.querySelector('#shared-shot-status').textContent.includes('1개 배율 자동 반영'));assert(p.doc.querySelector('#shared-review').textContent.includes('기존 값 유지'));assert.equal(p.calls.filter(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).length,0);
-  p.doc.querySelector('#shared-save').click();await settle();const saved=JSON.parse(p.calls.find(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).options.body).snapshot;assert.equal(saved.captureMethod,'screenshot');assert.equal(saved.rates[0].percent,41.22);assert.equal(saved.rates[1].percent,77);
+  p.doc.querySelector('#shared-save').click();await settle();const saved=JSON.parse(p.calls.find(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).options.body).snapshot;assert.equal(saved.captureMethod,'screenshot');assert.equal(saved.conditions.destinyChampion,false);assert.equal(saved.rates[0].percent,41.22);assert.equal(saved.rates[1].percent,77);
  }finally{p.close();}
 });
 test('타인 닉네임 검색은 id/basic만 조회하고 레벨·서버·직업·외형만 공유 저장한다',async()=>{
@@ -204,6 +205,28 @@ test('선택한 파티만 확인 후 삭제하고 브라우저 목록에 저장�
 test('배율 저장 시 선택한 계정으로 묶고 계정 이름과 저장 토스트를 갱신한다',async()=>{
  const p=await boot('shared_boss_rates',{snapshots:[snapshot('본캐'),snapshot('부캐')],accounts:[{id:'group-one',label:'주인',characters:[{name:'본캐'}]}]});try{
   select(p.w,'shared-character','부캐');select(p.w,'shared-owner','group-one');type(p.w,'shared-owner-label','우리 계정');p.doc.querySelector('#shared-save').click();await settle();const req=p.calls.find(c=>c.options.method==='POST'&&JSON.parse(c.options.body).action==='accounts');const account=JSON.parse(req.options.body).accounts.find(a=>a.id==='group-one');assert.equal(account.label,'우리 계정');assert.deepEqual(account.characters.map(c=>c.name).sort(),['본캐','부캐'].sort());assert(p.doc.querySelector('#shared-toast').textContent.includes('저장 완료'));
+ }finally{p.close();}
+});
+test('공용 계정은 키 없이 등록된 260 이상 캐릭터로 편집하고 숨긴 기존 소속을 보존한다',async()=>{
+ const main=snapshot('친구본캐'),added=snapshot('추가캐릭터'),low=snapshot('낮은캐릭터'),unknown=snapshot('레벨미확인');
+ added.character.level=260;low.character.level=259;delete unknown.character;
+ const registry=[{id:'friend',label:'친구 계정',characters:[{name:main.characterName},{name:low.characterName},{name:'배율미등록',profile:profile('배율미등록')}]},
+  {id:'other',label:'기존 묶음',characters:[{name:added.characterName}]}];
+ const p=await boot('shared_boss_rates',{snapshots:[main,added,low,unknown],accounts:registry});try{
+  select(p.w,'shared-group-select','friend');
+  const candidates=()=>[...p.doc.querySelectorAll('#shared-group-members input')];
+  assert.deepEqual(candidates().map(n=>n.value),['친구본캐','추가캐릭터']);
+  assert.equal(candidates()[0].checked,true);assert.equal(candidates()[1].checked,false);
+  candidates()[1].click();type(p.w,'shared-group-label','친구 새 이름');
+  p.doc.querySelector('#shared-refresh').click();await settle();
+  assert.equal(candidates()[1].checked,true);assert.equal(p.doc.querySelector('#shared-group-label').value,'친구 새 이름');
+  p.doc.querySelector('#shared-group-save').click();await settle();
+  const body=JSON.parse(p.calls.find(c=>c.options.method==='POST').options.body);
+  assert.deepEqual(body.accounts[0].characters.map(c=>c.name),['친구본캐','낮은캐릭터','배율미등록','추가캐릭터']);
+  assert.equal(body.accounts[0].label,'친구 새 이름');assert.deepEqual(body.accounts[1].characters,[]);
+  assert.match(p.doc.querySelector('#shared-group-status').textContent,/저장 완료/);
+  p.doc.querySelector('#shared-refresh').click();await settle();
+  assert.equal(candidates().filter(n=>n.checked).length,2);assert(p.calls.every(c=>c.url==='/api/boss-rates'));
  }finally{p.close();}
 });
 test('내 계정 불러오기는 비공개 계정 ID와 OCID를 공용 요청에 넣지 않는다',async()=>{

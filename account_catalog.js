@@ -20,7 +20,17 @@
   function importOwn(store,rows,newId){
     var known=new Map();groups(store).forEach(function(g){g.characters.forEach(function(c){if(c.profile)known.set(c.name,c.profile);});});
     var groupsByPrivateId=new Map();rows.forEach(function(r){var id=r.accountId||'current';if(!groupsByPrivateId.has(id))groupsByPrivateId.set(id,[]);var p=data.publicCharacter({name:r.name,world:r.world,job:r.characterClass||'',level:r.level,image:'',updatedAt:Date.now()},r.name),old=known.get(r.name);if(p&&old){if(old.image)p={...p,image:old.image,updatedAt:old.updatedAt};else if(old.world===p.world&&old.job===p.job&&old.level===p.level&&Date.now()-old.updatedAt<86400000)p=old;}if(p)groupsByPrivateId.get(id).push({name:r.name,profile:p});});
-    var accounts=normalize(store.accounts||[]);groupsByPrivateId.forEach(function(members){var current=accounts.find(function(a){return a.characters.some(function(c){return members.some(function(m){return m.name===c.name;});});});accounts=assign(accounts,current?current.id:newId(),current?current.label:'',members);});return accounts;
+    var accounts=normalize(store.accounts||[]);
+    groupsByPrivateId.forEach(function(members){
+      if(!members.length)return;
+      var incoming=new Set(members.map(function(m){return m.name;}));
+      var current=accounts.find(function(a){return a.characters.some(function(c){return incoming.has(c.name);});});
+      var assignedElsewhere=new Set(accounts.filter(function(a){return a!==current;}).flatMap(function(a){return a.characters.map(function(c){return c.name;});}));
+      var merged=new Map((current?.characters||[]).map(function(c){return [c.name,c];}));
+      members.forEach(function(c){if(!assignedElsewhere.has(c.name))merged.set(c.name,c);});
+      accounts=assign(accounts,current?current.id:newId(),current?current.label:'',Array.from(merged.values()));
+    });
+    return accounts;
   }
   async function save(fetchImpl,accounts,revision,pin){var r=await fetchImpl('/api/boss-rates',{method:'POST',headers:{'Content-Type':'application/json','x-rate-pin':pin||''},body:JSON.stringify({action:'accounts',accounts:normalize(accounts),expectedRevision:revision||''})}),b=await r.json();if(!r.ok)throw new Error(b.error&&b.error.code||'RATE_STORE_UNAVAILABLE');return b;}
   async function syncOwn(store,options){

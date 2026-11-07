@@ -35,8 +35,8 @@
       if(seen.has(r.bossId))throw new Error('SHOT_DUPLICATE');seen.add(r.bossId);out.set(r.bossId,{bossId:r.bossId,percent:r.value,eligibility:''});count++;
     });if(!count)throw new Error('SHOT_EMPTY');return Array.from(out.values());
   }
-  function snapshot(name,rates,method){
-    var raw={schemaVersion:1,characterName:name,preset:'00000',sourceUrl:data.resultUrl(name,'00000'),fetchedAt:new Date().toISOString(),conditions:{view:'all',bossTimeMinutes:20,destinyChampion:true,simulation:false},rates:rates,storage:'local-edit',captureMethod:method||'manual'};
+  function snapshot(name,rates,method,destinyChampion=method!=='screenshot'){
+    var raw={schemaVersion:1,characterName:name,preset:'00000',sourceUrl:data.resultUrl(name,'00000'),fetchedAt:new Date().toISOString(),conditions:{view:'all',bossTimeMinutes:20,destinyChampion:destinyChampion,simulation:false},rates:rates,storage:'local-edit',captureMethod:method||'manual'};
     var valid=data.normalizeSnapshot(raw,name,'00000');if(!valid)throw new Error('RATE_INVALID');return valid;
   }
   return {published:published,saveShared:saveShared,readSaved:readSaved,fetchRemote:fetchRemote,choices:choices,shotRows:shotRows,applyShot:applyShot,snapshot:snapshot};

@@ -59,3 +59,11 @@ test('내 계정 자동 동기화는 타인 계정을 유지하고 같은 데이
  const options={fetch:fetchImpl,load:async()=>[{name:'내캐릭터',accountId:'private-own',world:'루나',characterClass:'히어로',level:290}],newId:()=> 'mine'};
  let doc=await account.syncOwn(await store.read(),options);assert.equal(doc.accounts.length,2);assert(doc.accounts.some(a=>a.id==='friend'));assert.equal(writes,1);doc=await account.syncOwn(doc,options);assert.equal(writes,1);assert.equal(account.accountId(doc,'내캐릭터'),'mine');
 });
+test('내 계정 동기화는 기존 공용 묶음의 수동 소속을 보존한다',()=>{
+ const account=require('../account_catalog.js');
+ const store={snapshots:[],accounts:[{id:'mine',label:'내 그룹',characters:[{name:'내캐릭터'},{name:'수동으로추가'}]},
+  {id:'other',label:'별도 그룹',characters:[{name:'수동으로이동'}]}]};
+ const rows=['내캐릭터','수동으로이동','새캐릭터'].map(name=>({name,accountId:'private-own',world:'루나',level:290}));
+ const next=account.importOwn(store,rows,()=> 'unused');
+ assert.deepEqual(next.map(group=>group.characters.map(c=>c.name)),[['내캐릭터','수동으로추가','새캐릭터'],['수동으로이동']]);
+});

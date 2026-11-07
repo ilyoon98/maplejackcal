@@ -44,11 +44,11 @@
   function normalizeSnapshot(raw,name,preset){
     if(!raw||raw.schemaVersion!==1||raw.characterName!==name||raw.preset!==preset||!validName(name)||!validPreset(preset))return null;
     if(raw.sourceUrl!==resultUrl(name,preset)||!Number.isFinite(Date.parse(raw.fetchedAt))||Date.parse(raw.fetchedAt)>Date.now()+60000)return null;
-    var c=raw.conditions;if(!c||c.view!=='all'||c.bossTimeMinutes!==20||c.simulation!==false||c.destinyChampion!==true)return null;
+    var c=raw.conditions;if(!c||c.view!=='all'||c.bossTimeMinutes!==20||c.simulation!==false||typeof c.destinyChampion!=='boolean')return null;
     if(!Array.isArray(raw.rates)||raw.rates.length===0||raw.rates.length>100)return null;
     var seen=new Set(),rates=[];
     for(var row of raw.rates){if(!row||typeof row.bossId!=='string'||!Object.values(BOSS).some(function(b){return Object.values(DIFFICULTY).some(function(d){return row.bossId===b+'|'+d;});})||seen.has(row.bossId)||percent(row.percent)===null)return null;seen.add(row.bossId);rates.push({bossId:row.bossId,percent:row.percent,eligibility:typeof row.eligibility==='string'?row.eligibility.slice(0,30):''});}
-    var snapshot={schemaVersion:1,characterName:name,preset:preset,sourceUrl:raw.sourceUrl,fetchedAt:raw.fetchedAt,conditions:{view:'all',bossTimeMinutes:20,destinyChampion:true,simulation:false},rates:rates};
+    var snapshot={schemaVersion:1,characterName:name,preset:preset,sourceUrl:raw.sourceUrl,fetchedAt:raw.fetchedAt,conditions:{view:'all',bossTimeMinutes:20,destinyChampion:c.destinyChampion,simulation:false},rates:rates};
     if(['public-json','local-edit','shared-server'].includes(raw.storage))snapshot.storage=raw.storage;
     if(['browser-dom','screenshot','manual'].includes(raw.captureMethod))snapshot.captureMethod=raw.captureMethod;
     var character=publicCharacter(raw.character,name);if(character)snapshot.character=character;
