@@ -19,24 +19,27 @@
       <button id="shared-import-account" class="boss-wide" type="button">내 계정 불러오기</button>
       <form id="shared-open" class="shared-add-character"><label class="sr-only" for="shared-nickname">새 캐릭터 닉네임</label><input id="shared-nickname" maxlength="30" placeholder="새 캐릭터 닉네임" required><button type="submit" class="boss-primary">추가</button></form>
       <details id="shared-account-editor" class="boss-details"><summary>계정 관리</summary>
-        <p class="boss-status">공용 계정을 선택하고 등록된 260레벨 이상 캐릭터를 묶으세요.</p>
-        <label>관리할 계정<select id="shared-group-select"><option value="">새 계정 만들기</option></select></label>
-        <label>계정 이름 (선택)<input id="shared-group-label" maxlength="40" placeholder="비우면 대표 캐릭터 이름 사용"></label>
-        <fieldset class="shared-group-roster">
-          <legend>이 계정의 캐릭터</legend>
-          <div id="shared-group-members" class="shared-group-members"></div>
-          <p id="shared-group-empty" class="boss-status" hidden>표시할 등록 캐릭터가 없습니다.</p>
-        </fieldset>
-        <fieldset class="shared-group-roster">
-          <legend>캐릭터 추가</legend>
-          <label for="shared-group-search">닉네임 검색</label>
-          <input id="shared-group-search" type="search" maxlength="30" placeholder="닉네임 일부로 검색" autocomplete="off" aria-controls="shared-group-results">
-          <p id="shared-group-search-status" class="boss-status" role="status"></p>
-          <div id="shared-group-results" class="shared-group-members"></div>
-          <p id="shared-group-move" class="boss-status" hidden>다른 묶음의 캐릭터를 선택하면 저장할 때 이 계정으로 이동합니다.</p>
-        </fieldset>
-        <button id="shared-group-save" class="boss-primary boss-wide" type="button" disabled>공용 계정 저장</button>
-        <p id="shared-group-status" class="boss-status" role="status"></p>
+        <label>관리할 계정<select id="shared-group-select"><option value=":pick" disabled selected>계정을 선택하세요</option></select></label>
+        <div id="shared-group-fields" hidden>
+          <fieldset class="shared-group-roster">
+            <legend>소속 캐릭터</legend>
+            <div id="shared-group-members" class="shared-group-members"></div>
+            <p id="shared-group-empty" class="boss-status" hidden>표시할 캐릭터가 없습니다.</p>
+          </fieldset>
+          <fieldset class="shared-group-roster">
+            <legend>캐릭터 추가</legend>
+            <label class="sr-only" for="shared-group-search">닉네임 검색</label>
+            <input id="shared-group-search" type="search" maxlength="30" placeholder="닉네임 검색" autocomplete="off" aria-controls="shared-group-results" aria-describedby="shared-group-search-status">
+            <p id="shared-group-search-status" class="boss-status" role="status"></p>
+            <div id="shared-group-results" class="shared-group-members"></div>
+          </fieldset>
+          <details class="ux-details shared-group-name-settings" id="shared-group-name-settings">
+            <summary>계정 이름 설정</summary>
+            <label>계정 이름 (선택)<input id="shared-group-label" maxlength="40" placeholder="비우면 대표 캐릭터 이름 사용"></label>
+          </details>
+          <button id="shared-group-save" class="boss-primary boss-wide" type="button" disabled>공용 계정 저장</button>
+          <p id="shared-group-status" class="boss-status" role="status"></p>
+        </div>
       </details>
       <p id="shared-connection" class="shared-connection" role="status">연결 중…</p>
     </aside>
@@ -47,8 +50,8 @@
       <p id="shared-status" class="boss-status" role="status" aria-live="polite"></p>
       <div id="shared-capture">
         <div class="shared-capture-header">
-          <p class="ux-hint">보스 카드를 캡처해 붙여넣고, 인식된 배율을 확인해 저장하세요.</p>
-          <button id="shared-capture-guide" class="ux-button" type="button" data-ux-help-trigger="shared-capture-guide-section">캡처 등록 방법</button>
+          <button id="shared-capture-guide" class="ux-button" type="button" data-ux-help-trigger="shared-capture-guide-section"><span class="shared-guide-mark" aria-hidden="true">?</span> 캡처 등록 방법</button>
+          <p class="ux-hint">보스 카드 캡처를 아래에 붙여넣으세요.</p>
         </div>
         <div id="shared-capture-guide-section" data-ux-help="캡처 등록 순서" hidden>
           <ol class="shared-capture-steps">
