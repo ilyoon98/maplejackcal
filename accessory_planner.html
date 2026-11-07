@@ -62,6 +62,7 @@
           <h4 id="accessory-preference-title">선호 옵션</h4>
           <div class="accessory-lines" id="accessory-lines" role="group" aria-labelledby="accessory-preference-title"></div>
           <h4>옵션 조합별 매물 가격</h4>
+          <p class="accessory-hint">억 메소 단위로 입력하세요. 0.1은 1천만 메소입니다.</p>
           <div id="accessory-prices"></div>
         </div>
       </div>
@@ -79,10 +80,15 @@
         <p class="accessory-hint">추가 등록하면 기존 후보도 다시 조합해 목표를 맞춥니다.</p>
         <ul class="accessory-gap-suggestions" id="accessory-gap-suggestions"></ul>
       </div>
-      <table id="accessory-result-table" hidden>
-        <thead><tr><th scope="col">부위</th><th scope="col">옵션</th><th scope="col">가격</th></tr></thead>
-        <tbody id="accessory-result-rows"></tbody>
-      </table>
+      <details class="ux-details" id="accessory-result-details" hidden>
+        <summary>부위별 조합 상세</summary>
+        <div class="accessory-table-scroll">
+          <table id="accessory-result-table">
+            <thead><tr><th scope="col">부위</th><th scope="col">옵션</th><th scope="col">가격</th></tr></thead>
+            <tbody id="accessory-result-rows"></tbody>
+          </table>
+        </div>
+      </details>
     </section>
 
     <section data-ux-help="장신구 맞추기 기준">

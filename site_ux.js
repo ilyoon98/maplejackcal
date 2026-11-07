@@ -192,6 +192,7 @@
       'starforce_calc.html':['.sf-layout > aside','#resMeso','평균 비용'],
       'flame_calc.html':['.fc-result','#flameExpectedCost','평균 메소 비용','#flameResult [data-result-status]'],
       'hunting_calc.html':['#hunt-result','#results:not([hidden]) #fragments','솔 에르다 조각(개)','#inputError:not([hidden]) [data-result-status]'],
+      'accessory_planner.html':['.accessory-result','#accessory-result-status','조합 결과'],
       'trace_calc.html':['.layout-right','#actionValue','지금 할 일'],
       'boss_buff_planner.html':['.layout-right','#packResult','동선 확인'],
       'trade_margin_calc.html':['.tm-result','#breakEvenValue','본전 판매가'],

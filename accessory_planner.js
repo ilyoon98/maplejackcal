@@ -41,7 +41,7 @@
   const resultStatus = byId('accessory-result-status');
   const goalSummary = byId('accessory-goal-summary');
   const preferenceStatus = byId('accessory-preference-status');
-  const resultTable = byId('accessory-result-table');
+  const resultDetails = byId('accessory-result-details');
   const resultRows = byId('accessory-result-rows');
   const resultGap = byId('accessory-result-gap');
   const gapMetrics = byId('accessory-gap-metrics');
@@ -125,14 +125,15 @@
     <label class="accessory-price" style="--price-row: ${index + 1}">
       <span id="accessory-price-option-${index}">${combo.label}</span>
       <span class="accessory-price-entry">
-        <input type="text" inputmode="decimal" maxlength="${maxFormattedPriceLength}" autocomplete="off" spellcheck="false" aria-labelledby="accessory-slot-title accessory-price-option-${index}" aria-describedby="accessory-price-unit-${index}" aria-errormessage="accessory-price-error">
+        <input type="text" inputmode="decimal" maxlength="${maxFormattedPriceLength}" autocomplete="off" spellcheck="false" aria-labelledby="accessory-slot-title accessory-price-option-${index}" aria-describedby="accessory-price-unit-${index}" aria-errormessage="accessory-price-error-${index}">
         <span id="accessory-price-unit-${index}">억 메소</span>
       </span>
+      <small class="accessory-price-error" id="accessory-price-error-${index}" hidden>0보다 큰 수를 입력하세요. 소수점 아래 최대 8자리까지 가능합니다.</small>
     </label>
-  `).join('') + '<p class="accessory-price-error" id="accessory-price-error" hidden>억 메소 단위로 0보다 큰 수를 입력하세요. 소수점 아래 최대 8자리까지 입력할 수 있습니다.</p>';
+  `).join('');
   const priceInputs = Array.from(priceEditor.querySelectorAll('input'));
   const ownedButtons = Array.from(priceEditor.querySelectorAll('.accessory-owned'));
-  const priceError = priceEditor.querySelector('.accessory-price-error');
+  const priceErrors = Array.from(priceEditor.querySelectorAll('.accessory-price-error'));
 
   const savedGoals = load(goalKey);
   const metrics = Array.from(document.querySelectorAll('.accessory-metric'), (card, index) => {
@@ -215,13 +216,11 @@
   }
 
   function renderPriceErrors() {
-    let hasError = false;
-    priceInputs.forEach(input => {
+    priceInputs.forEach((input, index) => {
       const invalid = !input.disabled && input.value.trim() !== '' && !parsePrice(input.value);
       input.setAttribute('aria-invalid', String(invalid));
-      hasError ||= invalid;
+      priceErrors[index].hidden = !invalid;
     });
-    priceError.hidden = !hasError;
   }
 
   function renderPriceInputs() {
@@ -326,19 +325,19 @@
     const plans = findPlans(candidates, dropGoal, mesoGoal);
     const goalPlan = plans.find(plan => plan.drop === dropGoal && plan.meso === mesoGoal);
     const best = goalPlan?.missing === 0 ? goalPlan : undefined;
-    resultTable.hidden = !best;
+    resultDetails.hidden = !best;
     preferenceStatus.hidden = !best || requested === 0;
     resultGap.hidden = Boolean(best || !registered || !goalPlan);
 
     if (!best) {
       resultStatus.textContent = registered
-        ? `등록한 후보로 두 목표를 함께 달성할 수 없습니다. (${registered} / ${slots.length * pricedCombos.length}개 등록)`
-        : '가격이나 보유 장비를 등록하면 최저가 조합을 확인할 수 있습니다.';
+        ? `목표 달성에 필요한 후보가 부족합니다. (${registered} / ${slots.length * pricedCombos.length}개 등록)`
+        : '가격 또는 보유 장비를 등록하세요.';
       if (!resultGap.hidden) renderShortfall(plans, goalPlan);
       return;
     }
 
-    resultStatus.textContent = `최저 합계 ${koreanAmount(best.cost)}`;
+    resultStatus.textContent = `최저 구매 합계 ${koreanAmount(best.cost)}`;
     const [dropApplied, mesoApplied] = metrics.map(metric => appliedRate(best.picks, metric));
     if (dropApplied !== dropTarget || mesoApplied !== mesoTarget) {
       goalSummary.textContent += ` / 조합 드랍 ${dropApplied}% · 메획 ${mesoApplied}%`;
@@ -349,7 +348,7 @@
         const choice = candidates[slot][index];
         return `${slots[slot]} ${choice.label}${choice.price === null ? ' (가격 미등록)' : ''}`;
       });
-      preferenceStatus.textContent = `선호 ${best.preferred} / ${requested}부위 반영${unmatched.length ? ` · 미반영 ${unmatched.join(', ')}` : ''}`;
+      preferenceStatus.textContent = `선호 ${best.preferred} / ${requested}부위 반영 · 선호를 가장 많이 충족한 조합 중 최저가${unmatched.length ? ` · 미반영 ${unmatched.join(', ')}` : ''}`;
     }
     const displayRows = best.picks.map((choice, slot) => ({ ...choice, slot, group: choice.owned ? 0 : choice.badge ? 1 : 2 }));
     displayRows.sort((a, b) => a.group - b.group);
@@ -463,6 +462,7 @@
   });
   reset.addEventListener('click', () => {
     if (reset.getAttribute('aria-disabled') === 'true') return;
+    if (!window.confirm('장신구 9부위의 선호 옵션을 모두 지울까요?')) return;
     preferences.forEach(lines => lines.fill(''));
     updatePreferences();
   });
