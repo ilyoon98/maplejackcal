@@ -8,9 +8,9 @@
   const layout = [
     [0, 4, null, null, null, -1, -1],
     [1, 5, null, null, null, -1, -1],
-    [2, 6, null, null, null, -1, -1],
-    [3, 7, null, null, null, -1, -1],
-    [-1, 8, -1, -1, -1, -1, -1],
+    [2, 8, null, null, null, -1, -1],
+    [3, 6, null, null, null, -1, -1],
+    [-1, 7, -1, -1, -1, -1, -1],
     [-1, null, null, null, null, -1, -1]
   ];
   const combos = [
