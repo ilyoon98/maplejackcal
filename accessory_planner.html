@@ -24,18 +24,26 @@
 
     <section class="card accessory-summary" aria-labelledby="accessory-summary-title">
       <h2 id="accessory-summary-title">장비에서 적용되는 옵션</h2>
-      <div class="accessory-metrics" aria-live="polite" aria-atomic="true">
-        <div class="accessory-metric" data-kind="drop">
+      <div class="accessory-metrics">
+        <div class="accessory-metric" data-kind="drop" data-cap="100">
           <h3>아이템 드랍률</h3>
-          <p class="accessory-score"><strong>0%</strong> <span> / 100%</span></p>
-          <progress aria-label="아이템 드랍률 달성도" max="100" value="0"></progress>
-          <p class="accessory-detail">100%p 부족 · 5줄</p>
+          <p class="accessory-score"><strong>0%</strong> <span>상한 100%</span></p>
+          <progress aria-label="아이템 드랍률 목표 달성도" max="100" value="0"></progress>
+          <p class="accessory-detail" role="status">100%p 부족 · 5줄</p>
+          <label class="accessory-target">
+            <span>목표</span>
+            <select aria-label="목표 아이템 드랍률"></select>
+          </label>
         </div>
-        <div class="accessory-metric" data-kind="meso">
+        <div class="accessory-metric" data-kind="meso" data-cap="200">
           <h3>메소 획득량</h3>
-          <p class="accessory-score"><strong>0%</strong> <span> / 200%</span></p>
-          <progress aria-label="메소 획득량 달성도" max="200" value="0"></progress>
-          <p class="accessory-detail">200%p 부족 · 10줄</p>
+          <p class="accessory-score"><strong>0%</strong> <span>상한 200%</span></p>
+          <progress aria-label="메소 획득량 목표 달성도" max="100" value="0"></progress>
+          <p class="accessory-detail" role="status">200%p 부족 · 10줄</p>
+          <label class="accessory-target">
+            <span>목표</span>
+            <select aria-label="목표 메소 획득량"></select>
+          </label>
         </div>
       </div>
       <div class="accessory-fill">
@@ -72,7 +80,7 @@
         <button class="ux-button accessory-primary" id="accessory-apply" type="button" hidden>장비창에 적용</button>
       </div>
       <p id="accessory-result-status" role="status"></p>
-      <p class="accessory-hint">장비 드랍 100% · 메획 200% 기준</p>
+      <p class="accessory-hint" id="accessory-goal-summary">목표 드랍 100% · 메획 200%</p>
       <table id="accessory-result-table" hidden>
         <thead><tr><th scope="col">부위</th><th scope="col">옵션</th><th scope="col">가격</th></tr></thead>
         <tbody id="accessory-result-rows"></tbody>
@@ -82,11 +90,11 @@
     <section data-ux-help="장신구 맞추기 기준">
       <ul>
         <li>장신구마다 최대 2줄까지 고를 수 있고, 각 줄은 드랍률 또는 메획을 20%p 올립니다.</li>
-        <li>장비에서 적용되는 상한은 드랍 100%와 메획 200%입니다. 두 목표를 함께 채우려면 15줄이 필요하므로 9부위 중 최소 6부위는 2줄을 사용합니다.</li>
+        <li>목표는 20% 단위로 선택합니다. 장비 상한인 드랍 100%와 메획 200%를 함께 채우려면 15줄이 필요합니다.</li>
         <li>자동 배치는 기존 옵션을 유지하고, 옵션이 하나도 없는 장비부터 1줄씩 채웁니다.</li>
         <li>Enter 또는 Tab으로 다음 가격 칸을 입력할 수 있습니다. 귀걸이의 마지막 가격 칸에서 Enter를 누르면 최저가 조합으로 이동합니다.</li>
         <li>최저가 조합은 가격을 입력했거나 보유 중인 후보에서 찾습니다. 보유 장비의 추가 비용은 0메소입니다. 각 부위는 비워 두거나 한 조합만 선택합니다. 상한을 넘는 옵션도 후보로 비교합니다.</li>
-        <li>입력한 배치, 가격, 보유 여부는 이 브라우저에 저장됩니다.</li>
+        <li>목표, 배치, 가격, 보유 여부는 이 브라우저에 저장됩니다.</li>
       </ul>
     </section>
   </main>

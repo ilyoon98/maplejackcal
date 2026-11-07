@@ -27,6 +27,7 @@
   const maxFormattedPriceLength = maxPriceLength + Math.floor((maxPriceLength - 1) / 3);
   const storageKey = 'accessoryPlanner.v1';
   const priceKey = 'accessoryPlanner.prices.v2';
+  const goalKey = 'accessoryPlanner.goals.v1';
   const { koreanAmount } = window.MoneyInput;
   const byId = id => document.getElementById(id);
   const sheet = byId('accessory-slots');
@@ -39,6 +40,7 @@
   const apply = byId('accessory-apply');
   const resultTitle = byId('accessory-result-title');
   const resultStatus = byId('accessory-result-status');
+  const goalSummary = byId('accessory-goal-summary');
   const resultTable = byId('accessory-result-table');
   const resultRows = byId('accessory-result-rows');
 
@@ -123,17 +125,22 @@
   const ownedButtons = Array.from(priceEditor.querySelectorAll('.accessory-owned'));
   const priceError = priceEditor.querySelector('.accessory-price-error');
 
-  const metrics = Array.from(document.querySelectorAll('.accessory-metric'), card => {
-    const progress = card.querySelector('progress');
+  const savedGoals = load(goalKey);
+  const metrics = Array.from(document.querySelectorAll('.accessory-metric'), (card, index) => {
+    const cap = Number(card.dataset.cap);
+    const target = card.querySelector('select');
+    const values = Array.from({ length: cap / lineValue + 1 }, (_, step) => step * lineValue);
+    target.innerHTML = values.map(value => `<option value="${value}">${value}%</option>`).join('');
+    target.value = String(values.includes(savedGoals[index]) ? savedGoals[index] : cap);
     return {
       kind: card.dataset.kind,
-      cap: progress.max,
-      progress,
+      cap,
+      target,
+      progress: card.querySelector('progress'),
       score: card.querySelector('strong'),
       detail: card.querySelector('.accessory-detail')
     };
   });
-  const [dropGoal, mesoGoal] = metrics.map(({ cap }) => cap / lineValue);
   let selected = 0;
   let best;
 
@@ -142,8 +149,8 @@
   }
 
   function missingLines(lines) {
-    return metrics.flatMap(({ kind, cap }) =>
-      Array(Math.max(0, cap / lineValue - countLines(lines, kind))).fill(kind)
+    return metrics.flatMap(({ kind, target }) =>
+      Array(Math.max(0, Number(target.value) / lineValue - countLines(lines, kind))).fill(kind)
     );
   }
 
@@ -160,20 +167,22 @@
     const missing = missingLines(lines).length;
     lineCount.textContent = `사용 ${lines.length - empty} / ${lines.length}줄 · 2줄 장비 ${double}개`;
 
-    for (const { kind, cap, progress, score, detail } of metrics) {
+    for (const { kind, cap, target, progress, score, detail } of metrics) {
+      const goal = Number(target.value);
       const total = countLines(lines, kind) * lineValue;
       const applied = Math.min(total, cap);
+      const shortfall = goal - applied;
       score.textContent = `${applied}%`;
-      progress.value = applied;
-      if (total > cap) detail.textContent = `옵션 합계 ${total}% · ${total - cap}%p 초과`;
-      else if (total < cap) detail.textContent = `${cap - total}%p 부족 · ${(cap - total) / lineValue}줄`;
+      progress.value = goal === 0 ? 100 : Math.min(100, applied / goal * 100);
+      if (total > cap) detail.textContent = `옵션 합계 ${total}% · 상한 ${total - cap}%p 초과`;
+      else if (shortfall > 0) detail.textContent = `${shortfall}%p 부족 · ${shortfall / lineValue}줄`;
       else detail.textContent = '목표 달성';
     }
 
     complete.setAttribute('aria-disabled', String(missing === 0 || missing > empty));
     reset.setAttribute('aria-disabled', String(empty === lines.length));
     if (missing === 0) status.textContent = '드랍과 메획 목표를 모두 달성했습니다.';
-    else if (missing > empty) status.textContent = `빈 줄이 ${missing - empty}줄 부족합니다. 상한을 초과한 옵션을 바꾸면 두 목표를 채울 수 있어요.`;
+    else if (missing > empty) status.textContent = `빈 줄이 ${missing - empty}줄 부족합니다. 목표를 넘긴 옵션을 바꾸면 두 목표를 채울 수 있어요.`;
     else status.textContent = `선택한 옵션을 유지하고 빈 줄에 ${missing}줄을 채웁니다.`;
 
     buttons.forEach((button, slot) => {
@@ -238,8 +247,8 @@
     renderPriceErrors();
   }
 
-  function findLowestPrice(candidates) {
-    // Rates beyond their caps have the same value for reaching the goal.
+  function findLowestPrice(candidates, dropGoal, mesoGoal) {
+    // Rates beyond the requested goal are equivalent when comparing prices.
     const key = (drop, meso) => drop * (mesoGoal + 1) + meso;
     let states = new Map([[0, { drop: 0, meso: 0, cost: 0n, picks: [] }]]);
     for (const choices of candidates) {
@@ -262,6 +271,8 @@
   }
 
   function renderResult() {
+    const [dropTarget, mesoTarget] = metrics.map(({ target }) => Number(target.value));
+    goalSummary.textContent = `목표 드랍 ${dropTarget}% · 메획 ${mesoTarget}%`;
     const candidates = prices.map(slotPrices => {
       const choices = [{ ...combos[0], price: 0n }];
       pricedCombos.forEach((combo, index) => {
@@ -272,7 +283,7 @@
       return choices;
     });
     const registered = candidates.reduce((total, choices) => total + choices.length - 1, 0);
-    best = findLowestPrice(candidates);
+    best = findLowestPrice(candidates, dropTarget / lineValue, mesoTarget / lineValue);
     apply.hidden = resultTable.hidden = !best;
 
     if (!best) {
@@ -303,6 +314,11 @@
     renderResult();
   }
 
+  metrics.forEach(({ target }) => target.addEventListener('change', () => {
+    save(goalKey, metrics.map(metric => Number(metric.target.value)));
+    renderOptions();
+    renderResult();
+  }));
   buttons.forEach((button, slot) => button.addEventListener('click', () => selectSlot(slot)));
   lineButtons.forEach((choices, index) => {
     choices.forEach(choice => choice.addEventListener('click', () => {

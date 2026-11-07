@@ -10,6 +10,8 @@
 
 .accessory-metric {
   --metric-color: #91bcff;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   padding: 12px 14px;
   border: 1px solid var(--border);
@@ -23,6 +25,29 @@
 .accessory-score strong { color: var(--metric-color); font-size: clamp(1.25rem, 4.5vw, 2rem); }
 .accessory-score span { color: var(--text-dim); font-size: 0.82rem; }
 .accessory-detail { margin: 5px 0 0; color: var(--text-dim); font-size: 0.82rem; }
+
+.accessory-target {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.accessory-target select {
+  width: 76px;
+  min-height: var(--ui-control-height, 44px);
+  padding-inline-start: 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--ui-control-radius, 8px);
+  background-color: var(--card);
+  color: var(--text);
+  color-scheme: dark;
+  font: inherit;
+}
 
 .accessory-metric progress {
   display: block;
