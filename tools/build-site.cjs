@@ -18,5 +18,5 @@ const excluded=new Set(['package.json','package-lock.json','vercel.json']);
 for(const entry of fs.readdirSync(root,{withFileTypes:true})){
   if(entry.isFile()&&/\.(?:html|css|js|json|png|webp|jpe?g|ico|svg|woff2?)$/.test(entry.name)&&!excluded.has(entry.name)&&!entry.name.startsWith('calculator-audit-'))fs.copyFileSync(path.join(root,entry.name),path.join(output,entry.name));
 }
-for(const directory of ['icons','vendor','herb_idle_assets'])if(fs.existsSync(path.join(root,directory)))fs.cpSync(path.join(root,directory),path.join(output,directory),{recursive:true});
+for(const directory of ['icons','capture-guide','vendor','herb_idle_assets'])if(fs.existsSync(path.join(root,directory)))fs.cpSync(path.join(root,directory),path.join(output,directory),{recursive:true});
 console.log('Static pages and assets prepared in public/');
