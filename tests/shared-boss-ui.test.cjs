@@ -128,6 +128,8 @@ test('캡처 토글·붙여넣기는 확실한 카드만 즉시 반영하고 불
  const p=await boot('shared_boss_rates',{shot:[{name:'스우',diff:'익스트림',value:41.22,sure:true},{name:'윌',diff:'하드',value:999,sure:false}]});try{
   assert.equal(p.doc.querySelector('#shared-mode-capture').getAttribute('aria-pressed'),'true');assert.equal(p.doc.querySelector('#shared-capture').hidden,false);assert(p.doc.querySelector('#shared-fetch-panel').hidden);
   assert.equal(p.doc.querySelectorAll('.shared-capture-steps li').length,4);
+  assert.equal(p.doc.querySelector('#shared-capture-guide').dataset.uxHelpTrigger,'shared-capture-guide-section');
+  assert.equal(p.doc.querySelectorAll('.shared-capture-steps img').length,2);
   assert.match(p.doc.querySelector('.shared-capture-steps li').textContent,/내 기준보기.*전체 보기.*데스티니\/유챔 확인.*OFF/);
   const e=new p.w.Event('paste',{bubbles:true,cancelable:true});e.clipboardData={items:[{kind:'file',getAsFile:()=>new p.w.Blob(['fake-pixels'],{type:'image/png'})}]};p.doc.querySelector('#shared-drop').dispatchEvent(e);await settle();
   const inputs=[...p.doc.querySelectorAll('#shared-rows input')];assert.equal(inputs[0].value,'41.22');assert.equal(inputs[1].value,'77');assert(p.doc.querySelector('#shared-shot-status').textContent.includes('1개 배율 자동 반영'));assert(p.doc.querySelector('#shared-review').textContent.includes('기존 값 유지'));assert.equal(p.calls.filter(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).length,0);
@@ -215,16 +217,22 @@ test('공용 계정은 키 없이 등록된 260 이상 캐릭터로 편집하고
  const p=await boot('shared_boss_rates',{snapshots:[main,added,low,unknown],accounts:registry});try{
   select(p.w,'shared-group-select','friend');
   const candidates=()=>[...p.doc.querySelectorAll('#shared-group-members input')];
-  assert.deepEqual(candidates().map(n=>n.value),['친구본캐','추가캐릭터']);
-  assert.equal(candidates()[0].checked,true);assert.equal(candidates()[1].checked,false);
-  candidates()[1].click();type(p.w,'shared-group-label','친구 새 이름');
+  const results=()=>[...p.doc.querySelectorAll('#shared-group-results input')];
+  assert.deepEqual(candidates().map(n=>n.value),['친구본캐']);assert.equal(candidates()[0].checked,true);
+  assert.deepEqual(results(),[]);
+  type(p.w,'shared-group-search','낮은');assert.deepEqual(results(),[]);
+  type(p.w,'shared-group-search','추가');assert.deepEqual(results().map(n=>n.value),['추가캐릭터']);
+  assert.equal(results()[0].checked,false);
+  results()[0].click();assert.deepEqual(results(),[]);
+  assert.equal(p.doc.querySelector('.shared-group-pending').textContent,'추가 예정');
+  type(p.w,'shared-group-label','친구 새 이름');
   p.doc.querySelector('#shared-refresh').click();await settle();
   assert.equal(candidates()[1].checked,true);assert.equal(p.doc.querySelector('#shared-group-label').value,'친구 새 이름');
   p.doc.querySelector('#shared-group-save').click();await settle();
   const body=JSON.parse(p.calls.find(c=>c.options.method==='POST').options.body);
   assert.deepEqual(body.accounts[0].characters.map(c=>c.name),['친구본캐','낮은캐릭터','배율미등록','추가캐릭터']);
   assert.equal(body.accounts[0].label,'친구 새 이름');assert.deepEqual(body.accounts[1].characters,[]);
-  assert.match(p.doc.querySelector('#shared-group-status').textContent,/저장 완료/);
+  assert.match(p.doc.querySelector('#shared-group-status').textContent,/공용 계정에 저장했습니다/);
   p.doc.querySelector('#shared-refresh').click();await settle();
   assert.equal(candidates().filter(n=>n.checked).length,2);assert(p.calls.every(c=>c.url==='/api/boss-rates'));
  }finally{p.close();}

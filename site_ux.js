@@ -22,6 +22,7 @@
     head.append(title, close); help.append(head);
     qa('[data-ux-help]').forEach(n => {
       const section = make('section', 'ux-help-section'); section.append(make('h3', '', n.dataset.uxHelp));
+      if (n.id) section.id = n.id;
       const detail = q('details', n); if (detail) { q('summary', detail)?.remove(); section.append(...detail.childNodes); }
       else { qa('h2', n).forEach(h => h.remove()); section.append(...n.childNodes); }
       help.append(section); n.remove();
@@ -54,8 +55,28 @@
     if (header) {
       const opener = make('button', 'ux-help-open', '? 도움말'); opener.type = 'button'; opener.setAttribute('aria-haspopup', 'dialog'); opener.setAttribute('aria-controls', help.id);
       header.append(opener); header.classList.add('ux-header');
-      opener.addEventListener('click', () => { help.showModal(); document.body.classList.add('ux-modal-open'); close.focus(); });
-      help.addEventListener('close', () => { document.body.classList.remove('ux-modal-open'); opener.focus(); });
+      let activeOpener = opener;
+      function openHelp(button, section) {
+        activeOpener = button;
+        button.focus({preventScroll:true});
+        help.showModal();
+        document.body.classList.add('ux-modal-open');
+        help.scrollTop = section ? section.offsetTop - head.offsetHeight : 0;
+        close.focus({preventScroll:true});
+      }
+      opener.addEventListener('click', () => openHelp(opener));
+      qa('[data-ux-help-trigger]').forEach(button => {
+        const section = document.getElementById(button.dataset.uxHelpTrigger);
+        if (!section || !help.contains(section)) return;
+        button.setAttribute('aria-haspopup', 'dialog');
+        button.setAttribute('aria-controls', help.id);
+        button.addEventListener('click', () => openHelp(button, section));
+      });
+      help.addEventListener('close', () => {
+        if (help.open) return;
+        document.body.classList.remove('ux-modal-open');
+        if (document.activeElement === document.body || help.contains(document.activeElement)) activeOpener.focus();
+      });
     }
     close.addEventListener('click', () => help.close());
     help.addEventListener('click', e => { if (e.target === help) { const r = help.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) help.close(); } });

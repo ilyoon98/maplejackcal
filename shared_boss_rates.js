@@ -51,22 +51,36 @@
     var status=el('shared-group-status');status.textContent=message;status.classList.toggle('error',!!error);
   }
   function renderGroupEditor(){
-    var groups=allGroups(),select=el('shared-group-select'),list=el('shared-group-members');
+    var groups=allGroups(),select=el('shared-group-select');
     select.replaceChildren();option(select,'','새 계정 만들기');
     groups.filter(function(g){return g.id;}).forEach(function(g){option(select,g.id,g.label);});
     select.value=groupEditId;
-    var account=selectedGroup(),candidates=groupCandidates(groups);
-    el('shared-group-label').value=groupLabelDraft??account?.label??'';
-    el('shared-group-empty').hidden=candidates.length>0;
-    el('shared-group-move').hidden=!candidates.some(function(c){return c.group.id&&c.group.id!==groupEditId;});
-    list.replaceChildren();
+    el('shared-group-label').value=groupLabelDraft??selectedGroup()?.label??'';
+    renderGroupMembers(groupCandidates(groups));
+  }
+  function renderGroupMembers(candidates=groupCandidates(allGroups())){
+    var roster=el('shared-group-members'),results=el('shared-group-results'),search=el('shared-group-search');
+    var query=search.value.trim().toLocaleLowerCase('ko-KR'),focused=document.activeElement,replacement;
+    var focusedName=roster.contains(focused)||results.contains(focused)?focused.value:'';
+    var hasMove=false;
+    roster.replaceChildren();results.replaceChildren();
     candidates.forEach(function(c){
+      var existing=Boolean(groupEditId&&c.group.id===groupEditId),checked=groupEdits.get(c.name)??existing;
+      var inRoster=existing||checked;
+      if(!inRoster&&(!query||!c.name.toLocaleLowerCase('ko-KR').includes(query)))return;
       var label=node('label'),check=node('input'),info=node('span');
-      check.type='checkbox';check.value=c.name;check.checked=groupEdits.get(c.name)??Boolean(groupEditId&&c.group.id===groupEditId);
+      check.type='checkbox';check.value=c.name;check.checked=checked;check.disabled=busy;
       info.append(node('strong',c.name),node('small','Lv. '+c.profile.level));
-      if(c.group.id&&c.group.id!==groupEditId)info.append(node('small',c.group.label));
-      label.append(check,info);list.append(label);
+      if(c.group.id&&!existing){info.append(node('small',c.group.label));hasMove=true;}
+      if(checked!==existing){var state=node('small',checked?'추가 예정':'제외 예정');state.className='shared-group-pending';info.append(state);}
+      label.append(check,info);(inRoster?roster:results).append(label);
+      if(c.name===focusedName)replacement=check;
     });
+    el('shared-group-empty').hidden=roster.childElementCount>0;
+    el('shared-group-move').hidden=!hasMove;
+    el('shared-group-search-status').textContent=!candidates.length?'레벨이 확인된 260레벨 이상 등록 캐릭터가 없습니다.':
+      !query?'닉네임을 입력해 추가할 캐릭터를 찾으세요.':results.childElementCount?'':'추가할 수 있는 검색 결과가 없습니다.';
+    if(focusedName)(replacement||search).focus();
   }
   function accountOptions(){var select=el('shared-account');select.replaceChildren();option(select,'','전체 계정');allGroups().forEach(function(g){option(select,g.id||'__unassigned__',g.label);});if(!Array.from(select.options).some(function(o){return o.value===accountFilter;}))accountFilter='';select.value=accountFilter;characterOptions();ownerOptions();renderGroupEditor();}
   async function persistAccounts(next){var result=await accounts.save(fetch,next,store.accountRevision||'',el('shared-pin').value);store.accounts=result.accounts;store.accountRevision=result.accountRevision;return result;}
@@ -88,9 +102,9 @@
   }
   function controls(){
     el('shared-fetch').disabled=busy||!name;el('shared-save').disabled=busy||!name||!rates.length||!store.persistent;el('shared-add').disabled=busy||!name;el('shared-image').disabled=busy||!name;el('shared-open').querySelector('button').disabled=busy;
-    ['shared-character','shared-account','shared-owner','shared-owner-label','shared-group-select','shared-group-label','shared-refresh','shared-nickname','shared-add-boss','shared-pin','shared-mode-fetch','shared-mode-capture'].forEach(function(id){el(id).disabled=busy;});el('shared-import-account').disabled=busy||!!ownSyncPending;
+    ['shared-character','shared-account','shared-owner','shared-owner-label','shared-group-select','shared-group-label','shared-group-search','shared-refresh','shared-nickname','shared-add-boss','shared-pin','shared-mode-fetch','shared-mode-capture'].forEach(function(id){el(id).disabled=busy;});el('shared-import-account').disabled=busy||!!ownSyncPending;
     el('shared-group-save').disabled=busy||!!ownSyncPending||!store.persistent;
-    document.querySelectorAll('#shared-rows input,#shared-rows button,#shared-group-members input,.boss-picker button,.boss-picker summary').forEach(function(n){if(n.tagName==='SUMMARY')n.inert=busy;else n.disabled=busy;});
+    document.querySelectorAll('#shared-rows input,#shared-rows button,.shared-group-members input,.boss-picker button,.boss-picker summary').forEach(function(n){if(n.tagName==='SUMMARY')n.inert=busy;else n.disabled=busy;});
   }
   function saveState(message,phase=''){
     el('shared-save-bar').dataset.state=phase;
@@ -151,11 +165,12 @@
   el('shared-owner').addEventListener('change',function(){ownerLabel();dirty=true;ownerDirty=true;saveState('계정 변경 · 저장 전');});el('shared-owner-label').addEventListener('input',function(){dirty=true;ownerDirty=true;saveState('계정 이름 변경 · 저장 전');});
   el('shared-group-select').addEventListener('change',function(){
     if((groupEdits.size||groupLabelDraft!==null)&&!window.confirm('저장하지 않은 계정 수정이 있습니다. 다른 계정을 선택할까요?')){this.value=groupEditId;return;}
-    groupEditId=this.value;groupEdits.clear();groupLabelDraft=null;groupStatus('');renderGroupEditor();
+    groupEditId=this.value;groupEdits.clear();groupLabelDraft=null;el('shared-group-search').value='';groupStatus('');renderGroupEditor();
   });
-  el('shared-group-members').addEventListener('change',function(e){
+  el('shared-group-search').addEventListener('input',function(){renderGroupMembers();});
+  el('shared-account-editor').addEventListener('change',function(e){
     var checkbox=e.target;if(checkbox.type!=='checkbox')return;
-    groupEdits.set(checkbox.value,checkbox.checked);groupStatus('');
+    groupEdits.set(checkbox.value,checkbox.checked);groupStatus('');renderGroupMembers();
   });
   el('shared-group-label').addEventListener('input',function(){groupLabelDraft=this.value;groupStatus('');});
   el('shared-group-save').addEventListener('click',async function(){
@@ -170,7 +185,7 @@
     busy=true;groupStatus('공용 계정 저장 중…');controls();
     try{
       await persistAccounts(accounts.assign(store.accounts||[],id,label,Array.from(members.values())));
-      groupEditId=id;groupEdits.clear();groupLabelDraft=null;accountOptions();groupStatus('저장 완료 · 공용 계정에 반영됨');
+      groupEditId=id;groupEdits.clear();groupLabelDraft=null;el('shared-group-search').value='';accountOptions();groupStatus('공용 계정에 저장했습니다.');
       try{localStorage.setItem('sharedBossRates.changed',String(Date.now()));}catch(e){}
     }catch(e){
       groupStatus(e.message==='RATE_CONFLICT'?'다른 사람이 먼저 저장했습니다. 작성값은 유지했습니다. 목록을 새로고침한 뒤 다시 저장하세요.':errors[e.message]||'공용 계정을 저장하지 못했습니다. 다시 시도하세요.',true);
