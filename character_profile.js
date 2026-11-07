@@ -18,6 +18,21 @@
     }};
   }
   function fresh(raw,name){var c=data.publicCharacter(raw,name);return c&&Date.now()-c.updatedAt<30*86400000?c:null;}
+  function renderInfo(doc,c,name){
+    var info=doc.createElement('div'),title=doc.createElement('strong');
+    info.className='character-info';title.className='character-name';title.textContent=name||'캐릭터를 선택하세요';info.append(title);
+    if(!c)return info;
+    var meta=doc.createElement('div');meta.className='character-meta';
+    [[c.world,'character-world'],[c.level?'Lv. '+c.level:'',''],[c.job,'']].forEach(function(entry){
+      if(!entry[0])return;
+      var chip=doc.createElement('span');chip.className='character-chip '+entry[1];
+      var path=entry[1]&&doc.defaultView?.NexonCharacters?.worldIconPath?.(c.world);
+      if(path){var icon=doc.createElement('img');icon.src=path;icon.alt='';chip.append(icon);}
+      chip.append(entry[0]);meta.append(chip);
+    });
+    if(meta.childElementCount)info.append(meta);
+    return info;
+  }
   function render(doc,c,name){
     var box=doc.createElement('div');box.className='shared-character-card';
     if(c&&c.image){
@@ -26,7 +41,7 @@
       img.addEventListener('error',function(){frame.textContent='외형 로드 실패';});
       frame.append(img);box.append(frame);
     }
-    var info=doc.createElement('div'),title=doc.createElement('strong'),meta=doc.createElement('p');title.textContent=name||'캐릭터를 선택하세요';meta.textContent=c?c.world+' · Lv.'+c.level+' · '+c.job:'캐릭터 정보 미조회';info.append(title,meta);box.append(info);return box;
+    box.append(renderInfo(doc,c,name));return box;
   }
-  return {client:client,fresh:fresh,render:render};
+  return {client:client,fresh:fresh,render:render,renderInfo:renderInfo};
 });

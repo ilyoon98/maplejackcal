@@ -8,7 +8,7 @@
 @media(max-width:1000px){.shared-workspace{grid-template-columns:260px minmax(0,1fr)}}
 @media(max-width:760px){.shared-workspace{grid-template-columns:1fr;gap:14px}.shared-sidebar{position:static}.shared-selectors{grid-template-columns:1fr 1fr}.shared-sidebar>.boss-wide{width:auto}.shared-add-character{margin-top:12px;padding-top:12px}.shared-sidebar .boss-details{margin-top:12px}.shared-connection{position:absolute;right:20px;top:22px;margin:0}.shared-sidebar{position:relative;top:auto}.shared-sidebar .boss-section-head{padding-right:75px}.shared-save-bar{top:0}}
 @media(max-width:440px){.shared-hero{align-items:start;gap:8px}.shared-hero .shared-character-card{gap:8px}.shared-character-tools .boss-button{font-size:.72rem;padding:7px 9px;min-height:34px}.shared-selectors,.shared-owner-fields{grid-template-columns:1fr}.shared-panel .boss-identity{gap:6px;font-size:.8rem}.shared-panel .diff-badge{font-size:.58rem;padding:2px 5px}.shared-drop{flex-direction:column;align-items:start}.shared-input-toggle button{font-size:.78rem;padding:6px 9px}.shared-panel td input[type=number]{width:86px}.shared-panel td:nth-child(2){width:90px}}
-.shared-profile-portrait{display:grid;place-items:center;overflow:hidden;width:112px;height:120px;flex:none;border-radius:8px;background:var(--bg);color:var(--text-dim);font-size:.7rem}
+.shared-profile-portrait{display:grid;place-items:center;overflow:hidden;width:152px;height:148px;flex:none;border-radius:8px;background:var(--bg);color:var(--text-dim);font-size:.7rem}
 .shared-save-bar #shared-save{min-height:52px;min-width:156px;font-size:.98rem;padding:10px 18px}
 .shared-save-bar[data-state=saved]{background:#172d23;border-color:var(--good);border-radius:8px;padding-inline:12px}
 .shared-save-bar[data-state=saved] .shared-save-state{color:var(--good);font-size:.86rem;font-weight:700}
@@ -16,8 +16,22 @@
 .shared-save-bar[data-state=error] .shared-save-state{color:var(--bad)}
 #shared-toast{inset:16px auto auto 50%;transform:translateX(-50%);width:max-content;text-align:center}
 @media(max-width:440px){
-  .shared-profile-portrait{width:80px;height:94px}
   .shared-save-bar{flex-wrap:wrap}
   .shared-save-bar>div:last-child{flex-wrap:wrap;margin-left:auto;justify-content:flex-end}
   .shared-save-bar #shared-save{min-width:136px;font-size:.9rem}
+}
+.shared-panel #shared-table .boss-identity{font-size:1.02rem;font-weight:750;flex-wrap:wrap}
+.shared-panel #shared-table .boss-face{width:48px;height:48px}
+.shared-panel #shared-table .diff-badge{font-size:.73rem}
+.shared-panel #shared-table td:nth-child(2){width:155px}
+.shared-rate-amount{display:flex;justify-content:flex-end;align-items:center;gap:5px;font-weight:750}
+.shared-panel .shared-rate-amount input[type=number]{min-height:42px;width:116px;font-size:1.12rem;font-weight:750}
+.shared-damage{display:block;margin-top:4px;color:var(--accent);font-size:1.04rem;font-weight:750;font-variant-numeric:tabular-nums}
+@media(max-width:540px){
+  .shared-hero{flex-wrap:wrap}
+  .shared-profile-portrait{width:108px;height:108px}
+  .shared-panel #shared-table .boss-face{width:36px;height:36px}
+  .shared-panel #shared-table .boss-identity{font-size:.92rem}
+  .shared-panel #shared-table td:nth-child(2){width:100px}
+  .shared-panel .shared-rate-amount input[type=number]{width:78px;font-size:1rem}
 }

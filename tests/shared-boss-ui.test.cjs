@@ -14,9 +14,9 @@ async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,s
    return {ok:true,json:async()=>({schemaVersion:1,persistent:true,snapshots:structuredClone(values),accounts:structuredClone(registry),accountRevision:registry.length?'accounts-v1':''})};
   }if(fetchExtra)return fetchExtra(url,options);throw new Error('Unexpected network request: '+url);
  };
- const scripts=['boss_db.js','scouter_data.js','account_catalog.js','rate_catalog.js','nexon_key.js','character_profile.js','boss_identity.js'];
+ const scripts=['boss_db.js','scouter_data.js','account_catalog.js','rate_catalog.js','nexon_key.js','nexon_characters.js','character_profile.js','boss_identity.js'];
  for(const file of scripts)w.eval(fs.readFileSync(path.join(__dirname,'../'+file),'utf8'));
- w.NexonCharacters={fetch:async()=>structuredClone(ownRows)};
+ w.NexonCharacters={...w.NexonCharacters,fetch:async()=>structuredClone(ownRows)};
  w.BossShotReader={readBlob:async()=>shot};w.eval(fs.readFileSync(path.join(__dirname,'../'+page+'.js'),'utf8'));await settle();
  return {w,doc:w.document,calls,close:()=>w.close(),setCatalog(next){values=structuredClone(next);}};
 }
@@ -24,10 +24,32 @@ function select(w,id,value){const n=w.document.getElementById(id);n.value=value;
 function type(w,id,value){const n=w.document.getElementById(id);n.value=value;n.dispatchEvent(new w.Event('input',{bubbles:true}));}
 test('저장된 캐릭터 선택 즉시 프로필과 배율을 열고 중복 열기·조건 확인 버튼 없이 저장한다',async()=>{
  const p=await boot('shared_boss_rates',{snapshots:[snapshot('다른사람'),snapshot('두번째캐릭터')]});try{
-  assert.equal(p.doc.querySelector('#shared-open').hidden,false);assert.equal(p.doc.querySelectorAll('#shared-rows tr').length,2);assert(p.doc.querySelector('#shared-profile').textContent.includes('Lv.285'));assert(p.doc.querySelector('#shared-profile img').src===image);
+  assert.equal(p.doc.querySelector('#shared-open').hidden,false);assert.equal(p.doc.querySelectorAll('#shared-rows tr').length,2);assert(p.doc.querySelector('#shared-profile').textContent.includes('Lv. 285'));assert(p.doc.querySelector('#shared-profile img').src===image);
   select(p.w,'shared-character','두번째캐릭터');await settle();assert(p.doc.querySelector('#shared-profile').textContent.includes('두번째캐릭터'));assert.equal(p.doc.querySelector('#shared-open').hidden,false);assert(!p.doc.querySelector('#shared-confirm'));assert(!p.doc.querySelector('#shared-apply-shot'));
   assert(p.doc.querySelector('#shared-rows .boss-face').src.endsWith('suu.webp'));assert(p.doc.querySelector('#shared-rows .diff-badge.extreme'));
   p.doc.querySelector('#shared-save').click();await settle();assert.equal(p.calls.filter(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).length,1);assert(p.doc.querySelector('#shared-save-state').textContent.includes('저장 완료'));assert.equal(p.doc.querySelector('#shared-toast').hidden,false);
+ }finally{p.close();}
+});
+test('환산 차단 시 작성 배율을 유지하며 캡처 영역에 포커스를 옮긴다',async()=>{
+ const p=await boot('shared_boss_rates',{fetchExtra:async url=>{
+  assert(url.startsWith('/api/scouter?'));return {ok:false,json:async()=>({error:{code:'SCOUTER_BLOCKED'}})};
+ }});try{
+  const row=p.doc.querySelector('#shared-rows input');row.value='136.47';row.dispatchEvent(new p.w.Event('input',{bubbles:true}));
+  assert.equal(p.doc.querySelector('.shared-damage').textContent,'1.36배');
+  p.doc.querySelector('#shared-fetch').click();await settle();
+  assert.equal(p.doc.querySelector('#shared-capture').hidden,false);
+  assert.equal(p.doc.activeElement.id,'shared-drop');assert.equal(row.value,'136.47');
+  assert.match(p.doc.querySelector('#shared-status').textContent,/차단/);
+ }finally{p.close();}
+});
+test('파티 목록과 상세는 환산 합계, 100% 기준 배수, 판정을 같이 표시한다',async()=>{
+ const saved=snapshot();saved.rates[0].percent=136.47;
+ const p=await boot('party_boss_scheduler',{snapshots:[saved],parties:[{id:'p1',name:'테스트',bossId:'Lotus|Extreme',members:[{character:{...saved.character,ocid:'shared:'+saved.characterName},rate:136.47}]}]});try{
+  for(const id of ['party-list','party-detail']){
+   const totals=p.doc.querySelector('#'+id+' .party-totals');
+   assert.deepEqual([...totals.querySelectorAll('.party-metric-value')].map(n=>n.textContent),['136.47%','1.36배']);
+   assert.equal(totals.querySelector('.party-verdict').textContent,'클리어 가능');
+  }
  }finally{p.close();}
 });
 test('기존 파티 수정은 파티원과 ID를 유지하고 변경한 보스의 배율만 합산한다',async()=>{
@@ -36,18 +58,22 @@ test('기존 파티 수정은 파티원과 ID를 유지하고 변경한 보스�
  const p=await boot('party_boss_scheduler',{snapshots:[a,b],parties:[party]});try{
   const edit=()=>p.doc.querySelector('.party-edit').click();
   const stored=()=>JSON.parse(p.w.localStorage.getItem('partyBossScheduler.v1')).parties[0];
-  const form=p.doc.querySelector('#party-edit-form');
+  const form=p.doc.querySelector('#party-create-form');
   assert.equal(p.doc.querySelector('.party-edit').nextElementSibling.className,'party-delete');
-  edit();type(p.w,'party-edit-name','취소할 이름');p.doc.querySelector('#party-edit-cancel').click();assert.equal(stored().name,'금요팟');
-  edit();type(p.w,'party-edit-name','');select(p.w,'party-edit-boss','Will|Hard');
+  edit();assert.equal(p.doc.querySelector('#party-form-title').textContent,'파티 수정');
+  type(p.w,'party-name','취소할 이름');p.doc.querySelector('#party-draft-members .party-remove').click();
+  assert.equal(p.doc.querySelectorAll('#party-draft-members .party-member').length,1);
+  p.doc.querySelector('#party-create-cancel').click();assert.equal(stored().name,'금요팟');assert.equal(stored().members.length,2);
+  edit();type(p.w,'party-name','');select(p.w,'party-boss','Will|Hard');
   p.w.dispatchEvent(new p.w.Event('focus'));await settle();
-  assert.equal(form.hidden,false);assert.equal(p.doc.querySelector('#party-edit-boss').value,'Will|Hard');
+  assert.equal(form.hidden,false);assert.equal(p.doc.querySelector('#party-boss').value,'Will|Hard');
   form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
   assert.equal(form.hidden,true);assert.equal(stored().id,party.id);assert.equal(stored().name,'하드 윌');assert.equal(stored().bossId,'Will|Hard');
   assert.deepEqual(stored().members.map(m=>[m.character.name,m.rate]),[['다른사람',77],['스우전용',null]]);
   assert(p.doc.querySelector('#party-detail').textContent.includes('1명 미등록'));
-  edit();type(p.w,'party-edit-name','새 금요팟');form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
-  assert.equal(stored().name,'새 금요팟');assert.equal(stored().members[0].rate,77);
+  edit();type(p.w,'party-name','새 금요팟');p.doc.querySelector('#party-draft-members .party-member:last-child .party-remove').click();
+  form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+  assert.equal(stored().name,'새 금요팟');assert.equal(stored().members[0].rate,77);assert.equal(stored().members.length,1);
  }finally{p.close();}
 });
 test('공용 외형이 누락된 기존 파티원을 다시 조회하고 계정 새로고침 뒤에도 사진을 유지한다',async()=>{
@@ -67,7 +93,7 @@ test('최신 계정 정보에 외형이 빠져 있어도 저장된 공식 외형
  a.character={...a.character,image:avatar};
  const p=await boot('shared_boss_rates',{snapshots:[a],accounts:[{id:'owner',label:'계정',characters:[{name:a.characterName,profile:{...a.character,image:'',level:286,updatedAt:Date.now()+1000}}]}]});try{
   assert.equal(p.doc.querySelector('#shared-profile img').src,avatar);
-  assert.match(p.doc.querySelector('#shared-profile').textContent,/Lv\.286/);
+  assert.match(p.doc.querySelector('#shared-profile').textContent,/Lv\. 286/);
   p.doc.querySelector('#shared-save').click();await settle();
   assert.equal(p.doc.querySelector('#shared-save-bar').dataset.state,'saved');
   assert.equal(p.doc.querySelector('#shared-save').textContent,'✓ 저장 완료');
@@ -86,14 +112,17 @@ test('캡처 토글·붙여넣기는 확실한 카드만 즉시 반영하고 불
 });
 test('타인 닉네임 검색은 id/basic만 조회하고 레벨·서버·직업·외형만 공유 저장한다',async()=>{
  const stale=snapshot();stale.character.updatedAt=Date.now()-7200000;const p=await boot('shared_boss_rates',{snapshots:[stale],key:'test-key-only',fetchExtra:async(url,options)=>{const u=new URL(url);assert.equal(options.headers['x-nxopen-api-key'],'test-key-only');assert(!u.pathname.endsWith('/character/list'));return {ok:true,json:async()=>u.pathname.endsWith('/id')?{ocid:'private-ocid'}:{character_name:u.searchParams.get('ocid')==='private-ocid'?'다른사람':'',world_name:'스카니아',character_class:'비숍',character_level:290,character_image:image}};}});try{
-  assert(p.doc.querySelector('#shared-profile').textContent.includes('스카니아 · Lv.290 · 비숍'));p.doc.querySelector('#shared-save').click();await settle();const body=p.calls.find(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).options.body;assert(!body.includes('test-key-only'));assert(!body.includes('private-ocid'));const c=JSON.parse(body).snapshot.character;assert.equal(c.level,290);assert.equal(c.world,'스카니아');assert.equal(c.job,'비숍');assert.equal(c.image,image);
+  assert.deepEqual([...p.doc.querySelectorAll('#shared-profile .character-chip')].map(n=>n.textContent),['스카니아','Lv. 290','비숍']);p.doc.querySelector('#shared-save').click();await settle();const body=p.calls.find(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).options.body;assert(!body.includes('test-key-only'));assert(!body.includes('private-ocid'));const c=JSON.parse(body).snapshot.character;assert.equal(c.level,290);assert.equal(c.world,'스카니아');assert.equal(c.job,'비숍');assert.equal(c.image,image);
  }finally{p.close();}
 });
 test('파티는 API 키 없이 공용 캐릭터를 추가하고 해당 보스 배율을 합산한다',async()=>{
  const p=await boot('party_boss_scheduler',{snapshots:[snapshot(),{...snapshot('윌전용캐릭터'),rates:[{bossId:'Will|Hard',percent:12}]}]});try{
   p.doc.querySelector('#party-create-toggle').click();select(p.w,'party-boss','Lotus|Extreme');type(p.w,'party-name','금요팟');p.doc.querySelector('#party-create-form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await settle();
   const options=[...p.doc.querySelector('#party-saved-character').options];assert(options.some(o=>o.value==='다른사람'));assert(options.find(o=>o.value==='윌전용캐릭터').disabled);
-  select(p.w,'party-saved-character','다른사람');await settle();assert(p.doc.querySelector('#party-character-preview').textContent.includes('루나 · Lv.285 · 히어로'));assert.equal(p.doc.querySelector('#party-character-preview img').src,image);
+  select(p.w,'party-saved-character','다른사람');await settle();
+  assert.deepEqual([...p.doc.querySelectorAll('#party-character-preview .character-chip')].map(n=>n.textContent),['루나','Lv. 285','히어로']);
+  assert(p.doc.querySelector('#party-character-preview .character-world img').src.endsWith('/icons/server/%EB%A3%A8%EB%82%98.webp'));
+  assert.equal(p.doc.querySelector('#party-character-preview .party-portrait img').src,image);
   p.doc.querySelector('#party-add-current').click();assert(p.doc.querySelector('#party-detail').textContent.includes('49.68%'));assert.equal(JSON.parse(p.w.localStorage.getItem('partyBossScheduler.v1')).parties[0].members.length,1);assert(p.doc.querySelector('#party-detail .diff-badge.extreme'));
   assert(p.calls.every(c=>c.url==='/api/boss-rates'));
   const updated=snapshot();updated.rates[0].percent=60;p.setCatalog([updated]);p.w.dispatchEvent(new p.w.Event('focus'));await settle();assert(p.doc.querySelector('#party-detail').textContent.includes('60%'));

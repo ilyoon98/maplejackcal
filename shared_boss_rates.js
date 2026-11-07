@@ -26,7 +26,7 @@
       group.label=account.label;
       for(var character of registered){
         var profile=character.profile;
-        var label=character.name+(profile?' · '+profile.world+' · Lv.'+profile.level:'');
+        var label=character.name+(profile?' ('+profile.world+', Lv. '+profile.level+')':'');
         option(group,character.name,label);
       }
       select.append(group);
@@ -77,8 +77,12 @@
   function render(){
     renderProfile();el('shared-source').hidden=!name;if(name)el('shared-source').href=data.resultUrl(name,'00000');
     el('shared-table').hidden=!rates.length;el('shared-rate-count').textContent=rates.length?String(rates.length):'';el('shared-rows').replaceChildren();
-    rates.forEach(function(r){var tr=node('tr'),td=node('td'),input=node('input'),remove=node('button','×'),eligibility=node('td',r.eligibility||'—'),boss=node('td');boss.append(visual.create(document,r.bossId,window.MapleBossDB));if(shotIds.has(r.bossId))tr.className='shared-shot-applied';
-      input.type='number';input.min='0';input.max='1000000000';input.step='0.01';input.value=r.percent===null?'':String(r.percent);input.setAttribute('aria-label',boss.textContent+' 배율');input.addEventListener('input',function(){r.percent=input.value.trim()===''?null:Number(input.value);r.eligibility='';eligibility.textContent='—';changed();});td.append(input);
+    rates.forEach(function(r){var tr=node('tr'),td=node('td'),input=node('input'),remove=node('button','×'),boss=node('td');boss.append(visual.create(document,r.bossId,window.MapleBossDB));if(shotIds.has(r.bossId))tr.className='shared-shot-applied';
+      var amount=node('div'),suffix=node('span','%'),damage=node('span',catalog.damageLabel(r.percent));
+      amount.className='shared-rate-amount';suffix.setAttribute('aria-hidden','true');damage.className='shared-damage';
+      input.type='number';input.min='0';input.max='1000000000';input.step='0.01';input.value=r.percent===null?'':String(r.percent);input.setAttribute('aria-label',boss.textContent+' 환산 배율 %');
+      input.addEventListener('input',function(){r.percent=input.value.trim()===''?null:Number(input.value);r.eligibility='';damage.textContent=catalog.damageLabel(r.percent);changed();});
+      amount.append(input,suffix);td.append(amount,damage);
       remove.type='button';remove.setAttribute('aria-label',boss.textContent+' 삭제');remove.addEventListener('click',function(){rates=rates.filter(function(v){return v!==r;});changed();render();});var action=node('td');action.append(remove);tr.append(boss,td,action);el('shared-rows').append(tr);
     });controls();
   }
@@ -126,7 +130,13 @@
   el('shared-add').addEventListener('click',function(){var id=el('shared-add-boss').value;if(rates.some(function(r){return r.bossId===id;})){say('이미 있는 보스·난이도입니다.',true);return;}rates.push({bossId:id,percent:null,eligibility:''});changed();render();});
   el('shared-fetch').addEventListener('click',async function(){
     if(dirty&&!window.confirm('작성 중인 배율을 환산 조회값으로 바꿀까요?'))return;var v=version;busy=true;controls();say('배율 불러오는 중…');
-    try{var s=await catalog.fetchRemote(name,fetch);if(v!==version)return;rates=s.rates;shotIds.clear();changed();method=s.captureMethod||'browser-dom';stamp=s.fetchedAt;render();say(rates.length+'개 불러옴 · 저장 전');}catch(e){fail(e);}finally{busy=false;controls();}
+    try{var s=await catalog.fetchRemote(name,fetch);if(v!==version)return;rates=s.rates;shotIds.clear();changed();method=s.captureMethod||'browser-dom';stamp=s.fetchedAt;render();say(rates.length+'개 불러옴 · 저장 전');}
+    catch(e){
+      if(e.code==='SCOUTER_BLOCKED'){
+        mode(true);say('자동 조회가 차단되었습니다. 환산 원문에서 보스 카드를 캡처해 아래에 붙여넣으세요.',true);
+        el('shared-drop').focus();
+      }else fail(e);
+    }finally{busy=false;controls();}
   });
   el('shared-save').addEventListener('click',async function(){
     busy=true;saveState('공용 저장소에 기록 중…','saving');controls();var ownerSaved=false;

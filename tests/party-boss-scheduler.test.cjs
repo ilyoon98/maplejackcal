@@ -37,6 +37,9 @@ test('넥슨 외부 주소·자격증명 포함 주소는 이미지로 사용하
 test('배율 0과 미입력을 구분하고 잘못된 값을 합계에 넣지 않는다',()=>{
  assert.deepEqual(app.summary([{rate:0},{rate:125.5},{rate:null},{rate:' '},{rate:true},{rate:-1},{rate:Infinity}]),{total:125.5,missing:5});
 });
+test('클리어 판정은 100%, 140%, 200%를 각각 다음 구간에 넣는다',()=>{
+ assert.deepEqual([99.99,100,139.99,140,199.99,200].map(n=>app.clearStatus(n)[1]),['불가능','클리어 가능','클리어 가능','여유컷','여유컷','완전 개팸']);
+});
 test('파티 복원은 OCID 중복·난이도별 인원 제한·키/임의 필드 유입을 걸러낸다',()=>{
  const choices=app.catalog(db);
  const c=app.profile(basic(),'char1');

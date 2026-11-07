@@ -11,19 +11,15 @@
   <header><h1>파티 보스 스케줄러</h1><p class="sub">공용 배율로 함께 갈 보스 파티를 구성하세요.</p></header>
   <div class="party-board-head"><div><h2>파티 목록</h2><span class="party-local">이 기기에 저장</span></div><div class="party-board-actions"><label class="sr-only" for="party-view">보기</label><select id="party-view"><option value="all">전체 파티</option><option value="mine">내 캐릭터 파티</option></select><button id="party-create-toggle" class="boss-primary" type="button" aria-expanded="false" aria-controls="party-create-form">파티 만들기</button></div></div>
   <form id="party-create-form" class="card party-create-form" hidden>
-    <div class="boss-section-head"><h2>새 파티</h2><button id="party-create-cancel" class="boss-icon-button" type="button" aria-label="파티 만들기 닫기">×</button></div>
-    <div class="party-form-grid"><label>보스 · 난이도<select id="party-boss" required></select></label><label>파티 이름 · 선택<input id="party-name" maxlength="60" placeholder="비우면 보스 이름 사용"></label></div>
-    <div class="party-draft-picker"><label>계정<select id="party-draft-account"><option value="">전체 계정</option></select></label><label>캐릭터<select id="party-draft-character"><option value="">캐릭터 선택</option></select></label><button id="party-draft-add" type="button">추가</button></div>
-    <div id="party-draft-members" class="party-draft-members"></div><p id="party-draft-status" class="boss-status" role="status"></p><div class="party-form-footer"><button class="boss-primary" type="submit">파티 저장</button></div>
+    <div class="boss-section-head"><h2 id="party-form-title">새 파티</h2><button id="party-create-cancel" type="button">취소</button></div>
+    <div class="party-form-grid"><label>보스와 난이도<select id="party-boss" required></select></label><label>파티 이름<input id="party-name" maxlength="60" placeholder="비우면 보스와 난이도 이름 사용"></label></div>
+    <div id="party-draft-summary"></div>
+    <div class="party-draft-picker"><label>계정<select id="party-draft-account"><option value="">전체 계정</option></select></label><label>캐릭터<select id="party-draft-character"><option value="">캐릭터 선택</option></select></label><button id="party-draft-add" class="boss-primary" type="button">추가</button></div>
+    <div id="party-draft-members" class="party-members"></div><p id="party-draft-status" class="boss-status" role="status"></p><div class="party-form-footer"><button class="boss-primary" type="submit">파티 저장</button></div>
   </form>
   <p id="party-storage-status" class="boss-status" role="status"></p>
   <div class="party-board"><aside id="party-list" class="party-list" aria-label="파티 목록"></aside><div class="party-content"><section id="party-detail" class="card party-detail" aria-label="선택한 파티">
     <div id="party-detail-heading"></div>
-    <form id="party-edit-form" class="party-edit-form" aria-label="파티 수정" hidden>
-      <div class="party-form-grid"><label>파티 이름 · 선택<input id="party-edit-name" maxlength="60" placeholder="비우면 보스·난이도 이름 사용"></label><label>보스 · 난이도<select id="party-edit-boss" required></select></label></div>
-      <p id="party-edit-status" class="boss-status error" role="status"></p>
-      <div class="party-detail-actions"><button id="party-edit-cancel" type="button">취소</button><button class="boss-primary" type="submit">변경 저장</button></div>
-    </form>
     <div id="party-detail-content"></div>
   </section>
     <section class="card party-search" id="party-add-panel" aria-labelledby="search-title" hidden>
