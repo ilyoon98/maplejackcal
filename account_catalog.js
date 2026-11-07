@@ -3,19 +3,24 @@
   function normalize(accounts){
     if(!Array.isArray(accounts)||accounts.length>200)throw new Error('ACCOUNT_INVALID');var ids=new Set(),names=new Set(),count=0;
     return accounts.map(function(a){if(!a||typeof a.id!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(a.id)||ids.has(a.id)||!Array.isArray(a.characters)||a.characters.length>200)throw new Error('ACCOUNT_INVALID');ids.add(a.id);
-      return {id:a.id,label:typeof a.label==='string'?a.label.trim().slice(0,40):'',characters:a.characters.map(function(raw){var name=typeof raw==='string'?raw:raw&&raw.name;if(!data.validName(name)||names.has(name)||++count>1000)throw new Error('ACCOUNT_INVALID');names.add(name);var c={name:name},profile=data.publicCharacter(raw.profile||raw,name);if(profile)c.profile=profile;return c;})};
+      var characters=a.characters.map(function(raw){var name=typeof raw==='string'?raw:raw&&raw.name;if(!data.validName(name)||names.has(name)||++count>1000)throw new Error('ACCOUNT_INVALID');names.add(name);var c={name:name},profile=data.publicCharacter(raw.profile||raw,name);if(profile)c.profile=profile;return c;});
+      var account={id:a.id,label:typeof a.label==='string'?a.label.trim().slice(0,40):'',characters:characters};
+      if(characters.some(function(c){return c.name===a.representative;}))account.representative=a.representative;
+      return account;
     });
   }
   function groups(store){
-    var snapshots=store.snapshots||[],used=new Set(),out=(store.accounts||[]).map(function(a){return {id:a.id,customLabel:a.label||'',characters:a.characters.map(function(member){var name=typeof member==='string'?member:member.name;used.add(name);var snap=snapshots.find(function(s){return s.characterName===name&&s.preset==='00000';}),saved=snap&&data.publicCharacter(snap.character,name),roster=data.publicCharacter(member.profile,name);return {name:name,profile:data.mergeCharacter(saved,roster),snapshot:snap||null};})};});
+    var snapshots=store.snapshots||[],used=new Set(),out=(store.accounts||[]).map(function(a){return {id:a.id,customLabel:a.label||'',representative:a.representative,characters:a.characters.map(function(member){var name=typeof member==='string'?member:member.name;used.add(name);var snap=snapshots.find(function(s){return s.characterName===name&&s.preset==='00000';}),saved=snap&&data.publicCharacter(snap.character,name),roster=data.publicCharacter(member.profile,name);return {name:name,profile:data.mergeCharacter(saved,roster),snapshot:snap||null};})};});
     var ungrouped=snapshots.filter(function(s){return !used.has(s.characterName);}).map(function(s){var p=data.publicCharacter(s.character,s.characterName);return {name:s.characterName,profile:p&&Date.now()-p.updatedAt<30*86400000?p:null,snapshot:s};});
     if(ungrouped.length)out.push({id:'',customLabel:'미분류 캐릭터',characters:ungrouped});
-    out.forEach(function(a){a.characters.sort(function(a,b){return (b.profile?b.profile.level:0)-(a.profile?a.profile.level:0)||a.name.localeCompare(b.name,'ko');});a.label=a.customLabel||(a.characters[0]?a.characters[0].name:'새 계정');});return out.filter(function(a){return a.characters.length||a.customLabel;});
+    out.forEach(function(a){a.characters.sort(function(a,b){return (b.profile?b.profile.level:0)-(a.profile?a.profile.level:0)||a.name.localeCompare(b.name,'ko');});a.label=a.customLabel||a.characters.find(function(c){return c.name===a.representative;})?.name||a.characters[0]?.name||'새 계정';});return out.filter(function(a){return a.characters.length||a.customLabel;});
   }
   function accountId(store,name){var found=(store.accounts||[]).find(function(a){return a.characters.some(function(c){return (typeof c==='string'?c:c.name)===name;});});return found?found.id:'character:'+name;}
   function conflict(store,members,name){var id=accountId(store,name);return members.some(function(m){return accountId(store,m.character.name)===id;});}
-  function assign(accounts,id,label,characters){
-    var names=new Set(characters.map(function(c){return c.name;})),out=accounts.map(function(a){return {id:a.id,label:a.label,characters:a.characters.filter(function(c){return !names.has(c.name);})};}),target=out.find(function(a){return a.id===id;});if(!target){target={id:id,label:label,characters:[]};out.push(target);}target.label=label;target.characters=characters;return normalize(out);
+  function assign(accounts,id,label,characters,representative){
+    var names=new Set(characters.map(function(c){return c.name;})),out=accounts.map(function(a){return {...a,characters:a.characters.filter(function(c){return !names.has(c.name);})};}),target=out.find(function(a){return a.id===id;});if(!target){target={id:id,label:label,characters:[]};out.push(target);}target.label=label;target.characters=characters;
+    if(representative!==undefined)target.representative=representative;
+    return normalize(out);
   }
   function importOwn(store,rows,newId){
     var known=new Map();groups(store).forEach(function(g){g.characters.forEach(function(c){if(c.profile)known.set(c.name,c.profile);});});

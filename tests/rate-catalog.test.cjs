@@ -67,3 +67,14 @@ test('내 계정 동기화는 기존 공용 묶음의 수동 소속을 보존한
  const next=account.importOwn(store,rows,()=> 'unused');
  assert.deepEqual(next.map(group=>group.characters.map(c=>c.name)),[['내캐릭터','수동으로추가','새캐릭터'],['수동으로이동']]);
 });
+test('대표 캐릭터는 공용 저장과 일반 편집에서 유지되고 이동하면 기존 묶음에서 해제된다',async()=>{
+ const account=require('../account_catalog.js'),store=createStore({command:backend()});
+ const characters=[{name:'높은캐릭터',profile:{name:'높은캐릭터',world:'루나',job:'비숍',level:290,updatedAt:Date.now()}},{name:'대표후보'}];
+ await store.saveAccounts([{id:'group-one',label:'',representative:'대표후보',characters}],'');
+ const registry=(await store.read()).accounts;
+ assert.equal(registry[0].representative,'대표후보');assert.equal(account.groups({accounts:registry})[0].label,'대표후보');
+ const renamed=account.assign(registry,'group-one','친구 계정',characters);
+ assert.equal(renamed[0].representative,'대표후보');assert.equal(account.groups({accounts:renamed})[0].label,'친구 계정');
+ const moved=account.assign(registry,'group-two','',[characters[1]]);
+ assert.equal(moved[0].representative,undefined);assert.equal(account.groups({accounts:moved})[0].label,'높은캐릭터');
+});
