@@ -20,7 +20,12 @@
   function fresh(raw,name){var c=data.publicCharacter(raw,name);return c&&Date.now()-c.updatedAt<30*86400000?c:null;}
   function render(doc,c,name){
     var box=doc.createElement('div');box.className='shared-character-card';
-    if(c&&c.image){var img=doc.createElement('img');img.src=c.image;img.alt=name+' 캐릭터 외형';img.referrerPolicy='no-referrer';img.addEventListener('error',function(){img.hidden=true;});box.appendChild(img);}
+    if(c&&c.image){
+      var frame=doc.createElement('div'),img=doc.createElement('img');frame.className='shared-profile-portrait';
+      img.src=c.image;img.alt=name+' 캐릭터 외형';img.referrerPolicy='no-referrer';
+      img.addEventListener('error',function(){frame.textContent='외형 로드 실패';});
+      frame.append(img);box.append(frame);
+    }
     var info=doc.createElement('div'),title=doc.createElement('strong'),meta=doc.createElement('p');title.textContent=name||'캐릭터를 선택하세요';meta.textContent=c?c.world+' · Lv.'+c.level+' · '+c.job:'캐릭터 정보 미조회';info.append(title,meta);box.append(info);return box;
   }
   return {client:client,fresh:fresh,render:render};

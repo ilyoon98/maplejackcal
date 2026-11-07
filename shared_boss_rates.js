@@ -66,7 +66,12 @@
     ['shared-character','shared-account','shared-owner','shared-owner-label','shared-group-select','shared-group-label','shared-group-save','shared-refresh','shared-nickname','shared-add-boss','shared-pin','shared-mode-fetch','shared-mode-capture'].forEach(function(id){el(id).disabled=busy;});el('shared-import-account').disabled=busy||!!ownSyncPending;
     document.querySelectorAll('#shared-rows input,#shared-rows button,#shared-group-members input,.boss-picker button,.boss-picker summary').forEach(function(n){if(n.tagName==='SUMMARY')n.inert=busy;else n.disabled=busy;});
   }
-  function changed(){dirty=true;method='manual';stamp=new Date().toISOString();el('shared-save-state').textContent='저장 전';controls();}
+  function saveState(message,phase=''){
+    el('shared-save-bar').dataset.state=phase;
+    el('shared-save-state').textContent=message;
+    el('shared-save').textContent=phase==='saving'?'저장 중…':phase==='saved'?'✓ 저장 완료':'공용 배율 저장';
+  }
+  function changed(){dirty=true;method='manual';stamp=new Date().toISOString();saveState('저장 전');controls();}
   choices.forEach(function(c){var o=node('option',c.label);o.value=c.id;el('shared-add-boss').append(o);});visual.picker(document,el('shared-add-boss'),window.MapleBossDB);
   function renderProfile(){el('shared-profile').replaceChildren(profiles.render(document,character,name));}
   function render(){
@@ -81,18 +86,27 @@
     if(profileController)profileController.abort();profileController=new AbortController();
     var note=el('shared-profile-status');
     if(!force&&character&&character.image&&Date.now()-character.updatedAt<3600000){note.textContent='';return;}
-    if(!window.NexonKey.has()){note.replaceChildren();if(!character){var link=node('a','API 키 등록');link.href='index.html#apiKey';note.append(link);}return;}
+    if(!window.NexonKey.has()){
+      note.replaceChildren();
+      if(!character?.image&&name){var link=node('a','API 키 등록');link.href='index.html#apiKey';note.append('외형을 불러오려면 ',link);}
+      return;
+    }
     note.textContent='캐릭터 정보 불러오는 중…';
-    try{var found=await profileApi.load(name,profileController.signal);if(v!==version)return;character=found;renderProfile();note.textContent='';}
+    try{
+      var found=await profileApi.load(name,profileController.signal);if(v!==version)return;
+      character=data.mergeCharacter(found,character);renderProfile();
+      var saved=store.snapshots.find(function(s){return s.characterName===name&&s.preset==='00000';});
+      note.textContent=!character?.image?'넥슨 API에서 외형을 받지 못했습니다.':saved&&!saved.character?.image&&el('shared-save-bar').dataset.state!=='saving'?'외형을 불러왔습니다. 저장하면 파티에서도 보여요.':'';
+    }
     catch(e){if(v!==version||e.name==='AbortError')return;note.textContent='캐릭터 정보 조회 실패';}
   }
   function open(value,forceProfile){
     if(dirty&&!window.confirm('저장하지 않은 수정이 있습니다. 다른 캐릭터를 선택할까요?')){el('shared-character').value=name;return;}
     if(value&&!data.validName(value)){say('캐릭터 닉네임을 확인하세요.',true);return;}
     version++;if(profileController)profileController.abort();name=value;var saved=store.snapshots.find(function(s){return s.characterName===name&&s.preset==='00000';});
-    rates=saved?saved.rates.map(function(r){return {...r};}):[];revision=saved&&saved.revision||'';character=saved&&profiles.fresh(saved.character,name)||memberInfo(name)?.profile||null;method=saved&&saved.captureMethod||'manual';stamp=saved&&saved.fetchedAt||'';dirty=false;ownerDirty=false;shotIds.clear();
+    rates=saved?saved.rates.map(function(r){return {...r};}):[];revision=saved&&saved.revision||'';character=memberInfo(name)?.profile||null;method=saved&&saved.captureMethod||'manual';stamp=saved&&saved.fetchedAt||'';dirty=false;ownerDirty=false;shotIds.clear();
     el('shared-review').replaceChildren();el('shared-shot-status').textContent='';el('shared-profile-status').textContent='';el('shared-nickname').value='';el('shared-character').value=name;ownerOptions();renderGroupEditor();
-    el('shared-save-state').textContent=saved?'저장됨 · '+new Date(saved.fetchedAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):name?'저장 전':'';
+    saveState(saved?'저장됨 · '+new Date(saved.fetchedAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):name?'저장 전':'');
     say('');render();profilePending=name?loadProfile(version,forceProfile):null;if(!name)el('shared-nickname').focus();
   }
   async function refresh(){
@@ -104,7 +118,7 @@
   el('shared-mode-fetch').addEventListener('click',function(){mode(false);});el('shared-mode-capture').addEventListener('click',function(){mode(true);});
   el('shared-open').addEventListener('submit',function(e){e.preventDefault();var value=el('shared-nickname').value.trim();if(value)open(value);});el('shared-character').addEventListener('change',function(){if(this.value)open(this.value);});
   el('shared-account').addEventListener('change',function(){if(dirty&&!window.confirm('저장하지 않은 수정이 있습니다. 다른 계정을 선택할까요?')){this.value=accountFilter;return;}dirty=false;accountFilter=this.value;characterOptions();var first=Array.from(el('shared-character').options).find(function(o){return o.value;});open(first?first.value:'');});
-  el('shared-owner').addEventListener('change',function(){ownerLabel();dirty=true;ownerDirty=true;el('shared-save-state').textContent='계정 변경 · 저장 전';});el('shared-owner-label').addEventListener('input',function(){dirty=true;ownerDirty=true;el('shared-save-state').textContent='계정 이름 변경 · 저장 전';});
+  el('shared-owner').addEventListener('change',function(){ownerLabel();dirty=true;ownerDirty=true;saveState('계정 변경 · 저장 전');});el('shared-owner-label').addEventListener('input',function(){dirty=true;ownerDirty=true;saveState('계정 이름 변경 · 저장 전');});
   el('shared-group-select').addEventListener('change',function(){groupEditId=this.value;groupDirty=false;renderGroupEditor();});el('shared-group-members').addEventListener('change',function(){groupDirty=true;});el('shared-group-label').addEventListener('input',function(){groupDirty=true;});
   el('shared-group-save').addEventListener('click',async function(){busy=true;controls();try{var members=Array.from(el('shared-group-members').querySelectorAll('input:checked')).map(function(n){var info=memberInfo(n.value),p=n.value===name&&character||info&&info.profile;return p?{name:n.value,profile:p}:{name:n.value};});if(!members.length)throw new Error('ACCOUNT_EMPTY');var id=groupEditId||crypto.randomUUID();await persistAccounts(accounts.assign(accountStore().accounts||[],id,el('shared-group-label').value.trim(),members));groupEditId=id;groupDirty=false;accountOptions();el('shared-group-status').textContent='계정 묶음을 저장했습니다.';toast('계정 묶음 저장 완료');try{localStorage.setItem('sharedBossRates.changed',String(Date.now()));}catch(e){}}catch(e){el('shared-group-status').textContent=e.message==='ACCOUNT_EMPTY'?'묶을 캐릭터를 선택하세요.':errors[e.message]||'계정 저장에 실패했습니다. 새로고침 후 다시 시도하세요.';}finally{busy=false;controls();}});
   el('shared-import-account').addEventListener('click',function(){syncOwnAccount(false);});
@@ -115,8 +129,22 @@
     try{var s=await catalog.fetchRemote(name,fetch);if(v!==version)return;rates=s.rates;shotIds.clear();changed();method=s.captureMethod||'browser-dom';stamp=s.fetchedAt;render();say(rates.length+'개 불러옴 · 저장 전');}catch(e){fail(e);}finally{busy=false;controls();}
   });
   el('shared-save').addEventListener('click',async function(){
-    busy=true;controls();var ownerSaved=false;
-    try{if(profilePending)await profilePending;var snapshot=catalog.snapshot(name,rates,method);if(stamp)snapshot.fetchedAt=stamp;if(character)snapshot.character=character;ownerSaved=await saveOwner();var saved=await catalog.saveShared(fetch,snapshot,revision,el('shared-pin').value);revision=saved.revision;dirty=false;ownerDirty=false;el('shared-save-state').textContent='✓ '+name+' 저장 완료 · '+new Date().toLocaleTimeString('ko-KR');try{localStorage.setItem('sharedBossRates.changed',String(Date.now()));}catch(e){}await refresh();say(name+' 배율을 저장했습니다.');toast(name+' 저장 완료');}catch(e){if(ownerSaved){accountOptions();say('계정 묶음은 저장했지만 배율 저장에 실패했습니다. 배율 입력값은 유지됩니다. '+(errors[e.message]||'다시 시도하세요.'),true);}else fail(e);}finally{busy=false;controls();}
+    busy=true;saveState('공용 저장소에 기록 중…','saving');controls();var ownerSaved=false;
+    try{
+      if(profilePending)await profilePending;
+      var snapshot=catalog.snapshot(name,rates,method);if(stamp)snapshot.fetchedAt=stamp;if(character)snapshot.character=character;
+      ownerSaved=await saveOwner();
+      var saved=await catalog.saveShared(fetch,snapshot,revision,el('shared-pin').value);
+      revision=saved.revision;dirty=false;ownerDirty=false;
+      saveState(name+' 저장 완료','saved');
+      if(character?.image)el('shared-profile-status').textContent='';
+      toast(name+' 저장 완료');
+      try{localStorage.setItem('sharedBossRates.changed',String(Date.now()));}catch(e){}
+      if(await refresh())say('');
+    }catch(e){
+      saveState('저장 실패 · 다시 시도하세요.','error');
+      if(ownerSaved){accountOptions();say('계정 묶음은 저장했지만 배율 저장에 실패했습니다. 배율 입력값은 유지됩니다. '+(errors[e.message]||'다시 시도하세요.'),true);}else fail(e);
+    }finally{busy=false;controls();}
   });
   async function readImage(file){
     if(busy)return;if(!name){say('먼저 캐릭터 닉네임을 검색하세요.',true);return;}

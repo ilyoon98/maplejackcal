@@ -5,9 +5,10 @@ const image='https://open.api.nexon.com/static/maplestory/character/look/ABC123'
 const profile=name=>({name,world:'루나',job:'히어로',level:285,image,updatedAt:Date.now()});
 function snapshot(name='다른사람'){const s=catalog.snapshot(name,[{bossId:'Lotus|Extreme',percent:49.68},{bossId:'Will|Hard',percent:77}],'manual');return {...s,revision:'v1',character:profile(name)};}
 const settle=async()=>{for(let i=0;i<5;i++)await new Promise(setImmediate);};
-async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,shot=[],ownRows=[]}={}){
+async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,shot=[],ownRows=[],parties=[]}={}){
  const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../'+page+'.html'),'utf8'),{url:'https://example.test/'+page+'.html',runScripts:'outside-only'}),w=dom.window,calls=[];let values=structuredClone(snapshots),registry=structuredClone(accounts);
  w.confirm=()=>true;w.setInterval=()=>1;if(key)w.localStorage.setItem('nxopen_api_key',key);
+ if(parties.length)w.localStorage.setItem('partyBossScheduler.v1',JSON.stringify({parties}));
  w.fetch=async(url,options={})=>{calls.push({url,options});if(url==='/api/boss-rates'){
    if(options.method==='POST'){const b=JSON.parse(options.body);if(b.action==='accounts'){registry=b.accounts;return {ok:true,json:async()=>({accounts:registry,accountRevision:'accounts-v2'})};}const saved={...b.snapshot,revision:'v2'};values=values.filter(s=>s.characterName!==saved.characterName).concat(saved);return {ok:true,json:async()=>({snapshot:saved})};}
    return {ok:true,json:async()=>({schemaVersion:1,persistent:true,snapshots:structuredClone(values),accounts:structuredClone(registry),accountRevision:registry.length?'accounts-v1':''})};
@@ -27,6 +28,52 @@ test('저장된 캐릭터 선택 즉시 프로필과 배율을 열고 중복 열
   select(p.w,'shared-character','두번째캐릭터');await settle();assert(p.doc.querySelector('#shared-profile').textContent.includes('두번째캐릭터'));assert.equal(p.doc.querySelector('#shared-open').hidden,false);assert(!p.doc.querySelector('#shared-confirm'));assert(!p.doc.querySelector('#shared-apply-shot'));
   assert(p.doc.querySelector('#shared-rows .boss-face').src.endsWith('suu.webp'));assert(p.doc.querySelector('#shared-rows .diff-badge.extreme'));
   p.doc.querySelector('#shared-save').click();await settle();assert.equal(p.calls.filter(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).length,1);assert(p.doc.querySelector('#shared-save-state').textContent.includes('저장 완료'));assert.equal(p.doc.querySelector('#shared-toast').hidden,false);
+ }finally{p.close();}
+});
+test('기존 파티 수정은 파티원과 ID를 유지하고 변경한 보스의 배율만 합산한다',async()=>{
+ const a=snapshot(),b=snapshot('스우전용');b.rates=b.rates.slice(0,1);
+ const party={id:'saved-party',name:'금요팟',bossId:'Lotus|Extreme',members:[a,b].map(s=>({character:{...s.character,ocid:'shared:'+s.characterName},rate:49.68,rateMode:'auto'}))};
+ const p=await boot('party_boss_scheduler',{snapshots:[a,b],parties:[party]});try{
+  const edit=()=>p.doc.querySelector('.party-edit').click();
+  const stored=()=>JSON.parse(p.w.localStorage.getItem('partyBossScheduler.v1')).parties[0];
+  const form=p.doc.querySelector('#party-edit-form');
+  assert.equal(p.doc.querySelector('.party-edit').nextElementSibling.className,'party-delete');
+  edit();type(p.w,'party-edit-name','취소할 이름');p.doc.querySelector('#party-edit-cancel').click();assert.equal(stored().name,'금요팟');
+  edit();type(p.w,'party-edit-name','');select(p.w,'party-edit-boss','Will|Hard');
+  p.w.dispatchEvent(new p.w.Event('focus'));await settle();
+  assert.equal(form.hidden,false);assert.equal(p.doc.querySelector('#party-edit-boss').value,'Will|Hard');
+  form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+  assert.equal(form.hidden,true);assert.equal(stored().id,party.id);assert.equal(stored().name,'하드 윌');assert.equal(stored().bossId,'Will|Hard');
+  assert.deepEqual(stored().members.map(m=>[m.character.name,m.rate]),[['다른사람',77],['스우전용',null]]);
+  assert(p.doc.querySelector('#party-detail').textContent.includes('1명 미등록'));
+  edit();type(p.w,'party-edit-name','새 금요팟');form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+  assert.equal(stored().name,'새 금요팟');assert.equal(stored().members[0].rate,77);
+ }finally{p.close();}
+});
+test('공용 외형이 누락된 기존 파티원을 다시 조회하고 계정 새로고침 뒤에도 사진을 유지한다',async()=>{
+ const a=snapshot();a.character.image='';
+ const member={character:{...a.character,ocid:'shared:'+a.characterName},rate:49.68,rateMode:'auto'};
+ const p=await boot('party_boss_scheduler',{snapshots:[a],key:'test-key',parties:[{id:'party',name:'파티',bossId:'Lotus|Extreme',members:[member]}],fetchExtra:async url=>{
+  const raw=new URL(url).pathname.endsWith('/id')?{ocid:'lookup-id'}:{character_name:a.characterName,world_name:'루나',character_class:'히어로',character_level:285,character_image:image};
+  return {ok:true,json:async()=>raw};
+ }});try{
+  assert.equal(p.doc.querySelector('#party-detail .party-portrait img').src,image);
+  a.character.updatedAt=Date.now()+1000;p.setCatalog([a]);p.w.dispatchEvent(new p.w.Event('focus'));await settle();
+  assert.equal(p.doc.querySelector('#party-detail .party-portrait img').src,image);
+ }finally{p.close();}
+});
+test('최신 계정 정보에 외형이 빠져 있어도 저장된 공식 외형과 저장 완료 상태를 표시한다',async()=>{
+ const a=snapshot(),avatar='https://avatar.maplestory.nexon.com/CharacterEx/180/ABCDEFG.png';
+ a.character={...a.character,image:avatar};
+ const p=await boot('shared_boss_rates',{snapshots:[a],accounts:[{id:'owner',label:'계정',characters:[{name:a.characterName,profile:{...a.character,image:'',level:286,updatedAt:Date.now()+1000}}]}]});try{
+  assert.equal(p.doc.querySelector('#shared-profile img').src,avatar);
+  assert.match(p.doc.querySelector('#shared-profile').textContent,/Lv\.286/);
+  p.doc.querySelector('#shared-save').click();await settle();
+  assert.equal(p.doc.querySelector('#shared-save-bar').dataset.state,'saved');
+  assert.equal(p.doc.querySelector('#shared-save').textContent,'✓ 저장 완료');
+  const row=p.doc.querySelector('#shared-rows input');row.value='50';row.dispatchEvent(new p.w.Event('input',{bubbles:true}));
+  assert.equal(p.doc.querySelector('#shared-save-bar').dataset.state,'');
+  assert.equal(p.doc.querySelector('#shared-save').textContent,'공용 배율 저장');
  }finally{p.close();}
 });
 test('캡처 토글·붙여넣기는 확실한 카드만 즉시 반영하고 불확실한 기존 배율과 나머지 값은 유지한다',async()=>{

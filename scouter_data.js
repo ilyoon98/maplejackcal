@@ -10,10 +10,26 @@
   function resultUrl(name,preset){if(!validName(name)||!validPreset(preset))throw new Error('SCOUTER_BAD_INPUT');return 'https://maplescouter.com/ko/result?'+new URLSearchParams({name:name,preset:preset});}
   function bossId(icon){var m=typeof icon==='string'&&icon.match(/^\/bossIcon\/([a-z]+)_([A-Za-z]+)\.png$/);return m&&DIFFICULTY[m[1]]&&BOSS[m[2]]?BOSS[m[2]]+'|'+DIFFICULTY[m[1]]:null;}
   function percent(value){return typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=1e9?value:null;}
+  function imageUrl(value){
+    try{
+      var url=new URL(value);
+      if(url.username||url.password)return '';
+      if(url.origin==='https://open.api.nexon.com'&&/^\/static\/maplestory\/character\/look\/[A-Za-z0-9]+$/.test(url.pathname))return url.href;
+      if(url.origin==='https://avatar.maplestory.nexon.com'&&/^\/CharacterEx\/180\/[A-Z]+\.png$/.test(url.pathname)&&!url.search&&!url.hash)return url.href;
+    }catch(e){}
+    return '';
+  }
   function publicCharacter(raw,name){
     if(!raw||raw.name!==name||!validName(name)||typeof raw.world!=='string'||typeof raw.job!=='string'||!Number.isInteger(raw.level)||raw.level<1||raw.level>400||!Number.isFinite(raw.updatedAt)||raw.updatedAt>Date.now()+60000)return null;
-    var image='';try{var u=new URL(raw.image);if(u.origin==='https://open.api.nexon.com'&&!u.username&&!u.password&&/^\/static\/maplestory\/character\/look\/[A-Za-z0-9]+$/.test(u.pathname))image=u.href;}catch(e){}
-    return {name:name,world:raw.world.slice(0,30),job:raw.job.slice(0,50),level:raw.level,image:image,updatedAt:raw.updatedAt};
+    return {name:name,world:raw.world.slice(0,30),job:raw.job.slice(0,50),level:raw.level,image:imageUrl(raw.image),updatedAt:raw.updatedAt};
+  }
+  function mergeCharacter(first,second){
+    var cutoff=Date.now()-30*86400000;
+    if(first&&first.updatedAt<=cutoff)first=null;
+    if(second&&second.updatedAt<=cutoff)second=null;
+    if(!first)return second||null;
+    if(second&&second.updatedAt>first.updatedAt)[first,second]=[second,first];
+    return first&&!first.image&&second&&second.image?{...first,image:second.image}:first;
   }
   function rowsToRates(rows){
     var rates=[],unmapped=[],seen=new Set();
@@ -45,5 +61,5 @@
     if(!snapshot||Date.now()-Date.parse(snapshot.fetchedAt)>=30*86400000)return null;
     snapshot.storage='public-json';return snapshot;
   }
-  return {validName:validName,validPreset:validPreset,resultUrl:resultUrl,bossId:bossId,rowsToRates:rowsToRates,normalizeSnapshot:normalizeSnapshot,findShared:findShared,publicCharacter:publicCharacter};
+  return {validName:validName,validPreset:validPreset,resultUrl:resultUrl,bossId:bossId,rowsToRates:rowsToRates,normalizeSnapshot:normalizeSnapshot,findShared:findShared,imageUrl:imageUrl,publicCharacter:publicCharacter,mergeCharacter:mergeCharacter};
 });
