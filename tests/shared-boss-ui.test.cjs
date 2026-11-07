@@ -68,18 +68,38 @@ test('같은 보스·난이도의 중복 캡처는 어느 숫자도 자동 선�
 });
 test('계정 그룹을 선택하면 캐릭터 목록이 바뀌고 새 캐릭터 입력은 항상 별도로 보인다',async()=>{
  const a=snapshot('낮은캐릭터'),b=snapshot('높은캐릭터'),c=snapshot('다른계정');a.character.level=280;b.character.level=295;
- const p=await boot('shared_boss_rates',{snapshots:[a,b,c],accounts:[{id:'group-one',label:'',characters:[{name:a.characterName},{name:b.characterName}]},{id:'group-two',label:'친구',characters:[{name:c.characterName}]}]});try{
+ const p=await boot('shared_boss_rates',{snapshots:[a,b,c],accounts:[{id:'group-one',label:'',characters:[{name:a.characterName},{name:b.characterName},{name:'미등록캐릭터'}]},{id:'group-two',label:'친구',characters:[{name:c.characterName}]}]});try{
   const labels=[...p.doc.querySelector('#shared-account').options].map(o=>o.textContent);assert(labels.includes('높은캐릭터'));assert(labels.includes('친구'));assert.equal(p.doc.querySelector('#shared-open').hidden,false);assert(![...p.doc.querySelector('#shared-character').options].some(o=>o.textContent.includes('새 캐릭터')));
-  select(p.w,'shared-account','group-one');await settle();const names=[...p.doc.querySelector('#shared-character').options].map(o=>o.value);assert(names.includes('낮은캐릭터'));assert(names.includes('높은캐릭터'));assert(!names.includes('다른계정'));assert(p.doc.querySelector('#shared-character optgroup').label==='높은캐릭터');
+  select(p.w,'shared-account','group-one');await settle();const names=[...p.doc.querySelector('#shared-character').options].map(o=>o.value);assert.deepEqual(names,['','높은캐릭터','낮은캐릭터']);assert(p.doc.querySelector('#shared-character optgroup').label==='높은캐릭터');
   assert(!p.doc.querySelector('#shared-conditions'));assert(p.doc.querySelector('#shared-profile').parentElement.parentElement.classList.contains('shared-hero'));
  }finally{p.close();}
 });
 test('파티 생성 중 멤버를 구성하고 같은 계정 중복을 거부하며 이름을 비우면 보스 이름으로 저장한다',async()=>{
  const a=snapshot('본캐'),b=snapshot('부캐'),c=snapshot('친구캐릭터');
- const p=await boot('party_boss_scheduler',{snapshots:[a,b,c],accounts:[{id:'mine',label:'내 계정',characters:[{name:'본캐'},{name:'부캐'}]},{id:'friend',label:'친구 계정',characters:[{name:'친구캐릭터'}]}]});try{
+ const p=await boot('party_boss_scheduler',{snapshots:[a,b,c],accounts:[{id:'mine',label:'내 계정',characters:[{name:'본캐'},{name:'부캐'},{name:'미등록캐릭터'}]},{id:'friend',label:'친구 계정',characters:[{name:'친구캐릭터'}]}]});try{
   assert(!p.doc.querySelector('#party-schedule'));p.doc.querySelector('#party-create-toggle').click();select(p.w,'party-boss','Lotus|Extreme');select(p.w,'party-draft-account','mine');select(p.w,'party-draft-character','본캐');p.doc.querySelector('#party-draft-add').click();select(p.w,'party-draft-character','부캐');p.doc.querySelector('#party-draft-add').click();assert(p.doc.querySelector('#party-draft-status').textContent.includes('같은 계정'));assert.equal(p.doc.querySelectorAll('#party-draft-members .party-member').length,1);
+  assert(!p.doc.querySelector('#party-draft-character option[value="미등록캐릭터"]'));
   select(p.w,'party-draft-account','friend');select(p.w,'party-draft-character','친구캐릭터');p.doc.querySelector('#party-draft-add').click();p.doc.querySelector('#party-create-form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await settle();const party=JSON.parse(p.w.localStorage.getItem('partyBossScheduler.v1')).parties[0];assert.equal(party.name,'익스트림 스우');assert.equal(party.members.length,2);assert(!('schedule' in party));assert.equal(p.doc.querySelectorAll('#party-detail .party-member').length,2);
   select(p.w,'party-account','mine');select(p.w,'party-saved-character','부캐');await settle();p.doc.querySelector('#party-add-current').click();assert(p.doc.querySelector('#party-search-status').textContent.includes('같은 계정'));assert.equal(p.doc.querySelectorAll('#party-detail .party-member').length,2);
+  assert(!p.doc.querySelector('#party-saved-character option[value="미등록캐릭터"]'));
+ }finally{p.close();}
+});
+test('선택한 파티만 확인 후 삭제하고 브라우저 목록에 저장한다',async()=>{
+ const p=await boot('party_boss_scheduler');
+ try{
+  for(const name of ['첫 파티','둘째 파티']){
+   p.doc.querySelector('#party-create-toggle').click();
+   type(p.w,'party-name',name);
+   p.doc.querySelector('#party-create-form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+  }
+  const saved=()=>JSON.parse(p.w.localStorage.getItem('partyBossScheduler.v1')).parties.map(party=>party.name);
+  p.w.confirm=()=>false;
+  p.doc.querySelector('.party-delete').click();
+  assert.deepEqual(saved(),['첫 파티','둘째 파티']);
+  p.w.confirm=message=>message.includes('둘째 파티');
+  p.doc.querySelector('.party-delete').click();
+  assert.deepEqual(saved(),['첫 파티']);
+  assert(p.doc.querySelector('#party-detail').textContent.includes('첫 파티'));
  }finally{p.close();}
 });
 test('배율 저장 시 선택한 계정으로 묶고 계정 이름과 저장 토스트를 갱신한다',async()=>{

@@ -73,14 +73,50 @@
     try{var saved=JSON.parse(win.localStorage.getItem(STORAGE)||'{}');parties=restore(saved,choices);}catch(e){}
     function node(tag,cls,label){var n=doc.createElement(tag);if(cls)n.className=cls;if(label!=null)n.textContent=label;return n;}
     function status(message,error){el('party-search-status').textContent=message||'';el('party-search-status').classList.toggle('error',!!error);}
-    function persist(){try{win.localStorage.setItem(STORAGE,JSON.stringify({parties:parties}));el('party-storage-status').textContent='';}catch(e){el('party-storage-status').textContent='브라우저에 저장하지 못했습니다.';}}
+    function persist(nextParties=parties){
+      try{
+        win.localStorage.setItem(STORAGE,JSON.stringify({parties:nextParties}));
+        el('party-storage-status').textContent='';
+        return true;
+      }catch(e){
+        el('party-storage-status').textContent='브라우저에 저장하지 못했습니다.';
+        return false;
+      }
+    }
     function snapshotFor(c){return scouter.findShared(shared,c.name,'00000');}
     function publicInfo(name){var s=scouter.findShared(shared,name,'00000'),p=s&&profiles.fresh(s.character,name);for(var a of accounts.groups(shared)){var c=a.characters.find(function(c){return c.name===name;});if(c&&c.profile&&(!p||c.profile.updatedAt>p.updatedAt))p=c.profile;}return p;}
     function accountName(name){var id=accounts.accountId(shared,name),g=accounts.groups(shared).find(function(g){return g.id===id;});return g?g.label:'미분류';}
     function publicMember(name,bossId){var p=publicInfo(name),c=p?{...p,ocid:'shared:'+name}:{ocid:'shared:'+name,name:name,world:'',job:'',level:0,image:'',updatedAt:0};return makeMember(c,bossId);}
     function fillAccounts(id){var select=el(id),value=select.value;select.replaceChildren();var first=node('option','','전체 계정');first.value='';select.append(first);accounts.groups(shared).forEach(function(g){var o=node('option','',g.label);o.value=g.id||'__unassigned__';select.append(o);});select.value=Array.from(select.options).some(function(o){return o.value===value;})?value:'';}
-    function fillCharacters(id,accountId,bossId,value){var select=el(id);select.replaceChildren();var first=node('option','','캐릭터 선택');first.value='';select.append(first);var count=0;
-      accounts.groups(shared).filter(function(g){return !accountId||(g.id||'__unassigned__')===accountId;}).forEach(function(g){var group=node('optgroup');group.label=g.label;g.characters.forEach(function(c){var snap=scouter.findShared(shared,c.name,'00000'),r=snap&&snap.rates.find(function(r){return r.bossId===bossId;}),o=node('option','',c.name+(c.profile?' · Lv.'+c.profile.level:'')+(bossId?r?' · '+r.percent+'%':' · 배율 미등록':''));o.value=c.name;o.disabled=!snap||!!bossId&&!r;group.append(o);count++;});select.append(group);});select.disabled=!count;select.value=Array.from(select.options).some(function(o){return o.value===value&&!o.disabled;})?value:'';}
+    function fillCharacters(id,accountId,bossId,value){
+      var select=el(id);
+      select.replaceChildren();
+      var placeholder=node('option','','캐릭터 선택');
+      placeholder.value='';
+      select.append(placeholder);
+      for(var account of accounts.groups(shared)){
+        if(accountId&&(account.id||'__unassigned__')!==accountId)continue;
+        var registered=account.characters.filter(function(character){return character.snapshot;});
+        if(!registered.length)continue;
+        var group=node('optgroup');
+        group.label=account.label;
+        for(var character of registered){
+          var snapshot=scouter.findShared(shared,character.name,'00000');
+          var bossRate=snapshot&&snapshot.rates.find(function(rate){return rate.bossId===bossId;});
+          var label=character.name;
+          if(character.profile)label+=' · Lv.'+character.profile.level;
+          if(bossId)label+=bossRate?' · '+bossRate.percent+'%':' · 배율 미등록';
+          var option=node('option','',label);
+          option.value=character.name;
+          option.disabled=!snapshot||Boolean(bossId&&!bossRate);
+          group.append(option);
+        }
+        select.append(group);
+      }
+      select.disabled=select.options.length===1;
+      if(select.disabled)placeholder.textContent='등록된 캐릭터 없음';
+      select.value=Array.from(select.options).some(function(option){return option.value===value&&!option.disabled;})?value:'';
+    }
     function makeMember(c,bossId){var snap=snapshotFor(c),r=snap&&snap.rates.find(function(row){return row.bossId===bossId;});return {character:{...c},rate:r?r.percent:null,rateMode:'auto',rateUpdatedAt:snap?snap.fetchedAt:''};}
     function targetBoss(){var p=parties.find(function(p){return p.id===selected;});return !el('party-create-form').hidden?el('party-boss').value:p?p.bossId:'';}
     function available(){var bossId=targetBoss();return shared.snapshots.filter(function(raw){var snap=scouter.findShared(shared,raw.characterName,'00000');return snap&&(!bossId||snap.rates.some(function(r){return r.bossId===bossId;}));});}
@@ -110,7 +146,25 @@
       if(!p){detail.append(node('p','party-empty',el('party-view').value==='mine'?'내 캐릭터 파티가 없습니다.':'새 파티를 만들어보세요.'));return;}
       var boss=choices.find(function(c){return c.id===p.bossId;}),sum=summary(p.members);add.disabled=!current||!snapshotFor(current)||!snapshotFor(current).rates.some(function(r){return r.bossId===p.bossId;});
       add.onclick=function(){if(!current)return;if(accounts.conflict(shared,p.members,current.name)){status('같은 계정은 한 명만 배치할 수 있습니다.',true);return;}if(p.members.length>=boss.max){status('최대 '+boss.max+'명입니다.',true);return;}p.members.push(makeMember(current,p.bossId));persist();renderBoard();status(current.name+' 추가됨');};
-      var title=node('h3');title.append(visual.create(doc,p.bossId,win.MapleBossDB));if(p.name!==boss.label)title.append(node('span','',p.name));detail.append(title);
+      var header=node('div','party-detail-head');
+      var title=node('h3');
+      title.append(visual.create(doc,p.bossId,win.MapleBossDB));
+      if(p.name!==boss.label)title.append(node('span','',p.name));
+      var deleteButton=node('button','party-delete','파티 삭제');
+      deleteButton.type='button';
+      deleteButton.addEventListener('click',function(){
+        if(!win.confirm('“'+p.name+'” 파티를 삭제할까요?'))return;
+        var remaining=parties.filter(function(party){return party.id!==p.id;});
+        if(!persist(remaining))return;
+        parties=remaining;
+        selected=visible()[0]?.id||'';
+        candidates();
+        renderBoard();
+        status('');
+        el('party-storage-status').textContent='“'+p.name+'” 파티를 삭제했습니다.';
+      });
+      header.append(title,deleteButton);
+      detail.append(header);
       var total=node('div','party-total'),values=node('div');values.append(node('p','party-note','배율 합계'),node('output','',sum.total.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%'));if(sum.missing)values.append(node('p','party-note',sum.missing+'명 미등록'));total.append(values);detail.append(total);
       if(p.members.some(function(m,i){return accounts.conflict(shared,p.members.slice(0,i),m.character.name);}))detail.append(node('p','party-note account-error','계정 묶음이 변경되어 같은 계정의 캐릭터가 중복되었습니다. 한 명을 빼주세요.'));
       p.members.forEach(function(m){var row=node('div','party-member'),info=node('div'),remove=node('button','','×');info.append(node('strong','',m.character.name),node('p','',m.character.level?m.character.world+' · Lv.'+m.character.level+' · '+m.character.job:''));

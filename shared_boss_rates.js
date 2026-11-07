@@ -14,8 +14,25 @@
   function memberInfo(value){for(var g of allGroups()){var member=g.characters.find(function(c){return c.name===value;});if(member)return member;}return null;}
   function option(select,value,label){var o=node('option',label);o.value=value;select.append(o);return o;}
   function characterOptions(){
-    var select=el('shared-character');select.replaceChildren();option(select,'','캐릭터 선택').disabled=true;
-    allGroups().filter(function(g){return !accountFilter||(g.id||'__unassigned__')===accountFilter;}).forEach(function(g){var group=node('optgroup');group.label=g.label;g.characters.forEach(function(c){option(group,c.name,c.name+(c.profile?' · '+c.profile.world+' · Lv.'+c.profile.level:''));});select.append(group);});select.value=name;
+    var select=el('shared-character');
+    select.replaceChildren();
+    var placeholder=option(select,'','캐릭터 선택');
+    placeholder.disabled=true;
+    for(var account of allGroups()){
+      if(accountFilter&&(account.id||'__unassigned__')!==accountFilter)continue;
+      var registered=account.characters.filter(function(character){return character.snapshot;});
+      if(!registered.length)continue;
+      var group=node('optgroup');
+      group.label=account.label;
+      for(var character of registered){
+        var profile=character.profile;
+        var label=character.name+(profile?' · '+profile.world+' · Lv.'+profile.level:'');
+        option(group,character.name,label);
+      }
+      select.append(group);
+    }
+    if(select.options.length===1)placeholder.textContent='등록된 캐릭터 없음';
+    select.value=Array.from(select.options).some(function(entry){return entry.value===name;})?name:'';
   }
   function ownerOptions(){
     var owner=el('shared-owner');owner.replaceChildren();option(owner,'__unassigned__','미분류');allGroups().filter(function(g){return g.id;}).forEach(function(g){option(owner,g.id,g.label);});option(owner,'__new__','새 계정');
