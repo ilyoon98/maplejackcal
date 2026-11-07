@@ -4,7 +4,8 @@
   function init() {
     const q = (s, r = document) => r.querySelector(s);
     const qa = (s, r = document) => Array.from(r.querySelectorAll(s));
-    const page = location.pathname.split('/').pop() || 'index.html';
+    const basename = location.pathname.split('/').pop() || 'index.html';
+    const page = basename.endsWith('.html') ? basename : basename + '.html';
     document.body.dataset.uxPage = page;
     const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; };
     const text = s => q(s)?.textContent.trim() || '';
@@ -19,7 +20,6 @@
     const head = make('div', 'ux-help-head'); const title = make('h2', '', '사용법 · 계산 기준'); title.id = 'uxHelpTitle'; title.textContent = '사용법 · 계산 기준';
     const close = make('button', 'ux-button', '닫기 ✕'); close.type = 'button'; close.setAttribute('aria-label', '도움말 닫기');
     head.append(title, close); help.append(head);
-    const intro = make('p', 'ux-hint', page === 'starforce_history.html' ? '본인 API 키로 기록을 조회한 뒤 장비를 선택하세요. 강화 조건을 확인하고 선택 구간 분석을 누르면 결과가 갱신됩니다.' : /play|gacha|idle/.test(page) ? '가상으로 진행한 결과와 기록을 확인할 수 있어요. 실제 게임의 아이템이나 재화는 사용하지 않습니다.' : '입력값을 바꾸면 결과가 자동으로 갱신됩니다. 상세 내역은 결과 아래에서 펼쳐볼 수 있어요.'); help.append(intro);
     qa('[data-ux-help]').forEach(n => {
       const section = make('section', 'ux-help-section'); section.append(make('h3', '', n.dataset.uxHelp));
       const detail = q('details', n); if (detail) { q('summary', detail)?.remove(); section.append(...detail.childNodes); }
@@ -29,18 +29,27 @@
     const source = q('#dataSource'); if (source) { const section = make('section', 'ux-help-section'); section.append(make('h3', '', '데이터 출처'), source); help.append(section); }
     const guides = {
       'index.html': '일반 계산기는 API 연결 없이 사용할 수 있습니다. 캐릭터 정보를 가져오려면 내 캐릭터 연결에서 API 키를 등록하세요. 키와 설정은 이 브라우저에 저장됩니다.',
+      'starforce_history.html': '본인 API 키로 기록을 조회한 뒤 장비를 선택하세요. 강화 조건을 확인하고 선택 구간 분석을 누르면 결과가 갱신됩니다.',
       'trace_calc.html': '아이템과 작을 선택한 뒤, 진행 중인 작이라면 슬롯을 눌러 성공·실패를 표시하세요. 손절 기준표는 결과 아래에서 펼칠 수 있습니다.',
       'authentic_symbol_calc.html': '캐릭터를 조회하거나 현재 심볼 레벨을 직접 설정하세요. 목표 포스까지 최소 메소가 드는 강화 순서를 보여줍니다. 심볼 보유 수량과 획득 기간을 고려한 경로는 아닙니다.',
       'boss_income_calc.html': 'API 없이 캐릭터를 직접 추가하고 보스·난이도·완료 상태를 선택할 수 있습니다. API를 연결하면 스케줄러에서 보스와 완료 상태를 가져옵니다. 파티 인원은 직접 확인하세요. 주간 완료 수익은 완료한 주간 보스만 합산하며, 검은 마법사 등 월간 보스는 제외합니다. 결정석 판매 여부를 확인한 금액은 아닙니다. 월간 예상은 주간 수익 4회와 월간 보스 수익의 합입니다.',
+      'party_boss_scheduler.html': '파티 만들기에서 보스와 난이도를 선택하고 캐릭터를 추가하세요. 파티 저장을 누르면 이 브라우저에 저장됩니다.',
+      'shared_boss_rates.html': '캐릭터를 고른 뒤 환산 배율을 불러오거나 캡처에서 읽어 오세요. 값을 확인하고 공용 배율 저장을 누르면 파티 스케줄러에서 사용할 수 있습니다.',
+      'flame_calc.html': '장비 레벨과 종류를 선택한 뒤 목표 옵션을 추가하세요. 옵션과 불꽃 종류를 바꾸면 기대값이 갱신됩니다. 장비별 수치는 본문의 1추부터 5추까지에서 볼 수 있습니다.',
       'cube_calc.html': '현재 등급과 목표 등급을 선택하세요. 천장은 등급업 기준이며 옵션 획득을 보장하지 않습니다. 내 기록 비교에 실제 사용 횟수를 입력할 수 있습니다.',
       'cube_play.html': '한 단계 등급업하면 자동 진행이 멈춥니다. 같은 구간을 다시 도전하거나 다음 등급으로 진행할 수 있어요. 완료한 판의 평균과 누적 기록은 서로 다른 비교 기준입니다.',
+      'starforce_play.html': '장비와 시작·목표 별을 고른 뒤 가상 강화를 시작하세요. 목표에 도달한 판의 사용 메소를 기대값과 비교할 수 있습니다.',
       'pet_gacha.html': '원더블랙 2개 또는 원더블랙과 루나 스윗을 합성합니다. 자동 뽑기는 블랙＋스윗을 우선 사용합니다. 보관함의 확률은 원더베리·합성 등 해당 단계 기준이며 서로 더하지 않습니다.',
       'boutique_gacha.html': '자동 뽑기의 목표는 한 번에 얻는 티켓 수입니다. 피버는 10번째 뽑기마다 적용됩니다. 성적표의 상위 비율은 정규근사 추정치이며 적은 횟수에서는 참고용입니다.',
       'seedring_gacha.html': '오늘의 뽑기는 지정 상자를 한 번, 무한 뽑기는 선택한 상자를 반복해서 엽니다. 확률은 커뮤니티 자료로 재구성한 추정치입니다. 전체 확률은 화면의 확률표를 펼쳐 확인하세요.',
       'herb_idle.html': '약초 캐기·오일 만들기·연금술 버튼을 누르면 캐릭터가 그 자리로 가서 알아서 진행합니다. 가공 재료가 떨어지면 약초 캐기로 돌아옵니다. 시세는 3초마다 바뀌니 평소보다 오를 때 파세요. 창을 닫아도 최대 8시간까지 이어서 캡니다.',
       'coin_shop_calc.html': '현재까지 사용 가능은 선택 주차까지의 누적 획득 계획에서 구매 기록을 뺀 값입니다. 이번 주 잔액은 장바구니까지 반영합니다. 종료 예상 잔액에는 앞으로 받을 코인이 포함됩니다. 전부 구매 처리는 이 계산기의 기록만 갱신합니다.'
     };
-    if (guides[page]) { const section = make('section', 'ux-help-section'); section.append(make('h3', '', '사용 방법'), make('p', '', guides[page])); help.append(section); }
+    if (guides[page] || !help.querySelector('.ux-help-section')) {
+      const section = make('section', 'ux-help-section');
+      section.append(make('h3', '', '사용 방법'), make('p', '', guides[page] || '조건을 설정하면 결과가 바로 갱신됩니다.'));
+      head.after(section);
+    }
     document.body.append(help);
     if (header) {
       const opener = make('button', 'ux-help-open', '? 도움말'); opener.type = 'button'; opener.setAttribute('aria-haspopup', 'dialog'); opener.setAttribute('aria-controls', help.id);
@@ -54,7 +63,7 @@
     if (page === 'index.html') {
       const api = q('#apiKey'); const tools = qa('.tool-section')[0]; if (api && tools) tools.after(api);
       const openKey = () => { if (location.hash === '#apiKey' && api) { api.open = true; api.scrollIntoView(); } }; window.addEventListener('hashchange', openKey);
-      const groups = window.SiteNavigation.categories.slice(0, 3).map(([name, paths]) => [name, paths.map(path => path.replace('.html', ''))]);
+      const groups = window.SiteNavigation.categories.filter(([, , group]) => group === 'calc').map(([name, paths]) => [name, paths.map(path => path.replace('.html', ''))]);
       const grid = q('.tool-grid', tools); const cards = qa('.tool-card', grid);
       window.SiteNavigation.categories.forEach(([, paths]) => paths.forEach(path => {
         const card = cards.find(card => card.getAttribute('href') === path); if (card) grid.append(card);
@@ -181,6 +190,8 @@
       'cube_option_calc.html':['.cube-layout > aside','#resMeso','평균 비용'],
       'cube_calc.html':['.cube-layout > aside','#expectedCost','평균 비용'],
       'starforce_calc.html':['.sf-layout > aside','#resMeso','평균 비용'],
+      'flame_calc.html':['.fc-result','#flameExpectedCost','평균 메소 비용','#flameResult [data-result-status]'],
+      'hunting_calc.html':['#hunt-result','#results:not([hidden]) #fragments','솔 에르다 조각(개)','#inputError:not([hidden]) [data-result-status]'],
       'trace_calc.html':['.layout-right','#actionValue','지금 할 일'],
       'boss_buff_planner.html':['.layout-right','#packResult','동선 확인'],
       'trade_margin_calc.html':['.tm-result','#breakEvenValue','본전 판매가'],
@@ -193,12 +204,12 @@
     };
     const config = docks[page];
     if (config && q(config[0])) {
-      const [target, source, label] = config; const bar = make('div','ux-result-dock'); const go = make('button','ux-dock-main'); go.type='button';
-      const caption = make('span','ux-dock-caption',label); const val = make('strong'); const action = make('span','ux-dock-action','결과 보기 ↑'); go.append(caption,val,action); bar.append(go); document.body.append(bar); document.body.classList.add('ux-has-dock');
+      const [target, source, label, status] = config; const bar = make('div','ux-result-dock'); const go = make('button','ux-dock-main'); go.type='button';
+      const caption = make('span','ux-dock-caption',label); const val = make('strong'); const action = make('span','ux-dock-action','결과 보기'); go.append(caption,val,action); bar.append(go); document.body.append(bar); document.body.classList.add('ux-has-dock');
       const dest=q(target); if(!dest.id) dest.id='ux-result'; go.setAttribute('aria-controls',dest.id);
       go.addEventListener('click',()=>{ dest.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'}); dest.setAttribute('tabindex','-1'); dest.focus({preventScroll:true}); });
-      const update=()=> { let value=text(source); if(page==='boss_buff_planner.html') value='전체 동선 / 버프 한 번'; if(page==='starforce_play.html') value+='★'; if(page!=='wealth_elixir_calc.html' && q('#verdictBox') && !q('#verdictBox').classList.contains('hidden')) {value=text('#verdictValue');setText(caption,page==='trade_margin_calc.html'?'총 순이익':'실수령 차이');} else setText(caption,label); setText(val,value||'조건을 입력하세요'); };
-      const observed=q(source); if(observed)new MutationObserver(update).observe(dest,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']}); update();
+      const update=()=> { let value=text(source); if(page==='boss_buff_planner.html') value='전체 동선 / 버프 한 번'; if(page==='starforce_play.html') value+='★'; if(page!=='wealth_elixir_calc.html' && q('#verdictBox') && !q('#verdictBox').classList.contains('hidden')) {value=text('#verdictValue');setText(caption,page==='trade_margin_calc.html'?'총 순이익':'실수령 차이');} else setText(caption,label); setText(val,value||(status && text(status))||'조건을 입력하세요'); };
+      new MutationObserver(update).observe(dest,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','hidden']}); update();
     }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

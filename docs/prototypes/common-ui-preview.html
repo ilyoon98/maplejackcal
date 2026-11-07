@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="../../">
+  <title>주간 메소 목표 계산기 · UI 프로토타입</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="site_ux.css">
+  <script src="site_header.js" defer></script>
+  <script src="site_nav.js" defer></script>
+  <script src="site_ux.js" defer></script>
+  <style>
+    .ui-preview header .preview-label {
+      color: var(--ux-muted);
+      font-size: .75rem;
+      margin: 0 0 4px;
+    }
+    .ui-preview .layout > * { min-width: 0; }
+    .ui-preview .card { margin-top: 0; }
+    .ui-preview .preview-fields { display: grid; gap: 16px; }
+    .ui-preview .preview-field { display: grid; gap: 6px; }
+    .ui-preview .preview-field label { font-size: .9rem; font-weight: 650; }
+    .ui-preview .preview-field small { color: var(--ux-muted); font-size: .8rem; }
+    .ui-preview .preview-input {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      color: var(--ux-muted);
+      font-size: .85rem;
+    }
+    .ui-preview .preview-input input {
+      width: 100%;
+      min-height: var(--ui-control-height);
+      padding: 8px 12px;
+      border: 1px solid var(--ux-line);
+      border-radius: var(--ui-control-radius);
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 1rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .ui-preview .preview-input input[aria-invalid="true"] { border-color: var(--bad); }
+    .ui-preview .preview-field small.error { color: var(--bad); }
+    .ui-preview .preview-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .ui-preview .preview-actions > * { min-height: var(--ui-control-height); }
+    .ui-preview .preview-jump { display: none; }
+    .ui-preview .preview-result { scroll-margin-top: 16px; overflow-wrap: anywhere; }
+    .ui-preview .preview-result:focus-visible { outline: 2px solid var(--ux-accent); outline-offset: 3px; }
+    .ui-preview .preview-estimate { margin: 0; color: var(--accent); font-weight: 700; }
+    .ui-preview .preview-estimate output {
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+    }
+    .ui-preview .preview-estimate span { margin-left: 6px; font-size: 1.2rem; }
+    .ui-preview .preview-scope { min-height: 1.5em; margin: 8px 0 20px; color: var(--ux-muted); }
+    .ui-preview .preview-breakdown { display: grid; gap: 10px; margin: 0; }
+    .ui-preview .preview-breakdown div {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 4px 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--ux-line);
+    }
+    .ui-preview .preview-breakdown dt { color: var(--ux-muted); }
+    .ui-preview .preview-breakdown dd { margin: 0; font-weight: 650; }
+    .ui-preview .ux-details { margin-bottom: 0; }
+    .ui-preview .ux-details summary { min-height: var(--ui-control-height); padding-block: 10px; }
+    .ui-preview .ux-details p { margin: 4px 0 0; }
+    @media (max-width: 960px) {
+      .ui-preview .preview-jump { display: inline-flex; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap ui-preview">
+    <div data-site-navigation></div>
+    <header>
+      <p class="preview-label">공통 UI 프로토타입</p>
+      <h1><img class="site-title-icon" src="icons/home/메소주머니.webp" alt="" width="32" height="32">주간 메소 목표 계산기</h1>
+      <p class="sub">매주 모으는 메소로 목표까지 얼마나 걸리는지 확인하세요.</p>
+    </header>
+
+    <main class="layout">
+      <section class="card" aria-labelledby="preview-input-title">
+        <h2 id="preview-input-title">저축 조건</h2>
+        <div class="preview-fields">
+          <div class="preview-field">
+            <label for="preview-goal">목표 금액</label>
+            <div class="preview-input">
+              <input id="preview-goal" value="1,000,000,000" inputmode="numeric" aria-describedby="preview-goal-note">
+              <span aria-hidden="true">메소</span>
+            </div>
+            <small id="preview-goal-note">10억 메소</small>
+          </div>
+          <div class="preview-field">
+            <label for="preview-current">현재 보유 메소</label>
+            <div class="preview-input">
+              <input id="preview-current" value="400,000,000" inputmode="numeric" aria-describedby="preview-current-note">
+              <span aria-hidden="true">메소</span>
+            </div>
+            <small id="preview-current-note">4억 메소</small>
+          </div>
+          <div class="preview-field">
+            <label for="preview-weekly">주간 저축액</label>
+            <div class="preview-input">
+              <input id="preview-weekly" value="150,000,000" inputmode="numeric" aria-describedby="preview-weekly-note">
+              <span aria-hidden="true">메소</span>
+            </div>
+            <small id="preview-weekly-note">1억 5,000만 메소</small>
+          </div>
+        </div>
+        <div class="preview-actions">
+          <button class="ux-button" id="preview-example" type="button">예시 값 불러오기</button>
+          <button class="ux-button preview-jump" id="preview-jump" type="button">결과 보기 ↓</button>
+        </div>
+      </section>
+
+      <aside class="layout-right">
+        <section class="card card-primary preview-result" id="preview-result" aria-labelledby="preview-result-title" tabindex="-1">
+          <h2 id="preview-result-title">목표까지 예상 기간</h2>
+          <div role="status" aria-atomic="true">
+            <p class="preview-estimate"><output id="preview-weeks" aria-live="off">4</output><span id="preview-unit">주</span></p>
+            <p class="preview-scope" id="preview-scope">매주 1억 5,000만 메소씩 모을 때</p>
+          </div>
+          <dl class="preview-breakdown">
+            <div><dt>목표 금액</dt><dd id="preview-target">10억 메소</dd></div>
+            <div><dt>더 모을 메소</dt><dd id="preview-missing">6억 메소</dd></div>
+          </dl>
+          <details class="ux-details">
+            <summary>계산 기준</summary>
+            <p class="ux-hint">더 모을 메소를 주간 저축액으로 나눈 뒤, 주 단위로 올림합니다.</p>
+          </details>
+        </section>
+      </aside>
+    </main>
+
+    <section data-ux-help="주간 메소 목표 계산기">
+      <p>목표 금액, 현재 보유 메소, 주간 저축액을 입력하면 예상 기간이 바로 갱신됩니다. 예시 값 불러오기로 처음 예시를 다시 볼 수 있습니다.</p>
+    </section>
+  </div>
+  <script>
+    const element = name => document.getElementById('preview-' + name);
+    const fields = [element('goal'), element('current'), element('weekly')];
+    const format = new Intl.NumberFormat('ko-KR');
+
+    function meso(value) {
+      const units = ['조', '억', '만', ''];
+      const factors = [1_000_000_000_000, 100_000_000, 10_000, 1];
+      const parts = factors.map((factor, index) => {
+        const group = Math.floor(value / factor) % 10_000;
+        return group ? format.format(group) + units[index] : '';
+      }).filter(Boolean);
+      return (parts.join(' ') || '0') + ' 메소';
+    }
+
+    function readAmount(field) {
+      const raw = field.value.trim();
+      const value = Number(raw.replaceAll(',', ''));
+      const invalid = raw !== '' && (!/^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(raw) || value > 1_000_000_000_000);
+      const note = document.getElementById(field.getAttribute('aria-describedby'));
+      field.setAttribute('aria-invalid', String(invalid));
+      note.classList.toggle('error', invalid);
+      note.textContent = invalid ? '0부터 1조까지 정수로 입력하세요.' : raw ? meso(value) : '금액을 입력하세요.';
+      return raw && !invalid ? value : null;
+    }
+
+    function update() {
+      const [goal, current, weekly] = fields.map(readAmount);
+      const missing = goal === null || current === null ? null : Math.max(0, goal - current);
+      let weeks = null;
+      let scope = '저축 조건을 모두 입력하세요.';
+      if (missing === 0) {
+        weeks = 0;
+        scope = '이미 목표를 달성했어요.';
+      } else if (missing !== null && weekly === 0) {
+        scope = '예상 기간을 보려면 주간 저축액을 1메소 이상 입력하세요.';
+      } else if (missing !== null && weekly !== null) {
+        weeks = Math.ceil(missing / weekly);
+        scope = '매주 ' + meso(weekly) + '씩 모을 때';
+      }
+      element('weeks').textContent = weeks === null ? '—' : format.format(weeks);
+      element('unit').hidden = weeks === null;
+      element('scope').textContent = scope;
+      element('target').textContent = goal === null ? '—' : meso(goal);
+      element('missing').textContent = missing === null ? '—' : meso(missing);
+    }
+
+    fields.forEach(field => {
+      field.addEventListener('input', update);
+      field.addEventListener('blur', () => {
+        if (field.value.trim() && field.getAttribute('aria-invalid') === 'false') {
+          field.value = format.format(Number(field.value.replaceAll(',', '')));
+        }
+      });
+    });
+    element('example').addEventListener('click', () => {
+      fields.forEach(field => { field.value = field.defaultValue; });
+      update();
+    });
+    element('jump').addEventListener('click', () => element('result').focus());
+    update();
+  </script>
+</body>
+</html>

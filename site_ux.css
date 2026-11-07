@@ -1,14 +1,43 @@
 /* Shared information hierarchy. Existing calculator styles and engines remain intact. */
 body { --ux-surface:#171a21; --ux-line:#343b49; --ux-text:#e8e9ec; --ux-muted:#aeb7c7; --ux-accent:#6ea8fe; }
-body .ux-header { position:relative; padding:20px 150px 20px 22px; margin:0 0 20px; border:1px solid var(--ux-line); border-radius:12px; background:var(--ux-surface); min-height:0; overflow:visible; }
-body .ux-header h1 { font-size:clamp(1.3rem,2.3vw,1.85rem); line-height:1.4; margin:0; letter-spacing:-.035em; }
+body :is(.cube-panel, .sf-panel, .ic-panel, .tm-panel, .mm-panel, .hunt-panel, .history-panel, .bt-card, .pet-card, .sr-card) {
+  border-radius: var(--ui-card-radius);
+}
+/* Native inputs and single selects share a frame while keeping page-specific widths. */
+body:has(.site-nav) :is(input:not(:where([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="hidden"], [type="button"], [type="submit"], [type="reset"])), select):not(:where(.flatpickr-calendar *, [multiple], [size])) {
+  min-height: var(--ui-control-height);
+  max-width: 100%;
+  border: 1px solid var(--ux-line);
+  border-radius: var(--ui-control-radius);
+  color: var(--ux-text);
+  color-scheme: dark;
+}
+body:has(.site-nav) :is(input:not(:where([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="hidden"], [type="button"], [type="submit"], [type="reset"])), select):not(:where(.flatpickr-calendar *, [multiple], [size], .row-diff)) {
+  background-color: var(--bg);
+}
+body:has(.site-nav) select:not(:where(.flatpickr-calendar *, [multiple], [size])) {
+  appearance: none;
+  padding-inline-end: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1.5 5 5 5-5' fill='none' stroke='%23aeb7c7' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  text-overflow: ellipsis;
+}
+body:has(.site-nav) select:not(:disabled):hover { border-color: var(--ux-accent); }
+body:has(.site-nav) select:disabled { opacity: .65; cursor: default; }
+@media (forced-colors: active) {
+  body:has(.site-nav) select:not(:where(.flatpickr-calendar *, [multiple], [size])) { appearance: auto; background-image: none; }
+}
+body .ux-header { display:block; position:relative; padding:20px 150px 20px 22px; margin:0 0 20px; border:1px solid var(--ux-line); border-radius:var(--ui-card-radius); background:var(--ux-surface); min-height:0; overflow:visible; }
+body .ux-header h1 { font-size:clamp(1.3rem,2.3vw,1.85rem); line-height:1.4; margin:0; letter-spacing:-.035em; overflow-wrap:anywhere; }
 body .ux-header .eyebrow { display:none; }
 body .ux-header p { max-width:760px; font-size:.88rem; line-height:1.65; margin:7px 0 0; color:var(--ux-muted); }
 body .ux-header::before,body .ux-header::after { display:none; }
 body .ux-header .reset-badge { position:static; float:right; margin:0 0 8px 12px; }
-.ux-help-open,.ux-button { border:1px solid var(--ux-line); border-radius:8px; background:#202735; color:var(--ux-text); padding:9px 13px; font:inherit; font-size:.85rem; cursor:pointer; }
+.ux-help-open,.ux-button { min-height:var(--ui-control-height); border:1px solid var(--ux-line); border-radius:var(--ui-control-radius); background:#202735; color:var(--ux-text); padding:9px 13px; font:inherit; font-size:.85rem; cursor:pointer; }
 .ux-help-open { position:absolute; top:20px; right:20px; }
 body :is(button,a,input,select,summary):focus-visible { outline:3px solid var(--ux-accent); outline-offset:3px; }
+body .site-tab:focus-visible { outline-offset:-3px; }
 body .ux-help { position:fixed; inset:0 0 0 auto; margin:0; width:min(540px,100%); height:100dvh; max-height:100dvh; max-width:100%; border:0; border-left:1px solid var(--ux-line); border-radius:0; padding:0 24px 32px; background:#171a21; color:var(--ux-text); overflow:auto; box-sizing:border-box; font-size:.93rem; line-height:1.8; }
 .ux-help::backdrop { background:rgba(0,0,0,.65); }
 .ux-modal-open { overflow:hidden; }
@@ -40,6 +69,12 @@ body[data-ux-page="index.html"] .tool-card .go { display:none; }
 body[data-ux-page="index.html"] .tool-section { margin-top:24px; }
 @media(max-width:900px) { body[data-ux-page="index.html"] .tool-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media(max-width:600px) {
+ body :is(.boss-primary, .boss-icon-button, .nx-character-mode, .fetch-btn, button[role="tab"],
+   .rank-chip, .sf-chip, .part-chip, .pick-chip, .switch-item, .toggle-card, .row-doping, .week-pill,
+   .tm-chip, .mm-chip, .ic-chip, .ic-pick, .ic-level-step, .shop-tabs button, .shared-input-toggle button,
+   .boss-list-actions > .tool-btn, .ux-header-actions button,
+   :where(#schedulerRefreshAllBtn, #tabOpt, #tabManual, #probToggleBtn)) { min-height:var(--ui-control-height); }
+ body .ic-level-step { min-width:var(--ui-control-height); }
  body[data-ux-page="index.html"] .tool-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
  body[data-ux-page="index.html"] .tool-card { padding:13px 11px; }
  body[data-ux-page="index.html"] .tool-card h2 { font-size:.88rem; }
@@ -75,9 +110,9 @@ body[data-ux-page="coin_shop_calc.html"] .week-fill { white-space:normal; max-wi
   body .ux-header h1 { padding-right:0; }
   .ux-help-open { position:static; margin-top:12px; padding:7px 12px; }
   body .ux-header .reset-badge { float:none; margin:0 0 10px; }
-  body.ux-has-dock { padding-bottom:84px; }
+  body.ux-has-dock { padding-bottom:calc(84px + env(safe-area-inset-bottom)); }
   body .ux-result-dock { display:block; position:fixed; bottom:0; left:0; right:0; z-index:45; border-top:1px solid #425b7d; background:#161e2c; padding:10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow:0 -6px 25px #0004; }
-  .ux-dock-main { width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 14px; text-align:left; border:0; background:none; color:var(--ux-text); font:inherit; cursor:pointer; }
+  .ux-dock-main { width:100%; min-height:var(--ui-control-height); display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 14px; text-align:left; border:0; background:none; color:var(--ux-text); font:inherit; cursor:pointer; }
   .ux-dock-caption { grid-column:1; font-size:.72rem; color:var(--ux-muted); }
   .ux-dock-main strong { grid-column:1; font-size:1rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ux-dock-action { grid-column:2; grid-row:1 / 3; align-self:center; color:#9fc7ff; font-size:.84rem; }
@@ -109,12 +144,7 @@ body[data-ux-page="coin_shop_calc.html"] .week-fill { white-space:normal; max-wi
  .ic-result .ux-details { overflow-x:auto; }
 }
 
-body[data-ux-page="index.html"] .ux-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:17px 18px; }
-body[data-ux-page="index.html"] .ux-header h1 { min-width:0; }
-body[data-ux-page="index.html"] .ux-help-open { position:static; margin:0; flex-shrink:0; }
 @media(max-width:600px) {
- body[data-ux-page="index.html"] .ux-header h1 { font-size:1.12rem; }
- body[data-ux-page="index.html"] .ux-help-open { font-size:.75rem; padding:7px 9px; }
  .ux-home-filters .ux-button { padding:7px 8px; font-size:.72rem; }
 }
 

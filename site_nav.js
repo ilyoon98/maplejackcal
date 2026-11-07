@@ -2,13 +2,38 @@
 // Add a new page's YYYY-MM-DD release date here: NEW expires after 30 days (KST).
 window.SiteNavigation = {
   categories: [
-      ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','flame_calc.html','item_craft_calc.html','authentic_symbol_calc.html']],
-      ['보스', ['boss_income_calc.html','boss_buff_planner.html','party_boss_scheduler.html','shared_boss_rates.html']],
-      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','accessory_planner.html','wealth_elixir_calc.html','coin_shop_calc.html']],
-      ['강화 시뮬레이터', ['cube_play.html','starforce_play.html']],
-      ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html']],
-      ['미니게임', ['herb_idle.html']]
+      ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','flame_calc.html','item_craft_calc.html','authentic_symbol_calc.html'], 'calc'],
+      ['보스', ['boss_income_calc.html','boss_buff_planner.html','party_boss_scheduler.html','shared_boss_rates.html'], 'calc'],
+      ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','accessory_planner.html','wealth_elixir_calc.html','coin_shop_calc.html'], 'calc'],
+      ['강화 시뮬레이터', ['cube_play.html','starforce_play.html'], 'play'],
+      ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html'], 'play'],
+      ['미니게임', ['herb_idle.html'], 'play']
     ],
+  menuItems: {
+    'trace_calc.html': ['주흔 기댓값 계산기', '기대 메소·시도 횟수'],
+    'starforce_calc.html': ['스타포스 기댓값 계산기', '목표 성까지 기대 메소·파괴'],
+    'cube_calc.html': ['큐브 등급업 비용 계산기', '큐브별 기대 개수와 비용'],
+    'cube_option_calc.html': ['큐브 옵션 확률 계산기', '목표 잠재옵션 확률·기대 메소'],
+    'flame_calc.html': ['추가옵션 계산기', '목표 추옵 확률·불꽃·메소'],
+    'item_craft_calc.html': ['아이템 제작 비용 계산기', '노작부터 완성까지 평균 비용'],
+    'authentic_symbol_calc.html': ['어센틱 심볼 계산기', '최소 메소 강화 순서'],
+    'boss_income_calc.html': ['보스 수익 정산 계산기', '주간·월간 수익 정산'],
+    'boss_buff_planner.html': ['보스 버프 동선 계산기', '30분 버프 안 최적 조합'],
+    'party_boss_scheduler.html': ['파티 보스 스케줄러', '캐릭터 외형·파티 배율 합산'],
+    'shared_boss_rates.html': ['공용 환산 배율', '확인해 저장한 보스별 배율'],
+    'trade_margin_calc.html': ['되팔기 손익 계산기', '본전 판매가와 수수료 제외 순이익'],
+    'meso_market_calc.html': ['메소마켓 시세 계산기', '거래 방식별 실수령 비교'],
+    'hunting_calc.html': ['아이템 획득량 계산기', '30분 사냥 조각·메소'],
+    'accessory_planner.html': ['장신구 맞추기', '9부위 드랍·메획 배치'],
+    'wealth_elixir_calc.html': ['재물 비약 제작 계산기', '씨앗·오일·비약 가격 비교'],
+    'coin_shop_calc.html': ['이벤트 코인샵 계산기', '주차별 구매 계획'],
+    'cube_play.html': ['큐브 시뮬레이터', '가상 큐브와 천장 기록'],
+    'starforce_play.html': ['스타포스 시뮬레이터', '목표 성까지 가상 강화'],
+    'pet_gacha.html': ['펫 시뮬레이터', '원더베리·루나 크리스탈'],
+    'boutique_gacha.html': ['부티크 기프트 시뮬레이터', '부티크 기프트 가상 뽑기'],
+    'seedring_gacha.html': ['시드링 시뮬레이터', '보스 반지 상자 가상 뽑기'],
+    'herb_idle.html': ['달빛 약초 채집소', '약초 채집·가공·판매']
+  },
   releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02', 'party_boss_scheduler.html': '2026-11-07', 'shared_boss_rates.html': '2026-11-07', 'accessory_planner.html': '2026-11-07' },
   newDays: 30,
   // 메뉴와 홈 카드에 쓰는 게임 아이템 아이콘. 새 페이지를 추가하면 여기에도 넣는다.
@@ -58,9 +83,7 @@ window.SiteNavigation = {
   script.dataset.sundayMapleEvent = 'true';
   document.head.appendChild(script);
 })();
-// 상단 탭 한 줄. 분류(계산기·시뮬레이터)를 누르면 그 아래로 목록 패널이 펼쳐지고,
-// 패널이 열려 있는 동안에는 pill이 그 분류로 옮겨간다. 닫으면 지금 보고 있는
-// 페이지의 분류로 되돌아온다. 탭 목록은 페이지마다 하드코딩돼 있다.
+// 분류를 열면 표시를 그 탭으로 옮기고, 닫으면 현재 페이지의 분류로 돌린다.
 (function () {
   // 탭을 누르면 페이지가 통째로 새로 뜨기 때문에 직전 위치가 남지 않는다.
   // 누를 때 그 값을 넘겨놔야 새 페이지에서 "이전 분류 → 현재 분류"로 슬라이드할 수 있다.
@@ -104,79 +127,41 @@ window.SiteNavigation = {
     if (!nav) return;
     var track = nav.querySelector('.site-groups');
     if (!track) return;
-    // 공통 탭으로 추가해 모든 기존 계산기에서 기록 화면으로 이동한다.
-    if (!track.querySelector('[data-group="history"]')) {
-      var historyTab = document.createElement('a');
-      historyTab.href = 'starforce_history.html';
-      historyTab.className = 'site-tab';
-      historyTab.dataset.group = 'history';
-      historyTab.innerHTML = '<span class="site-tab-icon"></span>로그보기';
-      if (location.pathname.endsWith('/starforce_history.html')) {
-        track.querySelectorAll('.active').forEach(function (el) { el.classList.remove('active'); });
-        historyTab.classList.add('active');
-      }
-      track.appendChild(historyTab);
-    }
-    var calcMenu = nav.querySelector('.site-menu[data-group="calc"]');
-    if (calcMenu && !calcMenu.querySelector('a[href="flame_calc.html"]')) {
-      var flameLink = document.createElement('a');
-      flameLink.href = 'flame_calc.html';
-      flameLink.className = 'site-menu-item';
-      flameLink.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">추가옵션 계산기</span><span class="site-menu-desc">목표 추옵 확률·불꽃·메소</span></span>';
-      if (location.pathname.endsWith('/flame_calc.html')) flameLink.classList.add('active');
-      calcMenu.appendChild(flameLink);
-    }
-    if (calcMenu && !calcMenu.querySelector('a[href="hunting_calc.html"]')) {
-      var huntingLink = document.createElement('a');
-      huntingLink.href = 'hunting_calc.html';
-      huntingLink.className = 'site-menu-item';
-      huntingLink.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">아이템 획득량 계산기</span><span class="site-menu-desc">30분 사냥 조각·메소</span></span>';
-      if (location.pathname.endsWith('/hunting_calc.html')) huntingLink.classList.add('active');
-      calcMenu.appendChild(huntingLink);
-    }
-    if (calcMenu && !calcMenu.querySelector('a[href="wealth_elixir_calc.html"]')) {
-      var elixirLink = document.createElement('a');
-      elixirLink.href = 'wealth_elixir_calc.html';
-      elixirLink.className = 'site-menu-item';
-      elixirLink.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">재물 비약 제작 계산기</span><span class="site-menu-desc">씨앗·오일·비약 뭘 살지</span></span>';
-      if (location.pathname.endsWith('/wealth_elixir_calc.html')) elixirLink.classList.add('active');
-      calcMenu.appendChild(elixirLink);
-    }
-    var playMenu = nav.querySelector('.site-menu[data-group="play"]');
-    [
-      ['party_boss_scheduler.html', '파티 보스 스케줄러', '캐릭터 외형 · 파티 배율 합산'],
-      ['shared_boss_rates.html', '공용 환산 배율', '확인해 저장한 보스별 배율'],
-      ['accessory_planner.html', '장신구 맞추기', '9부위 드랍·메획 최저가 조합']
-    ].forEach(function (page) {
-      if (!calcMenu || calcMenu.querySelector('a[href="' + page[0] + '"]')) return;
-      var link = document.createElement('a');
-      link.href = page[0];
-      link.className = 'site-menu-item';
-      link.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">' + page[1] + '</span><span class="site-menu-desc">' + page[2] + '</span></span>';
-      if (location.pathname.endsWith('/' + page[0])) link.classList.add('active');
-      calcMenu.appendChild(link);
-    });
-    if (playMenu && !playMenu.querySelector('a[href="herb_idle.html"]')) {
-      var herbLink = document.createElement('a');
-      herbLink.href = 'herb_idle.html';
-      herbLink.className = 'site-menu-item';
-      herbLink.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name">약초 방치 게임</span><span class="site-menu-desc">채집·가공해서 시세 보고 팔기</span></span>';
-      if (location.pathname.endsWith('/herb_idle.html')) herbLink.classList.add('active');
-      playMenu.appendChild(herbLink);
-    }
+    var page = location.pathname.split('/').pop() || 'index.html';
+    if (!page.endsWith('.html')) page += '.html';
     var pill = track.querySelector('.site-tabs-pill');
-    var tabs = [].slice.call(track.querySelectorAll('.site-tab'));
-    var menus = [].slice.call(nav.querySelectorAll('.site-menu'));
-    var categories = window.SiteNavigation.categories;
-    menus.forEach(function (menu) {
-      categories.forEach(function (category) {
-        var links = category[1].map(function (href) { return menu.querySelector('a[href="' + href + '"]'); }).filter(Boolean);
-        if (!links.length) return;
-        var group = document.createElement('section'); group.className = 'site-menu-category';
-        var heading = document.createElement('h3'); heading.textContent = category[0]; group.appendChild(heading);
-        links.forEach(function (link) { group.appendChild(link); }); menu.appendChild(group);
+    var tabs = Array.from(track.querySelectorAll('.site-tab'));
+    var menus = Array.from(nav.querySelectorAll('.site-menu'));
+    var navigation = window.SiteNavigation;
+    navigation.categories.forEach(function ([title, pages, group]) {
+      var menu = menus.find(function (panel) { return panel.dataset.group === group; });
+      if (!menu) return;
+      var section = document.createElement('section');
+      section.className = 'site-menu-category';
+      var heading = document.createElement('h3');
+      heading.textContent = title;
+      section.appendChild(heading);
+      pages.forEach(function (href) {
+        var [name, description] = navigation.menuItems[href];
+        var link = document.createElement('a');
+        link.href = href;
+        link.className = 'site-menu-item';
+        link.innerHTML = '<span class="site-menu-icon"></span><span><span class="site-menu-name"></span><span class="site-menu-desc"></span></span>';
+        link.querySelector('.site-menu-name').textContent = name;
+        link.querySelector('.site-menu-desc').textContent = description;
+        section.appendChild(link);
       });
+      menu.appendChild(section);
     });
+
+    var current = Array.from(nav.querySelectorAll('a')).find(function (link) { return link.getAttribute('href') === page; });
+    var pageGroup = 'calc';
+    if (current) {
+      current.setAttribute('aria-current', 'page');
+      current.classList.add('active');
+      pageGroup = current.closest('[data-group]').dataset.group;
+    }
+    tabs.forEach(function (tab) { tab.classList.toggle('active', tab.dataset.group === pageGroup); });
 
     // One release list drives both surfaces, without moving new items out of their category.
     var today = Date.parse(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) + 'T00:00:00+09:00');
@@ -207,7 +192,7 @@ window.SiteNavigation = {
       var src = groupIcons[heading.dataset.siteIcon];
       if (src && !heading.querySelector('.site-title-icon')) heading.prepend(itemIcon(src, 'site-title-icon'));
     });
-    var pageIcon = window.SiteNavigation.icons[location.pathname.split('/').pop() || 'index.html'];
+    var pageIcon = navigation.icons[page];
     var pageTitle = document.querySelector('h1');
     if (pageIcon && pageTitle && !pageTitle.querySelector('.site-title-icon')) pageTitle.prepend(itemIcon(pageIcon, 'site-title-icon'));
     document.querySelectorAll('a.site-menu-item, a.tool-card').forEach(function (link) {
@@ -231,12 +216,6 @@ window.SiteNavigation = {
       for (var i = 0; i < tabs.length; i++) if (tabs[i].dataset.group === group) return tabs[i];
       return null;
     }
-    // 지금 페이지가 속한 분류(마크업에 박혀 있는 active). 패널을 열어 둘러보는 동안에도 바뀌지 않는다.
-    var pageGroup = (function () {
-      var t = null;
-      tabs.forEach(function (x) { if (x.classList.contains('active')) t = x; });
-      return t ? t.dataset.group : null;
-    })();
     var openGroup = null;
 
     var from = readFrom();
@@ -279,7 +258,10 @@ window.SiteNavigation = {
       if (!nav.contains(e.target)) close();
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') close();
+      if (e.key !== 'Escape' || !openGroup) return;
+      var opener = tabOf(openGroup);
+      if (document.activeElement?.closest('.site-menu')) opener.focus();
+      close();
     });
 
     window.addEventListener('resize', function () { snap(pill, tabOf(openGroup || pageGroup)); });

@@ -8,6 +8,11 @@
   --accent-strong: #4c8dff;
   --good: #4caf7d;
   --bad: #e2664a;
+  --ui-control-height: 44px;
+  --ui-control-radius: 8px;
+  --ui-card-radius: 12px;
+  --ui-icon-size: 32px;
+  --ui-tab-icon-size: 20px;
 }
 
 * { box-sizing: border-box; }
@@ -87,9 +92,8 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
 }
 .site-menu-item:hover { background: rgba(110, 168, 254, 0.12); }
 .site-menu-item.active { background: rgba(76, 141, 255, 0.16); }
-.site-menu-icon { flex: 0 0 auto; font-size: 1.35rem; line-height: 1; }
-.site-menu-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; }
-.site-item-icon { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
+.site-menu-icon { display: inline-flex; flex: 0 0 auto; width: var(--ui-icon-size); height: var(--ui-icon-size); }
+.site-item-icon { width: var(--ui-icon-size); height: var(--ui-icon-size); object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
 .site-menu-name { display: block; font-size: 0.92rem; font-weight: 700; color: var(--text); }
 .site-menu-desc { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--text-dim); }
 
@@ -113,6 +117,7 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
   gap: 6px;
   flex: 0 0 128px;
   width: 128px;
+  min-height: var(--ui-control-height);
   padding: 8px 10px;
   border: none;
   border-radius: 8px;
@@ -128,12 +133,20 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
 }
 /* 대분류는 3개뿐이라 줄을 꽉 채워 크게 쓴다. */
 .site-groups .site-tab { flex: 1 1 0; width: auto; }
-.site-tab[aria-expanded="true"]::after { content: "▾"; font-size: 0.65rem; opacity: 0.8; }
+.site-tab[aria-expanded]::after {
+  content: "";
+  flex: 0 0 5px;
+  height: 5px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+.site-tab[aria-expanded="true"]::after { transform: translateY(1px) rotate(225deg); }
 .site-tab:hover { color: var(--text); }
 .site-tab.active { color: #0b0d12; }
-.site-tab-icon { font-size: 0.95rem; line-height: 1; }
-.site-tab-icon .site-item-icon { width: 20px; height: 20px; vertical-align: -5px; }
-.site-title-icon { width: auto; height: 1.15em; margin-right: 0.3em; vertical-align: -0.2em; object-fit: contain; image-rendering: pixelated; }
+.site-tab-icon { display: flex; flex-shrink: 0; }
+.site-tab-icon .site-item-icon { width: var(--ui-tab-icon-size); height: var(--ui-tab-icon-size); }
+.site-title-icon { width: var(--ui-icon-size); height: var(--ui-icon-size); margin-right: 0.3em; vertical-align: middle; object-fit: contain; image-rendering: pixelated; }
 .ic-stage-icon { width: 24px; height: 24px; vertical-align: -6px; object-fit: contain; image-rendering: pixelated; }
 
 .layout {
@@ -153,7 +166,7 @@ header h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--ui-card-radius);
   padding: 18px 20px;
   margin-top: 16px;
 }
@@ -398,6 +411,7 @@ button.primary {
   border: none;
   border-radius: 8px;
   padding: 12px 20px;
+  min-height: var(--ui-control-height);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -549,6 +563,11 @@ button.primary:hover { filter: brightness(1.08); }
 .site-new-badge { display:inline-block; margin-left:8px; padding:2px 6px; border:1px solid #507760; border-radius:5px; background:#203b2c; color:#a3edba; font-size:10px; font-weight:800; line-height:1.4; letter-spacing:.04em; vertical-align:middle; white-space:nowrap; }
 
 @media (max-width:480px) {
-  .site-groups .site-tab { flex:1 1 auto; padding:8px 5px; gap:3px; font-size:.75rem; }
-  .site-groups .site-tab-icon { display:none; }
+  :root { --ui-icon-size: 24px; --ui-tab-icon-size: 16px; }
+  .site-groups .site-tab { flex:1 1 auto; padding:8px 4px; gap:3px; font-size:.75rem; }
+}
+
+@media (max-width:360px) {
+  .site-groups .site-tab { flex:1 1 0; flex-direction:column; padding:4px 2px; gap:2px; }
+  .site-tab[aria-expanded]::after { position:absolute; top:12px; right:8px; width:5px; }
 }

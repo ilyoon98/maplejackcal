@@ -66,8 +66,7 @@
   .row-include:hover, .row-complete:hover { filter:brightness(1.18); }
   .row-include:focus-visible, .row-complete:focus-visible, .row-diff:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .row-difficulty { position:relative; min-width:0; }
-  .row-difficulty::after { content:"▾"; position:absolute; right:9px; top:50%; transform:translateY(-50%); color:var(--text); font-size:0.7rem; pointer-events:none; }
-  .row-difficulty .row-diff { width:100%; max-width:none; height:34px; box-sizing:border-box; margin:0; border:1px solid transparent; padding:5px 25px 5px 9px; appearance:none; cursor:pointer; font:inherit; font-size:0.73rem; font-weight:800; }
+  .row-difficulty .row-diff { width:100%; margin:0; padding:5px 9px; cursor:pointer; font:inherit; font-size:0.73rem; font-weight:800; }
   .row-diff option { background:#191c24; color:var(--text); }
   .row-doping { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:36px; padding:5px 6px; border:1px solid; border-radius:9px; font:inherit; font-size:0.73rem; font-weight:800; line-height:1; white-space:nowrap; cursor:pointer; }
   .row-doping img { width:22px; height:22px; object-fit:contain; image-rendering:pixelated; }
@@ -215,90 +214,19 @@
   }
   @media (max-width:500px) {
     .boss-row { grid-template-columns:60px minmax(0,1fr) 100px; grid-template-areas:"icon name diff" "include doping complete" "mult mult time"; }
+    .row-include { width:var(--ui-control-height); }
+    .row-include, .row-complete { min-height:var(--ui-control-height); }
     .boss-selection-count { display:block; margin-left:0; margin-top:4px; }
   }
 </style>
 <link rel="stylesheet" href="site_ux.css">
+<script src="site_header.js" defer></script>
+<script src="site_nav.js" defer></script>
 <script src="site_ux.js" defer></script>
 </head>
 <body>
 <div class="wrap">
-  <nav class="site-nav">
-    <div class="site-tabs-track site-groups">
-      <span class="site-tabs-pill" aria-hidden="true"></span>
-      <a class="site-tab" href="index.html" data-group="home"><span class="site-tab-icon"></span>홈</a>
-      <button type="button" class="site-tab active" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon"></span>계산기</button>
-      <button type="button" class="site-tab" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon"></span>시뮬레이터</button>
-    </div>
-    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
-      <a class="site-menu-item" href="trace_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
-      </a>
-      <a class="site-menu-item" href="starforce_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">스타포스 기댓값 계산기</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
-      </a>
-      <a class="site-menu-item" href="authentic_symbol_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
-      </a>
-      <a class="site-menu-item" href="boss_income_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">보스 수익 정산 계산기</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
-      </a>
-      <a class="site-menu-item active" href="boss_buff_planner.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">보스 버프 동선 계산기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
-      </a>
-      <a class="site-menu-item" href="cube_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">큐브 등급업 비용 계산기</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
-      </a>
-      <a class="site-menu-item" href="cube_option_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">큐브 옵션 확률 계산기</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
-      </a>
-      <a class="site-menu-item" href="item_craft_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">아이템 제작 비용 계산기</span><span class="site-menu-desc">대박·평균 제작 메소</span></span>
-      </a>
-      <a class="site-menu-item" href="trade_margin_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">되팔기 손익 계산기</span><span class="site-menu-desc">수수료 떼고 남는 메소</span></span>
-      </a>
-      <a class="site-menu-item" href="meso_market_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">메소마켓 시세 계산기</span><span class="site-menu-desc">1억 메소당 실수령 메포</span></span>
-      </a>
-      <a class="site-menu-item" href="coin_shop_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">이벤트 코인샵 계산기</span><span class="site-menu-desc">주차별 구매 계획</span></span>
-      </a>
-    </div>
-    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
-      <a class="site-menu-item" href="cube_play.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">큐브 시뮬레이터</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
-      </a>
-      <a class="site-menu-item" href="starforce_play.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">스타포스 시뮬레이터</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
-      </a>
-      <a class="site-menu-item" href="boutique_gacha.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">부티크 기프트 시뮬레이터</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
-      </a>
-      <a class="site-menu-item" href="pet_gacha.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">펫 뽑기</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
-      </a>
-      <a class="site-menu-item" href="seedring_gacha.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">시드링 시뮬레이터</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
-      </a>
-    </div>
-  </nav>
+  <div data-site-navigation></div>
 
   <header>
     <h1>보스 버프 동선 계산기</h1>
@@ -397,7 +325,6 @@
     </div>
   </div>
 </div>
-<script src="site_nav.js"></script>
 <script src="nexon_key.js"></script>
 <script src="nexon_characters.js"></script>
 <script src="boss_shot_reader.js"></script>

@@ -103,92 +103,16 @@
   .tool-section .section-sub{ margin:0; color:var(--text-dim); font-size:0.85rem; }
 </style>
 <link rel="stylesheet" href="site_ux.css">
+<script src="site_header.js" defer></script>
+<script src="site_nav.js" defer></script>
 <script src="site_ux.js" defer></script>
 </head>
 <body>
 <div class="wrap">
-  <nav class="site-nav">
-    <div class="site-tabs-track site-groups">
-      <span class="site-tabs-pill" aria-hidden="true"></span>
-      <a class="site-tab active" href="index.html" data-group="home"><span class="site-tab-icon"></span>홈</a>
-      <button type="button" class="site-tab" data-group="calc" aria-expanded="false" aria-controls="site-menu-calc"><span class="site-tab-icon"></span>계산기</button>
-      <button type="button" class="site-tab" data-group="play" aria-expanded="false" aria-controls="site-menu-play"><span class="site-tab-icon"></span>시뮬레이터</button>
-    </div>
-    <div class="site-menu" id="site-menu-calc" data-group="calc" hidden>
-      <a class="site-menu-item" href="trace_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">주흔 기댓값 계산기</span><span class="site-menu-desc">기대 메소·시도 횟수</span></span>
-      </a>
-      <a class="site-menu-item" href="starforce_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">스타포스 기댓값 계산기</span><span class="site-menu-desc">목표 성까지 기대 메소·파괴</span></span>
-      </a>
-      <a class="site-menu-item" href="authentic_symbol_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">어센틱 심볼 계산기</span><span class="site-menu-desc">최소 메소 강화 순서</span></span>
-      </a>
-      <a class="site-menu-item" href="boss_income_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">보스 수익 정산 계산기</span><span class="site-menu-desc">주간·월간 수익 정산</span></span>
-      </a>
-      <a class="site-menu-item" href="boss_buff_planner.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">보스 버프 동선 계산기</span><span class="site-menu-desc">30분 버프 안 최적 조합</span></span>
-      </a>
-      <a class="site-menu-item" href="party_boss_scheduler.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">파티 보스 스케줄러</span><span class="site-menu-desc">캐릭터 외형 · 파티 구성 미리보기</span></span>
-      </a>
-      <a class="site-menu-item" href="cube_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">큐브 등급업 비용 계산기</span><span class="site-menu-desc">큐브별 기대 개수 계산</span></span>
-      </a>
-      <a class="site-menu-item" href="cube_option_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">큐브 옵션 확률 계산기</span><span class="site-menu-desc">원하는 옵션 뜰 확률·기대 메소</span></span>
-      </a>
-      <a class="site-menu-item" href="item_craft_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">아이템 제작 비용 계산기</span><span class="site-menu-desc">대박·평균 제작 메소</span></span>
-      </a>
-      <a class="site-menu-item" href="trade_margin_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">되팔기 손익 계산기</span><span class="site-menu-desc">수수료 떼고 남는 메소</span></span>
-      </a>
-      <a class="site-menu-item" href="meso_market_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">메소마켓 시세 계산기</span><span class="site-menu-desc">1억 메소당 실수령 메포</span></span>
-      </a>
-      <a class="site-menu-item" href="coin_shop_calc.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">이벤트 코인샵 계산기</span><span class="site-menu-desc">주차별 구매 계획</span></span>
-      </a>
-    </div>
-    <div class="site-menu" id="site-menu-play" data-group="play" hidden>
-      <a class="site-menu-item" href="cube_play.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">큐브 시뮬레이터</span><span class="site-menu-desc">천장 카운터 가상 게임</span></span>
-      </a>
-      <a class="site-menu-item" href="starforce_play.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">스타포스 시뮬레이터</span><span class="site-menu-desc">목표 성까지 가상 강화</span></span>
-      </a>
-      <a class="site-menu-item" href="boutique_gacha.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">부티크 기프트 시뮬레이터</span><span class="site-menu-desc">공식 확률표 그대로</span></span>
-      </a>
-      <a class="site-menu-item" href="pet_gacha.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">펫 시뮬레이터</span><span class="site-menu-desc">원더베리 · 루나 크리스탈</span></span>
-      </a>
-      <a class="site-menu-item" href="seedring_gacha.html">
-        <span class="site-menu-icon"></span>
-        <span><span class="site-menu-name">시드링 시뮬레이터</span><span class="site-menu-desc">보스 반지 상자 열기</span></span>
-      </a>
-    </div>
-  </nav>
+  <div data-site-navigation></div>
   <header>
     <h1>메이플 계산기 모음</h1>
+    <p class="sub">장비 강화, 보스 수익, 재화 계산과 시뮬레이터를 찾아보세요.</p>
   </header>
 
   <details class="card ux-api" id="apiKey"><summary>내 캐릭터 연결 <span>API 키 설정 · 선택 사항</span></summary>
@@ -301,7 +225,7 @@
       </a>
       <a class="tool-card" href="accessory_planner.html">
         <h2>장신구 맞추기</h2>
-        <p>장신구 9부위에 드랍 100%와 메획 200%를 맞추는 최저가 조합을 찾습니다.</p>
+        <p>장신구 9부위에 드랍 100%와 메획 200%를 맞추고, 부족한 옵션을 확인합니다.</p>
         <span class="go">장신구 맞추기 →</span>
       </a>
       <a class="tool-card" href="wealth_elixir_calc.html">
@@ -358,7 +282,7 @@
       </a>
 
       <a class="tool-card" href="herb_idle.html">
-        <h2>약초 방치 게임</h2>
+        <h2>달빛 약초 채집소</h2>
         <p>심마니가 알아서 보라 약초를 캐서 씨앗을 모으고, 오일·재물비로 만들어 시세 좋을 때 팔기</p>
         <span class="go">게임 열기 →</span>
       </a>
@@ -366,7 +290,6 @@
   </section>
 </div>
 
-<script src="site_nav.js"></script>
 <script src="nexon_key.js"></script>
 <script>
 (function(){

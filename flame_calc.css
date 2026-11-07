@@ -61,6 +61,7 @@ summary { cursor:pointer; }
 .fc-metrics dt { font-size:.78rem; color:var(--text-dim); }
 .fc-metrics dd { margin:4px 0 0; font-size:1.25rem; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .fc-metrics dd small { font-size:.78rem; margin-left:6px; color:var(--text-dim); }
+.fc-metrics dd .fc-exact-cost { display:block; margin:4px 0 0; }
 .fc-weapon-fields { margin-top:16px; }
 .fc-weapon-fields #weaponField { flex-basis:100%; }
 .fc-totals { margin:12px 0; }
@@ -95,6 +96,6 @@ summary { cursor:pointer; }
 @media(max-width:420px) { .fc-grade-row { padding:16px 12px; gap:12px 6px; } .fc-grade-label { font-size:1.05rem; } .fc-guide-apply { padding:8px; font-size:.72rem; } .fc-grade-value { gap:8px; } .fc-grade-control { gap:4px; } .fc-grade-step { width:28px; min-height:48px; } .fc-grade-input { width:100px; padding:9px 6px; font-size:1.8rem; } .fc-grade-value > span { font-size:.95rem; } }
 @media(max-width:560px) { .fc-flame { flex-direction:column; gap:4px; font-size:.71rem; } }
 .hidden { display:none; }
-@media(max-width:850px) { .fc-layout { grid-template-columns:minmax(0,1fr); } .fc-result { position:static; } .fc-header { display:block; } }
+@media(max-width:960px) { .fc-layout { grid-template-columns:minmax(0,1fr); } .fc-result { position:static; } .fc-header { display:block; } }
 @media(max-width:420px) { .ic-panel { padding:16px; } .fc-header h1 { font-size:1.8rem; } }
 @media(max-width:380px) { .fc-metrics { grid-template-columns:1fr; } .fc-chance { padding:12px; } }

@@ -51,6 +51,6 @@
 .hunt-method a { color:var(--accent); }
 #inputError { color:#ffb59e; }
 [hidden] { display:none !important; }
-@media(max-width:900px) { .hunt-layout { grid-template-columns:minmax(0,1fr); gap:8px; } .hunt-panel { padding:18px; } }
+@media(max-width:960px) { .hunt-layout { grid-template-columns:minmax(0,1fr); gap:8px; } .hunt-panel { padding:18px; } }
 @media(max-width:480px) { .hunt-metrics { grid-template-columns:minmax(0,1fr); } .hunt-metric { display:grid; grid-template-columns:48px minmax(0,1fr) 28px; align-items:baseline; gap:8px; padding:14px; } .hunt-metric h3,.hunt-metric span { margin:0; } .hunt-metric strong { text-align:right; } .hunt-reward { padding:16px; } }
 @media(max-width:380px) { .hunt-fields { grid-template-columns:minmax(0,1fr); } }

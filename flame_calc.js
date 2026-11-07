@@ -234,26 +234,30 @@
   }
   function renderResult() {
     if (selectedWeapon()?.special) {
-      $('flameResult').innerHTML = '<p class="ic-note">제로 무기의 별도 생성 규칙은 확률 계산에 반영하지 않았습니다.</p>';
+      $('flameResult').innerHTML = '<p class="ic-note" data-result-status>제로 무기 · 별도 생성 규칙으로 계산 범위 밖</p>';
       return;
     }
     const conds = state.flameConds.filter(c => c.kind === 'opt' || c.min > 0);
     if (!conds.length) {
-      $('flameResult').innerHTML = '<p class="fc-empty">목표 옵션을 추가해 주세요.<br><small>주스탯 급수는 1 이상을 입력하세요.</small></p>';
+      $('flameResult').innerHTML = '<p class="fc-empty"><span data-result-status>목표 옵션을 추가해 주세요.</span><br><small>주스탯 급수는 1 이상을 입력하세요.</small></p>';
       return;
     }
     const probabilityConds = conds.map(c => c.id === 'ATT' ? { ...c, id: attackId() } : c);
     const p = F.probability({ level: state.level, weapon: state.part === '무기', boss: BOSS, flame: state.flame, conds: probabilityConds, mainStat: state.mainStat });
     if (!(p > 0)) {
-      $('flameResult').innerHTML = '<p class="fc-empty">현재 불꽃으로는 달성할 수 없는 목표입니다.<br><small>불꽃 종류를 바꾸거나 목표 단계·급수를 낮춰 주세요.</small></p>';
+      $('flameResult').innerHTML = '<p class="fc-empty"><span data-result-status>현재 불꽃으로는 달성할 수 없는 목표입니다.</span><br><small>불꽃 종류를 바꾸거나 목표 단계·급수를 낮춰 주세요.</small></p>';
       return;
     }
     const price = 3000000;
     const pct = (p * 100).toLocaleString('ko-KR', { maximumSignificantDigits: 4 });
+    const roundedCost = fmt(price / p);
+    const exactCost = roundedCost + ' 메소';
+    const displayedCost = window.MoneyInput?.koreanAmount(roundedCost) || exactCost;
     $('flameResult').innerHTML =
       '<div class="fc-prob"><span>한 번에 성공할 확률</span><strong>' + pct + '<small>%</small></strong></div>' +
       '<dl class="fc-metrics"><div><dt>평균 사용량</dt><dd>' + (1 / p).toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + '회</dd></div>' +
-      '<div><dt>평균 메소 비용</dt><dd>' + fmt(price / p) + '<small>메소</small></dd></div></dl>' +
+      '<div><dt>평균 메소 비용</dt><dd><span id="flameExpectedCost">' + displayedCost + '</span>' +
+      (displayedCost === exactCost ? '' : '<small class="fc-exact-cost">' + exactCost + '</small>') + '</dd></div></dl>' +
       '<h3>누적 성공 확률별 사용량</h3><div class="fc-chances">' +
       [0.5, 0.9, 0.95, 0.99].map(q => {
         const count = p >= 1 ? 1 : Math.ceil(Math.log1p(-q) / Math.log1p(-p));
