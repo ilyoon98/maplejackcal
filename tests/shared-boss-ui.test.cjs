@@ -14,7 +14,7 @@ async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,s
    return {ok:true,json:async()=>({schemaVersion:1,persistent:true,snapshots:structuredClone(values),accounts:structuredClone(registry),accountRevision:registry.length?'accounts-v1':''})};
   }if(fetchExtra)return fetchExtra(url,options);throw new Error('Unexpected network request: '+url);
  };
- const scripts=['boss_db.js','scouter_data.js','account_catalog.js','rate_catalog.js','nexon_key.js','nexon_characters.js','character_profile.js','boss_identity.js'];
+ const scripts=['boss_db.js','boss_rewards.js','scouter_data.js','account_catalog.js','rate_catalog.js','nexon_key.js','nexon_characters.js','character_profile.js','boss_identity.js'];
  for(const file of scripts)w.eval(fs.readFileSync(path.join(__dirname,'../'+file),'utf8'));
  w.NexonCharacters={...w.NexonCharacters,fetch:async()=>structuredClone(ownRows)};
  w.BossShotReader={readBlob:async()=>shot};w.eval(fs.readFileSync(path.join(__dirname,'../'+page+'.js'),'utf8'));await settle();
@@ -106,7 +106,12 @@ test('보스 보상은 선택한 난이도와 편집 중 인원수를 반영하�
   const amount=id=>p.doc.querySelector('#'+id+' .party-crystal .party-metric-value').textContent;
   const highlights=()=>[...p.doc.querySelectorAll('#party-detail .party-member-highlighted .party-member-match')].map(n=>n.textContent);
   assert.equal(amount('party-detail'),'6억 9,500만 메소');
-  assert.match(p.doc.querySelector('#party-detail .party-reward').textContent,/2인 균등 분배.*불멸의 유산/);
+  assert.match(p.doc.querySelector('#party-detail .party-reward').textContent,/2인 균등 분배/);
+  const item=(id,name)=>[...p.doc.querySelectorAll('#'+id+' .party-reward-item')].find(tile=>tile.dataset.tooltip===name);
+  assert.match(item('party-detail','불멸의 유산').firstElementChild.style.backgroundImage,/TheFirstAdversary\.png/);
+  for(const [name,count] of [['이어진 고대의 결의','6'],['에리온의 조각 교환권','30'],['솔 에르다의 기운','450']]){
+   assert.equal(item('party-detail',name).querySelector('.party-reward-quantity').textContent,count);
+  }
   assert.deepEqual(highlights(),[]);
   select(p.w,'party-view','character:첫번째');
   assert.equal(p.doc.querySelectorAll('#party-list button').length,1);
@@ -116,6 +121,10 @@ test('보스 보상은 선택한 난이도와 편집 중 인원수를 반영하�
   assert.equal(amount('party-draft-summary'),'6억 9,500만 메소');
   p.doc.querySelector('#party-draft-members .party-remove').click();
   assert.equal(amount('party-draft-summary'),'13억 9,000만 메소');
+  assert.equal(item('party-draft-summary','이어진 고대의 결의').querySelector('.party-reward-quantity').textContent,'6');
+  select(p.w,'party-boss','TheFirstAdversary|Normal');
+  assert.equal(item('party-draft-summary','불멸의 유산'),undefined);
+  assert.equal(item('party-draft-summary','이어진 고대의 결의 조각').querySelector('.party-reward-quantity').textContent,'4');
   p.doc.querySelector('#party-draft-members .party-remove').click();
   select(p.w,'party-boss','Lotus|Normal');
   assert.equal(amount('party-draft-summary'),'835만 메소');
@@ -123,6 +132,23 @@ test('보스 보상은 선택한 난이도와 편집 중 인원수를 반영하�
   p.doc.querySelector('#party-create-cancel').click();
   assert.equal(amount('party-detail'),'6억 9,500만 메소');
  }finally{p.close();}
+});
+test('스케줄러에서 선택 가능한 모든 난이도의 보상 아이콘은 로컬 이미지 안에 있다',()=>{
+ const rewards=require('../boss_rewards.js'),db=require('../boss_db.js');
+ const cache=new Map();
+ for(const {id} of catalog.choices(db)){
+  const items=rewards.forBoss(id);assert(items.length,id);
+  for(const item of items){
+   if(!cache.has(item.image)){
+    const bytes=fs.readFileSync(path.join(__dirname,'..',item.image));
+    assert.equal(bytes.toString('hex',0,8),'89504e470d0a1a0a');
+    cache.set(item.image,[bytes.readUInt32BE(16),bytes.readUInt32BE(20)]);
+   }
+   const [width,height]=cache.get(item.image);
+   assert(Number.isInteger(item.x)&&Number.isInteger(item.y)&&item.x>=0&&item.y>=0&&item.x+40<=width&&item.y+40<=height,id+' '+item.name);
+  }
+ }
+ assert.deepEqual(rewards.forBoss('Lotus|Unknown'),[]);
 });
 test('공용 외형이 누락된 기존 파티원을 다시 조회하고 계정 새로고침 뒤에도 사진을 유지한다',async()=>{
  const a=snapshot();a.character.image='';

@@ -11,28 +11,6 @@
   var RECENT_STORAGE='partyBossScheduler.recentBosses.v1';
   var BASE='https://open.api.nexon.com/maplestory/v1';
   var SHARE_COLORS=['#75adff','#59d8ad','#ffc46b','#c39bfa','#ff849d','#efe879'];
-  // Nexon lists these examples by boss across difficulties.
-  var REWARD_GUIDE='https://maplestory.nexon.com/guide/n23gameinformation/articles/459';
-  var MAJOR_REWARDS={
-    Lotus:['루즈 컨트롤 머신 마크','컴플리트 언더컨트롤','특수형 에너지 코어(S급)'],
-    Damien:['마력이 깃든 안대','루인 포스실드','뒤틀린 낙인의 영혼석'],
-    GuardianAngelSlime:['가디언 엔젤 링','흑옥의 보스 반지 상자'],
-    Lucid:['몽환의 벨트','트와일라이트 마크','나비날개 물방울석'],
-    Will:['저주받은 마도서 선택 상자','트와일라이트 마크','코브웹 물방울석'],
-    Dusk:['거대한 공포','에스텔라 이어링','아케인셰이드 무기 상자'],
-    Dunkel:['커맨더 포스 이어링','에스텔라 이어링','아케인셰이드 방어구 상자'],
-    VerusHilla:['고통의 근원','데이브레이크 펜던트','아케인셰이드 무기 상자'],
-    BlackMage:['창세의 뱃지','익셉셔널 해머 (벨트)','백옥의 보스 반지 상자'],
-    ChosenSeren:['미트라의 분노 선택 상자','데이브레이크 펜던트','익셉셔널 해머 (얼굴장식)'],
-    KalosTheGuardian:['남겨진 칼로스의 의지','의지의 에테르넬 방어구 상자','생명의 보스 반지 상자'],
-    TheFirstAdversary:['불멸의 유산','고대의 에테르넬 방어구 상자','이어진 고대의 결의','생명의 보스 반지 상자'],
-    Kaling:['뒤엉킨 흉수의 고리','흉수의 에테르넬 방어구 상자','혼돈의 칠흑 장신구 상자'],
-    Limbo:['근원의 속삭임','왜곡된 욕망의 결정','욕망의 에테르넬 방어구 상자'],
-    Baldrix:['죽음의 맹세','맹세의 에테르넬 방어구 상자','영원한 충성의 흔적'],
-    RadiantMalefic:['황홀한 악몽','환상의 에테르넬 방어구 상자','황홀한 환상의 단편 조각'],
-    Jupiter:['오만의 원죄','갈망의 에테르넬 방어구 상자','뒤틀린 갈망의 편린'],
-    Bellona:['굶주리는 핏빛 원혼','광기의 에테르넬 방어구 상자','저주받은 원혼의 잔재']
-  };
   function text(v,n){return typeof v==='string'?v.trim().slice(0,n||100):'';}
   var imageUrl=scouter.imageUrl;
   function profile(raw,ocid){
@@ -359,13 +337,24 @@
       var condition=count?count+'인 균등 분배':'파티원을 추가하면 1인당 금액 표시';
       if(count>1)condition+=' (전체 '+mesoLabel(price)+')';
       reward.append(node('h4','','보스 보상'),crystal,node('p','party-note',condition));
-      var items=MAJOR_REWARDS[key];
-      if(items){
-        var labels=node('ul','party-reward-items');items.forEach(function(item){labels.append(node('li','',item));});
-        var guide=node('a','','공식 보상 안내');guide.href=REWARD_GUIDE;guide.target='_blank';guide.rel='noopener';
-        var note=node('p','party-note','아이템은 난이도에 따라 달라요. ');note.append(guide);
-        reward.append(labels,note);
-      }
+      var items=win.BossRewards.forBoss(boss.id);
+      if(items.length){
+        var list=node('ul','party-reward-items');list.setAttribute('aria-label',boss.label+' 주요 보상 아이템');
+        items.forEach(function(item){
+          var entry=node('li'),tile=node('span','party-reward-item'),picture=node('span','party-reward-icon');
+          tile.tabIndex=0;tile.dataset.tooltip=item.name;
+          picture.style.backgroundImage='url('+item.image+')';picture.style.backgroundPosition=(-item.x)+'px '+(-item.y)+'px';
+          picture.setAttribute('role','img');picture.setAttribute('aria-label',item.name);tile.append(picture);
+          if(item.quantity!==undefined){
+            var amount=item.quantity.toLocaleString('ko-KR'),badge=node('strong','party-reward-quantity',amount);
+            badge.setAttribute('aria-label',amount+' '+item.unit);tile.dataset.tooltipValue=amount+' '+item.unit;tile.append(badge);
+          }
+          entry.append(tile);list.append(entry);
+        });
+        reward.append(list);
+      }else reward.append(node('p','party-note','이 난이도의 아이템 보상 정보가 없습니다.'));
+      var guide=node('a','','공식 보상 안내');guide.href=win.BossRewards.guide;guide.target='_blank';guide.rel='noopener';
+      var note=node('p','party-note');note.append(guide);reward.append(note);
       layout.append(totals(members,boss.max,false),reward);return layout;
     }
     function damageShares(members){
