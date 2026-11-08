@@ -98,6 +98,32 @@ test('기존 파티 수정은 파티원과 ID를 유지하고 변경한 보스�
   assert.equal(stored().name,'새 금요팟');assert.equal(stored().members[0].rate,77);assert.equal(stored().members.length,1);
  }finally{p.close();}
 });
+test('보스 보상은 선택한 난이도와 편집 중 인원수를 반영하고 필터 대상 카드만 강조한다',async()=>{
+ const members=['첫번째','두번째'].map(name=>({character:{...profile(name),ocid:'shared:'+name},rate:50}));
+ const parties=[{id:'boss',name:'대적자 파티',bossId:'TheFirstAdversary|Hard',members},{id:'other',name:'두 번째 파티',bossId:'Will|Hard',members:members.slice(1)}];
+ const accounts=[{id:'account1',label:'첫 번째 계정',characters:[{name:'첫번째',profile:profile('첫번째')}]}];
+ const p=await boot('party_boss_scheduler',{parties,accounts});try{
+  const amount=id=>p.doc.querySelector('#'+id+' .party-crystal .party-metric-value').textContent;
+  const highlights=()=>[...p.doc.querySelectorAll('#party-detail .party-member-highlighted .party-member-match')].map(n=>n.textContent);
+  assert.equal(amount('party-detail'),'6억 9,500만 메소');
+  assert.match(p.doc.querySelector('#party-detail .party-reward').textContent,/2인 균등 분배.*불멸의 유산/);
+  assert.deepEqual(highlights(),[]);
+  select(p.w,'party-view','character:첫번째');
+  assert.equal(p.doc.querySelectorAll('#party-list button').length,1);
+  assert.deepEqual(highlights(),['선택한 캐릭터']);
+  select(p.w,'party-view','account:account1');assert.deepEqual(highlights(),['선택한 계정']);
+  p.doc.querySelector('.party-edit').click();
+  assert.equal(amount('party-draft-summary'),'6억 9,500만 메소');
+  p.doc.querySelector('#party-draft-members .party-remove').click();
+  assert.equal(amount('party-draft-summary'),'13억 9,000만 메소');
+  p.doc.querySelector('#party-draft-members .party-remove').click();
+  select(p.w,'party-boss','Lotus|Normal');
+  assert.equal(amount('party-draft-summary'),'835만 메소');
+  assert.match(p.doc.querySelector('#party-draft-summary .party-crystal').textContent,/결정석 기본가/);
+  p.doc.querySelector('#party-create-cancel').click();
+  assert.equal(amount('party-detail'),'6억 9,500만 메소');
+ }finally{p.close();}
+});
 test('공용 외형이 누락된 기존 파티원을 다시 조회하고 계정 새로고침 뒤에도 사진을 유지한다',async()=>{
  const a=snapshot();a.character.image='';
  const member={character:{...a.character,ocid:'shared:'+a.characterName},rate:49.68,rateMode:'auto'};
@@ -192,6 +218,7 @@ test('선택한 파티만 확인 후 삭제하고 브라우저 목록에 저장�
  try{
   for(const name of ['첫 파티','둘째 파티']){
    p.doc.querySelector('#party-create-toggle').click();
+   select(p.w,'party-boss','Lotus|Extreme');
    type(p.w,'party-name',name);
    p.doc.querySelector('#party-create-form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
   }

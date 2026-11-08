@@ -5,7 +5,7 @@
   "scripts": {
     "build": "node tools/build-site.cjs",
     "start": "node tools/static_server.cjs",
-    "test:party": "node --test tests/party-boss-scheduler.test.cjs tests/scouter.test.cjs tests/rate-catalog.test.cjs tests/boss-shot-reader.test.cjs tests/shared-boss-ui.test.cjs",
+    "test:party": "node --test tests/party-boss-scheduler.test.cjs tests/party-store.test.cjs tests/scouter.test.cjs tests/rate-catalog.test.cjs tests/boss-shot-reader.test.cjs tests/shared-boss-ui.test.cjs",
     "check:scouter": "node tools/check-scouter.cjs"
   },
   "engines": {

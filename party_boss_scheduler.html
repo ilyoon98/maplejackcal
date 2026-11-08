@@ -9,13 +9,26 @@
 <body><main class="wrap boss-app party-app">
   <div data-site-navigation></div>
   <header><h1>파티 보스 스케줄러</h1><p class="sub">공용 배율로 함께 갈 보스 파티를 구성하세요.</p></header>
-  <div class="party-board-head"><div><h2>파티 목록</h2><span class="party-local">이 기기에 저장</span></div><div class="party-board-actions"><label class="sr-only" for="party-view">보기</label><select id="party-view"><option value="all">전체 파티</option><option value="mine">내 캐릭터 파티</option></select><button id="party-create-toggle" class="boss-primary" type="button" aria-expanded="false" aria-controls="party-create-form">파티 만들기</button></div></div>
+  <div class="party-scope-tabs" role="tablist" aria-label="파티 저장 위치">
+    <button id="party-scope-local" class="ux-button" type="button" role="tab" aria-selected="true" aria-controls="party-scope-panel">로컬</button>
+    <button id="party-scope-shared" class="ux-button" type="button" role="tab" aria-selected="false" aria-controls="party-scope-panel" tabindex="-1">공유</button>
+  </div>
+  <section id="party-scope-panel" role="tabpanel" aria-labelledby="party-scope-local">
+  <div class="party-scope-info">
+    <p id="party-scope-note" class="boss-status" role="status">이 브라우저에서만 볼 수 있습니다.</p>
+    <button id="party-refresh-shared" class="ux-button" type="button" hidden>공유 목록 새로고침</button>
+  </div>
+  <div class="party-board-head"><h2>파티 목록</h2><div class="party-board-actions"><label class="sr-only" for="party-view">파티 보기</label><select id="party-view"><option value="all">전체 파티</option><option value="mine">내 캐릭터 파티</option></select><button id="party-create-toggle" class="boss-primary" type="button" aria-expanded="false" aria-controls="party-create-form">파티 만들기</button></div></div>
+  <p id="party-filter-status" class="boss-status" role="status"></p>
   <form id="party-create-form" class="card party-create-form" hidden>
     <div class="boss-section-head"><h2 id="party-form-title">새 파티</h2><button id="party-create-cancel" type="button">취소</button></div>
-    <div class="party-form-grid"><label>보스와 난이도<select id="party-boss" required></select></label><label>파티 이름<input id="party-name" maxlength="60" placeholder="비우면 보스와 난이도 이름 사용"></label></div>
+    <div class="party-form-grid">
+      <div class="party-boss-field"><span id="party-boss-label">보스와 난이도</span><select id="party-boss" hidden aria-hidden="true" tabindex="-1"></select><button id="party-open-boss" class="ux-button" type="button" aria-haspopup="dialog" aria-controls="party-boss-dialog" aria-labelledby="party-boss-label party-open-boss">보스 선택</button></div>
+      <label>파티 이름<input id="party-name" maxlength="60" placeholder="비우면 보스와 난이도 이름 사용"></label>
+    </div>
     <div id="party-draft-summary"></div>
     <div class="party-draft-picker"><label>계정<select id="party-draft-account"><option value="">전체 계정</option></select></label><label>캐릭터<select id="party-draft-character"><option value="">캐릭터 선택</option></select></label><button id="party-draft-add" class="boss-primary" type="button">추가</button></div>
-    <div id="party-draft-members" class="party-members"></div><p id="party-draft-status" class="boss-status" role="status"></p><div class="party-form-footer"><button class="boss-primary" type="submit">파티 저장</button></div>
+    <div id="party-draft-members" class="party-members"></div><p id="party-draft-status" class="boss-status" role="status"></p><div class="party-form-footer"><span id="party-draft-scope" class="party-note">이 브라우저에 저장</span><button id="party-save" class="boss-primary" type="submit">파티 저장</button></div>
   </form>
   <p id="party-storage-status" class="boss-status" role="status"></p>
   <div class="party-board"><aside id="party-list" class="party-list" aria-label="파티 목록"></aside><div class="party-content"><section id="party-detail" class="card party-detail" aria-label="선택한 파티">
@@ -28,5 +41,14 @@
       <p id="party-search-status" class="boss-status" role="status" aria-live="polite"></p><div id="party-character-preview" class="party-character-preview" hidden></div>
     </section>
   </div></div>
+  </section>
+  <dialog id="party-boss-dialog" class="ux-confirm party-boss-dialog" aria-labelledby="party-boss-dialog-title">
+    <div class="party-boss-dialog-head"><h2 id="party-boss-dialog-title">보스 선택</h2><button id="party-close-boss" class="ux-button" type="button">닫기</button></div>
+    <section id="party-recent-bosses" hidden><h3>최근 선택</h3><div id="party-recent-list" class="party-boss-grid"></div></section>
+    <label id="party-boss-search">보스 검색<input id="party-boss-query" type="search" placeholder="보스 이름이나 별칭 검색" autocomplete="off" aria-controls="party-boss-results"></label>
+    <div id="party-boss-results" class="party-boss-grid"></div>
+    <p id="party-boss-empty" class="boss-status" role="status" hidden>검색 결과가 없습니다. 다른 이름으로 찾아보세요.</p>
+    <section id="party-boss-difficulty" hidden><div class="party-boss-dialog-head"><h3 id="party-difficulty-title">난이도 선택</h3><button id="party-boss-back" class="ux-button" type="button">보스 목록</button></div><div id="party-difficulty-options" class="party-boss-difficulties" role="group" aria-labelledby="party-difficulty-title"></div></section>
+  </dialog>
   <footer class="boss-data-credit">Data based on NEXON Open API</footer>
 </main></body></html>

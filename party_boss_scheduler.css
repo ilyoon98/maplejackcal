@@ -1,9 +1,13 @@
-.party-board-head,.party-board-head>div:first-child,.party-board-actions,.party-detail-head,.party-detail-actions{
+.party-board-head,.party-board-actions,.party-detail-head,.party-detail-actions{
   display:flex;align-items:center;gap:10px
 }
 .party-board-head{justify-content:space-between;margin:22px 0 16px}
 .party-board-head h2{font-size:1.3rem;margin:0}
-.party-local{font-size:.75rem;color:var(--text-dim)}
+.party-app .party-scope-tabs{display:flex;gap:8px;margin-top:16px;border-bottom:1px solid var(--border)}
+.party-app .party-scope-tabs .ux-button{min-width:90px;min-height:44px;border-radius:8px 8px 0 0}
+.party-app .party-scope-tabs [aria-selected=true]{border-color:var(--ux-accent);background:#2b4366;font-weight:750}
+.party-app .party-scope-info{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px}
+.party-app .party-scope-info .ux-button{min-height:44px}
 .party-board-actions select{width:auto;min-width:140px}
 .party-board{display:grid;grid-template-columns:295px minmax(0,1fr);gap:18px;align-items:start}
 .party-content,.party-list{display:grid;gap:14px;min-width:0}
@@ -12,7 +16,7 @@
   border-radius:12px
 }
 .party-list>button[aria-pressed=true]{border-color:var(--accent-strong);background:rgba(76,141,255,.12)}
-.party-list .boss-identity,.party-detail-head .boss-identity,.party-app .boss-picker summary .boss-identity{
+.party-list .boss-identity,.party-detail-head .boss-identity,.party-app #party-open-boss .boss-identity{
   flex-wrap:wrap;font-weight:800
 }
 .party-list .boss-identity{font-size:1.05rem}
@@ -24,7 +28,7 @@
 .party-detail-head h3{display:grid;gap:6px;margin:0;min-width:0;font-size:1.42rem;color:var(--text)}
 .party-detail-head .boss-face{width:62px;height:62px}
 .party-detail-name{font-size:1rem;color:var(--text-dim);overflow-wrap:anywhere}
-.party-detail-actions{justify-content:flex-end}
+.party-detail-actions{justify-content:flex-end;flex-wrap:wrap}
 .boss-app .party-edit{color:var(--accent);font-weight:700}
 .boss-app :is(.party-delete,.party-remove){color:var(--bad);font-weight:700}
 .party-note,.party-member-count{font-size:.79rem;color:var(--text-dim)}
@@ -53,6 +57,17 @@
 .party-verdict.overkill{color:#ffd99d;background:#4d3522}
 .party-verdict.pending{color:#e3d6ac;background:#373225}
 
+.party-app .party-summary-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:12px;margin:16px 0}
+.party-app .party-summary-grid .party-totals{margin:0}
+.party-app .party-reward{min-width:0;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
+.party-app .party-reward h4{margin:0 0 10px;font-size:.93rem;color:var(--text)}
+.party-app .party-crystal{display:flex;align-items:center;gap:9px}
+.party-app .party-crystal img{width:28px;height:28px;object-fit:contain;flex:none}
+.party-app .party-crystal .party-metric-value{font-size:1.27rem}
+.party-app .party-reward p{margin:7px 0 0;overflow-wrap:anywhere}
+.party-app .party-reward-items{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 0;padding:0;list-style:none}
+.party-app .party-reward-items li,.party-app .party-member-match{border:1px solid var(--border);border-radius:6px;padding:3px 7px;font-size:.76rem;overflow-wrap:anywhere}
+
 .party-share-chart{margin:0 0 16px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
 .party-share-chart h4{margin:0 0 10px;font-size:.93rem;color:var(--text)}
 .party-share-bar{display:flex;height:14px;overflow:hidden;border-radius:5px;background:var(--card)}
@@ -78,6 +93,8 @@
 }
 .party-portrait span{position:absolute;font-size:.72rem;text-align:center;color:var(--text-dim)}
 .party-member .party-account-label{margin:9px 0 0;color:var(--accent);font-size:.8rem;overflow-wrap:anywhere}
+.party-app .party-member-highlighted{border-color:var(--accent-strong);background:#182438}
+.party-app .party-member-match{display:inline-block;margin-top:7px;color:#c3deff;background:#243f62;font-weight:700}
 .party-member-metrics{grid-area:metrics;align-self:end;gap:8px 14px}
 .party-member-metrics .party-metric-value{font-size:1.25rem}
 .party-member:not(:has(.party-remove)) .party-member-metrics{align-self:center}
@@ -86,14 +103,27 @@
 
 .party-create-form{margin-bottom:18px}
 .party-form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
-.party-app .boss-picker{min-width:0}
-.party-app .boss-picker>summary{min-height:54px}
-.party-app .boss-picker-list .boss-identity{font-size:.96rem}
+.party-app .party-boss-field{display:grid;gap:6px;align-content:start;font-size:.8rem;color:var(--ux-muted)}
+.party-app #party-open-boss{min-height:44px;text-align:left;white-space:normal}
+.party-app #party-open-boss .boss-face{width:32px;height:32px}
+.party-app .party-boss-dialog{overflow:auto}
+.party-app .party-boss-dialog-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.party-app .party-boss-dialog :is(h2,h3){margin:0;color:var(--text)}
+.party-app .party-boss-dialog h3{font-size:1rem}
+.party-app .party-boss-dialog section{margin-bottom:16px}
+.party-app .party-boss-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr));gap:8px;margin:8px 0 12px}
+.party-app .party-boss-dialog .ux-button{min-height:44px;background:#202735;white-space:normal}
+.party-app .party-boss-dialog .ux-button[aria-pressed=true]{background:#2b4366}
+.party-app .party-boss-grid .ux-button{text-align:left}
+.party-app .party-boss-grid .boss-identity{flex-wrap:wrap;gap:4px 8px}
+.party-app .party-boss-grid .boss-face{width:36px;height:36px}
+.party-app .party-boss-difficulties{display:flex;flex-wrap:wrap;gap:8px}
+.party-app .party-boss-difficulties .diff-badge{font-size:.87rem}
 .party-draft-picker,.party-add-row{
   display:grid;grid-template-columns:minmax(125px,1fr) minmax(155px,1.5fr) auto;gap:10px;align-items:end
 }
 .party-draft-picker{margin-bottom:12px}
-.party-form-footer{display:flex;justify-content:flex-end;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.party-form-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .party-form-footer>button{min-width:124px;min-height:46px}
 .party-search .boss-section-head{margin-bottom:12px}
 
@@ -104,7 +134,6 @@
 @media(max-width:760px){
   .party-board{grid-template-columns:1fr}
   .party-list{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-  .party-board-head>div:first-child{display:block}
   .party-board-actions select{min-width:0;max-width:128px}
   .party-detail-head .boss-face{width:52px;height:52px}
 }
@@ -117,10 +146,12 @@
   }
   .party-member-metrics .party-metric-value{font-size:1.05rem}
   .party-form-grid,.party-draft-picker,.party-add-row{grid-template-columns:1fr}
+  .party-app .party-summary-grid{grid-template-columns:1fr}
   .party-draft-picker>button,.party-add-row>button{justify-self:end}
   .party-totals .party-metric-value{font-size:1.68rem}
   .party-totals.compact .party-metric-value{font-size:1.28rem}
   .party-detail-head h3{font-size:1.2rem}
+  .party-board-head{flex-wrap:wrap}
 }
 @media(max-width:380px){
   .party-board-head{gap:4px}
