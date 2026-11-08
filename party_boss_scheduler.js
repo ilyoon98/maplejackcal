@@ -334,7 +334,10 @@
     function partySummary(members,boss){
       var [key,difficulty]=boss.id.split('|'),price=Number(win.MapleBossDB[key][difficulty].CrystalPrice),count=members.length;
       var layout=node('div','party-summary-grid'),reward=node('section','party-reward');
-      var icon=node('img');icon.src='icons/home/강렬한힘의결정.webp';icon.alt='';
+      var daily=['Akayrum','PinkBean','Cygnus'].includes(key);
+      var icon=node('img');
+      icon.src=daily?'icons/home/강렬한힘의결정.webp':'icons/home/boss-crystal-'+(key==='BlackMage'?'monthly':'weekly')+'.png';
+      icon.alt='';
       var crystal=node('div','party-crystal');crystal.append(icon,metric(count?'1인당 결정석':'결정석 기본가',mesoLabel(Math.floor(price/Math.max(1,count)))));
       var condition=count?count+'인 균등 분배':'파티원을 추가하면 1인당 금액 표시';
       if(count>1)condition+=' (전체 '+mesoLabel(price)+')';

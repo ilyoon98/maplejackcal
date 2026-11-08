@@ -4,7 +4,7 @@
 .party-board-head{justify-content:space-between;margin:22px 0 16px}
 .party-board-head h2{font-size:1.3rem;margin:0}
 .party-app .party-scope-tabs{display:flex;gap:8px;margin-top:16px;border-bottom:1px solid var(--border)}
-.party-app .party-scope-tabs .ux-button{min-width:90px;min-height:44px;border-radius:8px 8px 0 0}
+.party-app .party-scope-tabs .ux-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:90px;min-height:44px;border-radius:8px 8px 0 0}
 .party-app .party-scope-tabs [aria-selected=true]{border-color:var(--ux-accent);background:#2b4366;font-weight:750}
 .party-app .party-scope-info{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px}
 .party-app .party-scope-info .ux-button{min-height:44px}
@@ -68,7 +68,7 @@
 .party-app .party-reward{min-width:0;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
 .party-app .party-reward h4{margin:0 0 10px;font-size:.93rem;color:var(--text)}
 .party-app .party-crystal{display:flex;align-items:center;gap:9px}
-.party-app .party-crystal img{width:28px;height:28px;object-fit:contain;flex:none}
+.party-app .party-crystal img{width:28px;height:28px;object-fit:contain;image-rendering:pixelated;flex:none}
 .party-app .party-crystal .party-metric-value{font-size:1.27rem}
 .party-app .party-reward p{margin:7px 0 0;overflow-wrap:anywhere}
 .party-app .party-reward-items{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}

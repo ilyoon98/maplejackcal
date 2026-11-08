@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>파티 보스 스케줄러</title><link rel="icon" href="favicon.png?v=2">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>파티 보스 스케줄러</title><link rel="icon" type="image/webp" href="icons/home/탐정수첩.webp">
   <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="site_ux.css"><link rel="stylesheet" href="site_tooltips.css"><link rel="stylesheet" href="boss_workspace.css"><link rel="stylesheet" href="party_boss_scheduler.css"><link rel="stylesheet" href="boss_identity.css">
   <script src="site_header.js" defer></script><script src="site_nav.js" defer></script><script src="site_ux.js" defer></script>
   <script src="nexon_key.js" defer></script><script src="nexon_characters.js" defer></script><script src="boss_db.js" defer></script><script src="boss_rewards.js" defer></script><script src="scouter_data.js" defer></script><script src="rate_catalog.js" defer></script><script src="account_catalog.js" defer></script><script src="character_profile.js" defer></script><script src="boss_identity.js" defer></script><script src="site_tooltips.js" defer></script><script src="party_boss_scheduler.js" defer></script>
@@ -10,8 +10,8 @@
   <div data-site-navigation></div>
   <header><h1>파티 보스 스케줄러</h1><p class="sub">공용 배율로 함께 갈 보스 파티를 구성하세요.</p></header>
   <div class="party-scope-tabs" role="tablist" aria-label="파티 저장 위치">
-    <button id="party-scope-local" class="ux-button" type="button" role="tab" aria-selected="true" aria-controls="party-scope-panel">로컬</button>
-    <button id="party-scope-shared" class="ux-button" type="button" role="tab" aria-selected="false" aria-controls="party-scope-panel" tabindex="-1">공유</button>
+    <button id="party-scope-local" class="ux-button" type="button" role="tab" aria-selected="true" aria-controls="party-scope-panel"><span class="site-tab-icon" aria-hidden="true"><svg class="site-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg></span>로컬</button>
+    <button id="party-scope-shared" class="ux-button" type="button" role="tab" aria-selected="false" aria-controls="party-scope-panel" tabindex="-1"><span class="site-tab-icon" aria-hidden="true"><svg class="site-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h11a4 4 0 0 0 0-8h-1a6 6 0 0 0-11.7-1.8A5 5 0 0 0 7 18Z"/></svg></span>공유</button>
   </div>
   <section id="party-scope-panel" role="tabpanel" aria-labelledby="party-scope-local">
   <div class="party-scope-info">

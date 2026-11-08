@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>공용 환산 배율</title><link rel="icon" href="favicon.png?v=2">
+  <title>공용 환산 배율</title><link rel="icon" type="image/webp" href="icons/home/메이프릴카메라.webp">
   <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="site_ux.css"><link rel="stylesheet" href="boss_workspace.css"><link rel="stylesheet" href="shared_boss_rates.css"><link rel="stylesheet" href="boss_identity.css">
   <script src="site_header.js" defer></script><script src="site_nav.js" defer></script><script src="site_ux.js" defer></script>
   <script src="boss_db.js" defer></script><script src="scouter_data.js" defer></script><script src="rate_catalog.js" defer></script><script src="account_catalog.js" defer></script>
@@ -44,7 +44,7 @@
     <section class="card shared-panel" aria-label="캐릭터 배율">
       <div class="shared-hero"><div><div id="shared-profile"></div><p id="shared-profile-status" class="boss-status" role="status"></p></div><div class="shared-character-tools"><a id="shared-source" class="boss-button" hidden target="_blank" rel="noopener noreferrer">환산 원문 ↗</a></div></div>
       <details id="shared-owner-settings" class="boss-details shared-owner-settings"><summary id="shared-owner-summary">계정 설정</summary><div id="shared-owner-fields" class="shared-owner-fields"><label>소속 계정<select id="shared-owner"><option value="__unassigned__">미분류</option></select></label><label>이름 · 선택<input id="shared-owner-label" maxlength="40" placeholder="비우면 자동으로 지정"></label></div></details>
-      <div class="shared-input-toolbar"><div class="shared-input-toggle" role="group" aria-label="배율 입력 방식"><button id="shared-mode-capture" type="button" aria-pressed="true" aria-controls="shared-capture">캡처 입력</button><button id="shared-mode-fetch" type="button" aria-pressed="false" aria-controls="shared-fetch-panel">환산 조회</button></div><div id="shared-fetch-panel" hidden><button id="shared-fetch" class="boss-primary" type="button" disabled>배율 불러오기</button></div></div>
+      <div class="shared-input-toolbar"><div class="shared-input-toggle" role="group" aria-label="배율 입력 방식"><button id="shared-mode-capture" type="button" aria-pressed="true" aria-controls="shared-capture"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/메이프릴카메라.webp" alt=""></span>캡처 입력</button><button id="shared-mode-fetch" type="button" aria-pressed="false" aria-controls="shared-fetch-panel"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/감정돋보기.webp" alt=""></span>환산 조회</button></div><div id="shared-fetch-panel" hidden><button id="shared-fetch" class="boss-primary" type="button" disabled>배율 불러오기</button></div></div>
       <p id="shared-status" class="boss-status" role="status" aria-live="polite"></p>
       <div id="shared-capture">
         <div class="shared-capture-header">

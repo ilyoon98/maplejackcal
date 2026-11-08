@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<link rel="icon" type="image/png" href="favicon.png?v=2" />
+<link rel="icon" type="image/png" href="icons/home/boss-crystal-weekly.png" />
 <meta name="description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="메이플 계산기 모음" />
@@ -253,6 +253,7 @@
   .summary-inner{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:24px 0; }
   .summary-stat{ container-type:inline-size; display:flex; flex-direction:column; gap:10px; padding:22px; border-radius:12px; background:#111722; min-width:0; }
   .summary-stat .k{ font-size:.95rem; color:var(--text-dim); font-weight:600; }
+  .summary-stat .crystal-label{ display:flex; align-items:center; justify-content:center; gap:6px; }
   .summary-stat .v{ font-size:1.5rem; font-weight:800; color:var(--text); white-space:nowrap; overflow-x:auto; max-width:100%; }
   .summary-stat.primary .v{ font-size:clamp(1.8rem,3.2vw,3rem); color:var(--accent); letter-spacing:-.04em; }
   .summary-stat.earned .v{ color:var(--good); }
@@ -445,12 +446,12 @@
 <div class="overall-highlights">
   <div class="summary-inner">
     <div class="summary-stat meso primary weekly-summary">
-      <span class="k" id="weeklyIncomeLabel">주간 완료 수익 / 예상 총수익</span>
+      <span class="k crystal-label"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/boss-crystal-weekly.png" alt=""></span><span id="weeklyIncomeLabel">주간 완료 수익 / 예상 총수익</span></span>
       <div class="weekly-values" id="weeklyIncomeValues"><span id="sumEarned">0</span><span class="income-slash">/</span><span class="income-expected" id="sumWeekly">0</span></div>
       <div class="weekly-progress" role="progressbar" aria-label="전체 주간 보스 완료율" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="overallProgress"><span></span></div>
     </div>
     <div class="summary-stat meso primary monthly-summary">
-      <span class="k">월간 예상 수익</span>
+      <span class="k crystal-label"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/boss-crystal-monthly.png" alt=""></span>월간 예상 수익</span>
       <span class="v" id="sumMonthly">0</span>
     </div>
     <div class="summary-stat">
