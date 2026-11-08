@@ -8,6 +8,8 @@ const settle=async()=>{for(let i=0;i<5;i++)await new Promise(setImmediate);};
 async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,shot=[],ownRows=[],parties=[]}={}){
  const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../'+page+'.html'),'utf8'),{url:'https://example.test/'+page+'.html',runScripts:'outside-only'}),w=dom.window,calls=[];let values=structuredClone(snapshots),registry=structuredClone(accounts);
  w.confirm=()=>true;w.setInterval=()=>1;if(key)w.localStorage.setItem('nxopen_api_key',key);
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
+ w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
  if(parties.length)w.localStorage.setItem('partyBossScheduler.v1',JSON.stringify({parties}));
  w.fetch=async(url,options={})=>{calls.push({url,options});if(url==='/api/boss-rates'){
    if(options.method==='POST'){const b=JSON.parse(options.body);if(b.action==='accounts'){registry=b.accounts;return {ok:true,json:async()=>({accounts:registry,accountRevision:'accounts-v2'})};}const saved={...b.snapshot,revision:'v2'};values=values.filter(s=>s.characterName!==saved.characterName).concat(saved);return {ok:true,json:async()=>({snapshot:saved})};}
@@ -113,10 +115,11 @@ test('보스 보상은 선택한 난이도와 편집 중 인원수를 반영하�
    assert.equal(item('party-detail',name).querySelector('.party-reward-quantity').textContent,count);
   }
   assert.deepEqual(highlights(),[]);
-  select(p.w,'party-view','character:첫번째');
+  const filter=(query,label)=>{p.doc.querySelector('#party-open-filter').click();type(p.w,'party-filter-query',query);p.doc.querySelector('#party-filter-results button[aria-label="'+label+'"]').click();};
+  filter('첫번째','캐릭터 첫번째');
   assert.equal(p.doc.querySelectorAll('#party-list button').length,1);
   assert.deepEqual(highlights(),['선택한 캐릭터']);
-  select(p.w,'party-view','account:account1');assert.deepEqual(highlights(),['선택한 계정']);
+  filter('첫 번째','계정 첫 번째 계정');assert.deepEqual(highlights(),['선택한 계정']);
   p.doc.querySelector('.party-edit').click();
   assert.equal(amount('party-draft-summary'),'6억 9,500만 메소');
   p.doc.querySelector('#party-draft-members .party-remove').click();
@@ -131,6 +134,23 @@ test('보스 보상은 선택한 난이도와 편집 중 인원수를 반영하�
   assert.match(p.doc.querySelector('#party-draft-summary .party-crystal').textContent,/결정석 기본가/);
   p.doc.querySelector('#party-create-cancel').click();
   assert.equal(amount('party-detail'),'6억 9,500만 메소');
+ }finally{p.close();}
+});
+test('보스 필터는 별칭으로 찾고 해당 보스의 모든 난이도를 보여주며 한 번에 해제한다',async()=>{
+ const parties=[['검마 하드','BlackMage|Hard'],['검마 익스트림','BlackMage|Extreme'],['스우','Lotus|Hard']].map(([name,bossId],id)=>({id:String(id),name,bossId,members:[]}));
+ const p=await boot('party_boss_scheduler',{parties});try{
+  p.doc.querySelector('#party-open-filter').click();
+  type(p.w,'party-filter-query','없는 보스');assert.equal(p.doc.querySelector('#party-filter-empty').hidden,false);
+  type(p.w,'party-filter-query','검마');
+  const option=p.doc.querySelector('#party-filter-results button[aria-label="보스 검은 마법사"]');
+  assert(option.querySelector('img').src.endsWith('black_mage.webp'));option.click();
+  assert.equal(p.doc.querySelector('#party-view-count').textContent,'파티 2개');
+  assert.equal(p.doc.querySelector('#party-active-filter').textContent,'보스 · 검은 마법사');
+  assert.deepEqual([...p.doc.querySelectorAll('#party-list .diff-badge')].map(n=>n.textContent),['하드','익스트림']);
+  assert.equal(p.doc.querySelector('#party-filter-dialog').open,false);
+  p.doc.querySelector('#party-clear-filter').click();
+  assert.equal(p.doc.querySelector('#party-view-count').textContent,'파티 3개');
+  assert.equal(p.doc.querySelector('#party-view-all').getAttribute('aria-pressed'),'true');
  }finally{p.close();}
 });
 test('스케줄러에서 선택 가능한 모든 난이도의 보상 아이콘은 로컬 이미지 안에 있다',()=>{

@@ -12,6 +12,7 @@
   var BASE='https://open.api.nexon.com/maplestory/v1';
   var SHARE_COLORS=['#75adff','#59d8ad','#ffc46b','#c39bfa','#ff849d','#efe879'];
   function text(v,n){return typeof v==='string'?v.trim().slice(0,n||100):'';}
+  function normalizeSearch(value){return value.toLocaleLowerCase('ko-KR').replace(/\s+/g,'');}
   var imageUrl=scouter.imageUrl;
   function profile(raw,ocid){
     if(!raw||!text(raw.character_name,30)||!text(ocid,160))throw new Error('PROFILE_INVALID');
@@ -107,16 +108,15 @@
       });
       options.querySelector('button').focus();
     }
-    function normalize(value){return value.toLocaleLowerCase('ko-KR').replace(/\s+/g,'');}
     function showBosses(){
-      var term=normalize(query.value);difficulty.hidden=true;search.hidden=false;results.hidden=false;results.replaceChildren();recentList.replaceChildren();
+      var term=normalizeSearch(query.value);difficulty.hidden=true;search.hidden=false;results.hidden=false;results.replaceChildren();recentList.replaceChildren();
       recent.filter(function(id){return available.some(function(c){return c.id===id;});}).forEach(function(id){
         recentList.append(button(visual.create(doc,id,db),function(){choose(id);}));
       });
       recentSection.hidden=!recentList.childElementCount;
       bosses.forEach(function(_,key){
         var names=[db[key].Name].concat(db.BossAliases?.[key]||[]);
-        if(names.some(function(name){return normalize(name).includes(term);}))results.append(button(visual.create(doc,key,db),function(){showDifficulties(key);}));
+        if(names.some(function(name){return normalizeSearch(name).includes(term);}))results.append(button(visual.create(doc,key,db),function(){showDifficulties(key);}));
       });
       empty.hidden=results.childElementCount>0;
     }
@@ -139,6 +139,7 @@
     var ownSyncedKey='',ownSyncPending=null;
     var editing='',editingRevision='',draftId='',portraitAttempts=new Set();
     var scope='local',remoteRows=[],remoteParties=[],remoteAvailable=false,remoteLoading=false,remoteWriting=false,remoteError='',remoteVersion=0;
+    var view={value:'all',label:''},filterTypes={boss:'보스',account:'계정',character:'캐릭터'};
     try{var saved=JSON.parse(win.localStorage.getItem(STORAGE)||'{}');parties=restore(saved,choices);}catch(e){}
     try{if(win.localStorage.getItem(SCOPE_STORAGE)==='shared')scope='shared';}catch(e){}
     function node(tag,cls,label){var n=doc.createElement(tag);if(cls)n.className=cls;if(label!=null)n.textContent=label;return n;}
@@ -170,7 +171,8 @@
       refresh.hidden=!sharedScope;refresh.disabled=remoteLoading||remoteWriting;
       el('party-create-toggle').disabled=remoteWriting||(sharedScope&&!remoteAvailable);
       el('party-create-cancel').disabled=remoteWriting;el('party-save').disabled=remoteWriting||(sharedScope&&!remoteAvailable);
-      el('party-create-form').inert=remoteWriting;el('party-view').disabled=remoteWriting;
+      el('party-create-form').inert=remoteWriting;
+      ['party-view-all','party-view-mine','party-open-filter','party-clear-filter'].forEach(function(id){el(id).disabled=remoteWriting;});
       el('party-save').textContent=remoteWriting?'저장 중…':sharedScope?'공유 파티 저장':'파티 저장';
       el('party-draft-scope').textContent=sharedScope?'저장하면 누구나 볼 수 있습니다.':'이 브라우저에 저장';
     }
@@ -395,21 +397,6 @@
       }
       return row;
     }
-    function fillView(){
-      var select=el('party-view'),value=select.value;
-      select.replaceChildren(new win.Option('전체 파티','all'),new win.Option('내 캐릭터 파티','mine'));
-      var groups=accounts.groups(shared);if(groups.length){
-        var options=node('optgroup');options.label='계정별 보기';
-        groups.forEach(function(group){options.append(new win.Option(group.label,'account:'+group.id));});select.append(options);
-      }
-      var names=new Set(activeParties().flatMap(function(p){return p.members.map(function(m){return m.character.name;});}));
-      if(names.size){
-        var characters=node('optgroup');characters.label='캐릭터별 보기';
-        Array.from(names).sort(function(a,b){return a.localeCompare(b,'ko-KR');}).forEach(function(name){characters.append(new win.Option(name,'character:'+name));});
-        select.append(characters);
-      }
-      select.value=Array.from(select.options).some(function(option){return option.value===value;})?value:'all';
-    }
     function matchingMember(filter,name){
       if(filter==='mine')return owned.has(name);
       if(filter.startsWith('character:'))return filter==='character:'+name;
@@ -418,9 +405,53 @@
       return filter==='account:'+id||filter==='account:'&&id==='character:'+name;
     }
     function visible(){
-      var filter=el('party-view').value,items=activeParties();
+      var filter=view.value,items=activeParties();
       if(filter==='all')return items;
+      if(filter.startsWith('boss:'))return items.filter(function(p){return p.bossId.split('|')[0]===filter.slice(5);});
       return items.filter(function(p){return p.members.some(function(m){return matchingMember(filter,m.character.name);});});
+    }
+    function setView(value,label){
+      if(remoteWriting)return;
+      view={value:value,label:label||''};filterStatus('');
+      if(value==='mine')loadMine();
+      refreshBoard();
+    }
+    function renderView(count){
+      ['all','mine'].forEach(function(id){el('party-view-'+id).setAttribute('aria-pressed',String(view.value===id));});
+      var kind=filterTypes[view.value.split(':')[0]],clear=el('party-clear-filter');
+      clear.hidden=!kind;
+      el('party-active-filter').textContent=kind?kind+' · '+view.label:'';
+      clear.setAttribute('aria-label',kind?kind+' '+view.label+' 필터 해제':'필터 해제');
+      el('party-view-count').textContent='파티 '+count+'개';
+    }
+    function renderFilterOptions(){
+      var db=win.MapleBossDB,items=activeParties(),host=el('party-filter-results'),term=normalizeSearch(el('party-filter-query').value);
+      var bossIds=new Set(items.map(function(p){return p.bossId.split('|')[0];}));
+      var names=new Set(items.flatMap(function(p){return p.members.map(function(m){return m.character.name;});}));
+      var options={
+        boss:Array.from(bossIds,function(id){return {id:id,label:db[id].Name,aliases:db.BossAliases?.[id]||[]};}),
+        account:accounts.groups(shared),
+        character:Array.from(names,function(name){return {id:name,label:name};})
+      };
+      host.replaceChildren();
+      Object.entries(options).forEach(function([kind,entries]){
+        var matches=entries.filter(function(entry){return [entry.label].concat(entry.aliases||[]).some(function(name){return normalizeSearch(name).includes(term);});});
+        if(!matches.length)return;
+        matches.sort(function(a,b){return a.label.localeCompare(b.label,'ko-KR');});
+        var section=node('section'),list=node('div','party-boss-grid');
+        section.append(node('h3','',filterTypes[kind]),list);
+        matches.forEach(function(entry){
+          var key=kind+':'+entry.id,button=node('button','ux-button');button.type='button';
+          button.setAttribute('aria-pressed',String(view.value===key));
+          button.setAttribute('aria-label',filterTypes[kind]+' '+entry.label);
+          button.append(kind==='boss'?visual.create(doc,entry.id,db):node('span','',entry.label));
+          if(kind==='account')button.append(node('span','party-note','소속 '+entry.characters.length+'명'));
+          button.addEventListener('click',function(){setView(key,entry.label);el('party-filter-dialog').close();});
+          list.append(button);
+        });
+        host.append(section);
+      });
+      el('party-filter-empty').hidden=host.childElementCount>0;
     }
     function storageStatus(message,error){var note=el('party-storage-status');note.textContent=message;note.classList.toggle('error',!!error);}
     function filterStatus(message,error){var note=el('party-filter-status');note.textContent=message;note.classList.toggle('error',!!error);}
@@ -464,9 +495,10 @@
       parties=next;refreshBoard();return true;
     }
     function selectVisible(shown){if(!shown.some(function(p){return p.id===selected;}))selected=shown[0]?.id||'';}
-    function refreshBoard(){fillView();var shown=visible();selectVisible(shown);candidates();renderBoard(shown);}
+    function refreshBoard(){var shown=visible();selectVisible(shown);candidates();renderBoard(shown);}
     function renderBoard(shown=visible()){
       var list=el('party-list'),headingHost=el('party-detail-heading'),detail=el('party-detail-content'),formOpen=!el('party-create-form').hidden;
+      renderView(shown.length);
       list.replaceChildren();headingHost.replaceChildren();detail.replaceChildren();selectVisible(shown);
       shown.forEach(function(p){
         var button=node('button'),boss=choices.find(function(c){return c.id===p.bossId;});
@@ -483,8 +515,8 @@
       var p=activeParties().find(function(item){return item.id===selected;}),editable=scope==='local'||p?.canEdit;
       el('party-detail').hidden=formOpen;el('party-add-panel').hidden=!p||formOpen||!editable;var add=el('party-add-current');add.disabled=true;
       if(!p){
-        var filter=el('party-view').value;
-        var message=scope==='shared'&&!remoteAvailable?(remoteError||'공유 파티를 불러오는 중입니다.'):filter==='mine'?'내 캐릭터 파티가 없습니다.':filter!=='all'?'이 계정의 파티가 없습니다.':scope==='shared'?'아직 공유된 파티가 없습니다.':'새 파티를 만들어보세요.';
+        var filter=view.value;
+        var message=scope==='shared'&&!remoteAvailable?(remoteError||'공유 파티를 불러오는 중입니다.'):filter==='mine'?'내 캐릭터 파티가 없습니다.':filter!=='all'?'선택한 조건에 맞는 파티가 없습니다.':scope==='shared'?'아직 공유된 파티가 없습니다.':'새 파티를 만들어보세요.';
         detail.append(node('p','party-empty',message));return;
       }
       if(formOpen)return;
@@ -529,7 +561,7 @@
       if(shares)detail.append(damageChart(p.members,shares));
       if(p.members.some(function(m,i){return accounts.conflict(shared,p.members.slice(0,i),m.character.name);}))detail.append(node('p','party-note account-error','계정 묶음이 변경되어 같은 계정의 캐릭터가 중복되었습니다. 한 명을 빼주세요.'));
       var roster=node('div','party-members');
-      var filter=el('party-view').value,highlight=filter==='mine'?'내 캐릭터':filter.startsWith('character:')?'선택한 캐릭터':'선택한 계정';
+      var filter=view.value,highlight=filter==='mine'?'내 캐릭터':filter.startsWith('character:')?'선택한 캐릭터':'선택한 계정';
       roster.append(...memberCards(p.members,shares,editable?function(m){updateMembers(p,p.members.filter(function(item){return item!==m;}));}:null,function(m){return matchingMember(filter,m.character.name)?highlight:'';}));
       detail.append(roster);
     }
@@ -556,7 +588,7 @@
     async function loadMine(){
       owned.clear();if(!win.NexonKey||!win.NexonKey.has()){filterStatus('내 캐릭터 필터는 홈에서 API 키를 등록하면 사용할 수 있습니다.',true);return;}
       filterStatus('내 캐릭터를 불러오는 중…');
-      try{var chars=await win.NexonCharacters.fetch();chars.forEach(function(c){owned.add(c.name);});if(el('party-view').value==='mine'){filterStatus('');refreshBoard();}}catch(e){if(el('party-view').value==='mine')filterStatus('내 캐릭터를 불러오지 못했습니다. API 키를 확인하세요.',true);}
+      try{var chars=await win.NexonCharacters.fetch();chars.forEach(function(c){owned.add(c.name);});if(view.value==='mine'){filterStatus('');refreshBoard();}}catch(e){if(view.value==='mine')filterStatus('내 캐릭터를 불러오지 못했습니다. API 키를 확인하세요.',true);}
     }
     var supported=new Set(win.RateCatalog.choices(win.MapleBossDB).map(function(c){return c.id;}));
     var bossPicker=mountBossPicker(win,choices,supported);
@@ -579,7 +611,14 @@
       if(draftMembers.length>=boss.max){draftStatus('이 보스는 최대 '+boss.max+'명입니다.',true);return;}
       var member=publicMember(name,boss.id);draftMembers.push(member);draftStatus(name+' 캐릭터를 추가했습니다.');renderDraft();repairPortraits({members:[member]});
     });
-    el('party-view').addEventListener('change',function(){filterStatus('');if(this.value==='mine')loadMine();refreshBoard();});
+    ['all','mine'].forEach(function(id){el('party-view-'+id).addEventListener('click',function(){setView(id);});});
+    el('party-clear-filter').addEventListener('click',function(){setView('all');el('party-view-all').focus();});
+    var filterDialog=el('party-filter-dialog'),filterQuery=el('party-filter-query'),filterOpener=el('party-open-filter');
+    filterOpener.addEventListener('click',function(){filterOpener.focus();filterQuery.value='';renderFilterOptions();filterDialog.showModal();filterQuery.focus();});
+    el('party-close-filter').addEventListener('click',function(){filterDialog.close();});
+    filterQuery.addEventListener('input',renderFilterOptions);
+    filterQuery.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();filterDialog.close();}});
+    filterDialog.addEventListener('close',function(){if(doc.activeElement===doc.body||filterDialog.contains(doc.activeElement))filterOpener.focus();});
     el('party-create-toggle').addEventListener('click',function(){
       if(!el('party-create-form').hidden&&!editing){closeEditor();candidates();renderBoard();}else openEditor();
     });
@@ -607,13 +646,12 @@
         parties=next;
       }
       selected=p.id;closeEditor();
-      fillView();
-      if(!visible().includes(p))el('party-view').value='all';
+      if(!visible().includes(p)){view={value:'all',label:''};filterStatus('');}
       candidates();renderBoard();status('');repairPortraits(p);
       storageStatus(scope==='shared'?'공유 목록에 파티를 저장했습니다.':original?'파티 변경사항을 저장했습니다.':p.name+' 파티를 만들었습니다.');
       doc.querySelector('.party-edit')?.focus();
     });
-    win.addEventListener('nexon-key-changed',function(){profileVersion++;if(controller)controller.abort();portraitAttempts.clear();if(current)choose(current.name);ownSyncedKey='';if(ownSyncPending)ownSyncPending.catch(function(){}).finally(function(){ownSyncedKey='';syncSaved();});else syncSaved();if(el('party-view').value==='mine')loadMine();});
+    win.addEventListener('nexon-key-changed',function(){profileVersion++;if(controller)controller.abort();portraitAttempts.clear();if(current)choose(current.name);ownSyncedKey='';if(ownSyncPending)ownSyncPending.catch(function(){}).finally(function(){ownSyncedKey='';syncSaved();});else syncSaved();if(view.value==='mine')loadMine();});
     function refresh(){syncSaved();if(scope==='shared')loadRemote();}
     win.addEventListener('storage',function(e){if(e.key==='sharedBossRates.changed'||e.key===win.NexonKey.STORAGE_KEY)syncSaved();});win.addEventListener('focus',refresh);if(win.setInterval)win.setInterval(function(){if(!doc.hidden)refresh();},30000);
     updateScopeUI();refreshBoard();refresh();

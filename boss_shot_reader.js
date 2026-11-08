@@ -29,6 +29,8 @@
     '8': '.###./#...#/#...#/##.#./#####/#...#/#...#/####.',
     '9': '.###./#..##/#...#/#...#/#####/....#/#...#/####.',
     '.': './././././././#',
+    // 실제 캡처에서 7의 오른쪽 위 획과 소수점이 같은 열을 공유한다.
+    '7.': '######/....##/....#./...##./...#../..#.../..#.../.#...#',
     '%': '###...#./#.#..#../#.#.#.../###.#.../...#..#./..#..#.#/..#..#.#/.#...###'
   };
   // 150%에서는 브라우저가 글꼴을 다시 그리므로 8px 글자를 단순 확대한 모양과 다르다.
@@ -438,7 +440,7 @@
       var small = parseWithTemplates(smooth, smallW, smallH, smallH / GLYPH_H, SMALL_TEMPLATES);
       if (small.error < result.error) result = small;
     }
-    var text = result.text;
+    var text = result.missingDecimal ? '' : result.text;
     var m = /^(\d+(?:\.\d+)?)%$/.exec(text || '');
     // 모양이 잘 맞지 않는 줄은 그럴듯한 큰 정수로 추측해 넣지 않고 직접 확인하도록 남긴다.
     return { text: text || '', value: m && result.error <= 0.15 ? parseFloat(m[1]) : null };
@@ -468,14 +470,15 @@
   // 그 사이트는 유효숫자 4자리로 적는다(0.42% · 10.19% · 143.1% · 1348% · 12081%).
   // 정수부 자릿수에 맞는 소수 자릿수를 상태로 강제해 흐린 틈에 점이 끼어들지 않게 한다.
   //  0 시작 · 1~3 정수 1~3자리 · 4 정수 4자리 이상
-  //  5~7 소수 2자리 필요(0·1·2자리 읽음) · 8~9 소수 1자리 필요(0·1자리 읽음) · 10 % 뒤(끝)
+  //  5~7 소수 2자리 필요(0·1·2자리 읽음) · 8~9 소수 1자리 필요(0·1자리 읽음)
+  //  10 정상 종료 · 11 소수부가 없는 짧은 정수(누락 판정에만 사용)
   var NEXT = {
     digit: [1, 2, 3, 4, 4, 6, 7, -1, 9, -1, -1],
     '.': [-1, 5, 5, 8, -1, -1, -1, -1, -1, -1, -1],
-    '%': [-1, -1, -1, -1, 10, -1, -1, 10, -1, 10, -1]
+    '7.': [5, 5, 8, -1, -1, -1, -1, -1, -1, -1, -1],
+    '%': [-1, 11, 11, 11, 10, -1, -1, 10, -1, 10, -1]
   };
-  var NS = 11, END = 10;
-  var DOT_PENALTY = 0;
+  var NS = 12, END = 10, SHORT = 11;
   function parseLine(soft, W, H, s, details) {
     // 브라우저 확대와 이미지를 단순 확대한 경우 모두 지원한다.
     var result = parseWithTemplates(soft, W, H, s, TEMPLATES);
@@ -501,15 +504,15 @@
       // 빈 칸 건너뛰기(칠해진 칸을 건너뛰면 크게 손해).
       relax(i, st, i + 1, st, here + colInk[i] * 3 / area, null);
       templates.forEach(function (t) {
-        var nst = NEXT[t.ch === '.' || t.ch === '%' ? t.ch : 'digit'][st];
-        if (nst < 0) return;
+        var nst = (NEXT[t.ch] || NEXT.digit)[st];
+        if (nst == null || nst < 0) return;
         var base = Math.max(1, Math.round(t.w * H / t.h));
         [base - 1, base, base + 1].forEach(function (wt) {
           if (wt < 1) return;
           var tpl = scaledTemplate(t, wt, H);
           // 글자 사이가 0칸이면 그대로 붙고, '77'처럼 1칸 겹치기도 한다.
           // 겹칠 때는 마지막 열을 다음 글자에게 맡기고 나머지만 비교한다.
-          var spans = t.w >= 4 ? [wt, wt - 1] : [wt];
+          var spans = t.w >= 4 && t.ch !== '7.' ? [wt, wt - 1] : [wt];
           spans.forEach(function (span) {
             if (span < 1 || i + span > W) return;
             var miss = 0;
@@ -525,8 +528,13 @@
               }
               if (low < 0.5 * area || high > low * 0.25) return;
             }
-            // 점은 한 칸짜리라 흐린 틈에도 싸게 맞아 버리므로 벌점을 더 준다.
-            var penalty = (span === wt ? 0.5 : 2.5) + (t.ch === '.' ? DOT_PENALTY : 0);
+            // 같은 열을 공유해도 오른쪽 아래에 실제 점 잉크가 있어야 한다.
+            if (t.ch === '7.') {
+              var dot = 0, tail = Math.max(1, Math.round(wt / t.w));
+              for (y = Math.floor(H * 0.75); y < H; y++) for (x = wt - tail; x < wt; x++) dot += soft[y * W + i + x];
+              if (dot < 0.5 * area) return;
+            }
+            var penalty = span === wt ? 0.5 : 2.5;
             relax(i, st, i + span, nst, here + miss + penalty, t.ch);
           });
         });
@@ -534,10 +542,27 @@
     }
     var end = W * NS + END;
     if (cost[end] === Infinity) return { text: '', error: Infinity };
-    var out = [];
-    for (var p = end; p > 0; p = from[p]) if (pick[p]) out.push(pick[p]);
+    var out = [], percentStart = W;
+    for (var p = end; p > 0; p = from[p]) {
+      if (pick[p]) out.push(pick[p]);
+      if (pick[p] === '%') percentStart = Math.floor(from[p] / NS);
+    }
     var text = out.reverse().join('');
-    return { text: text, error: cost[end] / (W * H / area) };
+    var pixels = W * H / area, error = cost[end] / pixels;
+    var missingDecimal = /^\d{4}%$/.test(text) &&
+      (cost[W * NS + SHORT] / pixels + 0.02 < error || hasDecimalGap(colInk, percentStart, s));
+    return { text: text, error: error, missingDecimal: missingDecimal };
+  }
+
+  function hasDecimalGap(colInk, end, scale) {
+    var gap = 0, seen = false;
+    for (var x = 0; x < end; x++) {
+      if (colInk[x] < 0.18 * scale) { if (seen) gap++; continue; }
+      if (gap >= 3 * scale) return true;
+      seen = true;
+      gap = 0;
+    }
+    return false;
   }
 
   // ── 전체 ───────────────────────────────────────────────────

@@ -150,3 +150,28 @@ test('125% 캡처의 배율을 소수점 없이 끼워 넣지 않고 정확히 �
   ]);
   assert.deepEqual(res.slice(0, 3).map(r => [r.name, r.diff]), [['림보', '노멀'], ['감시자 칼로스', '카오스'], ['벨로나', '노멀']]);
 });
+
+const decimalShot = decodePng(path.join(__dirname, 'fixtures/boss_shot_decimal.png'));
+test('제보 캡처에서 카링 80.25%와 7에 붙은 대적자 7.16%를 정확히 읽는다', () => {
+  const rows = reader.analyze(decimalShot, reader.siteRefs());
+  const value = (name,diff) => rows.find(row=>row.name===name && row.diff===diff).value;
+  assert.equal(rows.length,49);
+  assert.equal(value('카링','노멀'),80.25);
+  assert.equal(value('최초의 대적자','익스트림'),7.16);
+  assert.equal(value('윌','하드'),2100);
+  assert.equal(value('스우','노멀'),115053);
+});
+
+test('두 소수점 픽셀이 유실되면 8025%와 7160%로 자동 입력하지 않는다', () => {
+  const data = decimalShot.data.slice();
+  for (const [x,y] of [[272,420],[345,140]]) {
+    const offset = (y * decimalShot.width + x) * 4;
+    data.set([23,23,23,255],offset);
+  }
+  const rows = reader.analyze({...decimalShot,data}, reader.siteRefs());
+  for (const [name,diff] of [['카링','노멀'],['최초의 대적자','익스트림']]) {
+    const row = rows.find(row=>row.name===name && row.diff===diff);
+    assert.equal(row.value,null);
+    assert.equal(row.text,'');
+  }
+});
