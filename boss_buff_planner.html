@@ -86,6 +86,10 @@
   .row-name strong .nm { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .row-tag { flex:none; font-size:0.68rem; font-weight:700; color:var(--text-dim); padding:1px 6px; border:1px solid var(--border); border-radius:5px; }
   .row-tag.done { color:var(--good); border-color:rgba(76,175,125,.45); }
+  /* 파티 배율을 쓰는 보스는 배율·시간 칸 대신 파티 환산 합계를 쓴다. 눌러서 혼자 배율로 되돌릴 수 있다. */
+  button.row-tag.party-tag { cursor:pointer; background:transparent; font:inherit; font-size:0.68rem; font-weight:700; min-height:0; }
+  button.row-tag.party-tag[aria-pressed="true"] { color:#c3deff; border-color:#6ea8fe; background:#243f62; }
+  .row-input input:disabled { opacity:1; color:#c3deff; background:#182438; }
   .route-settings { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:0 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card); font-size:0.8rem; color:var(--text-dim); }
   .route-settings .route-item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
   .route-settings input { width:64px; padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:#11141a; color:var(--text); font-size:0.88rem; font-variant-numeric:tabular-nums; }
@@ -288,7 +292,7 @@
           <p class="note fetch-status" id="shotStatus"></p>
           <div id="shotResult" hidden></div>
         </div>
-        <p class="ux-hint">배율은 풀도핑 기준으로, 시간은 선택한 도핑 기준으로 입력하세요. 여유 시간과 윌의 +4분은 별도로 더합니다.</p><div class="boss-head">
+        <p class="ux-hint">배율은 풀도핑 기준으로, 시간은 선택한 도핑 기준으로 입력하세요. 여유 시간과 윌의 +4분은 별도로 더합니다.</p><p class="note fetch-status" id="partyRateStatus" role="status"></p><div class="boss-head">
           <span>포함</span><span></span><span class="name-col">보스</span><span>난이도</span><span>배율</span><span>소요</span><span>도핑</span><span>완료 상태</span>
         </div>
         <div id="bossList"></div>
@@ -329,6 +333,7 @@
 <script src="nexon_characters.js"></script>
 <script src="boss_shot_reader.js?v=2"></script>
 <script src="site_tooltips.js"></script>
+<script src="boss_db.js"></script>
 <script src="boss_buff_planner.js"></script>
 </body>
 </html>

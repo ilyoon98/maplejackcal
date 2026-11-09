@@ -73,6 +73,7 @@
       registered: b.registered === true,
       inList: b.inList === true || b.on !== false,
       completionOverride: b.completionOverride === true,
+      useParty: b.useParty !== false,
       difficultySettings: b.difficultySettings || {}
     };
   }
@@ -374,12 +375,74 @@
   var moveInput = document.getElementById('moveMin');
   var slackInput = document.getElementById('slackPct');
   var excludeCompletedBtn = document.getElementById('excludeCompletedBtn');
+  // ── 파티 보스 스케줄러 연동 ─────────────────────────────────
+  // 선택한 캐릭터가 들어간 파티(이 브라우저의 로컬 파티와 공유 파티)를 찾아, 그 보스는 파티 환산 합계를 배율로 쓴다.
+  // 파티원 중 한 명이라도 배율이 없으면 합계를 믿을 수 없으므로 혼자 배율을 그대로 쓴다.
+  var PARTY_STORE = 'partyBossScheduler.v1';
+  var DIFF_KEY = { '이지': 'Easy', '노멀': 'Normal', '하드': 'Hard', '카오스': 'Chaos', '익스트림': 'Extreme' };
+  var partyRates = Object.create(null), partyRequest = 0;
+  function bossIdOf(b) {
+    var db = window.MapleBossDB;
+    if (!db || !DIFF_KEY[b.diff]) return '';
+    var key = Object.keys(db).find(function (k) { return k !== 'BossAliases' && db[k] && db[k].Name === b.name; });
+    return key ? key + '|' + DIFF_KEY[b.diff] : '';
+  }
+  function partyFor(b) { var p = partyRates[bossIdOf(b)]; return p && b.useParty !== false ? p : null; }
+  function effectiveMult(b) { var p = partyFor(b); return p ? p.total : b.mult; }
+  function snapshotRate(store, name, bossId) {
+    var s = (store && Array.isArray(store.snapshots) ? store.snapshots : []).find(function (x) { return x.characterName === name && x.preset === '00000'; });
+    var r = s && (s.rates || []).find(function (x) { return x.bossId === bossId; });
+    return r && typeof r.percent === 'number' ? r.percent : null;
+  }
+  function collectPartyRates(name, local, shared, store) {
+    var found = Object.create(null), skipped = [];
+    function add(p, rates) {
+      if (!p || !p.bossId || found[p.bossId]) return;
+      if (!rates.length || rates.some(function (r) { return r === null; })) { skipped.push(p.name || '이름 없는 파티'); return; }
+      found[p.bossId] = { total: Math.round(rates.reduce(function (s, r) { return s + r; }, 0) * 100) / 100, name: p.name || '', count: rates.length };
+    }
+    // 공유 파티를 먼저 본다. 로컬 파티는 공유로 복사하기 전 사본일 수 있다.
+    shared.forEach(function (p) {
+      if (Array.isArray(p.members) && p.members.indexOf(name) >= 0) add(p, p.members.map(function (n) { return snapshotRate(store, n, p.bossId); }));
+    });
+    local.forEach(function (p) {
+      var members = Array.isArray(p.members) ? p.members : [];
+      if (!members.some(function (m) { return m && m.character && m.character.name === name; })) return;
+      add(p, members.map(function (m) {
+        var fresh = snapshotRate(store, m.character.name, p.bossId);
+        return fresh !== null ? fresh : typeof m.rate === 'number' ? m.rate : null;
+      }));
+    });
+    return { rates: found, skipped: skipped };
+  }
+  function partyStatus(message) { var n = document.getElementById('partyRateStatus'); if (n) n.textContent = message || ''; }
+  function loadPartyRates() {
+    var name = (activeProfile || charInput.value || '').trim(), request = ++partyRequest;
+    if (!name || typeof fetch !== 'function') { partyRates = Object.create(null); partyStatus(''); renderAll(); return Promise.resolve(); }
+    var local = [];
+    try { var saved = JSON.parse(localStorage.getItem(PARTY_STORE) || '{}'); if (saved && Array.isArray(saved.parties)) local = saved.parties; } catch (e) {}
+    function json(url) { return fetch(url, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); }); }
+    return Promise.all([json('/api/boss-parties').catch(function () { return null; }), json('/api/boss-rates').catch(function () { return null; })])
+      .then(function (res) {
+        if (request !== partyRequest) return;
+        var shared = res[0] && Array.isArray(res[0].parties) ? res[0].parties : [];
+        var result = collectPartyRates(name, local, shared, res[1]);
+        partyRates = result.rates;
+        var count = Object.keys(partyRates).length, notes = [];
+        if (count) notes.push(name + '의 파티 ' + count + '개는 파티 보스 스케줄러의 환산 합계를 배율로 씁니다. 보스 옆 파티 표시를 누르면 혼자 배율로 바꿉니다.');
+        if (result.skipped.length) notes.push('배율 미등록 파티원이 있는 파티는 혼자 배율을 씁니다: ' + result.skipped.join(', ') + '.');
+        if (!res[0] && !count) notes.push('공유 파티를 불러오지 못해 이 브라우저의 파티만 확인했습니다.');
+        partyStatus(notes.join(' '));
+        renderAll();
+      });
+  }
   function activeItems() {
     return state.bosses.filter(function (b) { return b.on && !(state.excludeCompleted && b.completed); }).map(function (b) {
+      var mult = effectiveMult(b);
       return {
-        name: b.name, diff: b.diff, icon: b.icon, mult: b.mult, extra: b.extra, rice: b.rice === true,
-        full: withSlack(secOf(b.mult)) + extraSec(b),
-        riceSec: withSlack(riceSecOf(b.mult)) + extraSec(b)
+        name: b.name, diff: b.diff, icon: b.icon, mult: mult, extra: b.extra, rice: b.rice === true,
+        full: withSlack(secOf(mult)) + extraSec(b),
+        riceSec: withSlack(riceSecOf(mult)) + extraSec(b)
       };
     });
   }
@@ -396,7 +459,10 @@
     viewBtn.setAttribute('aria-pressed', String(state.showAllBosses));
     state.bosses.forEach(function (b, i) {
       if (visible.indexOf(b) < 0) return;
-      var sec = b.rice ? riceSecOf(b.mult) : secOf(b.mult);
+      var party = partyRates[bossIdOf(b)], usingParty = !!partyFor(b), mult = effectiveMult(b);
+      var sec = b.rice ? riceSecOf(mult) : secOf(mult);
+      var partyTag = party ? '<button type="button" class="row-tag party-tag" data-act="party" data-i="' + i + '" aria-pressed="' + usingParty + '" aria-label="' + esc(b.name) + ' 파티 배율 ' + (usingParty ? '사용 중' : '사용 안 함') + '" data-tooltip="' + esc((party.name || '파티') + ' · ' + party.count + '명 환산 합계 ' + percentText(party.total) + '%') + '" data-tooltip-note="누르면 ' + (usingParty ? '혼자 배율' : '파티 배율') + '로 바뀝니다.">' + (usingParty ? '파티' : '파티 끔') + '</button>' : '';
+      var lockAttr = usingParty ? ' disabled title="파티 배율을 쓰는 중입니다"' : '';
       var excluded = state.excludeCompleted && b.completed;
       var dopingName = b.rice ? '쌀도핑' : '풀도핑';
       var nextDoping = b.rice ? '풀도핑' : '쌀도핑';
@@ -409,12 +475,12 @@
         (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="">' : '<span class="row-icon blank"></span>') +
         // 완료 표시는 고정된 오른쪽 버튼에만 두어 이름·난이도가 밀리지 않는다.
         '<div class="row-name"><strong><span class="nm" data-tooltip="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
-        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') +
+        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') + partyTag +
         '</strong></div>' +
         '<div class="row-difficulty">' + (entry ? '<select class="row-diff diff-badge ' + (DIFF_CLASS[b.diff] || '') + '" data-act="diff" data-i="' + i + '" aria-label="' + esc(b.name) + ' 난이도">' +
           entry[2].map(function (diff) { return '<option value="' + diff + '"' + (diff === b.diff ? ' selected' : '') + '>' + diff + '</option>'; }).join('') + '</select>' : diffBadge(b.diff)) + '</div>' +
-        '<div class="row-input row-mult"><input type="number" min="0.01" step="0.01" value="' + percentText(b.mult) + '" data-act="mult" data-i="' + i + '" aria-label="' + esc(b.name) + ' 배율"><span class="unit">%</span></div>' +
-        '<div class="row-input row-time"><input type="number" tabindex="-1" min="0.1" step="0.1" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '" aria-label="' + esc(b.name) + ' 소요 시간"><span class="unit">분</span></div>' +
+        '<div class="row-input row-mult"><input type="number" min="0.01" step="0.01" value="' + percentText(mult) + '" data-act="mult" data-i="' + i + '" aria-label="' + esc(b.name) + (usingParty ? ' 파티 배율' : ' 배율') + '"' + lockAttr + '><span class="unit">%</span></div>' +
+        '<div class="row-input row-time"><input type="number" tabindex="-1" min="0.1" step="0.1" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '" aria-label="' + esc(b.name) + ' 소요 시간"' + lockAttr + '><span class="unit">분</span></div>' +
         '<button type="button" class="row-doping ' + (b.rice ? 'rice' : 'full') + '" data-act="rice" data-i="' + i + '" aria-label="' + esc(b.name) + ' 도핑: ' + dopingName + ', ' + nextDoping + '으로 변경" aria-pressed="' + !!b.rice + '" data-tooltip="현재 ' + dopingName + '" data-tooltip-note="누르면 ' + nextDoping + '으로 바뀝니다.">' +
         '<img src="icons/buff/' + dopingIcon + '.webp" width="22" height="22" alt=""><span>' + dopingName + '</span></button>' +
         '<button type="button" class="row-complete' + (b.completed ? ' completed' : '') + '" data-act="complete" data-i="' + i + '" aria-pressed="' + !!b.completed + '" aria-label="' + esc(b.name) + ' 완료 상태">' + (b.completed ? '✓ 완료' : '미완료') + '</button>';
@@ -599,6 +665,7 @@
     var i = parseInt(t.dataset.i, 10);
     if (isNaN(i)) return;
     if (t.dataset.act === 'rice') state.bosses[i].rice = !state.bosses[i].rice;
+    else if (t.dataset.act === 'party') state.bosses[i].useParty = state.bosses[i].useParty === false;
     else if (t.dataset.act === 'on') {
       state.bosses[i].on = !state.bosses[i].on;
       state.bosses[i].inList = true;
@@ -860,7 +927,7 @@
         syncProfileInputs();
         activeProfile = name;
         rememberProfile(name, characterProfile);
-        saveState(); renderAll();
+        saveState(); renderAll(); loadPartyRates();
         setStatus('등록 보스 ' + parsed.bosses.length + '마리를 반영했습니다. 전체 보스에서 동선 포함 여부를 선택하세요.' +
           (parsed.skipped.length ? ' 아이콘 없는 보스: ' + parsed.skipped.join(', ') : ''), 'ok');
         try { localStorage.setItem('bossBuffPlanner.lastChar', name); } catch (err) {}
@@ -1128,7 +1195,7 @@
         activeProfile = p.name; state = loadState(p.state);
         selectProfileCharacter(p);
         renderCharacterProfile(p.character);
-        syncProfileInputs(); saveState(); renderAll(); renderProfiles();
+        syncProfileInputs(); saveState(); renderAll(); renderProfiles(); loadPartyRates();
         // API 키가 있으면 스케줄러에서 보스·난이도·완료 여부를 바로 새로 받는다(배율은 같은 보스·난이도면 유지).
         if (window.NexonKey && NexonKey.has()) importCharacter();
         else setStatus('저장한 배율과 보스 선택을 불러왔습니다. 최신 보스 목록은 API 키를 등록하면 바로 받아옵니다.', 'ok');
@@ -1158,6 +1225,12 @@
   var initialProfile = profiles.find(function(p){ return p.name === charInput.value; });
   if (initialProfile) { activeProfile = initialProfile.name; selectProfileCharacter(initialProfile, true); renderCharacterProfile(initialProfile.character); renderProfiles(); }
   refreshKeyState();
+  // 다른 탭의 파티 보스 스케줄러나 공용 환산 배율에서 바뀌면 파티 배율을 다시 맞춘다.
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('storage', function (e) { if (e.key === PARTY_STORE || e.key === 'sharedBossRates.changed') loadPartyRates(); });
+    window.addEventListener('focus', function () { loadPartyRates(); });
+  }
+  loadPartyRates();
 
   renderAll();
 })();
