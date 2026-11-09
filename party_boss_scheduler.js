@@ -169,10 +169,10 @@
     var chartCount=0,revealSelected=false,view={value:'all',label:''},filterTypes={boss:'보스',account:'계정',character:'캐릭터'};
     try{var saved=JSON.parse(win.localStorage.getItem(STORAGE)||'{}');parties=restore(saved,choices);}catch(e){}
     try{if(win.localStorage.getItem(SCOPE_STORAGE)==='shared')scope='shared';}catch(e){}
-    var sortMode='boss';
     // 다른 화면(보스 버프 동선 계산기)에서 '?scope=shared&party=ID'로 오면 그 파티를 연다. 저장된 탭 선택은 바꾸지 않는다.
     var wantedParty='';
     try{var query=new URLSearchParams(win.location&&win.location.search||'');if(['local','shared'].includes(query.get('scope')))scope=query.get('scope');wantedParty=text(query.get('party')||'',100);}catch(e){}
+    var sortMode='boss';
     try{var savedSort=win.localStorage.getItem(SORT_STORAGE);if(savedSort&&Array.from(el('party-sort').options).some(function(o){return o.value===savedSort;}))sortMode=savedSort;}catch(e){}
     el('party-sort').value=sortMode;
     // 직접 표시한 완료는 파티 ID별로 주기 키를 저장하고, 스케줄러 완료는 내 캐릭터 이름별로 메모리에만 둔다.
@@ -631,10 +631,12 @@
         var title=node('span','party-row-title',custom?p.name:lead?lead.character.name:'파티원 없음');
         if(!custom&&lead&&p.members.length>1)title.append(node('span','sr-only',' 외 '+(p.members.length-1)+'명'));
         identity.append(title);
-        if(custom&&lead)meta.append(node('span','party-list-name','대표 '+lead.character.name));
-        meta.append(node('span','party-member-count',p.members.length+' / '+boss.max+'명'));
-        if(sum.missing)meta.append(node('span','party-note',sum.missing+'명 미등록'));
+        // 한 줄에 들어가도록 대표 캐릭터와 미등록 인원은 화면 읽기용으로만 두고, 상세에서 보여준다.
+        if(custom&&lead)title.append(node('span','sr-only',', 대표 '+lead.character.name));
+        if(sum.missing)title.append(node('span','sr-only',', '+sum.missing+'명 미등록'));
+        // 완료 표시는 인원 왼쪽에 두어, 완료 여부와 관계없이 인원이 항상 오른쪽 끝 같은 자리에 오게 한다.
         if(done)meta.append(doneBadge());
+        meta.append(node('span','party-member-count',p.members.length+'/'+boss.max+'명'));
         button.append(identity,meta);
         button.addEventListener('click',function(){
           if(remoteWriting||!el('party-create-form').hidden)return;
@@ -643,7 +645,6 @@
         });list.append(button);
       });
       var p=activeParties().find(function(item){return item.id===selected;}),editable=scope==='local'||p?.canEdit;
-      el('party-detail').hidden=formOpen;el('party-add-panel').hidden=!p||formOpen||!editable;var add=el('party-add-current');add.disabled=true;
       if(revealSelected){
         // 링크로 연 파티는 목록에서 보이게 하고 상세로 화면을 옮긴다.
         revealSelected=false;
@@ -651,6 +652,7 @@
         if(openedRow&&openedRow.scrollIntoView){openedRow.scrollIntoView({block:'nearest'});el('party-detail').scrollIntoView({block:'start'});}
         if(p)repairPortraits(p);
       }
+      el('party-detail').hidden=formOpen;el('party-add-panel').hidden=!p||formOpen||!editable;var add=el('party-add-current');add.disabled=true;
       if(!p){
         var filter=view.value;
         var message=scope==='shared'&&!remoteAvailable?(remoteError||'공유 파티를 불러오는 중입니다.'):el('party-list-search').value.trim()&&filtered().length?'검색어에 맞는 파티가 없습니다. 다른 이름으로 찾아보세요.':filter==='mine'?'내 캐릭터 파티가 없습니다.':filter!=='all'?'선택한 조건에 맞는 파티가 없습니다.':scope==='shared'?'아직 공유된 파티가 없습니다.':'새 파티를 만들어보세요.';

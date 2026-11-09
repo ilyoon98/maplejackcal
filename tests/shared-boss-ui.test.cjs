@@ -51,8 +51,9 @@ test('파티원 세 명의 예상 딜 비중을 표시하고 파티원을 빼면
  const members=snapshots.map((s,index)=>({character:{...s.character,ocid:'shared:'+s.characterName},rate:rates[index]}));
  const p=await boot('party_boss_scheduler',{snapshots,parties:[{id:'p1',name:'테스트',bossId:'Will|Hard',members}]});try{
   // 직접 지은 이름이 있으면 그 이름을, 대표 캐릭터(환산 배율 1위)는 보조 줄에 보여준다.
-  assert.equal(p.doc.querySelector('#party-list .party-row-title').textContent,'테스트');
-  assert.equal(p.doc.querySelector('#party-list .party-list-name').textContent,'대표 세번째');
+  assert.match(p.doc.querySelector('#party-list .party-row-title').textContent,/^테스트,/);
+  // 목록은 한 줄이라 대표 캐릭터는 화면 읽기용 이름에만 넣는다.
+  assert.match(p.doc.querySelector('#party-list .party-row-title').textContent,/대표 세번째/);
   // 목록에는 배율과 판정을 두지 않고 상세에서만 보여준다.
   assert.equal(p.doc.querySelector('#party-list .party-row-total'),null);
   const totals=p.doc.querySelector('#party-detail .party-totals');
@@ -408,7 +409,7 @@ test('주소의 party와 scope로 들어오면 해당 파티를 열고 없으면
  const members=['첫번째','두번째'].map(name=>({character:{...profile(name),ocid:'shared:'+name},rate:50}));
  const parties=[{id:'first',name:'첫 파티',bossId:'Will|Hard',members},{id:'second',name:'두 번째 파티',bossId:'Lucid|Hard',members:members.slice(1)}];
  let p=await boot('party_boss_scheduler',{parties,url:'party_boss_scheduler.html?scope=local&party=second'});try{
-  assert.equal(p.doc.querySelector('#party-list button[aria-pressed="true"] .party-row-title').textContent,'두 번째 파티');
+  assert.match(p.doc.querySelector('#party-list button[aria-pressed="true"] .party-row-title').textContent,/^두 번째 파티,/);
   assert.equal(p.w.localStorage.getItem('partyBossScheduler.scope.v1'),null);
  }finally{p.close();}
  p=await boot('party_boss_scheduler',{parties,url:'party_boss_scheduler.html?scope=local&party=missing'});try{
