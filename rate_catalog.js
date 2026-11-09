@@ -8,6 +8,7 @@
   async function request(fetchImpl,url,options){var r=await fetchImpl(url,options),doc;try{doc=await r.json();}catch(e){throw new Error('RATE_STORE_UNAVAILABLE');}if(!r.ok)throw new Error(doc&&doc.error&&doc.error.code||'RATE_STORE_UNAVAILABLE');return doc;}
   async function published(fetchImpl,signal){var doc=await request(fetchImpl,'/api/boss-rates',{signal:signal,cache:'no-store'});if(!doc||doc.schemaVersion!==1||!Array.isArray(doc.snapshots))throw new Error('RATE_STORE_UNAVAILABLE');return doc;}
   async function saveShared(fetchImpl,snapshot,revision,pin){return (await request(fetchImpl,'/api/boss-rates',{method:'POST',headers:{'Content-Type':'application/json','x-rate-pin':pin||''},body:JSON.stringify({snapshot:snapshot,expectedRevision:revision||''})})).snapshot;}
+  async function deleteShared(fetchImpl,name,revision,pin){return (await request(fetchImpl,'/api/boss-rates',{method:'POST',headers:{'Content-Type':'application/json','x-rate-pin':pin||''},body:JSON.stringify({action:'delete',characterName:name,expectedRevision:revision||''})})).deleted===true;}
   async function readSaved(name,fetchImpl,storage,signal){
     if(!data.validName(name))throw new Error('SCOUTER_BAD_INPUT');
     var found=data.findShared(await published(fetchImpl,signal),name,'00000');if(!found)throw new Error('RATE_NOT_SAVED');return found;
@@ -39,5 +40,5 @@
     var raw={schemaVersion:1,characterName:name,preset:'00000',sourceUrl:data.resultUrl(name,'00000'),fetchedAt:new Date().toISOString(),conditions:{view:'all',bossTimeMinutes:20,destinyChampion:destinyChampion,simulation:false},rates:rates,storage:'local-edit',captureMethod:method||'manual'};
     var valid=data.normalizeSnapshot(raw,name,'00000');if(!valid)throw new Error('RATE_INVALID');return valid;
   }
-  return {published:published,saveShared:saveShared,readSaved:readSaved,fetchRemote:fetchRemote,choices:choices,shotRows:shotRows,applyShot:applyShot,snapshot:snapshot};
+  return {published:published,saveShared:saveShared,deleteShared:deleteShared,readSaved:readSaved,fetchRemote:fetchRemote,choices:choices,shotRows:shotRows,applyShot:applyShot,snapshot:snapshot};
 });

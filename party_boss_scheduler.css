@@ -62,6 +62,14 @@
 .party-verdict.easy{color:#a8d5ff;background:#233a54}
 .party-verdict.overkill{color:#ffd99d;background:#4d3522}
 .party-verdict.pending{color:#e3d6ac;background:#373225}
+.party-done-badge{
+  display:inline-block;justify-self:start;padding:4px 8px;border:1px solid #60ba8b;border-radius:6px;
+  color:#adf2cb;background:#1b392d;font-size:.8rem;font-weight:800;white-space:nowrap
+}
+.party-list>button.party-list-done .boss-identity{opacity:.62}
+.boss-app .party-complete.ux-complete-toggle{display:inline-flex;align-items:center;margin:0;padding:0 12px;min-width:76px;font-size:.86rem;font-weight:700}
+.boss-app .party-complete.ux-complete-toggle[aria-pressed=true]{background:#245840;color:#adf2cb;border-color:#60ba8b}
+.party-complete-note{margin:8px 0 0}
 
 .party-app .party-summary-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:12px;margin:16px 0}
 .party-app .party-summary-grid .party-totals{margin:0}

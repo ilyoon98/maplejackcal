@@ -25,7 +25,7 @@ function createStore({command=redisCommand(),key=KEY+(process.env.VERCEL_ENV==='
   async function read(){
     const entries=new Map(initial.map(s=>[id(s),s]));
     let registry={accounts:[],revision:''};
-    if(command)for(const raw of await command(['HVALS',key])){const s=JSON.parse(raw);if(s.kind==='accounts'){registry={accounts:accounts.normalize(s.accounts),revision:s.revision};continue;}const valid=data.normalizeSnapshot(s,s.characterName,s.preset);if(valid)entries.set(id(valid),{...valid,revision:s.revision,storage:'shared-server'});}
+    if(command)for(const raw of await command(['HVALS',key])){const s=JSON.parse(raw);if(s.kind==='deleted'){entries.delete(id(s));continue;}if(s.kind==='accounts'){registry={accounts:accounts.normalize(s.accounts),revision:s.revision};continue;}const valid=data.normalizeSnapshot(s,s.characterName,s.preset);if(valid)entries.set(id(valid),{...valid,revision:s.revision,storage:'shared-server'});}
     return {schemaVersion:1,persistent:!!command,snapshots:[...entries.values()],accounts:registry.accounts,accountRevision:registry.revision};
   }
   async function saveAccounts(raw,expectedRevision){
@@ -41,6 +41,14 @@ function createStore({command=redisCommand(),key=KEY+(process.env.VERCEL_ENV==='
     const result=await command(['EVAL',WRITE,1,key,id(s),expectedRevision,JSON.stringify(value),initial.some(i=>id(i)===id(s))?'seed':'']);
     if(result===0)throw new Error('RATE_CONFLICT');if(result!==1)throw new Error('RATE_LIMIT');return value;
   }
-  return {read,save,saveAccounts};
+  // 삭제는 같은 비교 쓰기로 빈 revision의 삭제 표시를 남긴다. 기본 제공 캐릭터도 숨길 수 있고, 다시 등록할 때는 빈 revision으로 덮어쓴다.
+  async function remove(characterName,expectedRevision){
+    if(!command)throw new Error('RATE_DB_NOT_CONFIGURED');
+    if(!data.validName(characterName)||typeof expectedRevision!=='string'||!expectedRevision||expectedRevision.length>80)throw new Error('RATE_INVALID');
+    const field=characterName+'|00000',value={kind:'deleted',characterName,preset:'00000',revision:''};
+    const result=await command(['EVAL',WRITE,1,key,field,expectedRevision,JSON.stringify(value),initial.some(i=>id(i)===field)?'seed':'']);
+    if(result===0)throw new Error('RATE_CONFLICT');if(result!==1)throw new Error('RATE_LIMIT');return true;
+  }
+  return {read,save,saveAccounts,remove};
 }
 module.exports={createStore,redisCommand,WRITE,KEY};

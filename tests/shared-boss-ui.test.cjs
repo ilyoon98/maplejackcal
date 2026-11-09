@@ -12,7 +12,7 @@ async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,s
  w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
  if(parties.length)w.localStorage.setItem('partyBossScheduler.v1',JSON.stringify({parties}));
  w.fetch=async(url,options={})=>{calls.push({url,options});if(url==='/api/boss-rates'){
-   if(options.method==='POST'){const b=JSON.parse(options.body);if(b.action==='accounts'){registry=b.accounts;return {ok:true,json:async()=>({accounts:registry,accountRevision:'accounts-v2'})};}const saved={...b.snapshot,revision:'v2'};values=values.filter(s=>s.characterName!==saved.characterName).concat(saved);return {ok:true,json:async()=>({snapshot:saved})};}
+   if(options.method==='POST'){const b=JSON.parse(options.body);if(b.action==='delete'){values=values.filter(s=>s.characterName!==b.characterName);return {ok:true,json:async()=>({deleted:true})};}if(b.action==='accounts'){registry=b.accounts;return {ok:true,json:async()=>({accounts:registry,accountRevision:'accounts-v2'})};}const saved={...b.snapshot,revision:'v2'};values=values.filter(s=>s.characterName!==saved.characterName).concat(saved);return {ok:true,json:async()=>({snapshot:saved})};}
    return {ok:true,json:async()=>({schemaVersion:1,persistent:true,snapshots:structuredClone(values),accounts:structuredClone(registry),accountRevision:registry.length?'accounts-v1':''})};
   }if(fetchExtra)return fetchExtra(url,options);throw new Error('Unexpected network request: '+url);
  };
@@ -284,11 +284,11 @@ test('배율 저장 시 선택한 계정으로 묶고 계정 이름과 저장 �
  }finally{p.close();}
 });
 test('공용 계정은 키 없이 등록된 260 이상 캐릭터로 편집하고 숨긴 기존 소속을 보존한다',async()=>{
- const main=snapshot('친구본캐'),added=snapshot('추가캐릭터'),low=snapshot('낮은캐릭터'),unknown=snapshot('레벨미확인');
+ const main=snapshot('친구본캐'),added=snapshot('추가캐릭터'),low=snapshot('낮은캐릭터'),unknown=snapshot('레벨미확인'),elsewhere=snapshot('다른계정캐릭터');
  added.character.level=260;low.character.level=259;delete unknown.character;
  const registry=[{id:'friend',label:'친구 계정',characters:[{name:main.characterName},{name:low.characterName},{name:'배율미등록',profile:profile('배율미등록')}]},
-  {id:'other',label:'기존 묶음',characters:[{name:added.characterName}]}];
- const p=await boot('shared_boss_rates',{snapshots:[main,added,low,unknown],accounts:registry});try{
+  {id:'other',label:'기존 묶음',characters:[{name:elsewhere.characterName}]}];
+ const p=await boot('shared_boss_rates',{snapshots:[main,added,low,unknown,elsewhere],accounts:registry});try{
   assert.equal(p.doc.querySelector('#shared-group-fields').hidden,true);
   select(p.w,'shared-group-select','friend');
   assert.equal(p.doc.querySelector('#shared-group-fields').hidden,false);
@@ -298,19 +298,20 @@ test('공용 계정은 키 없이 등록된 260 이상 캐릭터로 편집하고
   assert.equal(p.doc.querySelector('#shared-group-label').closest('details').id,'shared-account-editor');
   candidates()[0].click();assert.equal(candidates()[0].textContent,'되돌리기');
   candidates()[0].click();assert.equal(candidates()[0].textContent,'빼기');
-  assert.deepEqual(results(),[]);
-  type(p.w,'shared-group-search','낮은');assert.deepEqual(results(),[]);
+  // 검색하지 않아도 미분류 등록 캐릭터만 보이고, 다른 계정 소속·260 미만·레벨 미확인 캐릭터는 숨긴다.
+  assert.deepEqual(results().map(n=>n.value),['추가캐릭터']);
+  type(p.w,'shared-group-search','다른계정');assert.deepEqual(results(),[]);
   type(p.w,'shared-group-search','추가');assert.deepEqual(results().map(n=>n.value),['추가캐릭터']);
-  assert.equal(results()[0].textContent,'이동');
+  assert.equal(results()[0].textContent,'추가');
   results()[0].click();assert.deepEqual(results(),[]);
-  assert.equal(p.doc.querySelector('.shared-group-pending').textContent,'기존 묶음에서 이동 예정');
+  assert.equal(p.doc.querySelector('.shared-group-pending').textContent,'추가 예정');
   type(p.w,'shared-group-label','친구 새 이름');
   p.doc.querySelector('#shared-refresh').click();await settle();
   assert.equal(candidates()[1].textContent,'빼기');assert.equal(p.doc.querySelector('#shared-group-label').value,'친구 새 이름');
   p.doc.querySelector('#shared-group-save').click();await settle();
   const body=JSON.parse(p.calls.find(c=>c.options.method==='POST').options.body);
   assert.deepEqual(body.accounts[0].characters.map(c=>c.name),['친구본캐','낮은캐릭터','배율미등록','추가캐릭터']);
-  assert.equal(body.accounts[0].label,'친구 새 이름');assert.deepEqual(body.accounts[1].characters,[]);
+  assert.equal(body.accounts[0].label,'친구 새 이름');assert.deepEqual(body.accounts[1].characters.map(c=>c.name),['다른계정캐릭터']);
   assert.match(p.doc.querySelector('#shared-group-status').textContent,/공용 계정에 저장했습니다/);
   p.doc.querySelector('#shared-refresh').click();await settle();
   assert.equal(candidates().filter(n=>n.textContent==='빼기').length,2);assert(p.calls.every(c=>c.url==='/api/boss-rates'));
@@ -334,10 +335,10 @@ test('새 계정 이름을 비우면 소속 캐릭터 중 가장 높은 레벨�
   assert.equal(p.doc.querySelector('#shared-group-select option:checked').textContent,high.characterName);
  }finally{p.close();}
 });
-test('내 계정 불러오기는 비공개 계정 ID와 OCID를 공용 요청에 넣지 않는다',async()=>{
- const p=await boot('shared_boss_rates',{snapshots:[],key:'test-key'});try{
-  p.w.NexonCharacters.fetch=async()=>[{name:'계정본캐',accountId:'private-account',ocid:'private-ocid',world:'루나',characterClass:'히어로',level:290},{name:'계정부캐',accountId:'private-account',ocid:'private-ocid2',world:'루나',characterClass:'비숍',level:280}];
-  p.doc.querySelector('#shared-import-account').click();await settle();assert.equal(p.doc.querySelectorAll('#shared-account option').length,2);p.doc.querySelector('#shared-group-save').click();await settle();const body=p.calls.find(c=>c.options.method==='POST').options.body;assert(!body.includes('private-'));assert.equal(JSON.parse(body).accounts[0].characters.length,2);assert(p.doc.querySelector('#shared-account').textContent.includes('계정본캐'));
+test('내 계정 자동 연결은 비공개 계정 ID와 OCID를 공용 요청에 넣지 않고 수동 불러오기 버튼을 두지 않는다',async()=>{
+ const ownRows=[{name:'계정본캐',accountId:'private-account',ocid:'private-ocid',world:'루나',characterClass:'히어로',level:290},{name:'계정부캐',accountId:'private-account',ocid:'private-ocid2',world:'루나',characterClass:'비숍',level:280}];
+ const p=await boot('shared_boss_rates',{snapshots:[],key:'test-key',ownRows});try{
+  assert.equal(p.doc.querySelector('#shared-import-account'),null);await settle();assert.equal(p.doc.querySelectorAll('#shared-account option').length,2);const body=p.calls.find(c=>c.options.method==='POST').options.body;assert(!body.includes('private-'));assert.equal(JSON.parse(body).accounts[0].characters.length,2);assert(p.doc.querySelector('#shared-account').textContent.includes('계정본캐'));
  }finally{p.close();}
 });
 test('홈에 키가 있으면 공용 화면에서 내 계정을 자동 연결하고 수동 저장 절차를 요구하지 않는다',async()=>{
@@ -356,4 +357,44 @@ test('파티 화면도 내 계정을 자동 연결하고 같은 계정의 다른
 test('보조 설정은 접혀 있고 파티 선택 전에는 중복된 파티원 입력 화면을 보이지 않는다',async()=>{
  const shared=await boot('shared_boss_rates');try{assert.equal(shared.doc.querySelector('#shared-account-editor').open,false);assert.equal(shared.doc.querySelector('#shared-owner-settings').open,false);assert.equal(shared.doc.querySelector('.shared-manual-add').open,false);assert.equal(shared.doc.querySelectorAll('#shared-table th').length,3);assert(shared.doc.querySelector('#shared-open'));assert(!shared.doc.querySelector('#shared-conditions'));}finally{shared.close();}
  const party=await boot('party_boss_scheduler');try{assert.equal(party.doc.querySelector('#party-add-panel').hidden,true);assert.equal(party.doc.querySelector('#party-create-form').hidden,true);assert(!party.doc.querySelector('#party-search-form'));party.doc.querySelector('#party-create-toggle').click();assert.equal(party.doc.querySelector('#party-create-form').hidden,false);party.doc.querySelector('#party-create-cancel').click();assert.equal(party.doc.querySelector('#party-create-form').hidden,true);}finally{party.close();}
+});
+test('계정 선택은 전체 계정과 미분류를 구분선과 강조로 나누고 캐릭터 목록의 미분류 묶음도 강조한다',async()=>{
+ const p=await boot('shared_boss_rates',{snapshots:[snapshot('묶인캐릭터'),snapshot('미분류캐릭터')],accounts:[{id:'group-one',label:'본계정',characters:[{name:'묶인캐릭터'}]}]});try{
+  const account=p.doc.querySelector('#shared-account');
+  assert.deepEqual([...account.children].map(n=>n.tagName==='HR'?'—':n.textContent),['전체 계정','—','본계정','—','미분류 캐릭터 · 계정 설정 필요']);
+  assert(account.options[0].classList.contains('shared-account-all'));assert(account.options[2].classList.contains('shared-unassigned'));
+  const unassigned=p.doc.querySelector('#shared-character optgroup.shared-unassigned');assert.equal(unassigned.label,'미분류 캐릭터 · 계정 설정 필요');
+  assert.deepEqual([...unassigned.children].map(o=>o.value),['미분류캐릭터']);
+ }finally{p.close();}
+});
+test('잘못 넣은 캐릭터는 확인 후 공용 배율과 계정 소속에서 삭제한다',async()=>{
+ const p=await boot('shared_boss_rates',{snapshots:[snapshot('남길캐릭터'),snapshot('잘못넣음')],accounts:[{id:'group-one',label:'본계정',characters:[{name:'남길캐릭터'},{name:'잘못넣음'}]}]});try{
+  select(p.w,'shared-character','잘못넣음');await settle();
+  const remove=p.doc.querySelector('#shared-delete');assert.equal(remove.hidden,false);
+  remove.click();await settle();
+  const posts=p.calls.filter(c=>c.options.method==='POST').map(c=>JSON.parse(c.options.body));
+  assert.deepEqual(posts[0],{action:'delete',characterName:'잘못넣음',expectedRevision:'v1'});
+  assert.deepEqual(posts[1].accounts[0].characters.map(c=>c.name),['남길캐릭터']);
+  assert(![...p.doc.querySelector('#shared-character').options].some(o=>o.value==='잘못넣음'));
+  assert.match(p.doc.querySelector('#shared-status').textContent,/잘못넣음 캐릭터를 공용 배율에서 삭제했습니다/);
+ }finally{p.close();}
+});
+test('새 캐릭터 조회가 실패하면 저장을 막고 등록된 캐릭터는 그대로 저장할 수 있다',async()=>{
+ const p=await boot('shared_boss_rates',{snapshots:[snapshot('기존캐릭터')],key:'test-key',fetchExtra:async url=>{const u=new URL(url);if(u.pathname.endsWith('/id'))return {ok:false,json:async()=>({error:{name:'OPENAPI00004'}})};return {ok:true,json:async()=>[]};}});try{
+  type(p.w,'shared-nickname','없는캐릭터');p.doc.querySelector('#shared-open').dispatchEvent(new p.w.Event('submit',{cancelable:true}));await settle();
+  p.doc.querySelector('#shared-add').click();await settle();
+  assert.equal(p.doc.querySelector('#shared-save').disabled,true);assert.equal(p.doc.querySelector('#shared-delete').hidden,true);
+  assert.match(p.doc.querySelector('#shared-profile-status').textContent,/캐릭터를 찾을 수 없습니다.*조회에 성공한 캐릭터만 등록할 수 있습니다/);
+  select(p.w,'shared-character','기존캐릭터');await settle();assert.equal(p.doc.querySelector('#shared-save').disabled,false);
+ }finally{p.close();}
+});
+test('API 키가 없으면 새 캐릭터는 등록할 수 없고 등록된 캐릭터 배율은 저장할 수 있다',async()=>{
+ const p=await boot('shared_boss_rates',{snapshots:[snapshot('기존캐릭터')]});try{
+  assert.equal(p.doc.querySelector('#shared-save').disabled,false);
+  type(p.w,'shared-nickname','새캐릭터');p.doc.querySelector('#shared-open').dispatchEvent(new p.w.Event('submit',{cancelable:true}));await settle();
+  p.doc.querySelector('#shared-add').click();await settle();
+  assert.equal(p.doc.querySelector('#shared-save').disabled,true);
+  assert.match(p.doc.querySelector('#shared-profile-status').textContent,/새 캐릭터는 홈에서 API 키를 등록하고 조회에 성공해야 등록할 수 있습니다/);
+  assert(!p.calls.some(c=>c.options.method==='POST'));
+ }finally{p.close();}
 });

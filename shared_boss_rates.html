@@ -16,7 +16,6 @@
     <aside class="card shared-sidebar">
       <div class="boss-section-head"><h2>캐릭터</h2><button id="shared-refresh" class="boss-icon-button" type="button" aria-label="캐릭터 목록 새로고침" title="새로고침">↻</button></div>
       <div class="shared-selectors"><label>계정<select id="shared-account"><option value="">전체 계정</option></select></label><label>캐릭터<select id="shared-character"><option value="">캐릭터 선택</option></select></label></div>
-      <button id="shared-import-account" class="boss-wide" type="button">내 계정 불러오기</button>
       <form id="shared-open" class="shared-add-character"><label class="sr-only" for="shared-nickname">새 캐릭터 닉네임</label><input id="shared-nickname" maxlength="30" placeholder="새 캐릭터 닉네임" required><button type="submit" class="boss-primary">추가</button></form>
       <details id="shared-account-editor" class="boss-details"><summary>계정 관리</summary>
         <label>관리할 계정<select id="shared-group-select"><option value=":pick" disabled selected>계정을 선택하세요</option></select></label>
@@ -30,8 +29,8 @@
           </fieldset>
           <fieldset class="shared-group-roster">
             <legend>캐릭터 추가</legend>
-            <label class="sr-only" for="shared-group-search">닉네임 검색</label>
-            <input id="shared-group-search" type="search" maxlength="30" placeholder="닉네임 검색" autocomplete="off" aria-controls="shared-group-results" aria-describedby="shared-group-search-status">
+            <label class="sr-only" for="shared-group-search">닉네임으로 좁히기</label>
+            <input id="shared-group-search" type="search" maxlength="30" placeholder="닉네임으로 좁히기" autocomplete="off" aria-controls="shared-group-results" aria-describedby="shared-group-search-status">
             <p id="shared-group-search-status" class="boss-status" role="status"></p>
             <div id="shared-group-results" class="shared-group-members"></div>
           </fieldset>
@@ -42,7 +41,7 @@
       <p id="shared-connection" class="shared-connection" role="status">연결 중…</p>
     </aside>
     <section class="card shared-panel" aria-label="캐릭터 배율">
-      <div class="shared-hero"><div><div id="shared-profile"></div><p id="shared-profile-status" class="boss-status" role="status"></p></div><div class="shared-character-tools"><a id="shared-source" class="boss-button" hidden target="_blank" rel="noopener noreferrer">환산 원문 ↗</a></div></div>
+      <div class="shared-hero"><div><div id="shared-profile"></div><p id="shared-profile-status" class="boss-status" role="status"></p></div><div class="shared-character-tools"><button id="shared-delete" class="boss-button shared-delete" type="button" hidden>캐릭터 삭제</button><a id="shared-source" class="boss-button" hidden target="_blank" rel="noopener noreferrer">환산 원문 ↗</a></div></div>
       <details id="shared-owner-settings" class="boss-details shared-owner-settings"><summary id="shared-owner-summary">계정 설정</summary><div id="shared-owner-fields" class="shared-owner-fields"><label>소속 계정<select id="shared-owner"><option value="__unassigned__">미분류</option></select></label><label>이름 · 선택<input id="shared-owner-label" maxlength="40" placeholder="비우면 자동으로 지정"></label></div></details>
       <div class="shared-input-toolbar"><div class="shared-input-toggle" role="group" aria-label="배율 입력 방식"><button id="shared-mode-capture" type="button" aria-pressed="true" aria-controls="shared-capture"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/메이프릴카메라.webp" alt=""></span>캡처 입력</button><button id="shared-mode-fetch" type="button" aria-pressed="false" aria-controls="shared-fetch-panel"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/감정돋보기.webp" alt=""></span>환산 조회</button></div><div id="shared-fetch-panel" hidden><button id="shared-fetch" class="boss-primary" type="button" disabled>배율 불러오기</button></div></div>
       <p id="shared-status" class="boss-status" role="status" aria-live="polite"></p>

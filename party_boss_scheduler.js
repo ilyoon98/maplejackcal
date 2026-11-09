@@ -9,6 +9,8 @@
   var SCOPE_STORAGE='partyBossScheduler.scope.v1';
   var OWNER_STORAGE='partyBossScheduler.owner.v1';
   var RECENT_STORAGE='partyBossScheduler.recentBosses.v1';
+  var COMPLETE_STORAGE='partyBossScheduler.completed.v1';
+  var DAILY_BOSSES=['Akayrum','PinkBean','Cygnus'];
   var BASE='https://open.api.nexon.com/maplestory/v1';
   var SHARE_COLORS=['#75adff','#59d8ad','#ffc46b','#c39bfa','#ff849d','#efe879'];
   function text(v,n){return typeof v==='string'?v.trim().slice(0,n||100):'';}
@@ -25,6 +27,29 @@
     if(total>=140)return ['easy','여유컷'];
     if(total>=100)return ['clear','클리어 가능'];
     return ['short','불가능'];
+  }
+  // 완료 표시는 보스 초기화 주기 안에서만 유효하다. 한국 시간 기준 일간은 매일 0시, 주간은 목요일 0시, 월간은 1일 0시에 바뀐다.
+  function periodKey(bossId,now){
+    var key=String(bossId||'').split('|')[0],d=new Date((now==null?Date.now():now)+9*3600e3);
+    if(DAILY_BOSSES.includes(key))return 'D'+d.toISOString().slice(0,10);
+    if(key==='BlackMage')return 'M'+d.toISOString().slice(0,7);
+    return 'W'+new Date(d.getTime()-((d.getUTCDay()+3)%7)*864e5).toISOString().slice(0,10);
+  }
+  // 넥슨 스케줄러 응답에서 이번 주기에 클리어한 보스를 'Key|Difficulty' 집합으로 만든다.
+  function schedulerClears(data,db){
+    var labels={easy:'Easy',normal:'Normal',hard:'Hard',chaos:'Chaos',extreme:'Extreme'},names=new Map(),out=new Set();
+    Object.keys(db||{}).forEach(function(k){
+      if(k==='BossAliases'||!db[k]||!db[k].Name)return;
+      [db[k].Name].concat(db.BossAliases&&db.BossAliases[k]||[]).forEach(function(n){names.set(normalizeSearch(String(n)),k);});
+    });
+    (data&&Array.isArray(data.boss_contents)?data.boss_contents:[]).forEach(function(item){
+      if(!item)return;
+      var flag=item.clear_flag!=null?item.clear_flag:item.complete_flag;
+      if(!(flag===true||String(flag).toLowerCase()==='true'))return;
+      var key=names.get(normalizeSearch(String(item.content_name||''))),diff=labels[String(item.difficulty||'').toLowerCase()];
+      if(key&&diff)out.add(key+'|'+diff);
+    });
+    return out;
   }
   function catalog(db){
     var labels={Easy:'이지',Normal:'노멀',Hard:'하드',Chaos:'카오스',Extreme:'익스트림'};
@@ -142,6 +167,47 @@
     var view={value:'all',label:''},filterTypes={boss:'보스',account:'계정',character:'캐릭터'};
     try{var saved=JSON.parse(win.localStorage.getItem(STORAGE)||'{}');parties=restore(saved,choices);}catch(e){}
     try{if(win.localStorage.getItem(SCOPE_STORAGE)==='shared')scope='shared';}catch(e){}
+    // 직접 표시한 완료는 파티 ID별로 주기 키를 저장하고, 스케줄러 완료는 내 캐릭터 이름별로 메모리에만 둔다.
+    var manualDone={},apiClears=new Map(),clearsFetchedAt=new Map(),clearsKey='',clearsPending=null,mineCache=null;
+    try{var savedDone=JSON.parse(win.localStorage.getItem(COMPLETE_STORAGE)||'{}');if(savedDone&&typeof savedDone==='object')manualDone=savedDone;}catch(e){}
+    function completion(p){
+      if(p.members.some(function(m){var set=apiClears.get(m.character.name);return set&&periodKey(p.bossId,set.at)===periodKey(p.bossId)&&set.has(p.bossId);}))return 'api';
+      return manualDone[p.id]===periodKey(p.bossId)?'manual':'';
+    }
+    function setManualDone(p,done){
+      var next={};
+      Object.keys(manualDone).forEach(function(id){var party=parties.concat(remoteParties).find(function(item){return item.id===id;});if(party&&manualDone[id]===periodKey(party.bossId))next[id]=manualDone[id];});
+      if(done)next[p.id]=periodKey(p.bossId);else delete next[p.id];
+      try{win.localStorage.setItem(COMPLETE_STORAGE,JSON.stringify(next));}catch(e){storageStatus('완료 표시를 브라우저에 저장하지 못했습니다.',true);return false;}
+      manualDone=next;return true;
+    }
+    async function loadClears(force){
+      var key=win.NexonKey&&win.NexonKey.get();
+      if(!key||!win.NexonCharacters){apiClears.clear();clearsFetchedAt.clear();return;}
+      if(clearsKey!==key){clearsKey=key;apiClears.clear();clearsFetchedAt.clear();mineCache=null;}
+      if(clearsPending)return clearsPending;
+      clearsPending=(async function(){
+        if(force||!mineCache||Date.now()-mineCache.at>5*60e3){var rows=await win.NexonCharacters.fetch();if(key!==win.NexonKey.get())return;mineCache={at:Date.now(),rows:rows};}
+        var mine=mineCache.rows;
+        var names=new Set(parties.concat(remoteParties).flatMap(function(p){return p.members.map(function(m){return m.character.name;});}));
+        var changed=false;
+        for(var c of mine){
+          owned.add(c.name);
+          if(!names.has(c.name)||!c.ocid)continue;
+          var last=clearsFetchedAt.get(c.name)||0;if(!force&&Date.now()-last<5*60e3)continue;
+          try{
+            var res=await win.fetch(BASE+'/scheduler/character-state?'+new URLSearchParams({ocid:c.ocid}),{headers:{'x-nxopen-api-key':key},cache:'no-store'});
+            if(key!==win.NexonKey.get())return;
+            if(!res.ok){clearsFetchedAt.set(c.name,Date.now());continue;}
+            var set=schedulerClears(await res.json(),win.MapleBossDB),stamp=Date.now();
+            // 주기 키는 보스마다 다르므로 조회 시각을 남겨 두고 completion에서 해당 보스의 현재 주기와 비교한다.
+            set.at=stamp;apiClears.set(c.name,set);clearsFetchedAt.set(c.name,stamp);changed=true;
+          }catch(e){clearsFetchedAt.set(c.name,Date.now());}
+        }
+        if(changed)renderBoard();
+      })().catch(function(){}).finally(function(){clearsPending=null;});
+      return clearsPending;
+    }
     function node(tag,cls,label){var n=doc.createElement(tag);if(cls)n.className=cls;if(label!=null)n.textContent=label;return n;}
     function status(message,error){el('party-search-status').textContent=message||'';el('party-search-status').classList.toggle('error',!!error);}
     function persist(nextParties=parties){
@@ -315,9 +381,11 @@
       if(badge){var line=node('span','party-metric-line');line.append(amount,badge);box.append(line);}else box.append(amount);
       return box;
     }
-    function totals(members,max,compact){
+    function doneBadge(){return node('span','party-done-badge','✓ 완료');}
+    function totals(members,max,compact,done){
       var sum=summary(members),known=members.length>sum.missing;
       var box=node('span',compact?'party-totals compact':'party-totals'),footer=node('span','party-metrics-footer');
+      if(done)footer.append(doneBadge());
       var verdict=sum.missing?['pending','판정 대기']:members.length?clearStatus(Math.round(sum.total*100)/100):null;
       var badge=verdict?node('span','party-verdict '+verdict[0],verdict[1]):null;
       box.append(metric('환산 합계',known?percentLabel(sum.total):'—',compact?null:badge));
@@ -334,7 +402,7 @@
     function partySummary(members,boss){
       var [key,difficulty]=boss.id.split('|'),price=Number(win.MapleBossDB[key][difficulty].CrystalPrice),count=members.length;
       var layout=node('div','party-summary-grid'),reward=node('section','party-reward');
-      var daily=['Akayrum','PinkBean','Cygnus'].includes(key);
+      var daily=DAILY_BOSSES.includes(key);
       var icon=node('img');
       icon.src=daily?'icons/home/강렬한힘의결정.webp':'icons/home/boss-crystal-'+(key==='BlackMage'?'monthly':'weekly')+'.png';
       icon.alt='';
@@ -508,7 +576,8 @@
         button.type='button';button.disabled=formOpen||remoteWriting;button.setAttribute('aria-pressed',String(p.id===selected));
         button.append(visual.create(doc,p.bossId,win.MapleBossDB));
         if(p.name!==boss.label)button.append(node('span','party-list-name',p.name));
-        button.append(totals(p.members,boss.max,true));
+        var done=completion(p);if(done)button.classList.add('party-list-done');
+        button.append(totals(p.members,boss.max,true,!!done));
         button.addEventListener('click',function(){
           if(remoteWriting||!el('party-create-form').hidden)return;
           if(p.id!==selected){status('');if(editing)closeEditor();}
@@ -529,7 +598,18 @@
       var title=node('h3');
       title.append(visual.create(doc,p.bossId,win.MapleBossDB));
       if(p.name!==boss.label)title.append(node('span','party-detail-name',p.name));
+      var done=completion(p);if(done)title.append(doneBadge());
       var actions=node('div','party-detail-actions'),editButton=node('button','party-edit','수정');
+      var doneButton=node('button','ux-button ux-choice ux-complete-toggle party-complete',done?'완료':'미완료');
+      doneButton.type='button';doneButton.setAttribute('aria-pressed',String(!!done));
+      doneButton.setAttribute('aria-label',p.name+' 완료 상태');
+      doneButton.disabled=done==='api'||remoteWriting;
+      doneButton.addEventListener('click',function(){
+        var next=!completion(p);if(!setManualDone(p,next))return;
+        renderBoard();storageStatus(next?'완료 표시를 이 브라우저에 저장했습니다.':'완료 표시를 해제했습니다.');
+        doc.querySelector('.party-complete')?.focus();
+      });
+      actions.append(doneButton);
       editButton.type='button';
       editButton.setAttribute('aria-controls','party-create-form');
       editButton.addEventListener('click',function(){if(!remoteWriting)openEditor(p);});
@@ -559,6 +639,8 @@
       if(editable)actions.append(editButton,deleteButton);
       header.append(title,actions);
       headingHost.append(header);
+      var reset=DAILY_BOSSES.includes(p.bossId.split('|')[0])?'매일 0시':p.bossId.startsWith('BlackMage|')?'매월 1일 0시':'매주 목요일 0시';
+      headingHost.append(node('p','party-note party-complete-note',done==='api'?'넥슨 스케줄러에서 내 캐릭터의 클리어를 확인했습니다. '+reset+'에 초기화됩니다.':'완료 표시는 '+reset+'에 초기화됩니다.'+(win.NexonKey&&win.NexonKey.has()?'':' 홈에서 API 키를 등록하면 내 캐릭터의 클리어를 자동으로 확인합니다.')));
       detail.append(partySummary(p.members,boss));
       var shares=damageShares(p.members);
       if(shares)detail.append(damageChart(p.members,shares));
@@ -650,14 +732,14 @@
       }
       selected=p.id;closeEditor();
       if(!visible().includes(p)){view={value:'all',label:''};filterStatus('');}
-      candidates();renderBoard();status('');repairPortraits(p);
+      candidates();renderBoard();status('');repairPortraits(p);loadClears();
       storageStatus(scope==='shared'?'공유 목록에 파티를 저장했습니다.':original?'파티 변경사항을 저장했습니다.':p.name+' 파티를 만들었습니다.');
       doc.querySelector('.party-edit')?.focus();
     });
-    win.addEventListener('nexon-key-changed',function(){profileVersion++;if(controller)controller.abort();portraitAttempts.clear();if(current)choose(current.name);ownSyncedKey='';if(ownSyncPending)ownSyncPending.catch(function(){}).finally(function(){ownSyncedKey='';syncSaved();});else syncSaved();if(view.value==='mine')loadMine();});
-    function refresh(){syncSaved();if(scope==='shared')loadRemote();}
+    win.addEventListener('nexon-key-changed',function(){profileVersion++;if(controller)controller.abort();portraitAttempts.clear();if(current)choose(current.name);ownSyncedKey='';if(ownSyncPending)ownSyncPending.catch(function(){}).finally(function(){ownSyncedKey='';syncSaved();});else syncSaved();if(view.value==='mine')loadMine();loadClears(true).then(function(){renderBoard();});});
+    function refresh(){syncSaved();if(scope==='shared')loadRemote().then(function(){loadClears();});else loadClears();}
     win.addEventListener('storage',function(e){if(e.key==='sharedBossRates.changed'||e.key===win.NexonKey.STORAGE_KEY)syncSaved();});win.addEventListener('focus',refresh);if(win.setInterval)win.setInterval(function(){if(!doc.hidden)refresh();},30000);
     updateScopeUI();refreshBoard();refresh();
   }
-  return {imageUrl:imageUrl,profile:profile,summary:summary,clearStatus:clearStatus,catalog:catalog,restore:restore,client:client,scouterClient:scouterClient,applySnapshot:applySnapshot,mount:mount};
+  return {imageUrl:imageUrl,profile:profile,summary:summary,clearStatus:clearStatus,periodKey:periodKey,schedulerClears:schedulerClears,catalog:catalog,restore:restore,client:client,scouterClient:scouterClient,applySnapshot:applySnapshot,mount:mount};
 });

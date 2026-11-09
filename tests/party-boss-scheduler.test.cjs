@@ -48,3 +48,19 @@ test('파티 복원은 OCID 중복·난이도별 인원 제한·키/임의 필�
  assert.equal(choices.find(c=>c.id==='Lotus|Extreme').max,2);
  assert.equal(choices.find(c=>c.id==='BlackMage|Extreme').max,6);
 });
+test('완료 주기는 한국 시간 기준 일간 0시, 주간 목요일 0시, 월간 1일 0시에 바뀐다',()=>{
+ const t=s=>Date.parse(s);
+ assert.equal(app.periodKey('Lucid|Hard',t('2026-11-11T14:59:00Z')),'W2026-11-05');
+ assert.equal(app.periodKey('Lucid|Hard',t('2026-11-11T15:00:00Z')),'W2026-11-12');
+ assert.equal(app.periodKey('BlackMage|Hard',t('2026-11-30T15:00:00Z')),'M2026-12');
+ assert.equal(app.periodKey('Cygnus|Normal',t('2026-11-09T16:00:00Z')),'D2026-11-10');
+});
+test('스케줄러 응답에서 클리어한 보스만 이름·난이도로 찾는다',()=>{
+ const clears=app.schedulerClears({boss_contents:[
+  {content_name:'검은 마법사',difficulty:'extreme',clear_flag:'true'},
+  {content_name:'감시자칼로스',difficulty:'chaos',complete_flag:true},
+  {content_name:'루시드',difficulty:'hard',clear_flag:false},
+  {content_name:'모르는 보스',difficulty:'hard',clear_flag:true}
+ ]},db);
+ assert.deepEqual([...clears].sort(),['BlackMage|Extreme','KalosTheGuardian|Chaos']);
+});

@@ -68,3 +68,11 @@
   .shared-panel #shared-table td:nth-child(2){width:100px}
   .shared-panel .shared-rate-amount input[type=number]{width:78px;font-size:1rem}
 }
+/* 캐릭터 삭제는 되돌릴 수 없는 동작이라 위험 색으로 표시한다. */
+.shared-character-tools{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.boss-app .shared-delete{color:var(--bad);font-weight:700}
+/* 계정 선택의 전체 계정과 미분류 묶음은 일반 계정과 구분한다. */
+#shared-account .shared-account-all{font-weight:800;color:var(--accent)}
+#shared-account hr{border:0;border-top:1px solid var(--border);margin:4px 0}
+:is(#shared-account,#shared-character) .shared-unassigned{font-weight:800;color:#ffc46b}
+#shared-character .shared-unassigned option{color:var(--text);font-weight:400}

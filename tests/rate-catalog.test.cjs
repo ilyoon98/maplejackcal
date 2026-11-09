@@ -79,3 +79,15 @@ test('기존 대표 캐릭터로 정했던 표시 이름은 일반 계정 이름
  const moved=account.assign(registry,'group-two','',[characters[1]]);
  assert.equal(account.groups({accounts:moved})[0].label,'대표후보');
 });
+test('삭제는 현재 revision일 때만 캐릭터를 숨기고 같은 닉네임으로 다시 등록할 수 있다',async()=>{
+ const store=createStore({command:backend()}),saved=await store.save(snapshot('삭제대상'),'');
+ await assert.rejects(store.remove('삭제대상','old'),/RATE_CONFLICT/);
+ assert.equal(await store.remove('삭제대상',saved.revision),true);
+ assert(!(await store.read()).snapshots.some(s=>s.characterName==='삭제대상'));
+ await assert.rejects(store.remove('삭제대상',''),/RATE_INVALID/);
+ const again=await store.save(snapshot('삭제대상',60),'');assert.equal((await store.read()).snapshots.find(s=>s.characterName==='삭제대상').revision,again.revision);
+ const seed=(await store.read()).snapshots.find(s=>s.revision==='seed');
+ assert.equal(await store.remove(seed.characterName,'seed'),true);assert(!(await store.read()).snapshots.some(s=>s.characterName===seed.characterName));
+ const handler=createHandler(createStore({command:backend()}),{});const created=await call(handler,'POST',{snapshot:snapshot('핸들러'),expectedRevision:''});
+ const removed=await call(handler,'POST',{action:'delete',characterName:'핸들러',expectedRevision:created.body.snapshot.revision});assert.equal(removed.status,200);assert.equal(removed.body.deleted,true);
+});
