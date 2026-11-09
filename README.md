@@ -325,3 +325,13 @@ n=총 작 수, m=주흔 1회 비용, l=성공확률. 세 번째 항의 `min(prot
 실제로 얻은 30분 조각 수를 입력하면 이항분포의 상측 누적확률 P(X ≥ 획득 개수)를 상위 N%로 표시합니다. 몬스터별 독립·최대 1개 드랍을 가정하며 동률을 포함한 추정 확률이고 실제 유저 순위는 아닙니다. 빈 입력은 미표시, 0개는 상위 100%, 모델상 불가능한 획득량은 조건 확인으로 안내합니다.
 
 검증: `node --test tests/hunting-calc.test.cjs`
+
+## 캡처로 따라 하는 도움말
+
+공용 환산 배율의 기존 안내에 이미지 확대보기를 붙이고, 나머지 공개 콘텐츠 22개와 홈의 API 연결과 스타포스 로그에 단계별 실제 화면 캡처를 추가했습니다. 각 도움말은 용도, 조작 순서, 결과 읽는 법, 접힌 계산 기준으로 구성합니다. 이미지를 누르면 확대되며 원본 크기 보기와 키보드 Esc 닫기를 지원합니다. 예시 이미지의 조건과 실제 입력에 따른 결과를 구분합니다.
+
+- 원문: `help-content/common.json`, `equipment.json`, `tools.json`, `play.json`. 내용 수정 후 `npm run build:help`를 실행합니다. 생성본 `site_help_data.js`도 함께 관리하며 일반 빌드에서 자동 갱신됩니다.
+- 표시: `site_help.js`와 `site_ux.css`. 기존 `data-ux-help` 블록과 출처·ID는 유지하여 계산 로직과 연결된 DOM을 보존합니다. 기존 공용 배율의 특정 섹션 열기도 유지합니다.
+- 이미지: `capture-guide/<페이지>/`. `tools/help-captures/` 레시피로 실제 페이지에 예시 조건을 입력하고 촬영합니다. `npm run capture:help`로 전체, `HELP_PAGE` 환경변수로 해당 그룹의 한 페이지만 재촬영할 수 있습니다. `manifest-*.json`은 촬영 영역과 크기입니다.
+- 촬영·검증에는 프로젝트의 `playwright-core`와 설치된 Microsoft Edge를 사용합니다. 각 실행은 임시 로컬 서버와 빈 브라우저 컨텍스트를 만들고 끝나면 종료합니다. 외부 호출과 실제 공유 저장은 막고 모의 API 응답만 사용합니다. `PLAYWRIGHT_CHANNEL`로 설치된 다른 Chromium 채널을 지정할 수 있습니다.
+- 검증: `npm run check:help`는 생성본·이미지·링크를 확인합니다. `npm run test:help`는 도움말이 있는 25개 페이지를 1280·390·320px에서 확인하고, 확대·Esc·초점 복귀·이미지 오류·200% 글자 확대를 검증합니다. 결과와 화면은 `test-results/illustrated-help/`에 남습니다.

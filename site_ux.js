@@ -108,12 +108,13 @@
       'herb_idle.html': '약초 캐기·오일 만들기·연금술 버튼을 누르면 캐릭터가 그 자리로 가서 알아서 진행합니다. 가공 재료가 떨어지면 약초 캐기로 돌아옵니다. 시세는 3초마다 바뀌니 평소보다 오를 때 파세요. 창을 닫아도 최대 8시간까지 이어서 캡니다.',
       'coin_shop_calc.html': '현재까지 사용 가능은 선택 주차까지의 누적 획득 계획에서 구매 기록을 뺀 값입니다. 이번 주 잔액은 장바구니까지 반영합니다. 종료 예상 잔액에는 앞으로 받을 코인이 포함됩니다. 전부 구매 처리는 이 계산기의 기록만 갱신합니다.'
     };
-    if (guides[page] || !help.querySelector('.ux-help-section')) {
+    if (!window.SiteHelp?.has(page) && (guides[page] || !help.querySelector('.ux-help-section'))) {
       const section = make('section', 'ux-help-section');
       section.append(make('h3', '', '사용 방법'), make('p', '', guides[page] || '조건을 설정하면 결과가 바로 갱신됩니다.'));
       head.after(section);
     }
     document.body.append(help);
+    window.SiteHelp?.render(help, head, page);
     if (header) {
       const opener = make('button', 'ux-help-open', '? 도움말'); opener.type = 'button'; opener.setAttribute('aria-haspopup', 'dialog'); opener.setAttribute('aria-controls', help.id);
       header.append(opener); header.classList.add('ux-header');

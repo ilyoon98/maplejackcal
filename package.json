@@ -5,6 +5,10 @@
   "scripts": {
     "build": "node tools/build-site.cjs",
     "start": "node tools/static_server.cjs",
+    "build:help": "node tools/build-help.cjs",
+    "check:help": "node tools/build-help.cjs --check",
+    "test:help": "node tests/illustrated-help-ui.cjs",
+    "capture:help": "node tools/help-captures/common.cjs && node tools/help-captures/equipment.cjs && node tools/help-captures/tools.cjs && node tools/help-captures/play.cjs && node tools/build-help.cjs",
     "test:party": "node --test tests/party-boss-scheduler.test.cjs tests/party-store.test.cjs tests/scouter.test.cjs tests/rate-catalog.test.cjs tests/boss-shot-reader.test.cjs tests/shared-boss-ui.test.cjs",
     "check:scouter": "node tools/check-scouter.cjs"
   },

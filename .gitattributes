@@ -1,0 +1,2 @@
+# 생성본은 생성기와 같은 줄바꿈(LF)으로 받아야 `npm run check:help`가 운영체제와 관계없이 맞는다.
+site_help_data.js text eol=lf

@@ -1,0 +1,74 @@
+[
+  {
+    "page": "index.html",
+    "image": "capture-guide/index/connect.png",
+    "selector": "#apiKey",
+    "width": 1070,
+    "height": 611,
+    "viewport": {
+      "width": 760,
+      "height": 1000
+    },
+    "example": true
+  },
+  {
+    "page": "index.html",
+    "image": "capture-guide/index/enter-key.png",
+    "selector": ".api-key-row",
+    "width": 1019,
+    "height": 68,
+    "viewport": {
+      "width": 760,
+      "height": 1000
+    },
+    "example": true
+  },
+  {
+    "page": "index.html",
+    "image": "capture-guide/index/registered.png",
+    "selector": "#apiKey",
+    "width": 1070,
+    "height": 336,
+    "viewport": {
+      "width": 760,
+      "height": 1000
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_history.html",
+    "image": "capture-guide/starforce_history/conditions.png",
+    "selector": ".history-page > .history-panel",
+    "width": 1205,
+    "height": 729,
+    "viewport": {
+      "width": 850,
+      "height": 1100
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_history.html",
+    "image": "capture-guide/starforce_history/result.png",
+    "selector": ".history-finance",
+    "width": 1205,
+    "height": 414,
+    "viewport": {
+      "width": 850,
+      "height": 1100
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_history.html",
+    "image": "capture-guide/starforce_history/analysis.png",
+    "selector": "#analysisSettings",
+    "width": 1148,
+    "height": 921,
+    "viewport": {
+      "width": 850,
+      "height": 1100
+    },
+    "example": true
+  }
+]

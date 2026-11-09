@@ -1,0 +1,374 @@
+[
+  {
+    "page": "boss_buff_planner.html",
+    "image": "capture-guide/boss_buff_planner/settings.png",
+    "selector": "#bossList",
+    "width": 917,
+    "height": 656,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boss_buff_planner.html",
+    "image": "capture-guide/boss_buff_planner/timing.png",
+    "selector": ".route-settings",
+    "width": 600,
+    "height": 140,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boss_buff_planner.html",
+    "image": "capture-guide/boss_buff_planner/result.png",
+    "selector": ".layout-right .card-primary",
+    "width": 600,
+    "height": 899,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "party_boss_scheduler.html",
+    "image": "capture-guide/party_boss_scheduler/boss.png",
+    "selector": "#party-boss-dialog",
+    "width": 842,
+    "height": 333,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "party_boss_scheduler.html",
+    "image": "capture-guide/party_boss_scheduler/settings.png",
+    "selector": ".party-draft-picker",
+    "width": 1547,
+    "height": 111,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "party_boss_scheduler.html",
+    "image": "capture-guide/party_boss_scheduler/members.png",
+    "selector": "#party-draft-members",
+    "width": 1547,
+    "height": 521,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "party_boss_scheduler.html",
+    "image": "capture-guide/party_boss_scheduler/result.png",
+    "selector": "#party-detail-content .party-summary-grid",
+    "width": 1077,
+    "height": 416,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "trade_margin_calc.html",
+    "image": "capture-guide/trade_margin_calc/settings.png",
+    "selector": ".tm-layout > div:first-child > section:first-child",
+    "width": 834,
+    "height": 465,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "trade_margin_calc.html",
+    "image": "capture-guide/trade_margin_calc/sale.png",
+    "selector": ".tm-layout > div:first-child > section:nth-child(2)",
+    "width": 834,
+    "height": 380,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "trade_margin_calc.html",
+    "image": "capture-guide/trade_margin_calc/result.png",
+    "selector": ".tm-result > section:first-child",
+    "width": 750,
+    "height": 800,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "meso_market_calc.html",
+    "image": "capture-guide/meso_market_calc/settings.png",
+    "selector": ".mm-layout > div:first-child > section:first-child",
+    "width": 834,
+    "height": 500,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "meso_market_calc.html",
+    "image": "capture-guide/meso_market_calc/fees.png",
+    "selector": ".mm-layout > div:first-child > section:nth-child(3)",
+    "width": 834,
+    "height": 375,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "meso_market_calc.html",
+    "image": "capture-guide/meso_market_calc/result.png",
+    "selector": ".mm-result > section:first-child",
+    "width": 750,
+    "height": 846,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "hunting_calc.html",
+    "image": "capture-guide/hunting_calc/settings.png",
+    "selector": "#huntingForm",
+    "width": 630,
+    "height": 738,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "hunting_calc.html",
+    "image": "capture-guide/hunting_calc/fragments.png",
+    "selector": ".hunt-overview",
+    "width": 945,
+    "height": 357,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "hunting_calc.html",
+    "image": "capture-guide/hunting_calc/result.png",
+    "selector": ".hunt-money:not(.pure)",
+    "width": 945,
+    "height": 309,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "accessory_planner.html",
+    "image": "capture-guide/accessory_planner/settings.png",
+    "selector": ".accessory-summary",
+    "width": 1610,
+    "height": 314,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "accessory_planner.html",
+    "image": "capture-guide/accessory_planner/equipment.png",
+    "selector": ".accessory-workspace",
+    "width": 1547,
+    "height": 749,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "accessory_planner.html",
+    "image": "capture-guide/accessory_planner/result.png",
+    "selector": ".accessory-result",
+    "width": 1610,
+    "height": 963,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "wealth_elixir_calc.html",
+    "image": "capture-guide/wealth_elixir_calc/settings.png",
+    "selector": ".mm-layout > div:first-child > section:first-child",
+    "width": 834,
+    "height": 945,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "wealth_elixir_calc.html",
+    "image": "capture-guide/wealth_elixir_calc/crafts.png",
+    "selector": ".mm-layout > div:first-child > section:nth-child(3)",
+    "width": 834,
+    "height": 486,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "wealth_elixir_calc.html",
+    "image": "capture-guide/wealth_elixir_calc/routes.png",
+    "selector": ".mm-result > .mm-panel:nth-child(2)",
+    "width": 750,
+    "height": 968,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "wealth_elixir_calc.html",
+    "image": "capture-guide/wealth_elixir_calc/result.png",
+    "selector": "#verdictBox",
+    "width": 687,
+    "height": 239,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "coin_shop_calc.html",
+    "image": "capture-guide/coin_shop_calc/settings.png",
+    "selector": ".layout-left > section:first-child",
+    "width": 980,
+    "height": 240,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "coin_shop_calc.html",
+    "image": "capture-guide/coin_shop_calc/item.png",
+    "selector": ".item-row:visible >> nth=0",
+    "width": 917,
+    "height": 150,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "coin_shop_calc.html",
+    "image": "capture-guide/coin_shop_calc/result.png",
+    "selector": "#summaryCard",
+    "width": 597,
+    "height": 536,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "coin_shop_calc.html",
+    "image": "capture-guide/coin_shop_calc/cart.png",
+    "selector": "#cartList",
+    "width": 534,
+    "height": 152,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boss_income_calc.html",
+    "image": "capture-guide/boss_income_calc/settings.png",
+    "selector": ".scheduler-import",
+    "width": 507,
+    "height": 546,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boss_income_calc.html",
+    "image": "capture-guide/boss_income_calc/character.png",
+    "selector": "#charChipList .char-chip >> nth=0",
+    "width": 507,
+    "height": 377,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boss_income_calc.html",
+    "image": "capture-guide/boss_income_calc/boss.png",
+    "selector": "#bossList .boss-row:has([data-boss=\"스우\"])",
+    "width": 944,
+    "height": 228,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boss_income_calc.html",
+    "image": "capture-guide/boss_income_calc/result.png",
+    "selector": ".overall-card",
+    "width": 1610,
+    "height": 297,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  }
+]

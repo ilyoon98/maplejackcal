@@ -340,3 +340,45 @@ body[data-ux-page="trace_calc.html"] .ux-expected-card h2 { color:var(--ux-text)
   .sunday-event-dialog { width:100vw; max-width:none; height:92dvh; max-height:92dvh; margin:auto 0 0; border-radius:18px 18px 0 0; }
   .sunday-event-dialog > header { padding:16px; }
 }
+
+/* Illustrated walkthroughs share the existing help drawer and UI tokens. */
+.ux-help .ux-guide-intro { margin-top:20px; }
+.ux-help .ux-guide-intro h3 { margin:0 0 8px; color:var(--ux-text); font-size:1.1rem; }
+.ux-help .ux-guide-intro p { margin:8px 0; }
+.ux-help .ux-guide-example-note { font-size:.8125rem; }
+.ux-help .ux-guide-steps { list-style:none; padding:0; margin:0; }
+.ux-help .ux-guide-step + .ux-guide-step { margin-top:28px; }
+.ux-help .ux-guide-step h4 { display:flex; align-items:baseline; gap:10px; margin:0 0 8px; font-size:1rem; color:var(--ux-text); line-height:1.6; }
+.ux-help .ux-guide-step-number { display:inline-grid; place-content:center; flex:none; width:26px; height:26px; border:1px solid var(--ux-accent); border-radius:50%; background:#20344e; color:#b9d4fd; font-size:.875rem; line-height:1; }
+.ux-help .ux-guide-step p { margin:0 0 12px; }
+.ux-help .ux-guide-figure { margin:12px 0 0; }
+.ux-help .ux-guide-figure figcaption { margin-top:8px; color:var(--ux-muted); font-size:.8125rem; line-height:1.6; overflow-wrap:anywhere; }
+.ux-help .ux-guide-image-button { display:block; width:100%; max-width:100%; min-height:44px; padding:0; overflow:hidden; border:1px solid var(--ux-control-line,var(--ux-line)); border-radius:8px; background:var(--ux-surface,#171a21); color:var(--ux-text); cursor:zoom-in; text-align:left; }
+.ux-help .ux-guide-image-button:hover { border-color:var(--ux-accent); }
+.ux-help .ux-guide-image-button img { display:block; max-width:100%; height:auto; margin-inline:auto; border:0; }
+.ux-help .ux-guide-image-label { display:block; padding:8px 12px; font-size:.8125rem; color:#b9d4fd; background:#20344e; line-height:1.6; }
+.ux-help .ux-guide-image-error { cursor:default; }
+.ux-help .ux-guide-image-error img { min-height:60px; }
+.ux-help .ux-guide-details { margin-top:24px; padding-top:16px; border-top:1px solid var(--ux-line); }
+.ux-help .ux-guide-details > summary { min-height:44px; cursor:pointer; color:var(--ux-text); font-size:.9375rem; font-weight:650; align-content:center; }
+.ux-help .ux-guide-details > ul { margin-top:12px; }
+.ux-help .ux-guide-related a { display:block; min-height:44px; align-content:center; font-size:.875rem; text-decoration:underline; }
+.ux-help .ux-guide-result { margin-top:28px; }
+.ux-help-image { width:min(1120px,calc(100vw - 32px)); height:min(900px,calc(100dvh - 32px)); max-width:none; max-height:none; box-sizing:border-box; margin:auto; padding:0; border:1px solid var(--ux-control-line,var(--ux-line)); border-radius:12px; background:#171a21; color:var(--ux-text); overflow:hidden; }
+.ux-help-image[open] { display:flex; flex-direction:column; }
+.ux-help-image::backdrop { background:rgba(0,0,0,.8); }
+.ux-help-image-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:16px 20px; border-bottom:1px solid var(--ux-line); }
+.ux-help-image-head h2 { flex:1; min-width:180px; margin:0; font-size:1rem; line-height:1.5; overflow-wrap:anywhere; }
+.ux-help-image-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.ux-help-image-stage { flex:1; min-height:0; padding:16px; overflow:auto; overscroll-behavior:contain; background:#0f1115; }
+.ux-help-image-stage img { display:block; max-width:100%; height:auto; margin:auto; }
+.ux-help-image-stage img[hidden],.ux-help-image-status[hidden] { display:none; }
+.ux-help-image-status { margin:12px; color:var(--ux-muted); font-size:.9375rem; line-height:1.6; }
+.ux-help-image-original .ux-help-image-stage img { max-width:none; margin:0; }
+.ux-help-image-caption { flex:none; margin:0; padding:12px 20px; border-top:1px solid var(--ux-line); font-size:.8125rem; line-height:1.6; color:var(--ux-muted); }
+@media(max-width:540px) {
+  .ux-help-image { width:calc(100vw - 16px); height:calc(100dvh - 16px); }
+  .ux-help-image-head { padding:12px; gap:8px; }
+  .ux-help-image-stage { padding:8px; }
+  .ux-help-image-caption { padding:12px; }
+}

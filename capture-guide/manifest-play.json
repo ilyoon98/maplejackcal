@@ -1,0 +1,290 @@
+[
+  {
+    "page": "cube_play.html",
+    "image": "capture-guide/cube_play/settings.png",
+    "selector": ".cube-layout > section > .cube-panel",
+    "width": 918,
+    "height": 759,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "cube_play.html",
+    "image": "capture-guide/cube_play/start.png",
+    "selector": ".sim-action-stack",
+    "width": 603,
+    "height": 98,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "cube_play.html",
+    "image": "capture-guide/cube_play/decision.png",
+    "selector": "#decisionRow",
+    "width": 603,
+    "height": 98,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "cube_play.html",
+    "image": "capture-guide/cube_play/result.png",
+    "selector": "#simPercentiles",
+    "width": 603,
+    "height": 470,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_play.html",
+    "image": "capture-guide/starforce_play/settings.png",
+    "selector": ".sf-layout > section > .sf-panel",
+    "width": 857,
+    "height": 1124,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_play.html",
+    "image": "capture-guide/starforce_play/start.png",
+    "selector": "#starBox",
+    "width": 665,
+    "height": 333,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_play.html",
+    "image": "capture-guide/starforce_play/decision.png",
+    "selector": "#clearedActions",
+    "width": 665,
+    "height": 96,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_play.html",
+    "image": "capture-guide/starforce_play/result.png",
+    "selector": "#simStats",
+    "width": 665,
+    "height": 356,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boutique_gacha.html",
+    "image": "capture-guide/boutique_gacha/open.png",
+    "selector": ".bt-card:has(#pullTen)",
+    "width": 887,
+    "height": 366,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boutique_gacha.html",
+    "image": "capture-guide/boutique_gacha/auto.png",
+    "selector": "#autoCard",
+    "width": 887,
+    "height": 488,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boutique_gacha.html",
+    "image": "capture-guide/boutique_gacha/draw.png",
+    "selector": "#resultCard",
+    "width": 698,
+    "height": 452,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boutique_gacha.html",
+    "image": "capture-guide/boutique_gacha/result.png",
+    "selector": ".bt-card:has(#tickets)",
+    "width": 698,
+    "height": 786,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "seedring_gacha.html",
+    "image": "capture-guide/seedring_gacha/mode.png",
+    "selector": ".sr-card:has(#modeDaily)",
+    "width": 887,
+    "height": 236,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "seedring_gacha.html",
+    "image": "capture-guide/seedring_gacha/boxes.png",
+    "selector": "[data-box=\"black\"]",
+    "width": 824,
+    "height": 317,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "seedring_gacha.html",
+    "image": "capture-guide/seedring_gacha/result.png",
+    "selector": "#vaultPanel",
+    "width": 887,
+    "height": 687,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "pet_gacha.html",
+    "image": "capture-guide/pet_gacha/open.png",
+    "selector": ".pet-actions",
+    "width": 380,
+    "height": 251,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "pet_gacha.html",
+    "image": "capture-guide/pet_gacha/inventory.png",
+    "selector": ".pet-card:has(#inventory)",
+    "width": 911,
+    "height": 434,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "pet_gacha.html",
+    "image": "capture-guide/pet_gacha/synthesis.png",
+    "selector": ".pet-card:has(#synthBox)",
+    "width": 443,
+    "height": 512,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "pet_gacha.html",
+    "image": "capture-guide/pet_gacha/result.png",
+    "selector": ".pet-card:has(#spent)",
+    "width": 674,
+    "height": 893,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "herb_idle.html",
+    "image": "capture-guide/herb_idle/field.png",
+    "selector": "#stage",
+    "width": 999,
+    "height": 419,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "herb_idle.html",
+    "image": "capture-guide/herb_idle/actions.png",
+    "selector": ".hi-actions",
+    "width": 999,
+    "height": 153,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "herb_idle.html",
+    "image": "capture-guide/herb_idle/market.png",
+    "selector": ".hi-market",
+    "width": 585,
+    "height": 1082,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "herb_idle.html",
+    "image": "capture-guide/herb_idle/result.png",
+    "selector": "#worth",
+    "width": 534,
+    "height": 167,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "herb_idle.html",
+    "image": "capture-guide/herb_idle/facility.png",
+    "selector": "#facility",
+    "width": 534,
+    "height": 233,
+    "viewport": {
+      "width": 1120,
+      "height": 900
+    },
+    "example": true
+  }
+]

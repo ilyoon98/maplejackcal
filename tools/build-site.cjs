@@ -12,6 +12,7 @@ if(fs.existsSync(output)){
   fs.rmSync(output,{recursive:true,force:true});
 }
 execFileSync(process.execPath,[path.join(__dirname,'build_coin_shop_data.js')],{cwd:root,stdio:'inherit'});
+execFileSync(process.execPath,[path.join(__dirname,'build-help.cjs')],{cwd:root,stdio:'inherit'});
 fs.mkdirSync(output,{recursive:true});
 fs.writeFileSync(marker,'Generated static output. Edit the source files in the repository root.\n');
 const excluded=new Set(['package.json','package-lock.json','vercel.json']);
