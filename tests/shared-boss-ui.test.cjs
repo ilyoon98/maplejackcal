@@ -50,6 +50,9 @@ test('파티원 세 명의 예상 딜 비중을 표시하고 파티원을 빼면
  });
  const members=snapshots.map((s,index)=>({character:{...s.character,ocid:'shared:'+s.characterName},rate:rates[index]}));
  const p=await boot('party_boss_scheduler',{snapshots,parties:[{id:'p1',name:'테스트',bossId:'Will|Hard',members}]});try{
+  // 직접 지은 이름이 있으면 그 이름을, 대표 캐릭터(환산 배율 1위)는 보조 줄에 보여준다.
+  assert.equal(p.doc.querySelector('#party-list .party-row-title').textContent,'테스트');
+  assert.equal(p.doc.querySelector('#party-list .party-list-name').textContent,'대표 세번째');
   assert.equal(p.doc.querySelector('#party-list .party-row-total').textContent,'136.47%');
   assert.equal(p.doc.querySelector('#party-list .party-verdict').textContent,'클리어 가능');
   const totals=p.doc.querySelector('#party-detail .party-totals');

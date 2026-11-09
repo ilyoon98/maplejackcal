@@ -385,6 +385,9 @@
       if(badge){var line=node('span','party-metric-line');line.append(amount,badge);box.append(line);}else box.append(amount);
       return box;
     }
+    function leadMember(members){
+      return members.reduce(function(best,m){var r=rate(m.rate),b=best?rate(best.rate):null;return !best||r!==null&&(b===null||r>b)?m:best;},null);
+    }
     function doneBadge(){return node('span','party-done-badge','✓ 완료');}
     function mesoLabel(value){
       var eok=Math.floor(value/1e8),man=Math.floor(value%1e8/1e4),rest=value%1e4;
@@ -606,14 +609,23 @@
         // 목록은 고르기 위한 한 줄 요약이다. 환산 합계와 판정의 자세한 내용은 오른쪽 상세에서 크게 보여준다.
         var done=completion(p),sum=summary(p.members),meta=node('span','party-row-meta'),stats=node('span','party-row-stats');
         if(done)button.classList.add('party-list-done');
-        if(p.name!==boss.label)meta.append(node('span','party-list-name',p.name));
+        // 같은 보스 파티가 여러 개면 보스 이름으로는 구분이 안 되므로, 보스는 아이콘과 난이도로만 보여주고
+        // 제목에는 직접 지은 파티 이름 또는 환산 배율이 가장 높은 파티원(대표 캐릭터)을 쓴다.
+        var lead=leadMember(p.members);
+        var custom=p.name!==boss.label,identity=visual.create(doc,p.bossId,win.MapleBossDB);
+        identity.querySelector('span:not(.diff-badge)')?.classList.add('sr-only');
+        // 인원은 아래 줄에 있으므로 제목에는 이름만 둔다. 화면 읽기용 이름에는 나머지 인원도 함께 넣는다.
+        var title=node('span','party-row-title',custom?p.name:lead?lead.character.name:'파티원 없음');
+        if(!custom&&lead&&p.members.length>1)title.append(node('span','sr-only',' 외 '+(p.members.length-1)+'명'));
+        identity.append(title);
+        if(custom&&lead)meta.append(node('span','party-list-name','대표 '+lead.character.name));
         meta.append(node('span','party-member-count',p.members.length+' / '+boss.max+'명'));
         if(sum.missing)meta.append(node('span','party-note',sum.missing+'명 미등록'));
         if(done)meta.append(doneBadge());
         var verdict=sum.missing?['pending','판정 대기']:p.members.length?clearStatus(Math.round(sum.total*100)/100):null;
         stats.append(node('strong','party-row-total',p.members.length>sum.missing?percentLabel(sum.total):'—'));
         if(verdict)stats.append(node('span','party-verdict '+verdict[0],verdict[1]));
-        button.append(visual.create(doc,p.bossId,win.MapleBossDB),stats,meta);
+        button.append(identity,stats,meta);
         button.addEventListener('click',function(){
           if(remoteWriting||!el('party-create-form').hidden)return;
           if(p.id!==selected){status('');if(editing)closeEditor();}

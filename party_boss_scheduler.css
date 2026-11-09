@@ -190,3 +190,6 @@
   .party-board-head h2{font-size:1.05rem}
   .party-member{--portrait-size:94px}
 }
+/* 목록 제목은 대표 캐릭터나 파티 이름이다. 보스 이름은 아이콘과 난이도로 대신하고 화면 읽기용으로만 남긴다. */
+.party-row-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.party-list>button>.boss-identity{display:flex;align-items:center;gap:8px}
