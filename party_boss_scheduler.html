@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>파티 보스 스케줄러</title><link rel="icon" type="image/webp" href="icons/home/탐정수첩.webp">
-  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="site_ux.css"><link rel="stylesheet" href="site_tooltips.css"><link rel="stylesheet" href="boss_workspace.css"><link rel="stylesheet" href="party_boss_scheduler.css"><link rel="stylesheet" href="boss_identity.css">
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="site_ux.css"><link rel="stylesheet" href="site_tooltips.css"><link rel="stylesheet" href="boss_workspace.css"><link rel="stylesheet" href="party_boss_scheduler.css"><link rel="stylesheet" href="boss_identity.css"><link rel="stylesheet" href="boss_difficulty.css">
   <script src="site_header.js" defer></script><script src="site_nav.js" defer></script><script src="site_ux.js" defer></script>
   <script src="nexon_key.js" defer></script><script src="nexon_characters.js" defer></script><script src="boss_db.js" defer></script><script src="boss_rewards.js" defer></script><script src="scouter_data.js" defer></script><script src="rate_catalog.js" defer></script><script src="account_catalog.js" defer></script><script src="character_profile.js" defer></script><script src="boss_identity.js" defer></script><script src="site_tooltips.js" defer></script><script src="party_boss_scheduler.js" defer></script>
 </head>
@@ -60,7 +60,7 @@
     <label id="party-boss-search">보스 검색<input id="party-boss-query" type="search" placeholder="보스 이름이나 별칭 검색" autocomplete="off" aria-controls="party-boss-results"></label>
     <div id="party-boss-results" class="party-boss-grid"></div>
     <p id="party-boss-empty" class="boss-status" role="status" hidden>검색 결과가 없습니다. 다른 이름으로 찾아보세요.</p>
-    <section id="party-boss-difficulty" hidden><div class="party-boss-dialog-head"><h3 id="party-difficulty-title">난이도 선택</h3><button id="party-boss-back" class="ux-button" type="button">보스 목록</button></div><div id="party-difficulty-options" class="party-boss-difficulties" role="group" aria-labelledby="party-difficulty-title"></div></section>
+    <section id="party-boss-difficulty" hidden><div class="party-boss-dialog-head"><h3 id="party-difficulty-title">난이도 선택</h3><button id="party-boss-back" class="ux-button" type="button">보스 목록</button></div><div id="party-difficulty-options" class="party-boss-difficulties diff-options" role="group" aria-labelledby="party-difficulty-title"></div></section>
   </dialog>
   <dialog id="party-filter-dialog" class="ux-confirm party-boss-dialog" aria-labelledby="party-filter-title">
     <div class="party-boss-dialog-head"><h2 id="party-filter-title">파티 찾기</h2><button id="party-close-filter" class="ux-button" type="button">닫기</button></div>

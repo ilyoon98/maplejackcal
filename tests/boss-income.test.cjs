@@ -110,7 +110,7 @@ test('캐릭터 카드의 보스 아이콘은 완료 상태와 난이도를 함�
   assert.match(completed, /is-complete/);
   assert.match(completed, /class="chip-complete"[^>]*>완료/);
   assert.match(completed, /aria-label="검은 마법사 · .* · 완료"/);
-  assert.match(completed, /difficulty-mark/);
+  assert.match(completed, /diff-mark/);
   const pending = context.engine.characterBossIcon(boss, {diffIdx:0, complete:false});
   assert.doesNotMatch(pending, /chip-complete|is-complete/);
   assert.match(pending, /aria-label="검은 마법사 · .* · 미완료"/);

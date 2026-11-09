@@ -14,6 +14,7 @@
 <title>어센틱 심볼 계산기</title>
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="nexon_characters.css" />
+<link rel="stylesheet" href="boss_difficulty.css" />
 <style>
   :root{ --surface-2:#1d212b; }
   body{ padding-bottom:96px; }
@@ -417,7 +418,7 @@
     display:flex;
     flex-direction:column;
     gap:6px;
-    width:440px;
+    width:480px;
     max-width:100%;
     flex-shrink:0;
   }
@@ -447,8 +448,7 @@
   .boss-picker-trigger::after{ content:'▾'; margin-left:auto; color:var(--text-dim); }
   .boss-picker-trigger[aria-expanded="true"]{ border-color:var(--accent); }
   .boss-picker-trigger:focus-visible,
-  .boss-picker-option:focus-visible,
-  .boss-difficulty:focus-visible{
+  .boss-picker-option:focus-visible{
     outline:2px solid var(--accent);
     outline-offset:1px;
   }
@@ -491,44 +491,11 @@
   .boss-picker-option[aria-selected="true"]{ background:#1c2740; color:var(--accent); }
   .boss-difficulties{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); align-items:center; gap:6px; min-height:52px; }
   .boss-difficulty-hint{ grid-column:1 / -1; font-size:.8rem; color:var(--text-dim); }
-  .boss-difficulty{
-    --difficulty:var(--accent);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:3px;
-    min-width:0;
-    min-height:52px;
-    padding:5px 2px;
-    border:1px solid var(--difficulty);
-    border-radius:8px;
-    background:#11141a;
-    color:var(--difficulty);
-    font:inherit;
-    font-size:.78rem;
-    font-weight:700;
-    white-space:nowrap;
-    cursor:pointer;
-  }
-  .boss-difficulty[data-level="EASY"]{ --difficulty:#96999d; }
-  .boss-difficulty[data-level="NORMAL"]{ --difficulty:#20acc0; }
-  .boss-difficulty[data-level="HARD"]{ --difficulty:#d83f6c; }
-  .boss-difficulty[data-level="CHAOS"]{ --difficulty:#edbd76; }
-  .boss-difficulty[data-level="EXTREME"]{ --difficulty:#ff2447; }
-  .boss-difficulty[data-level="ALL"]{ grid-column:1 / -1; }
-  .boss-difficulty:hover{ background:var(--surface-2); }
-  .boss-difficulty:focus-visible{ outline-color:var(--difficulty); }
-  .boss-difficulty[aria-pressed="true"]{ background:var(--difficulty); color:#fff; }
-  .boss-difficulty[data-level="EASY"][aria-pressed="true"],
-  .boss-difficulty[data-level="NORMAL"][aria-pressed="true"]{ color:#111722; }
-  .boss-difficulty[data-level="CHAOS"][aria-pressed="true"],
-  .boss-difficulty[data-level="EXTREME"][aria-pressed="true"]{ background:#111722; color:var(--difficulty); box-shadow:inset 0 0 0 1px var(--difficulty); }
-  .boss-difficulty-force{ font-size:.7rem; font-weight:500; font-variant-numeric:tabular-nums; }
+  .boss-difficulties .diff-option{ min-width:0; padding:5px 2px; }
+  .boss-difficulties .diff-option.all{ grid-column:1 / -1; }
   @media (max-width:540px){
     .boss-select-group{ width:100%; }
     .boss-selects{ grid-template-columns:minmax(0,1fr); }
-    .boss-difficulty{ font-size:.72rem; }
   }
 
   table{
@@ -1398,18 +1365,19 @@
 
       var button = document.createElement('button');
       button.type = 'button';
-      button.className = 'boss-difficulty';
       button.dataset.diff = String(j);
       var difficulty = d.label.match(/^(EASY|NORMAL|HARD|CHAOS|EXTREME)\b/);
       button.dataset.level = difficulty ? difficulty[1] : 'ALL';
       button.setAttribute('aria-pressed', 'false');
+      button.className = 'diff-option ' + (difficulty ? difficulty[1].toLowerCase() : 'all');
       var label = d.label.replace(/EASY|NORMAL|HARD|CHAOS|EXTREME/g, function(name){ return difficultyNames[name]; });
       button.setAttribute('aria-label', label + ', 목표 포스 ' + d.target);
       button.title = label + ' · 요구 포스 ' + d.req + ' · 최대효율 목표 ' + d.target;
       var name = document.createElement('span');
       name.textContent = difficulty ? difficultyNames[difficulty[1]] : label;
       var force = document.createElement('span');
-      force.className = 'boss-difficulty-force';
+      name.className = 'diff-option-name';
+      force.className = 'diff-option-sub';
       force.textContent = d.target + ' F';
       button.appendChild(name);
       button.appendChild(force);

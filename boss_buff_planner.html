@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="nexon_characters.css" />
 <link rel="stylesheet" href="site_tooltips.css" />
+<link rel="stylesheet" href="boss_difficulty.css" />
 <style>
   .setting-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; }
   .setting { display:flex; flex-direction:column; gap:6px; }
@@ -51,7 +52,7 @@
   .pack-head .tag-row { display:flex; gap:5px; margin:5px 0 3px; }
   .pack-bin.rice { border-style:dashed; }
 
-  .boss-head, .boss-row { display:grid; grid-template-columns:32px 28px minmax(0,1fr) 100px 100px 94px 82px 68px; gap:6px; align-items:center; }
+  .boss-head, .boss-row { display:grid; grid-template-columns:32px 28px minmax(0,1fr) 108px 100px 94px 82px 68px; gap:6px; align-items:center; }
   .row-include { grid-area:include; }
   .row-icon { grid-area:icon; }
   .row-name { grid-area:name; }
@@ -68,10 +69,9 @@
   .row-include { width:26px; min-height:26px; justify-self:center; padding:0; font-size:15px; border-radius:5px; }
   .row-complete { border-color:transparent; background:transparent; font-size:0.7rem; }
   .row-include:hover, .row-complete:hover { filter:brightness(1.18); }
-  .row-include:focus-visible, .row-complete:focus-visible, .row-diff:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .row-include:focus-visible, .row-complete:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .row-difficulty { position:relative; min-width:0; }
-  .row-difficulty .row-diff { width:100%; margin:0; padding:5px 9px; cursor:pointer; font:inherit; font-size:0.73rem; font-weight:800; }
-  .row-diff option { background:#191c24; color:var(--text); }
+  .row-difficulty .row-diff { width:100%; }
   .row-doping { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:36px; padding:5px 6px; border:1px solid; border-radius:9px; font:inherit; font-size:0.73rem; font-weight:800; line-height:1; white-space:nowrap; cursor:pointer; }
   .row-doping img { width:22px; height:22px; object-fit:contain; image-rendering:pixelated; }
   .row-doping.full { background:#253f67; border-color:#669cef; color:#e4efff; }
@@ -183,12 +183,7 @@
   .shot-face.blank { display:inline-block; background:#22262f; }
   .shot-bname { font-size:0.86rem; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .shot-bname.dim { color:var(--text-dim); font-weight:400; }
-  .diff-badge { margin-left:auto; flex:none; font-size:0.66rem; font-weight:800; letter-spacing:0.02em; padding:2px 7px; border-radius:5px; background:#2a2e38; color:var(--text-dim); }
-  .diff-badge.easy { background:#666; color:#fff; }
-  .diff-badge.normal { background:#16aebe; color:#fff; }
-  .diff-badge.hard { background:#a52c4b; color:#fff; }
-  .diff-badge.chaos { background:#0b0b0b; color:#d9bc9b; border:1px solid #3a3226; }
-  .diff-badge.extreme { background:#0b0b0b; color:#e2465a; border:1px solid #4a1f26; }
+  .diff-badge { margin-left:auto; }
   .shot-pick-boss { position:relative; }
   .shot-pick-btn { width:100%; box-sizing:border-box; padding:5px 8px; border-radius:7px; border:1px solid var(--border); background:var(--card); cursor:pointer; font:inherit; text-align:left; }
   .shot-pick-btn:hover, .shot-pick-btn[aria-expanded="true"] { border-color:var(--accent); }
@@ -218,10 +213,10 @@
   /* 좁은 화면에서도 난이도와 숫자 칸의 위치·폭을 고정한다. */
   @media (max-width:760px), (min-width:961px) and (max-width:1200px) {
     .boss-head { display:none; }
-    .boss-row { grid-template-columns:60px 28px minmax(94px,1fr) 100px 68px; grid-template-areas:"include icon name diff complete" "mult mult time doping doping"; gap:8px 6px; }
+    .boss-row { grid-template-columns:60px 28px minmax(94px,1fr) 108px 68px; grid-template-areas:"include icon name diff complete" "mult mult time doping doping"; gap:8px 6px; }
   }
   @media (max-width:500px) {
-    .boss-row { grid-template-columns:60px minmax(0,1fr) 100px; grid-template-areas:"icon name diff" "include doping complete" "mult mult time"; }
+    .boss-row { grid-template-columns:60px minmax(0,1fr) 108px; grid-template-areas:"icon name diff" "include doping complete" "mult mult time"; }
     .row-include { width:var(--ui-control-height); }
     .row-include, .row-complete { min-height:var(--ui-control-height); }
     .boss-selection-count { display:block; margin-left:0; margin-top:4px; }

@@ -481,7 +481,7 @@
         '<div class="row-name"><strong><span class="nm" data-tooltip="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
         (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') + partyTag + partyOpen +
         '</strong></div>' +
-        '<div class="row-difficulty">' + (entry ? '<select class="row-diff diff-badge ' + (DIFF_CLASS[b.diff] || '') + '" data-act="diff" data-i="' + i + '" aria-label="' + esc(b.name) + ' 난이도">' +
+        '<div class="row-difficulty">' + (entry ? '<select class="row-diff diff-select ' + (DIFF_CLASS[b.diff] || '') + '" data-act="diff" data-i="' + i + '" aria-label="' + esc(b.name) + ' 난이도">' +
           entry[2].map(function (diff) { return '<option value="' + diff + '"' + (diff === b.diff ? ' selected' : '') + '>' + diff + '</option>'; }).join('') + '</select>' : diffBadge(b.diff)) + '</div>' +
         '<div class="row-input row-mult"><input type="number" min="0.01" step="0.01" value="' + percentText(mult) + '" data-act="mult" data-i="' + i + '" aria-label="' + esc(b.name) + (usingParty ? ' 파티 배율' : ' 배율') + '"' + lockAttr + '><span class="unit">%</span></div>' +
         '<div class="row-input row-time"><input type="number" tabindex="-1" min="0.1" step="0.1" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '" aria-label="' + esc(b.name) + ' 소요 시간"' + lockAttr + '><span class="unit">분</span></div>' +

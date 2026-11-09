@@ -129,8 +129,9 @@
       search.hidden=true;results.hidden=true;empty.hidden=true;recentSection.hidden=true;difficulty.hidden=false;
       title.replaceChildren(visual.create(doc,key,db),' 난이도');options.replaceChildren();
       bosses.get(key).forEach(function(c){
-        var badge=visual.create(doc,c.id,db).querySelector('.diff-badge');
-        var item=button(badge,function(){choose(c.id);});item.setAttribute('aria-pressed',String(select.value===c.id));options.append(item);
+        var badge=visual.create(doc,c.id,db).querySelector('.diff-badge'),name=doc.createElement('span');
+        name.className='diff-option-name';name.textContent=badge?badge.textContent:c.label;
+        var item=button(name,function(){choose(c.id);});item.className='diff-option '+(badge?badge.classList[1]:'');item.setAttribute('aria-pressed',String(select.value===c.id));options.append(item);
       });
       options.querySelector('button').focus();
     }

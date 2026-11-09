@@ -31,7 +31,7 @@ body:has(.site-nav) :is(input:not(:where([type="checkbox"], [type="radio"], [typ
   padding: 8px 12px;
   font-size: .9375rem;
 }
-body:has(.site-nav) :is(input:not(:where([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="hidden"], [type="button"], [type="submit"], [type="reset"])), select):not(:where(.flatpickr-calendar *, [multiple], [size], .row-diff)) {
+body:has(.site-nav) :is(input:not(:where([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="hidden"], [type="button"], [type="submit"], [type="reset"])), select):not(:where(.flatpickr-calendar *, [multiple], [size], .diff-select)) {
   background-color: var(--bg);
 }
 body:has(.site-nav) select:not(:where(.flatpickr-calendar *, [multiple], [size])) {

@@ -14,6 +14,7 @@
 <title>보스 수익 정산 계산기</title>
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="nexon_characters.css" />
+<link rel="stylesheet" href="boss_difficulty.css" />
 <style>
   :root{ --surface-2:#1d212b; }
   body{ padding-bottom:24px; }
@@ -183,20 +184,6 @@
   }
   .boss-check-badge.complete{ background:rgba(76,175,125,.22); color:#83e2ad; }
   .diff-chip-row{ display:flex; flex-wrap:wrap; gap:6px; flex:1 1 180px; min-width:140px; }
-  .diff-chip{
-    border:1px solid var(--border);
-    background:#11141a;
-    color:var(--text-dim);
-    font-size:0.74rem;
-    font-weight:700;
-    padding:6px 10px;
-    border-radius:999px;
-    cursor:pointer;
-  }
-  .diff-chip:hover{ border-color:var(--accent); color:var(--text); }
-  .diff-chip.active{ background:var(--difficulty); border-color:var(--difficulty); color:#10151c; box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--difficulty); }
-  .diff-chip.disabled{ opacity:.4; cursor:not-allowed; }
-  .diff-chip.disabled:hover{ border-color:var(--border); color:var(--text-dim); }
 
   .party-controls{
     display:flex;
@@ -262,13 +249,7 @@
   .chip-bosses{ grid-column:1/-1; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; max-width:288px; width:100%; }
   .chip-boss{ position:relative; display:inline-flex; padding-bottom:8px; }
   .chip-boss img{ width:100%; max-width:36px; height:auto; aspect-ratio:1; border-radius:8px; border:1px solid var(--border); object-fit:cover; }
-  .difficulty-easy{ --difficulty:#80cc8f; }
-  .difficulty-normal{ --difficulty:#77b9ef; }
-  .difficulty-hard{ --difficulty:#f5a360; }
-  .difficulty-chaos{ --difficulty:#eb88b8; }
-  .difficulty-extreme{ --difficulty:#c6a1fa; }
-  .difficulty-mark{ position:absolute; bottom:0; right:0; min-width:12px; padding:1px 2px; border-radius:4px; background:var(--difficulty); color:#111722; font-size:.55rem; line-height:1.3; text-align:center; font-weight:900; border:1px solid var(--card); }
-  .diff-chip{ min-height:32px; min-width:52px; padding:5px 8px; color:var(--difficulty); border-color:var(--difficulty); font-size:.76rem; font-weight:900; letter-spacing:.02em; }
+  .chip-boss .diff-mark{ position:absolute; bottom:0; right:0; }
   .boss-row{ padding:14px; }
   .boss-icon{ width:38px; height:38px; }
   .boss-name{ font-size:.95rem; }
@@ -334,25 +315,16 @@
   .chip-complete{ position:absolute; bottom:0; left:0; font-size:.53rem; line-height:1.4; color:#83e2ad; font-weight:800; }
   @media(max-width:420px){ .api-link-badge{ display:none; } }
   /* 난이도 색상과 완료 상태는 서로 독립된 표시다. */
-  .difficulty-easy{ --difficulty:#96999d; }
-  .difficulty-normal{ --difficulty:#20acc0; }
-  .difficulty-hard{ --difficulty:#d83f6c; }
-  .difficulty-chaos{ --difficulty:#edbd76; }
-  .difficulty-extreme{ --difficulty:#ff2447; }
-  .diff-chip{ min-width:0; min-height:28px; padding:4px 7px; font-size:.63rem; letter-spacing:-.02em; flex:none; }
-  .diff-chip.active{ color:#fff; box-shadow:0 0 0 2px #111722,0 0 0 3px var(--difficulty); }
-  .diff-chip.difficulty-chaos.active, .diff-chip.difficulty-extreme.active{ background:#111722; color:var(--difficulty); }
-  .diff-chip-row{ flex-wrap:nowrap; min-width:0; gap:4px; overflow:visible; padding:4px; }
+  .diff-chip-row{ flex-wrap:nowrap; min-width:0; overflow:visible; padding:4px; }
+  /* 행마다 같은 난이도 버튼 폭을 맞춰 선택을 바꿔도 위치가 흔들리지 않게 한다. */
+  .boss-row .diff-option{ flex:none; }
+  .boss-row .diff-option.easy, .boss-row .diff-option.normal, .boss-row .diff-option.hard{ width:54px; }
+  .boss-row .diff-option.chaos{ width:64px; }
+  .boss-row .diff-option.extreme{ width:76px; }
   .boss-list{ overflow:visible; }
   #bossPanel{ container-type:inline-size; }
   /* 모든 행에서 같은 열 폭을 사용해 선택 해제·금액 변경에도 조작 위치를 유지한다. */
-  .boss-row{ display:grid; grid-template-columns:minmax(0,1fr) 240px 96px 250px; gap:10px; min-width:0; padding:10px 8px; box-sizing:border-box; }
-  .boss-row .diff-chip{ padding:4px 5px; font-size:.6rem; }
-  .boss-row .diff-chip.difficulty-easy, .boss-row .diff-chip.difficulty-hard{ width:40px; }
-  .boss-row .diff-chip.difficulty-normal{ width:56px; }
-  .boss-row .diff-chip.difficulty-chaos{ width:48px; }
-  .boss-row .diff-chip.difficulty-extreme{ width:64px; }
-  .boss-row .diff-chip{ box-sizing:border-box; }
+  .boss-row{ display:grid; grid-template-columns:minmax(0,1fr) 280px 96px 250px; gap:10px; min-width:0; padding:10px 8px; box-sizing:border-box; }
   .boss-row .boss-name{ font-size:.8rem; }
   .boss-row .boss-icon{ width:30px; height:30px; }
   .boss-row .boss-name-wrap{ width:auto; min-width:0; }
@@ -369,7 +341,7 @@
   .chip-boss img{ width:42px; max-width:42px; }
   .chip-boss.is-complete img{ filter:brightness(.5) saturate(.5); }
   .chip-boss .chip-complete{ bottom:auto; top:11px; left:2px; right:2px; padding:2px 0; text-align:center; font-size:.7rem; line-height:1.2; color:#caffdf; border:2px solid #8be9b3; border-radius:3px; background:#143323dd; transform:rotate(-10deg); letter-spacing:.05em; }
-  .chip-boss .difficulty-mark{ z-index:1; }
+  .chip-boss .diff-mark{ z-index:1; }
   .summary-inner{ grid-template-columns:minmax(0,2fr) minmax(0,1.15fr) minmax(100px,.6fr); }
   .weekly-values{ display:flex; align-items:baseline; gap:.45em; white-space:nowrap; overflow-x:auto; font-size:clamp(.85rem,3.8cqi,1.65rem); font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.04em; }
   .weekly-values > :first-child{ color:#62cea0; }
@@ -1109,10 +1081,10 @@
     var difficulty = boss.diffs[entry.diffIdx].label;
     var badge = DIFFICULTY[difficulty];
     var label = escapeHtml(boss.name + ' · ' + difficulty + ' · ' + (entry.complete ? '완료' : '미완료'));
-    return '<span class="chip-boss difficulty-' + badge.key + (entry.complete ? ' is-complete' : '') + '" role="img" aria-label="' + label + '" title="' + label + '">' +
+    return '<span class="chip-boss' + (entry.complete ? ' is-complete' : '') + '" role="img" aria-label="' + label + '" title="' + label + '">' +
       iconHtml(boss, 'chip-boss-icon') +
       (entry.complete ? '<span class="chip-complete" aria-hidden="true">완료</span>' : '') +
-      '<span class="difficulty-mark" aria-hidden="true">' + badge.mark + '</span></span>';
+      '<span class="diff-mark ' + badge.key + '" aria-hidden="true">' + badge.mark + '</span></span>';
   }
 
   function weeklyCompletionHtml(t){
@@ -1388,8 +1360,8 @@
         var d = item.diff, diffIdx = item.index;
         var isActive = entry && entry.diffIdx === diffIdx;
         var isDisabled = !isActive && !boss.monthly && !entry && atCap;
-        return '<button type="button" class="diff-chip difficulty-' + DIFFICULTY[d.label].key + (isActive ? ' active' : '') + (isDisabled ? ' disabled' : '') +
-          '" title="' + d.label + '" aria-label="' + boss.name + ' ' + d.label + '" aria-pressed="' + !!isActive + '" aria-disabled="' + !!isDisabled + '" data-boss="' + bossIdx + '" data-diff="' + diffIdx + '">' + DIFFICULTY[d.label].text + '</button>';
+        return '<button type="button" class="diff-chip diff-option ' + DIFFICULTY[d.label].key + (isActive ? ' active' : '') + (isDisabled ? ' disabled' : '') +
+          '" title="' + d.label + '" aria-label="' + boss.name + ' ' + d.label + '" aria-pressed="' + !!isActive + '" aria-disabled="' + !!isDisabled + '" data-boss="' + bossIdx + '" data-diff="' + diffIdx + '"><span class="diff-option-name">' + d.label + '</span></button>';
       }).join('');
 
       var party = entry ? entry.party : 1;
@@ -1403,7 +1375,7 @@
           (boss.monthly ? '<span class="boss-check-badge">월간</span>' : '') +
           (entry && entry.complete ? '<span class="boss-check-badge complete">완료</span>' : '') +
         '</button>' +
-        '<div class="diff-chip-row">' + chipsHtml + '</div>' +
+        '<div class="diff-chip-row diff-options compact">' + chipsHtml + '</div>' +
         partyControlsHtml(bossIdx, party, entry ? entry.diffIdx : undefined) +
         '<span class="row-preview">' + (entry ? '<span class="row-income">' + won(per) + '</span><button type="button" class="ux-complete-toggle" data-boss="' + bossIdx + '" aria-label="' + boss.name + (entry.complete ? ' 완료 취소' : ' 완료 처리') + '" title="' + (entry.complete ? '누르면 완료 취소' : '누르면 완료 처리') + '" aria-pressed="' + !!entry.complete + '">' + (entry.complete ? '✓ 완료' : '○ 미완료') + '</button>' : '') + '</span>';
       bossList.appendChild(row);
