@@ -12,12 +12,11 @@ function memoryRedis(){
     assert.equal(args[0],'EVAL');assert.equal(args[1],WRITE);
     const [,,,,id,owner,expected,action,payload,createdAt,revision]=args;
     const old=entries.get(id);
-    if(old&&old.owner!==owner)return -2;
     if(old&&action==='save'&&old.payload===payload)return JSON.stringify(old);
     if(old&&old.revision!==expected)return 0;
     if(action==='delete'){entries.delete(id);return 1;}
     if(!old&&expected)return 0;
-    const record={owner,payload,createdAt:old?.createdAt||Number(createdAt),revision};
+    const record={owner:old?.owner||owner,payload,createdAt:old?.createdAt||Number(createdAt),revision};
     entries.set(id,record);return JSON.stringify(record);
   };
 }
@@ -39,11 +38,12 @@ test('공유 파티는 다른 서버에서도 조회되고 만든 브라우저�
   const revision=created.payload.party.revision;
   assert.equal((await call(a,'POST',request,owner)).payload.party.revision,revision);
   const publicList=(await call(b,'GET')).payload;
-  assert.deepEqual(publicList.parties,[{...party,revision,canEdit:false}]);
+  assert.deepEqual(publicList.parties,[{...party,revision,canEdit:true,mine:false}]);
   assert(!JSON.stringify(publicList).includes(owner));
-  assert.equal((await call(b,'GET',undefined,owner)).payload.parties[0].canEdit,true);
-  assert.equal((await call(b,'POST',{action:'delete',party:{id:party.id},revision},randomUUID())).status,403);
-  const edit=await call(a,'POST',{action:'save',party:{...party,name:'토요팟'},revision},owner);
+  assert.equal((await call(b,'GET',undefined,owner)).payload.parties[0].mine,true);
+  // 다른 브라우저도 수정할 수 있고, 만든 사람 기록은 그대로 남는다.
+  const edit=await call(b,'POST',{action:'save',party:{...party,name:'토요팟'},revision},randomUUID());
+  assert.equal((await call(b,'GET',undefined,owner)).payload.parties[0].mine,true);
   assert.equal(edit.status,200);assert.notEqual(edit.payload.party.revision,revision);
   assert.equal((await call(b,'POST',{action:'save',party:{...party,name:'일요팟'},revision},owner)).status,409);
   assert.equal((await call(a,'POST',{action:'delete',party:{id:party.id},revision:edit.payload.party.revision},owner)).status,200);

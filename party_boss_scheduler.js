@@ -10,6 +10,7 @@
   var OWNER_STORAGE='partyBossScheduler.owner.v1';
   var RECENT_STORAGE='partyBossScheduler.recentBosses.v1';
   var COMPLETE_STORAGE='partyBossScheduler.completed.v1';
+  var SORT_STORAGE='partyBossScheduler.sort.v1';
   var DAILY_BOSSES=['Akayrum','PinkBean','Cygnus'];
   var BASE='https://open.api.nexon.com/maplestory/v1';
   var SHARE_COLORS=['#75adff','#59d8ad','#ffc46b','#c39bfa','#ff849d','#efe879'];
@@ -164,9 +165,12 @@
     var ownSyncedKey='',ownSyncPending=null;
     var editing='',editingRevision='',draftId='',portraitAttempts=new Set();
     var scope='local',remoteRows=[],remoteParties=[],remoteAvailable=false,remoteLoading=false,remoteWriting=false,remoteError='',remoteVersion=0;
-    var view={value:'all',label:''},filterTypes={boss:'보스',account:'계정',character:'캐릭터'};
+    var chartCount=0,view={value:'all',label:''},filterTypes={boss:'보스',account:'계정',character:'캐릭터'};
     try{var saved=JSON.parse(win.localStorage.getItem(STORAGE)||'{}');parties=restore(saved,choices);}catch(e){}
     try{if(win.localStorage.getItem(SCOPE_STORAGE)==='shared')scope='shared';}catch(e){}
+    var sortMode='boss';
+    try{var savedSort=win.localStorage.getItem(SORT_STORAGE);if(savedSort&&Array.from(el('party-sort').options).some(function(o){return o.value===savedSort;}))sortMode=savedSort;}catch(e){}
+    el('party-sort').value=sortMode;
     // 직접 표시한 완료는 파티 ID별로 주기 키를 저장하고, 스케줄러 완료는 내 캐릭터 이름별로 메모리에만 둔다.
     var manualDone={},apiClears=new Map(),clearsFetchedAt=new Map(),clearsKey='',clearsPending=null,mineCache=null;
     try{var savedDone=JSON.parse(win.localStorage.getItem(COMPLETE_STORAGE)||'{}');if(savedDone&&typeof savedDone==='object')manualDone=savedDone;}catch(e){}
@@ -232,15 +236,15 @@
       });
       el('party-scope-panel').setAttribute('aria-labelledby','party-scope-'+scope);
       var sharedScope=scope==='shared',note=el('party-scope-note'),refresh=el('party-refresh-shared');
-      note.textContent=sharedScope?(remoteLoading?'공유 파티 불러오는 중…':remoteError||'누구나 볼 수 있습니다. 만든 브라우저에서 수정할 수 있습니다.'):'이 브라우저에서만 볼 수 있습니다.';
+      note.textContent=sharedScope?(remoteLoading?'공유 파티 불러오는 중…':remoteError||'누구나 보고 수정할 수 있습니다.'):'이 브라우저에서만 볼 수 있습니다.';
       note.classList.toggle('error',sharedScope&&!!remoteError&&!remoteLoading);
       refresh.hidden=!sharedScope;refresh.disabled=remoteLoading||remoteWriting;
       el('party-create-toggle').disabled=remoteWriting||(sharedScope&&!remoteAvailable);
       el('party-create-cancel').disabled=remoteWriting;el('party-save').disabled=remoteWriting||(sharedScope&&!remoteAvailable);
       el('party-create-form').inert=remoteWriting;
-      ['party-view-all','party-view-mine','party-open-filter','party-clear-filter'].forEach(function(id){el(id).disabled=remoteWriting;});
+      ['party-view-all','party-view-mine','party-open-filter','party-clear-filter','party-list-search','party-sort'].forEach(function(id){el(id).disabled=remoteWriting;});
       el('party-save').textContent=remoteWriting?'저장 중…':sharedScope?'공유 파티 저장':'파티 저장';
-      el('party-draft-scope').textContent=sharedScope?'저장하면 누구나 볼 수 있습니다.':'이 브라우저에 저장';
+      el('party-draft-scope').textContent=sharedScope?'저장하면 누구나 보고 수정할 수 있습니다.':'이 브라우저에 저장';
     }
     function hydrateRemote(){
       remoteParties=remoteRows.filter(function(row){return choices.some(function(c){return c.id===row.bossId;});}).map(function(row){
@@ -282,7 +286,7 @@
         }else remoteRows=remoteRows.filter(function(row){return row.id!==p.id;});
         hydrateRemote();return action==='save'?remoteParties.find(function(row){return row.id===p.id;}):true;
       }catch(e){
-        var errors={PARTY_CONFLICT:'다른 화면에서 먼저 수정했습니다. 편집을 닫고 공유 목록을 새로고침한 뒤 다시 시도하세요.',PARTY_FORBIDDEN:'파티를 만든 브라우저에서 수정할 수 있습니다.',PARTY_ACCOUNT_CONFLICT:'같은 계정의 캐릭터가 있습니다. 공용 계정 목록을 확인하세요.',PARTY_MEMBER_NOT_REGISTERED:'공용 배율에 등록되지 않은 파티원이 있습니다.',PARTY_LIMIT:'공유 파티 저장 한도에 도달했습니다.',PARTY_OWNER_STORAGE:'수정 권한을 브라우저에 저장할 수 없습니다.'};
+        var errors={PARTY_CONFLICT:'다른 화면에서 먼저 수정했습니다. 편집을 닫고 공유 목록을 새로고침한 뒤 다시 시도하세요.',PARTY_FORBIDDEN:'공유 저장소가 요청을 거부했습니다. 새로고침한 뒤 다시 시도하세요.',PARTY_ACCOUNT_CONFLICT:'같은 계정의 캐릭터가 있습니다. 공용 계정 목록을 확인하세요.',PARTY_MEMBER_NOT_REGISTERED:'공용 배율에 등록되지 않은 파티원이 있습니다.',PARTY_LIMIT:'공유 파티 저장 한도에 도달했습니다.',PARTY_OWNER_STORAGE:'수정 권한을 브라우저에 저장할 수 없습니다.'};
         notify(errors[e.message]||'공유 저장소에 반영하지 못했습니다. 입력값을 확인하고 다시 시도하세요.',true);return null;
       }finally{remoteWriting=false;updateScopeUI();}
     }
@@ -382,34 +386,34 @@
       return box;
     }
     function doneBadge(){return node('span','party-done-badge','✓ 완료');}
-    function totals(members,max,compact,done){
-      var sum=summary(members),known=members.length>sum.missing;
-      var box=node('span',compact?'party-totals compact':'party-totals'),footer=node('span','party-metrics-footer');
-      if(done)footer.append(doneBadge());
-      var verdict=sum.missing?['pending','판정 대기']:members.length?clearStatus(Math.round(sum.total*100)/100):null;
-      var badge=verdict?node('span','party-verdict '+verdict[0],verdict[1]):null;
-      box.append(metric('환산 합계',known?percentLabel(sum.total):'—',compact?null:badge));
-      if(compact&&badge)footer.append(badge);
-      if(sum.missing)footer.append(node('span','party-note',sum.missing+'명 미등록'));
-      footer.append(node('span','party-member-count',members.length+' / '+max+'명'));
-      box.append(footer);return box;
-    }
     function mesoLabel(value){
       var eok=Math.floor(value/1e8),man=Math.floor(value%1e8/1e4),rest=value%1e4;
       var parts=[eok?eok.toLocaleString('ko-KR')+'억':'',man?man.toLocaleString('ko-KR')+'만':'',rest?rest.toLocaleString('ko-KR'):''];
       return (parts.filter(Boolean).join(' ')||'0')+' 메소';
     }
+    // 왼쪽 카드는 파티 전투력(환산 합계와 예상 딜 비중), 오른쪽 카드는 받는 보상(결정석과 아이템)을 보여준다.
+    function partyOverview(members,boss){
+      var sum=summary(members),known=members.length>sum.missing,shares=damageShares(members);
+      var box=node('section','party-totals'),head=node('div','party-overview-head');
+      var verdict=sum.missing?['pending','판정 대기']:members.length?clearStatus(Math.round(sum.total*100)/100):null;
+      head.append(metric('환산 합계',known?percentLabel(sum.total):'—',verdict?node('span','party-verdict '+verdict[0],verdict[1]):null));
+      head.append(node('span','party-member-count',members.length+' / '+boss.max+'명'));
+      box.append(head);
+      if(shares)box.append(damageChart(members,shares));
+      else if(sum.missing)box.append(node('p','party-note',sum.missing+'명 미등록. 모든 파티원의 배율이 있어야 예상 딜 비중을 계산합니다.'));
+      return box;
+    }
     function partySummary(members,boss){
       var [key,difficulty]=boss.id.split('|'),price=Number(win.MapleBossDB[key][difficulty].CrystalPrice),count=members.length;
       var layout=node('div','party-summary-grid'),reward=node('section','party-reward');
-      var daily=DAILY_BOSSES.includes(key);
       var icon=node('img');
-      icon.src=daily?'icons/home/강렬한힘의결정.webp':'icons/home/boss-crystal-'+(key==='BlackMage'?'monthly':'weekly')+'.png';
+      icon.src=DAILY_BOSSES.includes(key)?'icons/home/강렬한힘의결정.webp':'icons/home/boss-crystal-'+(key==='BlackMage'?'monthly':'weekly')+'.png';
       icon.alt='';
+      // 1인당 금액 바로 오른쪽에 전체 금액을 두어 분배 기준을 한 줄에서 읽게 한다.
       var crystal=node('div','party-crystal');crystal.append(icon,metric(count?'1인당 결정석':'결정석 기본가',mesoLabel(Math.floor(price/Math.max(1,count)))));
-      var condition=count?count+'인 균등 분배':'파티원을 추가하면 1인당 금액 표시';
-      if(count>1)condition+=' (전체 '+mesoLabel(price)+')';
-      reward.append(node('h4','','보스 보상'),crystal,node('p','party-note',condition));
+      if(count>1)crystal.append(metric('전체 ('+count+'인 균등 분배)',mesoLabel(price)));
+      reward.append(node('h4','','보스 보상'),crystal);
+      if(!count)reward.append(node('p','party-note','파티원을 추가하면 1인당 금액을 표시합니다.'));
       var items=win.BossRewards.forBoss(boss.id);
       if(items.length){
         var list=node('ul','party-reward-items');list.setAttribute('aria-label',boss.label+' 주요 보상 아이템');
@@ -418,6 +422,7 @@
           tile.tabIndex=0;tile.dataset.tooltip=item.name;
           picture.style.backgroundImage='url('+item.image+')';picture.style.backgroundPosition=(-item.x)+'px '+(-item.y)+'px';
           picture.setAttribute('role','img');picture.setAttribute('aria-label',item.name);tile.append(picture);
+          // 수량은 아이콘 아래에 두어 옆 아이콘의 수량으로 읽히지 않게 한다.
           if(item.quantity!==undefined){
             var amount=item.quantity.toLocaleString('ko-KR'),badge=node('strong','party-reward-quantity',amount);
             badge.setAttribute('aria-label',amount+' '+item.unit);tile.dataset.tooltipValue=amount+' '+item.unit;tile.append(badge);
@@ -428,7 +433,7 @@
       }else reward.append(node('p','party-note','이 난이도의 아이템 보상 정보가 없습니다.'));
       var guide=node('a','','공식 보상 안내');guide.href=win.BossRewards.guide;guide.target='_blank';guide.rel='noopener';
       var note=node('p','party-note');note.append(guide);reward.append(note);
-      layout.append(totals(members,boss.max,false),reward);return layout;
+      layout.append(partyOverview(members,boss),reward);return layout;
     }
     function damageShares(members){
       var sum=summary(members);
@@ -436,7 +441,7 @@
     }
     function damageChart(members,shares){
       var section=node('section','party-share-chart'),title=node('h4','','예상 딜 비중');
-      title.id='party-share-title';section.setAttribute('aria-labelledby',title.id);section.append(title);
+      title.id='party-share-title-'+(++chartCount);section.setAttribute('aria-labelledby',title.id);section.append(title);
       var bar=node('div','party-share-bar'),legend=node('ul','party-share-legend');
       bar.setAttribute('aria-hidden','true');
       members.forEach(function(m,index){
@@ -475,11 +480,34 @@
       var id=accounts.accountId(shared,name);
       return filter==='account:'+id||filter==='account:'&&id==='character:'+name;
     }
-    function visible(){
+    function filtered(){
       var filter=view.value,items=activeParties();
       if(filter==='all')return items;
       if(filter.startsWith('boss:'))return items.filter(function(p){return p.bossId.split('|')[0]===filter.slice(5);});
       return items.filter(function(p){return p.members.some(function(m){return matchingMember(filter,m.character.name);});});
+    }
+    // 목록 검색은 보스 이름과 별칭, 파티 이름, 파티원 닉네임, 계정 이름에서 찾는다.
+    function searchText(p){
+      var db=win.MapleBossDB,key=p.bossId.split('|')[0],boss=choices.find(function(c){return c.id===p.bossId;});
+      return normalizeSearch([boss?boss.label:'',db[key]?.Name||'',p.name].concat(db.BossAliases?.[key]||[],p.members.flatMap(function(m){return [m.character.name,accountName(m.character.name)];})).join(' '));
+    }
+    function sortParties(items){
+      var order=new Map(choices.map(function(c,i){return [c.id,i];})),created=new Map(activeParties().map(function(p,i){return [p.id,i];}));
+      var byBoss=function(a,b){return (order.get(a.bossId)??999)-(order.get(b.bossId)??999)||a.name.localeCompare(b.name,'ko-KR');};
+      var total=function(p){var s=summary(p.members);return s.missing||!p.members.length?null:s.total;};
+      var byTotal=function(dir){return function(a,b){var x=total(a),y=total(b);if(x===null||y===null)return (x===null)-(y===null)||byBoss(a,b);return (x-y)*dir||byBoss(a,b);};};
+      var compare={
+        boss:byBoss,
+        remaining:function(a,b){return !!completion(a)-!!completion(b)||byBoss(a,b);},
+        'total-desc':byTotal(-1),'total-asc':byTotal(1),
+        recent:function(a,b){return created.get(b.id)-created.get(a.id);}
+      }[sortMode]||byBoss;
+      return items.slice().sort(compare);
+    }
+    function visible(){
+      var term=normalizeSearch(el('party-list-search').value||'');
+      var items=filtered();if(term)items=items.filter(function(p){return searchText(p).includes(term);});
+      return sortParties(items);
     }
     function setView(value,label){
       if(remoteWriting)return;
@@ -493,7 +521,8 @@
       clear.hidden=!kind;
       el('party-active-filter').textContent=kind?kind+' · '+view.label:'';
       clear.setAttribute('aria-label',kind?kind+' '+view.label+' 필터 해제':'필터 해제');
-      el('party-view-count').textContent='파티 '+count+'개';
+      var term=el('party-list-search').value.trim(),total=filtered().length;
+      el('party-view-count').textContent=term&&count!==total?'파티 '+total+'개 중 '+count+'개':'파티 '+count+'개';
     }
     function renderFilterOptions(){
       var db=win.MapleBossDB,items=activeParties(),host=el('party-filter-results'),term=normalizeSearch(el('party-filter-query').value);
@@ -528,7 +557,7 @@
     function filterStatus(message,error){var note=el('party-filter-status');note.textContent=message;note.classList.toggle('error',!!error);}
     function draftStatus(message,error){var note=el('party-draft-status');note.textContent=message;note.classList.toggle('error',!!error);}
     function closeEditor(){
-      editing='';editingRevision='';draftId='';draftMembers=[];el('party-create-form').hidden=true;bossPicker.close();
+      editing='';editingRevision='';draftId='';draftMembers=[];el('party-create-form').hidden=true;el('party-draft-summary').replaceChildren();el('party-draft-members').replaceChildren();bossPicker.close();
       el('party-create-toggle').setAttribute('aria-expanded','false');
     }
     function openEditor(p,copy){
@@ -574,10 +603,17 @@
       shown.forEach(function(p){
         var button=node('button'),boss=choices.find(function(c){return c.id===p.bossId;});
         button.type='button';button.disabled=formOpen||remoteWriting;button.setAttribute('aria-pressed',String(p.id===selected));
-        button.append(visual.create(doc,p.bossId,win.MapleBossDB));
-        if(p.name!==boss.label)button.append(node('span','party-list-name',p.name));
-        var done=completion(p);if(done)button.classList.add('party-list-done');
-        button.append(totals(p.members,boss.max,true,!!done));
+        // 목록은 고르기 위한 한 줄 요약이다. 환산 합계와 판정의 자세한 내용은 오른쪽 상세에서 크게 보여준다.
+        var done=completion(p),sum=summary(p.members),meta=node('span','party-row-meta'),stats=node('span','party-row-stats');
+        if(done)button.classList.add('party-list-done');
+        if(p.name!==boss.label)meta.append(node('span','party-list-name',p.name));
+        meta.append(node('span','party-member-count',p.members.length+' / '+boss.max+'명'));
+        if(sum.missing)meta.append(node('span','party-note',sum.missing+'명 미등록'));
+        if(done)meta.append(doneBadge());
+        var verdict=sum.missing?['pending','판정 대기']:p.members.length?clearStatus(Math.round(sum.total*100)/100):null;
+        stats.append(node('strong','party-row-total',p.members.length>sum.missing?percentLabel(sum.total):'—'));
+        if(verdict)stats.append(node('span','party-verdict '+verdict[0],verdict[1]));
+        button.append(visual.create(doc,p.bossId,win.MapleBossDB),stats,meta);
         button.addEventListener('click',function(){
           if(remoteWriting||!el('party-create-form').hidden)return;
           if(p.id!==selected){status('');if(editing)closeEditor();}
@@ -588,7 +624,7 @@
       el('party-detail').hidden=formOpen;el('party-add-panel').hidden=!p||formOpen||!editable;var add=el('party-add-current');add.disabled=true;
       if(!p){
         var filter=view.value;
-        var message=scope==='shared'&&!remoteAvailable?(remoteError||'공유 파티를 불러오는 중입니다.'):filter==='mine'?'내 캐릭터 파티가 없습니다.':filter!=='all'?'선택한 조건에 맞는 파티가 없습니다.':scope==='shared'?'아직 공유된 파티가 없습니다.':'새 파티를 만들어보세요.';
+        var message=scope==='shared'&&!remoteAvailable?(remoteError||'공유 파티를 불러오는 중입니다.'):el('party-list-search').value.trim()&&filtered().length?'검색어에 맞는 파티가 없습니다. 다른 이름으로 찾아보세요.':filter==='mine'?'내 캐릭터 파티가 없습니다.':filter!=='all'?'선택한 조건에 맞는 파티가 없습니다.':scope==='shared'?'아직 공유된 파티가 없습니다.':'새 파티를 만들어보세요.';
         detail.append(node('p','party-empty',message));return;
       }
       if(formOpen)return;
@@ -643,7 +679,6 @@
       headingHost.append(node('p','party-note party-complete-note',done==='api'?'넥슨 스케줄러에서 내 캐릭터의 클리어를 확인했습니다. '+reset+'에 초기화됩니다.':'완료 표시는 '+reset+'에 초기화됩니다.'+(win.NexonKey&&win.NexonKey.has()?'':' 홈에서 API 키를 등록하면 내 캐릭터의 클리어를 자동으로 확인합니다.')));
       detail.append(partySummary(p.members,boss));
       var shares=damageShares(p.members);
-      if(shares)detail.append(damageChart(p.members,shares));
       if(p.members.some(function(m,i){return accounts.conflict(shared,p.members.slice(0,i),m.character.name);}))detail.append(node('p','party-note account-error','계정 묶음이 변경되어 같은 계정의 캐릭터가 중복되었습니다. 한 명을 빼주세요.'));
       var roster=node('div','party-members');
       var filter=view.value,highlight=filter==='mine'?'내 캐릭터':filter.startsWith('character:')?'선택한 캐릭터':'선택한 계정';
@@ -698,6 +733,8 @@
     });
     ['all','mine'].forEach(function(id){el('party-view-'+id).addEventListener('click',function(){setView(id);});});
     el('party-clear-filter').addEventListener('click',function(){setView('all');el('party-view-all').focus();});
+    el('party-list-search').addEventListener('input',function(){if(!remoteWriting)refreshBoard();});
+    el('party-sort').addEventListener('change',function(){sortMode=this.value;try{win.localStorage.setItem(SORT_STORAGE,sortMode);}catch(e){}refreshBoard();});
     var filterDialog=el('party-filter-dialog'),filterQuery=el('party-filter-query'),filterOpener=el('party-open-filter');
     filterOpener.addEventListener('click',function(){filterOpener.focus();filterQuery.value='';renderFilterOptions();filterDialog.showModal();filterQuery.focus();});
     el('party-close-filter').addEventListener('click',function(){filterDialog.close();});
@@ -731,7 +768,7 @@
         parties=next;
       }
       selected=p.id;closeEditor();
-      if(!visible().includes(p)){view={value:'all',label:''};filterStatus('');}
+      if(!visible().includes(p)){view={value:'all',label:''};el('party-list-search').value='';filterStatus('');}
       candidates();renderBoard();status('');repairPortraits(p);loadClears();
       storageStatus(scope==='shared'?'공유 목록에 파티를 저장했습니다.':original?'파티 변경사항을 저장했습니다.':p.name+' 파티를 만들었습니다.');
       doc.querySelector('.party-edit')?.focus();

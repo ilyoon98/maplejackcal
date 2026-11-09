@@ -50,11 +50,13 @@ test('파티원 세 명의 예상 딜 비중을 표시하고 파티원을 빼면
  });
  const members=snapshots.map((s,index)=>({character:{...s.character,ocid:'shared:'+s.characterName},rate:rates[index]}));
  const p=await boot('party_boss_scheduler',{snapshots,parties:[{id:'p1',name:'테스트',bossId:'Will|Hard',members}]});try{
-  for(const id of ['party-list','party-detail']){
-   const totals=p.doc.querySelector('#'+id+' .party-totals');
-   assert.equal(totals.querySelector('.party-metric-value').textContent,'136.47%');
-   assert.equal(totals.querySelector('.party-verdict').textContent,'클리어 가능');
-  }
+  assert.equal(p.doc.querySelector('#party-list .party-row-total').textContent,'136.47%');
+  assert.equal(p.doc.querySelector('#party-list .party-verdict').textContent,'클리어 가능');
+  const totals=p.doc.querySelector('#party-detail .party-totals');
+  assert.equal(totals.querySelector('.party-metric-value').textContent,'136.47%');
+  assert.equal(totals.querySelector('.party-verdict').textContent,'클리어 가능');
+  // 예상 딜 비중은 환산 합계 카드 안에 함께 표시한다.
+  assert(totals.querySelector('.party-share-chart'));
   const shares=id=>[...p.doc.querySelectorAll('#'+id+' .party-member-metrics .party-metric:nth-child(2) .party-metric-value')].map(n=>n.textContent);
   assert.deepEqual(shares('party-detail'),['30.97%','31.76%','37.28%']);
   const legend=cls=>[...p.doc.querySelectorAll('.party-share-legend .'+cls)].map(n=>n.textContent);
@@ -107,6 +109,7 @@ test('보스 보상은 선택한 난이도와 편집 중 인원수를 반영하�
  const p=await boot('party_boss_scheduler',{parties,accounts});try{
   const amount=id=>p.doc.querySelector('#'+id+' .party-crystal .party-metric-value').textContent;
   const highlights=()=>[...p.doc.querySelectorAll('#party-detail .party-member-highlighted .party-member-match')].map(n=>n.textContent);
+  [...p.doc.querySelectorAll('#party-list button')].find(b=>b.textContent.includes('대적자 파티')).click();
   assert.equal(amount('party-detail'),'6억 9,500만 메소');
   assert.match(p.doc.querySelector('#party-detail .party-reward').textContent,/2인 균등 분배/);
   const item=(id,name)=>[...p.doc.querySelectorAll('#'+id+' .party-reward-item')].find(tile=>tile.dataset.tooltip===name);

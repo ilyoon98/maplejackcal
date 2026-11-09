@@ -10,9 +10,11 @@ const KEY='maplejackcal:boss-parties:v1';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const WRITE=`local old=redis.call('HGET',KEYS[1],ARGV[1])
 local created=tonumber(ARGV[6])
+local owner=ARGV[2]
 if old then
   local record=cjson.decode(old)
-  if record.owner~=ARGV[2] then return -2 end
+  -- 공유 파티는 누구나 수정한다. 만든 사람 기록은 처음 값을 유지한다.
+  owner=record.owner
   if ARGV[4]=='save' and record.payload==ARGV[5] then return old end
   if record.revision~=ARGV[3] then return 0 end
   if ARGV[4]=='delete' then return redis.call('HDEL',KEYS[1],ARGV[1]) end
@@ -22,7 +24,7 @@ else
   if ARGV[3]~='' then return 0 end
   if redis.call('HLEN',KEYS[1])>=200 then return -1 end
 end
-local value=cjson.encode({owner=ARGV[2],revision=ARGV[7],payload=ARGV[5],createdAt=created})
+local value=cjson.encode({owner=owner,revision=ARGV[7],payload=ARGV[5],createdAt=created})
 redis.call('HSET',KEYS[1],ARGV[1],value)
 return value`;
 
@@ -30,7 +32,7 @@ function ownerHash(token){
   return typeof token==='string'&&uuid.test(token)?createHash('sha256').update(token).digest('hex'):'';
 }
 function publicParty(record,owner){
-  return {...JSON.parse(record.payload),revision:record.revision,canEdit:Boolean(owner&&record.owner===owner)};
+  return {...JSON.parse(record.payload),revision:record.revision,canEdit:true,mine:Boolean(owner&&record.owner===owner)};
 }
 function createStore({command=redisCommand(),key=KEY+(process.env.VERCEL_ENV==='preview'?':preview':''),rates=createRateStore({command})}={}){
   async function read(token){

@@ -15,20 +15,33 @@
 .party-app .party-view-state p{margin:0}
 .party-app .party-filter-results{margin-top:16px}
 .party-app .party-filter-results .ux-button{display:grid;align-content:center;gap:4px;overflow-wrap:anywhere}
-.party-board{display:grid;grid-template-columns:295px minmax(0,1fr);gap:18px;align-items:start}
-.party-content,.party-list{display:grid;gap:14px;min-width:0}
+.party-board{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start}
+.party-content{display:grid;gap:14px;min-width:0}
+/* 파티가 늘어나도 페이지가 길어지지 않도록 목록은 화면 높이 안에서만 스크롤한다. */
+.party-list-pane{position:sticky;top:16px;display:grid;gap:8px;min-width:0}
+.party-list-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+.party-app .party-list-tools input,.party-app .party-list-tools select{width:100%;min-height:44px}
+.party-list-sort{display:grid;gap:4px;font-size:.78rem;color:var(--ux-muted)}
+.party-list{display:flex;flex-direction:column;gap:6px;min-width:0;max-height:calc(100vh - 120px);overflow:auto;overscroll-behavior:contain;padding:2px 4px 2px 2px}
 .party-list>button{
-  width:100%;text-align:left;white-space:normal;padding:16px;background:var(--card);
-  border-radius:12px
+  display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"id stats" "meta stats";
+  flex:none;align-items:center;gap:2px 10px;width:100%;min-height:56px;padding:8px 10px;
+  text-align:left;white-space:normal;background:var(--card);border-radius:10px
 }
 .party-list>button[aria-pressed=true]{border-color:var(--accent-strong);background:rgba(76,141,255,.12)}
+.party-list>button>.boss-identity{grid-area:id;min-width:0}
+.party-row-stats{grid-area:stats;display:grid;justify-items:end;gap:4px}
+.party-row-total{color:var(--accent);font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums}
+.party-row-meta{grid-area:meta;display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;padding-left:40px;min-width:0}
+.party-list .party-verdict,.party-list .party-done-badge{padding:2px 6px;font-size:.72rem}
+.party-list .party-member-count{margin:0}
 .party-list .boss-identity,.party-detail-head .boss-identity,.party-app #party-open-boss .boss-identity{
   flex-wrap:wrap;font-weight:800
 }
-.party-list .boss-identity{font-size:1.05rem}
+.party-list .boss-identity{font-size:.95rem;flex-wrap:nowrap}
 .party-app .boss-identity .diff-badge{font-size:.75rem}
-.party-list .boss-face{width:46px;height:46px}
-.party-list-name{display:block;margin-top:6px;font-size:.86rem;color:var(--text-dim);overflow-wrap:anywhere}
+.party-list .boss-face{width:32px;height:32px}
+.party-list-name{font-size:.8rem;color:var(--text);overflow-wrap:anywhere}
 .party-detail{min-height:180px}
 .party-detail-head{justify-content:space-between;flex-wrap:wrap}
 .party-detail-head h3{display:grid;gap:6px;margin:0;min-width:0;font-size:1.42rem;color:var(--text)}
@@ -41,8 +54,10 @@
 .party-note.error,.party-note.account-error{color:var(--bad)}
 .party-empty{font-size:.9rem;color:var(--text-dim);padding:30px 0;text-align:center}
 
-.party-totals{display:block;margin:16px 0;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
-.party-totals.compact{margin:12px 0 0;padding:10px}
+.party-totals{display:block;margin:16px 0;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
+.party-overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.party-totals .party-share-chart{margin:14px 0 0;padding:12px 0 0;border:0;border-top:1px solid var(--border);border-radius:0;background:none}
+.party-totals>.party-note{margin:10px 0 0}
 .party-member-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .party-metric{display:grid;gap:4px;min-width:0}
 .party-metric-line{display:flex;align-items:center;flex-wrap:wrap;gap:5px 10px;min-width:0}
@@ -52,10 +67,8 @@
   font-variant-numeric:tabular-nums;overflow-wrap:anywhere
 }
 .party-totals .party-metric-value,.party-member-metrics .party-metric:nth-child(2) .party-metric-value{color:var(--accent)}
-.party-totals.compact .party-metric-value{font-size:1.36rem}
-.party-totals.compact .party-metric-label{font-size:.72rem}
 .party-metrics-footer{display:flex;align-items:center;flex-wrap:wrap;gap:6px 9px;margin-top:11px}
-.party-member-count{margin-left:auto;white-space:nowrap}
+.party-member-count{white-space:nowrap}
 .party-verdict{padding:4px 8px;border-radius:6px;font-size:.8rem;font-weight:800;white-space:nowrap}
 .party-verdict.short{color:#ff9d99;background:#452929}
 .party-verdict.clear{color:#a4f2c4;background:#1b392d}
@@ -75,15 +88,17 @@
 .party-app .party-summary-grid .party-totals{margin:0}
 .party-app .party-reward{min-width:0;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
 .party-app .party-reward h4{margin:0 0 10px;font-size:.93rem;color:var(--text)}
-.party-app .party-crystal{display:flex;align-items:center;gap:9px}
+.party-app .party-crystal{display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px}
+.party-app .party-crystal .party-metric+.party-metric{padding-left:18px;border-left:1px solid var(--border)}
+.party-app .party-crystal .party-metric+.party-metric .party-metric-value{color:var(--text-dim);font-size:1rem}
 .party-app .party-crystal img{width:28px;height:28px;object-fit:contain;image-rendering:pixelated;flex:none}
 .party-app .party-crystal .party-metric-value{font-size:1.27rem}
 .party-app .party-reward p{margin:7px 0 0;overflow-wrap:anywhere}
-.party-app .party-reward-items{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}
-.party-app .party-reward-item{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:44px;min-height:44px;padding:2px;border-radius:6px;background:var(--card)}
+.party-app .party-reward-items{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:12px 0 0;border-top:1px solid var(--border);list-style:none}
+.party-app .party-reward-item{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:48px;min-height:44px;padding:4px;border-radius:6px;background:var(--card)}
 .party-app .party-reward-item:focus-visible{outline:3px solid var(--ux-focus,#9fc7ff);outline-offset:2px}
 .party-app .party-reward-icon{display:block;flex:none;width:40px;height:40px;border-radius:4px;background-repeat:no-repeat}
-.party-app .party-reward-quantity{margin-right:4px;color:var(--text);font-size:.86rem;font-variant-numeric:tabular-nums}
+.party-app .party-reward-quantity{color:var(--text);font-size:.78rem;line-height:1.1;font-variant-numeric:tabular-nums}
 .party-app .party-member-match{border:1px solid var(--border);border-radius:6px;padding:3px 7px;font-size:.76rem;overflow-wrap:anywhere}
 
 .party-share-chart{margin:0 0 16px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
@@ -146,12 +161,13 @@
 .party-search .boss-section-head{margin-bottom:12px}
 
 @media(max-width:900px){
-  .party-board{grid-template-columns:255px minmax(0,1fr)}
+  .party-board{grid-template-columns:280px minmax(0,1fr)}
   .party-member{--portrait-size:112px}
 }
 @media(max-width:760px){
   .party-board{grid-template-columns:1fr}
-  .party-list{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .party-list-pane{position:static}
+  .party-list{max-height:min(50vh,420px)}
   .party-detail-head .boss-face{width:52px;height:52px}
 }
 @media(max-width:540px){
@@ -166,7 +182,6 @@
   .party-app .party-summary-grid{grid-template-columns:1fr}
   .party-draft-picker>button,.party-add-row>button{justify-self:end}
   .party-totals .party-metric-value{font-size:1.68rem}
-  .party-totals.compact .party-metric-value{font-size:1.28rem}
   .party-detail-head h3{font-size:1.2rem}
   .party-board-head{flex-wrap:wrap}
 }

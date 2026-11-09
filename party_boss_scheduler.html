@@ -37,7 +37,13 @@
     <div id="party-draft-members" class="party-members"></div><p id="party-draft-status" class="boss-status" role="status"></p><div class="party-form-footer"><span id="party-draft-scope" class="party-note">이 브라우저에 저장</span><button id="party-save" class="boss-primary" type="submit">파티 저장</button></div>
   </form>
   <p id="party-storage-status" class="boss-status" role="status"></p>
-  <div class="party-board"><aside id="party-list" class="party-list" aria-label="파티 목록"></aside><div class="party-content"><section id="party-detail" class="card party-detail" aria-label="선택한 파티">
+  <div class="party-board"><div class="party-list-pane">
+    <div class="party-list-tools">
+      <label class="party-list-search"><span class="sr-only">파티 검색</span><input id="party-list-search" type="search" maxlength="40" placeholder="보스나 캐릭터 검색" autocomplete="off" aria-controls="party-list"></label>
+      <label class="party-list-sort"><span>정렬</span><select id="party-sort" aria-controls="party-list"><option value="boss">보스 순</option><option value="remaining">남은 파티 먼저</option><option value="total-desc">환산 합계 높은 순</option><option value="total-asc">환산 합계 낮은 순</option><option value="recent">최근 만든 순</option></select></label>
+    </div>
+    <aside id="party-list" class="party-list" aria-label="파티 목록"></aside>
+  </div><div class="party-content"><section id="party-detail" class="card party-detail" aria-label="선택한 파티">
     <div id="party-detail-heading"></div>
     <div id="party-detail-content"></div>
   </section>
