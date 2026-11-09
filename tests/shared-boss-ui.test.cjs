@@ -5,8 +5,8 @@ const image='https://open.api.nexon.com/static/maplestory/character/look/ABC123'
 const profile=name=>({name,world:'루나',job:'히어로',level:285,image,updatedAt:Date.now()});
 function snapshot(name='다른사람'){const s=catalog.snapshot(name,[{bossId:'Lotus|Extreme',percent:49.68},{bossId:'Will|Hard',percent:77}],'manual');return {...s,revision:'v1',character:profile(name)};}
 const settle=async()=>{for(let i=0;i<5;i++)await new Promise(setImmediate);};
-async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,shot=[],ownRows=[],parties=[]}={}){
- const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../'+page+'.html'),'utf8'),{url:'https://example.test/'+page+'.html',runScripts:'outside-only'}),w=dom.window,calls=[];let values=structuredClone(snapshots),registry=structuredClone(accounts);
+async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,shot=[],ownRows=[],parties=[],url=''}={}){
+ const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../'+page+'.html'),'utf8'),{url:'https://example.test/'+(url||page+'.html'),runScripts:'outside-only'}),w=dom.window,calls=[];let values=structuredClone(snapshots),registry=structuredClone(accounts);
  w.confirm=()=>true;w.setInterval=()=>1;if(key)w.localStorage.setItem('nxopen_api_key',key);
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
  w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
@@ -53,8 +53,8 @@ test('파티원 세 명의 예상 딜 비중을 표시하고 파티원을 빼면
   // 직접 지은 이름이 있으면 그 이름을, 대표 캐릭터(환산 배율 1위)는 보조 줄에 보여준다.
   assert.equal(p.doc.querySelector('#party-list .party-row-title').textContent,'테스트');
   assert.equal(p.doc.querySelector('#party-list .party-list-name').textContent,'대표 세번째');
-  assert.equal(p.doc.querySelector('#party-list .party-row-total').textContent,'136.47%');
-  assert.equal(p.doc.querySelector('#party-list .party-verdict').textContent,'클리어 가능');
+  // 목록에는 배율과 판정을 두지 않고 상세에서만 보여준다.
+  assert.equal(p.doc.querySelector('#party-list .party-row-total'),null);
   const totals=p.doc.querySelector('#party-detail .party-totals');
   assert.equal(totals.querySelector('.party-metric-value').textContent,'136.47%');
   assert.equal(totals.querySelector('.party-verdict').textContent,'클리어 가능');
@@ -402,5 +402,16 @@ test('API 키가 없으면 새 캐릭터는 등록할 수 없고 등록된 캐�
   assert.equal(p.doc.querySelector('#shared-save').disabled,true);
   assert.match(p.doc.querySelector('#shared-profile-status').textContent,/새 캐릭터는 홈에서 API 키를 등록하고 조회에 성공해야 등록할 수 있습니다/);
   assert(!p.calls.some(c=>c.options.method==='POST'));
+ }finally{p.close();}
+});
+test('주소의 party와 scope로 들어오면 해당 파티를 열고 없으면 안내한다',async()=>{
+ const members=['첫번째','두번째'].map(name=>({character:{...profile(name),ocid:'shared:'+name},rate:50}));
+ const parties=[{id:'first',name:'첫 파티',bossId:'Will|Hard',members},{id:'second',name:'두 번째 파티',bossId:'Lucid|Hard',members:members.slice(1)}];
+ let p=await boot('party_boss_scheduler',{parties,url:'party_boss_scheduler.html?scope=local&party=second'});try{
+  assert.equal(p.doc.querySelector('#party-list button[aria-pressed="true"] .party-row-title').textContent,'두 번째 파티');
+  assert.equal(p.w.localStorage.getItem('partyBossScheduler.scope.v1'),null);
+ }finally{p.close();}
+ p=await boot('party_boss_scheduler',{parties,url:'party_boss_scheduler.html?scope=local&party=missing'});try{
+  assert.match(p.doc.querySelector('#party-storage-status').textContent,/찾는 파티가 없습니다/);
  }finally{p.close();}
 });

@@ -24,16 +24,14 @@
 .party-list-sort{display:grid;gap:4px;font-size:.78rem;color:var(--ux-muted)}
 .party-list{display:flex;flex-direction:column;gap:6px;min-width:0;max-height:calc(100vh - 120px);overflow:auto;overscroll-behavior:contain;padding:2px 4px 2px 2px}
 .party-list>button{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"id stats" "meta stats";
+  display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"id" "meta";
   flex:none;align-items:center;gap:2px 10px;width:100%;min-height:56px;padding:8px 10px;
   text-align:left;white-space:normal;background:var(--card);border-radius:10px
 }
 .party-list>button[aria-pressed=true]{border-color:var(--accent-strong);background:rgba(76,141,255,.12)}
 .party-list>button>.boss-identity{grid-area:id;min-width:0}
-.party-row-stats{grid-area:stats;display:grid;justify-items:end;gap:4px}
-.party-row-total{color:var(--accent);font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums}
 .party-row-meta{grid-area:meta;display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;padding-left:40px;min-width:0}
-.party-list .party-verdict,.party-list .party-done-badge{padding:2px 6px;font-size:.72rem}
+.party-list .party-done-badge{padding:2px 6px;font-size:.72rem}
 .party-list .party-member-count{margin:0}
 .party-list .boss-identity,.party-detail-head .boss-identity,.party-app #party-open-boss .boss-identity{
   flex-wrap:wrap;font-weight:800

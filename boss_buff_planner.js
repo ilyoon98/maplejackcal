@@ -387,6 +387,8 @@
     var key = Object.keys(db).find(function (k) { return k !== 'BossAliases' && db[k] && db[k].Name === b.name; });
     return key ? key + '|' + DIFF_KEY[b.diff] : '';
   }
+  // 파티 보스 스케줄러에서 해당 파티를 바로 열 수 있는 주소.
+  function partyLink(p) { return p && p.id ? 'party_boss_scheduler.html?scope=' + p.scope + '&party=' + encodeURIComponent(p.id) : ''; }
   function partyFor(b) { var p = partyRates[bossIdOf(b)]; return p && b.useParty !== false ? p : null; }
   function effectiveMult(b) { var p = partyFor(b); return p ? p.total : b.mult; }
   function snapshotRate(store, name, bossId) {
@@ -396,14 +398,14 @@
   }
   function collectPartyRates(name, local, shared, store) {
     var found = Object.create(null), skipped = [];
-    function add(p, rates) {
+    function add(p, rates, scope) {
       if (!p || !p.bossId || found[p.bossId]) return;
       if (!rates.length || rates.some(function (r) { return r === null; })) { skipped.push(p.name || '이름 없는 파티'); return; }
-      found[p.bossId] = { total: Math.round(rates.reduce(function (s, r) { return s + r; }, 0) * 100) / 100, name: p.name || '', count: rates.length };
+      found[p.bossId] = { total: Math.round(rates.reduce(function (s, r) { return s + r; }, 0) * 100) / 100, name: p.name || '', count: rates.length, id: typeof p.id === 'string' ? p.id : '', scope: scope };
     }
     // 공유 파티를 먼저 본다. 로컬 파티는 공유로 복사하기 전 사본일 수 있다.
     shared.forEach(function (p) {
-      if (Array.isArray(p.members) && p.members.indexOf(name) >= 0) add(p, p.members.map(function (n) { return snapshotRate(store, n, p.bossId); }));
+      if (Array.isArray(p.members) && p.members.indexOf(name) >= 0) add(p, p.members.map(function (n) { return snapshotRate(store, n, p.bossId); }), 'shared');
     });
     local.forEach(function (p) {
       var members = Array.isArray(p.members) ? p.members : [];
@@ -411,7 +413,7 @@
       add(p, members.map(function (m) {
         var fresh = snapshotRate(store, m.character.name, p.bossId);
         return fresh !== null ? fresh : typeof m.rate === 'number' ? m.rate : null;
-      }));
+      }), 'local');
     });
     return { rates: found, skipped: skipped };
   }
@@ -438,9 +440,10 @@
   }
   function activeItems() {
     return state.bosses.filter(function (b) { return b.on && !(state.excludeCompleted && b.completed); }).map(function (b) {
-      var mult = effectiveMult(b);
+      var mult = effectiveMult(b), party = partyFor(b);
       return {
         name: b.name, diff: b.diff, icon: b.icon, mult: mult, extra: b.extra, rice: b.rice === true,
+        party: party ? (party.name || '파티') : '', partyLink: party ? partyLink(party) : '',
         full: withSlack(secOf(mult)) + extraSec(b),
         riceSec: withSlack(riceSecOf(mult)) + extraSec(b)
       };
@@ -462,6 +465,7 @@
       var party = partyRates[bossIdOf(b)], usingParty = !!partyFor(b), mult = effectiveMult(b);
       var sec = b.rice ? riceSecOf(mult) : secOf(mult);
       var partyTag = party ? '<button type="button" class="row-tag party-tag" data-act="party" data-i="' + i + '" aria-pressed="' + usingParty + '" aria-label="' + esc(b.name) + ' 파티 배율 ' + (usingParty ? '사용 중' : '사용 안 함') + '" data-tooltip="' + esc((party.name || '파티') + ' · ' + party.count + '명 환산 합계 ' + percentText(party.total) + '%') + '" data-tooltip-note="누르면 ' + (usingParty ? '혼자 배율' : '파티 배율') + '로 바뀝니다.">' + (usingParty ? '파티' : '파티 끔') + '</button>' : '';
+      var partyOpen = party && party.id ? '<a class="row-tag party-open" href="' + esc(partyLink(party)) + '" aria-label="' + esc((party.name || b.name) + ' 파티 보러 가기') + '" data-tooltip="파티 보러 가기">↗</a>' : '';
       var lockAttr = usingParty ? ' disabled title="파티 배율을 쓰는 중입니다"' : '';
       var excluded = state.excludeCompleted && b.completed;
       var dopingName = b.rice ? '쌀도핑' : '풀도핑';
@@ -475,7 +479,7 @@
         (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="">' : '<span class="row-icon blank"></span>') +
         // 완료 표시는 고정된 오른쪽 버튼에만 두어 이름·난이도가 밀리지 않는다.
         '<div class="row-name"><strong><span class="nm" data-tooltip="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
-        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') + partyTag +
+        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') + partyTag + partyOpen +
         '</strong></div>' +
         '<div class="row-difficulty">' + (entry ? '<select class="row-diff diff-badge ' + (DIFF_CLASS[b.diff] || '') + '" data-act="diff" data-i="' + i + '" aria-label="' + esc(b.name) + ' 난이도">' +
           entry[2].map(function (diff) { return '<option value="' + diff + '"' + (diff === b.diff ? ' selected' : '') + '>' + diff + '</option>'; }).join('') + '</select>' : diffBadge(b.diff)) + '</div>' +
@@ -565,7 +569,7 @@
           return (j ? '<li class="hop"><span>↓ 이동 ' + fmtMin(moveSec()) + '분</span></li>' : '') +
             '<li class="stop"><span class="step-no">' + (j + 1) + '</span>' +
             (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
-            '<span class="nm">' + esc(it.name) + (bin.full && it.rice ? ' <span class="tag full">풀도핑 전환</span>' : '') + '</span>' +
+            '<span class="nm">' + esc(it.name) + partyTagHtml(it) + (bin.full && it.rice ? ' <span class="tag full">풀도핑 전환</span>' : '') + '</span>' +
             '<span class="tm">' + fmtMin(secIn(it, bin.full)) + '분</span></li>';
         }).join('') + '</ol>' +
         '</div>';
@@ -613,9 +617,16 @@
       '<div class="chips">' + picked.map(function (it) { return chip(it, full); }).join('') + '</div>' +
       '</div>';
   }
+  // 파티 배율로 계산한 보스는 결과에서도 파티로 가는 보스임을 표시한다.
+  function partyTagHtml(it) {
+    if (!it.party) return '';
+    return it.partyLink
+      ? ' <a class="tag party" href="' + esc(it.partyLink) + '" aria-label="' + esc(it.party) + ' 파티 보러 가기" data-tooltip="' + esc(it.party) + ' 파티 배율로 계산" data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다.">파티</a>'
+      : ' <span class="tag party" data-tooltip="' + esc(it.party) + ' 파티 배율로 계산">파티</span>';
+  }
   function chip(it, full) {
     return '<span class="chip">' + (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
-      esc(it.name) + '<small>' + fmtMin(secIn(it, full)) + '분</small></span>';
+      esc(it.name) + partyTagHtml(it) + '<small>' + fmtMin(secIn(it, full)) + '분</small></span>';
   }
   function bar(sec, cap) {
     var pct = Math.min(100, sec / cap * 100);

@@ -627,14 +627,14 @@ test('캐릭터가 들어간 파티는 파티 환산 합계를 찾고 배율 미
   const shared = [{name:'익스트림 스우', bossId:'Lotus|Extreme', members:['나', '친구']}, {name:'남의 파티', bossId:'Dusk|Chaos', members:['친구']}];
   const local = [{name:'하드 윌', bossId:'Will|Hard', members:[{character:{name:'나'}, rate:70}, {character:{name:'미등록'}, rate:null}]}];
   const result = engine.collectPartyRates('나', local, shared, store);
-  assert.deepEqual(JSON.parse(JSON.stringify(result.rates)), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2}});
+  assert.deepEqual(JSON.parse(JSON.stringify(result.rates)), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'', scope:'shared'}});
   assert.deepEqual([...result.skipped], ['하드 윌']);
 });
 
 test('파티 보스는 파티 배율로 계산하고 파티 표시를 누르면 혼자 배율로 돌아간다', () => {
   const engine = loadPlanner();
   engine.setBosses([{name:'스우', diff:'익스트림', mult:50, on:true}, {name:'윌', diff:'하드', mult:80, on:true}].map((b, i) => ({id:'b' + i, extra:0, ...b})));
-  engine.setPartyRates(require('../boss_db.json'), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2}});
+  engine.setPartyRates(require('../boss_db.json'), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'', scope:'shared'}});
   const mult = name => engine.activeItems().find(item => item.name === name).mult;
   assert.equal(mult('스우'), 140.5);
   assert.equal(mult('윌'), 80);
