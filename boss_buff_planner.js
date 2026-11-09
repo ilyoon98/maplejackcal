@@ -73,7 +73,6 @@
       registered: b.registered === true,
       inList: b.inList === true || b.on !== false,
       completionOverride: b.completionOverride === true,
-      useParty: b.useParty !== false,
       difficultySettings: b.difficultySettings || {}
     };
   }
@@ -389,7 +388,7 @@
   }
   // 파티 보스 스케줄러에서 해당 파티를 바로 열 수 있는 주소.
   function partyLink(p) { return p && p.id ? 'party_boss_scheduler.html?scope=' + p.scope + '&party=' + encodeURIComponent(p.id) : ''; }
-  function partyFor(b) { var p = partyRates[bossIdOf(b)]; return p && b.useParty !== false ? p : null; }
+  function partyFor(b) { return partyRates[bossIdOf(b)] || null; }
   function effectiveMult(b) { var p = partyFor(b); return p ? p.total : b.mult; }
   function snapshotRate(store, name, bossId) {
     var s = (store && Array.isArray(store.snapshots) ? store.snapshots : []).find(function (x) { return x.characterName === name && x.preset === '00000'; });
@@ -431,7 +430,7 @@
         var result = collectPartyRates(name, local, shared, res[1]);
         partyRates = result.rates;
         var count = Object.keys(partyRates).length, notes = [];
-        if (count) notes.push(name + '의 파티 ' + count + '개는 파티 보스 스케줄러의 환산 합계를 배율로 씁니다. 보스 옆 파티 표시를 누르면 혼자 배율로 바꿉니다.');
+        if (count) notes.push(name + '의 파티 ' + count + '개는 파티 보스 스케줄러의 환산 합계를 배율로 씁니다. 파티 표시를 누르면 그 파티를 엽니다.');
         if (result.skipped.length) notes.push('배율 미등록 파티원이 있는 파티는 혼자 배율을 씁니다: ' + result.skipped.join(', ') + '.');
         if (!res[0] && !count) notes.push('공유 파티를 불러오지 못해 이 브라우저의 파티만 확인했습니다.');
         partyStatus(notes.join(' '));
@@ -462,10 +461,12 @@
     viewBtn.setAttribute('aria-pressed', String(state.showAllBosses));
     state.bosses.forEach(function (b, i) {
       if (visible.indexOf(b) < 0) return;
-      var party = partyRates[bossIdOf(b)], usingParty = !!partyFor(b), mult = effectiveMult(b);
+      var party = partyFor(b), usingParty = !!party, mult = effectiveMult(b);
       var sec = b.rice ? riceSecOf(mult) : secOf(mult);
-      var partyTag = party ? '<button type="button" class="row-tag party-tag" data-act="party" data-i="' + i + '" aria-pressed="' + usingParty + '" aria-label="' + esc(b.name) + ' 파티 배율 ' + (usingParty ? '사용 중' : '사용 안 함') + '" data-tooltip="' + esc((party.name || '파티') + ' · ' + party.count + '명 환산 합계 ' + percentText(party.total) + '%') + '" data-tooltip-note="누르면 ' + (usingParty ? '혼자 배율' : '파티 배율') + '로 바뀝니다.">' + (usingParty ? '파티' : '파티 끔') + '</button>' : '';
-      var partyOpen = party && party.id ? '<a class="row-tag party-open" href="' + esc(partyLink(party)) + '" aria-label="' + esc((party.name || b.name) + ' 파티 보러 가기') + '" data-tooltip="파티 보러 가기">↗</a>' : '';
+      // 파티 표시는 난이도처럼 고정 칸에 두어 보스 이름 길이와 관계없이 같은 자리에 오게 하고, 누르면 그 파티를 연다.
+      var partyCell = '<div class="row-party">' + (party ? (party.id
+        ? '<a class="party-link" href="' + esc(partyLink(party)) + '" aria-label="' + esc((party.name || b.name) + ' 파티 보러 가기') + '" data-tooltip="' + esc((party.name || '파티') + ' · ' + party.count + '명 환산 합계 ' + percentText(party.total) + '%') + '" data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다.">파티</a>'
+        : '<span class="party-link" data-tooltip="' + esc((party.name || '파티') + ' 환산 합계 ' + percentText(party.total) + '%') + '">파티</span>') : '') + '</div>';
       var lockAttr = usingParty ? ' disabled title="파티 배율을 쓰는 중입니다"' : '';
       var excluded = state.excludeCompleted && b.completed;
       var dopingName = b.rice ? '쌀도핑' : '풀도핑';
@@ -479,8 +480,8 @@
         (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="">' : '<span class="row-icon blank"></span>') +
         // 완료 표시는 고정된 오른쪽 버튼에만 두어 이름·난이도가 밀리지 않는다.
         '<div class="row-name"><strong><span class="nm" data-tooltip="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
-        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') + partyTag + partyOpen +
-        '</strong></div>' +
+        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') +
+        '</strong></div>' + partyCell +
         '<div class="row-difficulty">' + (entry ? '<select class="row-diff diff-select ' + (DIFF_CLASS[b.diff] || '') + '" data-act="diff" data-i="' + i + '" aria-label="' + esc(b.name) + ' 난이도">' +
           entry[2].map(function (diff) { return '<option value="' + diff + '"' + (diff === b.diff ? ' selected' : '') + '>' + diff + '</option>'; }).join('') + '</select>' : diffBadge(b.diff)) + '</div>' +
         '<div class="row-input row-mult"><input type="number" min="0.01" step="0.01" value="' + percentText(mult) + '" data-act="mult" data-i="' + i + '" aria-label="' + esc(b.name) + (usingParty ? ' 파티 배율' : ' 배율') + '"' + lockAttr + '><span class="unit">%</span></div>' +
@@ -676,7 +677,6 @@
     var i = parseInt(t.dataset.i, 10);
     if (isNaN(i)) return;
     if (t.dataset.act === 'rice') state.bosses[i].rice = !state.bosses[i].rice;
-    else if (t.dataset.act === 'party') state.bosses[i].useParty = state.bosses[i].useParty === false;
     else if (t.dataset.act === 'on') {
       state.bosses[i].on = !state.bosses[i].on;
       state.bosses[i].inList = true;

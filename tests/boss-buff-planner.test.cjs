@@ -631,16 +631,18 @@ test('캐릭터가 들어간 파티는 파티 환산 합계를 찾고 배율 미
   assert.deepEqual([...result.skipped], ['하드 윌']);
 });
 
-test('파티 보스는 파티 배율로 계산하고 파티 표시를 누르면 혼자 배율로 돌아간다', () => {
+test('파티 보스는 항상 파티 배율로 계산하고 고정 칸의 파티 표시로 그 파티를 연다', () => {
   const engine = loadPlanner();
   engine.setBosses([{name:'스우', diff:'익스트림', mult:50, on:true}, {name:'윌', diff:'하드', mult:80, on:true}].map((b, i) => ({id:'b' + i, extra:0, ...b})));
-  engine.setPartyRates(require('../boss_db.json'), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'', scope:'shared'}});
+  engine.setPartyRates(require('../boss_db.json'), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'party-1', scope:'shared'}});
   const mult = name => engine.activeItems().find(item => item.name === name).mult;
   assert.equal(mult('스우'), 140.5);
   assert.equal(mult('윌'), 80);
-  assert.match(engine.listRows()[0], /data-act="party"[^>]*aria-pressed="true"/);
-  assert.match(engine.listRows()[0], /aria-label="스우 파티 배율" disabled/);
+  const [suu, will] = engine.listRows();
+  assert(suu.includes('<div class="row-party"><a class="party-link" href="party_boss_scheduler.html?scope=shared&amp;party=party-1"'));
+  assert.match(suu, /aria-label="스우 파티 배율" disabled/);
+  assert.doesNotMatch(suu, /data-act="party"/);
+  assert(will.includes('<div class="row-party"></div>'));
   engine.clickBoss('스우', 'party');
-  assert.equal(mult('스우'), 50);
-  assert.match(engine.listRows()[0], /파티 끔/);
+  assert.equal(mult('스우'), 140.5);
 });
