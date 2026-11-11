@@ -309,3 +309,39 @@ test('장비 혼합·복구·특수 강화는 분석을 막고 정상 12성 복�
   assert.match(C.pathIssue([row('a',12,13,{upgrade_item:'펄스 인핸서'})]),/특수/);
   assert.match(C.pathIssue([row('a',12,13,{superior_item_flag:'적용'})]),/특수/);
 });
+test('최근 기간만 확인할 때 이전 날짜는 저장 기록만 쓰고 API를 호출하지 않음',async()=>{
+  const old={rows:[row('old',12,13,{date_create:'2026-09-17T12:00:00+09:00'})],savedAt:Date.parse('2026-09-17T20:00:00+09:00')};
+  const cache={get:async()=>assert.fail('범위 읽기를 써야 합니다'),getRange:async()=>new Map([['2026-09-17',old]]),set:async()=>{}};
+  const calls=[],skipped=[];
+  const loaded=await C.fetchHistory(async(p,q)=>{calls.push(q.date);return {starforce_history:[row('new-'+q.date,13,14,{date_create:q.date+'T12:00:00+09:00'})]};},'2026-09-16','2026-09-20',null,{cache,newestFirst:true,fetchFrom:'2026-09-19',refreshFrom:'2026-09-19',onSkip:(date,saved)=>skipped.push([date,saved])});
+  assert.deepEqual(calls,['2026-09-20','2026-09-19']);
+  assert.deepEqual(skipped,[['2026-09-18',false],['2026-09-17',true],['2026-09-16',false]]);
+  assert.deepEqual(loaded.map(r=>r.id).sort(),['new-2026-09-19','new-2026-09-20','old']);
+});
+test('호출 예산을 다 쓰면 남은 날짜를 건너뛰고 받은 기록은 유지',async()=>{
+  let state=null;
+  const budget=C.createCallBudget({limit:2,today:()=>'2026-09-20',load:()=>state,save:v=>{state=v;}});
+  const saved=new Map(),cache={getRange:async()=>new Map(),set:async(d,rows)=>saved.set(d,rows)};
+  const skipped=[];let stopped=null,calls=0;
+  const api=C.budgetedRequest(async(p,q)=>{calls++;return {starforce_history:[row(q.date,12,13,{date_create:q.date+'T12:00:00+09:00'})]};},budget);
+  const loaded=await C.fetchHistory(api,'2026-09-17','2026-09-20',null,{cache,newestFirst:true,refreshFrom:'2026-09-19',onSkip:d=>skipped.push(d),onStop:e=>{stopped=e;}});
+  assert.equal(calls,2);assert.equal(stopped.code,'BUDGET');
+  assert.deepEqual(skipped,['2026-09-18','2026-09-17']);
+  assert.deepEqual([...saved.keys()],['2026-09-20','2026-09-19']);
+  assert.equal(loaded.length,2);assert.equal(budget.remaining(),0);
+});
+test('호출 예산은 한국 날짜가 바뀌면 다시 채워짐',()=>{
+  let state={date:'2026-09-19',used:700},today='2026-09-19';
+  const budget=C.createCallBudget({limit:700,today:()=>today,load:()=>state,save:v=>{state=v;}});
+  assert.equal(budget.take(),false);
+  today='2026-09-20';assert.equal(budget.remaining(),700);assert.equal(budget.take(),true);assert.equal(budget.used(),1);
+  state={date:'2026-09-20',used:'bad'};assert.equal(budget.remaining(),700);
+});
+test('최대 별이 낮은 장비 레벨도 시도별 손익을 계산하고 초과 기록은 제외',()=>{
+  const context={window:{},document:{addEventListener(){}}};vm.createContext(context);
+  for(const file of ['starforce_data.js','starforce_calc.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),context);
+  const data=context.window.StarforceData,calculate=context.window.StarforceCalc.calculate;
+  const low=C.attemptComparison(row('low',0,1,{starcatch_result:'성공'}),{level:120},data,calculate);
+  assert.equal(low.status,'complete');assert.ok(low.reference>0);
+  assert.equal(C.attemptComparison(row('cap',15,16,{starcatch_result:'성공'}),{level:120},data,calculate).status,'excluded');
+});

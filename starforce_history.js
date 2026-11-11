@@ -7,7 +7,10 @@
   let coverage='partial',queryPeriod='';
   let detailTrigger=null;
   let activeKey=NexonKey.get();
-  let accountCharacters=[],characterRequest=null,characterLoadState='idle';
+  let accountCharacters=[],characterRequest=null,characterLoadState='idle',characterTask=null,linkTask=null;
+  // Entry checks only recent days; older uncached days wait for an explicit backfill.
+  const RECENT_DAYS=90,CALL_BUDGET=700;
+  let recentOnlyNext=false;
   const selectedWorlds=new Set(),selectedCharacters=new Set();
   let allWorlds=true,allCharacters=true,availableWorlds=[],availableCharacters=[];
   const characterKey=c=>JSON.stringify([c.world||'',c.name]);
@@ -23,6 +26,31 @@
   const profitText=n=>meso(Math.abs(n)).replace(' 메소','')+(n>0?' 이득':n<0?' 손해':' 차이 없음');
   function kstToday() { return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
   function earliest() { const d = new Date(kstToday()); d.setUTCFullYear(d.getUTCFullYear()-2); return d.toISOString().slice(0,10); }
+  function addDays(date,n){return new Date(Date.parse(date)+n*86400000).toISOString().slice(0,10);}
+  // A short non-reversible tag keeps the raw API key out of the budget's storage key.
+  function keyTag(key){let h=0x811c9dc5;for(const ch of key){h^=ch.codePointAt(0);h=Math.imul(h,16777619)>>>0;}return h.toString(16);}
+  function callBudget(key){
+    const storageKey='maple-starforce-history-budget-'+keyTag(key);
+    return C.createCallBudget({limit:CALL_BUDGET,today:kstToday,
+      load:()=>{try{return JSON.parse(localStorage.getItem(storageKey));}catch(e){return null;}},
+      save:value=>{try{localStorage.setItem(storageKey,JSON.stringify(value));}catch(e){}}});
+  }
+  function renderBackfill(missing,key){
+    const box=$('historyBackfill');
+    if(!missing||!key){box.hidden=true;return;}
+    const remaining=callBudget(key).remaining();
+    box.hidden=false;
+    $('historyBackfillText').textContent='이전 기간 '+fmt(missing)+'일을 더 불러올 수 있습니다. 하루치마다 API를 1회 이상 호출합니다. '+(remaining?'오늘 이 화면에서 쓸 수 있는 호출은 '+fmt(remaining)+'회 남았습니다.':'오늘 이 화면의 호출 예산을 모두 사용했습니다. 내일 이어서 불러오세요.');
+    $('historyBackfillButton').textContent='이전 기록 이어 불러오기 ('+fmt(missing)+'일)';
+    $('historyBackfillButton').disabled=!remaining||!!controller;
+  }
+  async function ensureCacheLink(key,signal){
+    try{if(await StarforceHistoryCache.isLinked(key))return;}catch(e){return;}
+    // First visit with this key: wait for the account list so saved records are matched by account.
+    const aborted=new Promise(resolve=>signal.addEventListener('abort',resolve,{once:true}));
+    await Promise.race([characterTask,aborted]);
+    if(!signal.aborted)await Promise.race([linkTask?.catch(()=>{}),aborted]);
+  }
   function status(message, error) { $('historyStatus').textContent = message; $('historyStatus').classList.toggle('error',!!error); }
   function refreshKey() { $('keyState').textContent = NexonKey.has() ? '기존 API 키 연결됨' : '홈에서 본인 API 키를 등록해 주세요.'; }
   function addText(parent, tag, text) { const el=document.createElement(tag); el.textContent=text; parent.append(el); return el; }
@@ -78,7 +106,8 @@
     scroll.forEach(([id,top])=>$(id).scrollTop=top);
     $('historyCharactersStatus').textContent=(rows.length?'스타포스 기록 캐릭터 '+fmt(candidates.size)+'명':'조회 기간에 강화 기록이 있는 캐릭터만 표시합니다.')+(characterLoadState==='loading'?' · 캐릭터 정보 확인 중':characterLoadState==='failed'?' · 캐릭터 정보를 불러오지 못했습니다.':'');
   }
-  async function loadCharacters(){
+  function loadCharacters(){characterTask=loadCharactersNow();return characterTask;}
+  async function loadCharactersNow(){
     characterRequest?.abort();characterRequest=null;$('historyCharactersRefresh').disabled=false;accountCharacters=[];characterLoadState='idle';renderCharacterFilters();
     if(!NexonKey.has()||!window.NexonCharacters)return;
     const request=new AbortController(),key=NexonKey.get();characterRequest=request;
@@ -88,6 +117,7 @@
       const loaded=await NexonCharacters.fetch({key,signal:request.signal});
       if(characterRequest!==request||NexonKey.get()!==key)return;
       accountCharacters=loaded;characterLoadState='ready';renderCharacterFilters();
+      linkTask=StarforceHistoryCache.link(key,loaded.map(c=>c.accountId)).catch(()=>null);
     }catch(e){if(characterRequest===request&&NexonKey.get()===key){characterLoadState='failed';renderCharacterFilters();}}
     finally{clearTimeout(timer);if(characterRequest===request){characterRequest=null;$('historyCharactersRefresh').disabled=false;}}
   }
@@ -303,6 +333,8 @@
     }
     const opts={level:Number($('itemLevel').value),start:selectedRows[0].before_starforce_count,goal:Number($('itemGoal').value),spare:Number($('itemSpare').value),mvp:Number($('itemMvp').value),pcRoom:$('itemPc').checked,discount30,lucky5,destroyDown30,safeguard:guards,recoveryMode:'off'};
     if(!Number.isInteger(opts.level)||opts.level<1||opts.level>300||!Number.isInteger(opts.goal)||opts.goal<=opts.start||opts.goal>30||!Number.isSafeInteger(opts.spare)||opts.spare<0||!$('analysisConfirmed').checked){out.textContent='장비 레벨, 시작 별보다 높은 목표 별, 대체 장비값과 확인 항목을 점검하세요.';return;}
+    const maxStar=StarforceData.maxStarForLevel(opts.level);
+    if(opts.goal>maxStar||opts.start>maxStar){out.textContent='장비 레벨 '+opts.level+'은 최대 '+maxStar+'성까지 강화할 수 있습니다. 목표 별을 '+maxStar+' 이하로 입력하세요.';return;}
     const result=StarforceCalc.calculate(opts),steps=result.steps;
     // Reject outcomes impossible under the selected fixed policy.
     if(selectedRows.some(r=>C.destroyed(r)&&steps[r.before_starforce_count].d===0 || !C.destroyed(r)&&r.before_starforce_count===r.after_starforce_count&&steps[r.before_starforce_count].p===1)){
@@ -353,14 +385,18 @@
   refreshKey();
   loadCharacters();
   $('historyQuery').addEventListener('submit',async event=>{
-    event.preventDefault();if(controller)return;
+    event.preventDefault();
+    const recentOnly=recentOnlyNext;recentOnlyNext=false;
+    if(controller)return;
     if(!NexonKey.has()){status('홈에서 본인 API 키를 먼저 등록하세요.',true);return;}
     const from=$('historyFrom').value,to=$('historyTo').value;
     try{C.days(from,to);if(from<earliest()||to>kstToday())throw new Error('최근 2년 이내의 날짜를 선택하세요.');}catch(e){status(e.message,true);return;}
     const request=new AbortController();controller=request;
     const key=NexonKey.get();
     coverage='partial';queryPeriod=from===to?from:from+' ~ '+to;
-    const completedDays=new Map();let cache=null,cacheFailed=false,lastPreview=0,cacheReady=false;
+    const completedDays=new Map(),skipped=[];let cache=null,cacheFailed=false,lastPreview=0,cacheReady=false,stopped=null;
+    const fetchFrom=recentOnly?addDays(kstToday(),-(RECENT_DAYS-1)):'';
+    $('historyBackfill').hidden=true;
     // Keep the current view usable during refresh and retain it if the network fails.
     C.normalize(rows,from,to).forEach(row=>{
       const date=C.day(row.date_create);if(!completedDays.has(date))completedDays.set(date,{records:[],stale:true});completedDays.get(date).records.push(row);
@@ -375,16 +411,21 @@
     status('기록을 불러오는 중입니다.');
     try{
       try{
+        await ensureCacheLink(key,request.signal);
+        if(request.signal.aborted)throw new DOMException('중단','AbortError');
         cache=await StarforceHistoryCache.open(key);
         const saved=await cache.getSettings();
         if(request.signal.aborted||NexonKey.get()!==key)throw new DOMException('중단','AbortError');
         overrides.clear();
         if(saved&&typeof saved==='object')Object.entries(saved).forEach(([groupKey,value])=>{const clean=C.cleanSettings(value);if(clean)overrides.set(groupKey,clean);});
       }catch(e){if(e.name==='AbortError')throw e;cacheFailed=true;}
-      const paced=C.pacedRequest((path,params)=>api(key,request.signal,path,params),{signal:request.signal,onRetry:(ms,attempt)=>status('API 호출 제한으로 '+Math.ceil(ms/1000)+'초 대기 후 같은 페이지를 다시 조회합니다. ('+attempt+'/3)')});
+      const budgeted=C.budgetedRequest((path,params)=>api(key,request.signal,path,params),callBudget(key));
+      const paced=C.pacedRequest(budgeted,{signal:request.signal,onRetry:(ms,attempt)=>status('API 호출 제한으로 '+Math.ceil(ms/1000)+'초 대기 후 같은 페이지를 다시 조회합니다. ('+attempt+'/3)')});
       const loaded=await C.fetchHistory(paced,from,to,(done,total,count)=>status(done+' / '+total+'일 확인 중 · '+fmt(count)+'건 · 저장된 날짜는 API 요청 생략'),{
-        cache,signal:request.signal,newestFirst:true,
-        refreshFrom:new Date(Date.parse(kstToday())-86400000).toISOString().slice(0,10),
+        cache,signal:request.signal,newestFirst:true,fetchFrom,
+        refreshFrom:addDays(kstToday(),-1),
+        onSkip:date=>skipped.push(date),
+        onStop:error=>{stopped=error;},
         onCacheError:()=>{cacheFailed=true;},
         onCacheReady:()=>{cacheReady=true;if(!request.signal.aborted&&NexonKey.get()===key&&completedDays.size)showPartial();},
         onDay:(date,records,stale)=>{
@@ -393,9 +434,14 @@
         }
       });
       if(request.signal.aborted||NexonKey.get()!==key)throw new DOMException('중단','AbortError');
-      rows=loaded;coverage='complete';renderGroups(true);
-      $('historyCoverage').textContent=from+' ~ '+to+' · 전체 기간 조회 완료';
-      status('조회 완료'+(cacheFailed?' · 브라우저 저장 실패':''));
+      const totalDays=C.days(from,to).length,missing=skipped.length;
+      rows=loaded;coverage=missing?'partial':'complete';renderGroups(true);
+      $('historyCoverage').textContent=missing?'부분 조회 · '+fmt(totalDays-missing)+' / '+fmt(totalDays)+'일 · 이전 '+fmt(missing)+'일은 아직 불러오지 않아 전체 기간 합계가 아닙니다.':from+' ~ '+to+' · 전체 기간 조회 완료';
+      const saveNote=cacheFailed?' · 브라우저 저장 실패':'';
+      if(stopped)status(stopped.message+' 불러온 날짜는 이 브라우저에 저장했고, 남은 '+fmt(missing)+'일은 내일 이어서 불러올 수 있습니다.'+saveNote,true);
+      else if(missing)status('최근 '+RECENT_DAYS+'일 조회 완료 · 저장된 이전 기록도 함께 표시합니다.'+saveNote);
+      else status('조회 완료'+saveNote);
+      renderBackfill(missing,key);
     }catch(e){
       if(controller!==request||NexonKey.get()!==key)return;
       let message=e.name==='AbortError'?'조회를 중단했습니다.':e instanceof TypeError?'네트워크 연결을 확인하고 다시 조회하세요.':e.message;
@@ -407,8 +453,9 @@
       message+=cacheFailed?' 브라우저 저장에 실패해 다시 요청할 수 있습니다.':' 완료한 날짜는 저장되어 다음 조회에서 이어집니다.';
       status(message,true);
     }
-    finally{cache?.close();if(controller===request){controller=null;$('historyFetch').disabled=false;$('historyCancel').hidden=true;}}
+    finally{cache?.close();if(controller===request){controller=null;$('historyFetch').disabled=false;$('historyCancel').hidden=true;$('historyBackfillButton').disabled=!callBudget(key).remaining();}}
   });
+  $('historyBackfillButton').addEventListener('click',()=>{if(controller)return;fullPeriod();$('historyQuery').requestSubmit();});
   $('historyCancel').addEventListener('click',()=>controller&&controller.abort());
   $('detailClose').addEventListener('click',()=>$('historyDetail').close());
   $('historyDetail').addEventListener('close',()=>{if(detailTrigger){detailTrigger.setAttribute('aria-pressed','false');if(detailTrigger.isConnected)detailTrigger.focus();}});
@@ -453,11 +500,11 @@
   $('analysisForm').addEventListener('submit',analyze);
   $('analysisForm').addEventListener('input',()=>{if(selected){resetComparison();costSummary();$('analysisResult').textContent='조건이 바뀌었습니다. 선택 구간 분석을 눌러 다시 계산하세요.';}});
   $('rowsPrev').addEventListener('click',()=>{page--;renderRows();});$('rowsNext').addEventListener('click',()=>{page++;renderRows();});
-  function autoLoad(){if(NexonKey.has()&&!controller){fullPeriod();$('historyQuery').requestSubmit();}}
+  function autoLoad(){if(NexonKey.has()&&!controller){fullPeriod();recentOnlyNext=true;$('historyQuery').requestSubmit();}}
   function keyChanged(){
     const key=NexonKey.get();if(key===activeKey)return;activeKey=key;
     if(controller)controller.abort();controller=null;
-    if($('historyDetail').open)$('historyDetail').close();overrides.clear();attemptCache.clear();rows=[];groups=[];selectedRows=[];selected=null;selectedWorlds.clear();selectedCharacters.clear();allWorlds=allCharacters=true;$('historyResults').hidden=true;refreshKey();loadCharacters();
+    if($('historyDetail').open)$('historyDetail').close();overrides.clear();attemptCache.clear();rows=[];groups=[];selectedRows=[];selected=null;selectedWorlds.clear();selectedCharacters.clear();allWorlds=allCharacters=true;$('historyResults').hidden=true;$('historyBackfill').hidden=true;refreshKey();loadCharacters();
     $('historyFetch').disabled=false;$('historyCancel').hidden=true;
     status(key?'새 계정 기록을 불러옵니다.':'홈에서 본인 API 키를 등록해 주세요.');autoLoad();
   }

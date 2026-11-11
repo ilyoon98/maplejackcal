@@ -48,8 +48,9 @@
       <label>종료일<input type="date" id="historyTo" required></label>
       <button class="primary" id="historyFetch" type="submit">기록 새로고침</button><button id="historyCancel" type="button" hidden>조회 중단</button>
     </div></form>
-    <p class="history-note">입장하면 최근 2년 기록을 자동으로 불러옵니다. 저장된 기록은 먼저 표시하고, 빠진 날짜와 최신 기록만 갱신합니다.</p>
+    <p class="history-note">입장하면 이 브라우저에 저장된 최근 2년 기록을 먼저 표시하고, 최근 90일만 넥슨 API로 새로 확인합니다. 하루치마다 API를 1회 이상 호출하므로 이 화면은 하루 최대 700회까지만 호출해 다른 계산기가 쓸 호출을 남겨 둡니다.</p>
     <p id="historyStatus" class="history-status" role="status" aria-live="polite"></p>
+    <div id="historyBackfill" class="history-backfill" hidden><p id="historyBackfillText" class="history-note"></p><button id="historyBackfillButton" type="button">이전 기록 이어 불러오기</button></div>
   </section>
   <div id="historyResults" hidden>
     <section class="history-finance history-panel" aria-label="강화 요약">

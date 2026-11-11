@@ -76,6 +76,7 @@ const server=http.createServer((req,res)=>{
       assert.equal(url.pathname,'/maplestory/v1/history/starforce');
       assert.equal(url.searchParams.has('ocid'),false);
       if(mode==='error'){await route.fulfill({status:429,json:{error:{name:'OPENAPI00007'}}});return;}
+      if(mode==='empty'){await route.fulfill({json:{starforce_history:[],next_cursor:null}});return;}
       if(mode==='slow'){await new Promise(r=>setTimeout(r,300));}
       if(mode==='refresh'){notifyRefresh?.();await refreshGate;await route.fulfill({json:{starforce_history:[rows[0],{...rows[1],id:'new-on-return'}],next_cursor:null}});return;}
       if(mode==='segments'){await route.fulfill({json:{starforce_history:segments,next_cursor:null}});return;}
@@ -337,10 +338,24 @@ const server=http.createServer((req,res)=>{
     releaseRefresh();await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('조회 완료'));
     assert.equal(await page.locator('#totalTries').innerText(),'13회');assert.equal(await page.locator('#historyDetail').isVisible(),true);await page.locator('#detailClose').click();
     const afterRefresh=calls.length;await reloadSaved();assert.equal(calls.length,afterRefresh);assert.equal(await page.locator('#totalTries').innerText(),'13회');
+    // A reissued key for the same game account reuses saved records instead of refetching two years.
+    assert.equal(await page.evaluate(async date=>{await StarforceHistoryCache.link('reissued-test-key',['fixture-account']);const cache=await StarforceHistoryCache.open('reissued-test-key');try{return Array.isArray((await cache.get(date))?.rows);}finally{cache.close();}},today),true);
+    // Entry checks only the recent window; older uncached days wait for the explicit backfill.
+    await page.evaluate(async()=>{const cache=await StarforceHistoryCache.open('test-only-key');try{await cache.clear();const all=StarforceHistoryCore.days(document.querySelector('#historyFrom').min,document.querySelector('#historyTo').max);for(const date of all.slice(3,-1))await cache.set(date,[]);}finally{cache.close();}});
+    mode='empty';const beforeEntry=calls.length;await page.reload();
+    await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.includes('최근 90일 조회 완료'));
+    assert.equal(calls.length,beforeEntry+1);
+    assert.equal(await page.locator('#historyBackfill').isVisible(),true);
+    assert.match(await page.locator('#historyBackfillButton').innerText(),/3일/);
+    assert.match(await page.locator('#historyBackfillText').innerText(),/남았습니다/);
+    await page.screenshot({path:path.join(output,'starforce-history-backfill.png')});
+    await page.locator('#historyBackfillButton').click();
+    await page.waitForFunction(()=>document.querySelector('#historyStatus').textContent.startsWith('조회 완료'));
+    assert.equal(calls.length,beforeEntry+4);assert.equal(await page.locator('#historyBackfill').isVisible(),false);
     await page.goto(base+'/index.html');assert.equal(await page.locator('.site-tab[data-group=history]').count(),1);
     await page.locator('.site-tab[data-group=history]').click();assert.match(page.url(),/starforce_history.html/);
     assert.deepEqual(errors,[]);
-    console.log('PASS: attempt gains/losses and target independence, destruction, unified summary and compact equipment cards, special currency excluded, server icons/filters, account character API and fallback, low-level characters, totals, missing costs, replacement costs, settings reload/isolation, sessions, starcatch, partial totals, XSS, API error/cancel, navigation, mobile overflow, no browser errors.');
+    console.log('PASS: attempt gains/losses and target independence, destruction, unified summary and compact equipment cards, special currency excluded, server icons/filters, account character API and fallback, low-level characters, totals, missing costs, replacement costs, settings reload/isolation, account-linked cache, recent-window entry and backfill, sessions, starcatch, partial totals, XSS, API error/cancel, navigation, mobile overflow, no browser errors.');
     console.log('Screenshots: '+path.join(output,'starforce-history-desktop.png')+'; '+path.join(output,'starforce-history-mobile.png'));
   }finally{if(browser)await browser.close();server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

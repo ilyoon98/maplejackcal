@@ -233,7 +233,10 @@
     if(template.reason)return {status:'excluded',reason:template.reason};
     const {discount30,lucky5,destroyDown30,eventModifiers}=template;
     const star=row.before_starforce_count;
-    const opts={level:options.level,spare:options.spare||0,mvp:options.mvp||0,pcRoom:!!options.pcRoom,start:0,goal:30,starcatch,discount30,lucky5,destroyDown30,eventModifiers,safeguard:active(row.destroy_defence)?{[star]:true}:{},recoveryMode:'off'};
+    // The calculator rejects goals above the equipment level's star cap (e.g. 15 at Lv.120).
+    const maxStar=typeof data?.maxStarForLevel==='function'?data.maxStarForLevel(options.level):30;
+    if(star>=maxStar)return {status:'excluded',reason:'장비 레벨 최대 별 초과 기록'};
+    const opts={level:options.level,spare:options.spare||0,mvp:options.mvp||0,pcRoom:!!options.pcRoom,start:0,goal:maxStar,starcatch,discount30,lucky5,destroyDown30,eventModifiers,safeguard:active(row.destroy_defence)?{[star]:true}:{},recoveryMode:'off'};
     const key=JSON.stringify(opts);
     let result=cache.get(key);
     if(!result){result=calculate(opts);cache.set(key,result);}
@@ -295,15 +298,41 @@
       }
     };
   }
+  // Counts real API requests per KST day so one page cannot drain the key's shared daily quota.
+  function createCallBudget(options) {
+    const read=()=>{
+      const today=options.today(),saved=options.load();
+      return saved&&saved.date===today&&Number.isInteger(saved.used)&&saved.used>=0?saved:{date:today,used:0};
+    };
+    return {
+      limit:options.limit,
+      used:()=>read().used,
+      remaining:()=>Math.max(0,options.limit-read().used),
+      take(){const state=read();if(state.used>=options.limit)return false;options.save({date:state.date,used:state.used+1});return true;}
+    };
+  }
+  function budgetedRequest(api, budget) {
+    return async function(path,params) {
+      if(!budget.take())throw Object.assign(new Error('오늘 이 화면의 API 호출 예산 '+budget.limit.toLocaleString('ko-KR')+'회를 모두 사용했습니다.'),{code:'BUDGET'});
+      return api(path,params);
+    };
+  }
   async function fetchHistory(api, from, to, progress, options={}) {
     const dates = days(from,to), rows = [], cached=new Map();
     if(options.newestFirst)dates.reverse();
     const checkAbort=()=>{if(options.signal?.aborted)throw new DOMException('중단','AbortError');};
+    // One range read is much faster than one IndexedDB transaction per day.
+    let saved=null;
+    if(options.cache&&typeof options.cache.getRange==='function'){
+      checkAbort();
+      try{saved=await options.cache.getRange(from,to);}catch(e){options.onCacheError?.();saved=new Map();}
+    }
     // Load every available day first, so a failure on today's request does not hide older records.
     if(options.cache)for(const date of dates){
       checkAbort();
       let entry;
-      try{entry=await options.cache.get(date);}catch(e){options.onCacheError?.();continue;}
+      if(saved)entry=saved.get(date);
+      else try{entry=await options.cache.get(date);}catch(e){options.onCacheError?.();continue;}
       if(!entry||!Array.isArray(entry.rows))continue;
       let normalized;
       try{normalized=normalize(entry.rows,date,date);}catch(e){continue;}
@@ -317,27 +346,42 @@
     }
     // Let the UI display all saved days together before making network requests.
     options.onCacheReady?.();
+    let stopped=null;
     for (let i=0;i<dates.length;i++) {
       checkAbort();
-      if(cached.get(dates[i])?.fresh){
-        rows.push(...cached.get(dates[i]).rows);
+      const entry=cached.get(dates[i]);
+      if(entry?.fresh){
+        rows.push(...entry.rows);
         if(rows.length>200000)throw new Error('기록이 너무 많습니다. 조회 기간을 줄여 주세요.');
+        progress?.(i+1,dates.length,rows.length);
+        continue;
+      }
+      // Older days outside fetchFrom, and every day after the call budget runs out, use saved rows only.
+      if(stopped||(options.fetchFrom&&dates[i]<options.fetchFrom)){
+        if(entry){rows.push(...entry.rows);if(rows.length>200000)throw new Error('기록이 너무 많습니다. 조회 기간을 줄여 주세요.');}
+        options.onSkip?.(dates[i],!!entry);
         progress?.(i+1,dates.length,rows.length);
         continue;
       }
       const daily=[];
       let cursor = '', pages = 0;
       const cursors = new Set();
-      do {
-        const body = await api('/history/starforce', cursor ? {count:1000,cursor} : {count:1000,date:dates[i]});
-        if (!body || !Array.isArray(body.starforce_history)) throw new Error('스타포스 기록 응답을 읽을 수 없습니다.');
-        daily.push(...body.starforce_history);
-        if (rows.length+daily.length > 200000) throw new Error('기록이 너무 많습니다. 조회 기간을 줄여 주세요.');
-        cursor = body.next_cursor || '';
-        if (typeof cursor !== 'string' || (cursor && cursors.has(cursor)) || ++pages > 1000) throw new Error('다음 기록을 불러오는 중 오류가 발생했습니다. 기간을 줄여 다시 조회하세요.');
-        if (cursor) cursors.add(cursor);
-        if (progress) progress(i+1, dates.length, rows.length+daily.length);
-      } while(cursor);
+      try {
+        do {
+          const body = await api('/history/starforce', cursor ? {count:1000,cursor} : {count:1000,date:dates[i]});
+          if (!body || !Array.isArray(body.starforce_history)) throw new Error('스타포스 기록 응답을 읽을 수 없습니다.');
+          daily.push(...body.starforce_history);
+          if (rows.length+daily.length > 200000) throw new Error('기록이 너무 많습니다. 조회 기간을 줄여 주세요.');
+          cursor = body.next_cursor || '';
+          if (typeof cursor !== 'string' || (cursor && cursors.has(cursor)) || ++pages > 1000) throw new Error('다음 기록을 불러오는 중 오류가 발생했습니다. 기간을 줄여 다시 조회하세요.');
+          if (cursor) cursors.add(cursor);
+          if (progress) progress(i+1, dates.length, rows.length+daily.length);
+        } while(cursor);
+      } catch(error) {
+        if(error?.code!=='BUDGET')throw error;
+        // Revisit this day as skipped; a partially paged day is never saved.
+        stopped=error;options.onStop?.(error);i--;continue;
+      }
       checkAbort();
       // Recent API responses may lag. Retain saved IDs, with newly fetched values taking priority.
       const completed=normalize([...daily,...(cached.get(dates[i])?.rows||[])],dates[i],dates[i]);
@@ -347,7 +391,7 @@
     }
     return normalize(rows,from,to);
   }
-  const core = {day,validDate,days,normalize,grouped,destroyed,active,countCDF,pathIssue,fetchHistory,abortableDelay,pacedRequest,itemInfo,itemLevel,eventPercent,inEventRange,recordModifiers,recordCost,costIssue,costTotals,cleanSettings,eventSignature,starcatchIssue,automaticStarcatch,starcatchApplied,starcatchLabel,sessions,specialCurrency,currencyRows,attemptComparison,aggregateAttempts};
+  const core = {day,validDate,days,normalize,grouped,destroyed,active,countCDF,pathIssue,fetchHistory,abortableDelay,pacedRequest,createCallBudget,budgetedRequest,itemInfo,itemLevel,eventPercent,inEventRange,recordModifiers,recordCost,costIssue,costTotals,cleanSettings,eventSignature,starcatchIssue,automaticStarcatch,starcatchApplied,starcatchLabel,sessions,specialCurrency,currencyRows,attemptComparison,aggregateAttempts};
   if (typeof module !== 'undefined' && module.exports) module.exports=core;
   else root.StarforceHistoryCore=core;
 })(typeof window !== 'undefined' ? window : globalThis);
