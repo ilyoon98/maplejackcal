@@ -36,6 +36,42 @@
     "example": true
   },
   {
+    "page": "access_log.html",
+    "image": "capture-guide/access_log/conditions.png",
+    "selector": "#accessForm",
+    "width": 1070,
+    "height": 555,
+    "viewport": {
+      "width": 760,
+      "height": 1000
+    },
+    "example": true
+  },
+  {
+    "page": "access_log.html",
+    "image": "capture-guide/access_log/characters.png",
+    "selector": "#accessChars",
+    "width": 1019,
+    "height": 245,
+    "viewport": {
+      "width": 760,
+      "height": 1000
+    },
+    "example": true
+  },
+  {
+    "page": "access_log.html",
+    "image": "capture-guide/access_log/result.png",
+    "selector": "#accessResult",
+    "width": 1070,
+    "height": 639,
+    "viewport": {
+      "width": 760,
+      "height": 1000
+    },
+    "example": true
+  },
+  {
     "page": "starforce_history.html",
     "image": "capture-guide/starforce_history/conditions.png",
     "selector": ".history-page > .history-panel",

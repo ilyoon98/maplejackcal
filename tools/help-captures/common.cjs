@@ -13,6 +13,24 @@ const recipes = {
       await shot('registered', '#apiKey');
     }
   },
+  'access_log.html': {
+    capture: async (page, shot) => {
+      await page.goto(page.url() + '?demo');
+      await page.setViewportSize({ width: 760, height: 1000 });
+      await page.locator('#accessChars').waitFor({ state: 'visible' });
+      await page.locator('#accessFrom').fill('2026-10-19');
+      await page.locator('#accessTo').fill('2026-11-08');
+      await shot('conditions', '#accessForm');
+      await page.locator('#accessChars').evaluate(node => node.open = true);
+      await page.locator('#accessCharNone').click();
+      await page.locator('#accessCharList input[value="demo-main"]').check();
+      await shot('characters', '#accessChars');
+      await page.locator('#accessChars').evaluate(node => node.open = false);
+      await page.locator('#accessSubmit').click();
+      await page.waitForFunction(() => !document.querySelector('#accessResult').hidden && !document.querySelector('#accessSubmit').disabled, { timeout: 30000 });
+      await shot('result', '#accessResult');
+    }
+  },
   'starforce_history.html': {
     prepare: async page => {
       await page.route('https://open.api.nexon.com/**', async route => {

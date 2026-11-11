@@ -7,9 +7,11 @@ window.SiteNavigation = {
       ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','accessory_planner.html','wealth_elixir_calc.html','coin_shop_calc.html'], 'calc'],
       ['강화 시뮬레이터', ['cube_play.html','starforce_play.html'], 'play'],
       ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html'], 'play'],
-      ['미니게임', ['herb_idle.html'], 'play']
+      ['미니게임', ['herb_idle.html'], 'play'],
+      ['기록', ['access_log.html'], 'calc']
     ],
   menuItems: {
+    'access_log.html': ['접속 기록', '이벤트 기간 접속일 한 줄 그래프'],
     'trace_calc.html': ['주흔 기댓값 계산기', '기대 메소·시도 횟수'],
     'starforce_calc.html': ['스타포스 기댓값 계산기', '목표 성까지 기대 메소·파괴'],
     'cube_calc.html': ['큐브 등급업 비용 계산기', '큐브별 기대 개수와 비용'],
@@ -34,10 +36,11 @@ window.SiteNavigation = {
     'seedring_gacha.html': ['시드링 시뮬레이터', '보스 반지 상자 가상 뽑기'],
     'herb_idle.html': ['달빛 약초 채집소', '약초 채집·가공·판매']
   },
-  releases: { 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02', 'party_boss_scheduler.html': '2026-11-07', 'shared_boss_rates.html': '2026-11-07', 'accessory_planner.html': '2026-11-07' },
+  releases: { 'access_log.html': '2026-10-20', 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02', 'party_boss_scheduler.html': '2026-11-07', 'shared_boss_rates.html': '2026-11-07', 'accessory_planner.html': '2026-11-07' },
   newDays: 30,
   // 메뉴와 홈 카드에 쓰는 게임 아이템 아이콘. 새 페이지를 추가하면 여기에도 넣는다.
   icons: {
+    'access_log.html': 'icons/home/신문기사.webp',
     'index.html': 'icons/home/단풍잎.webp',
     'starforce_history.html': 'icons/home/탐정수첩.webp',
     'trace_calc.html': 'icons/home/주문의흔적.webp',
