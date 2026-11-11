@@ -1,0 +1,12 @@
+{
+  "name": "maplejackcal-sunday-discord",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "wrangler deploy --dry-run --outdir dist",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev --test-scheduled",
+    "logs": "wrangler tail"
+  },
+  "devDependencies": { "wrangler": "4.156.0" }
+}

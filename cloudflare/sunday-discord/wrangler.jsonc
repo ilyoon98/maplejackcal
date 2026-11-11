@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "maplejackcal-sunday-discord",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-30",
+  "workers_dev": false,
+  "preview_urls": false,
+  "triggers": {
+    // UTC: Friday 01:00 = Friday 10:00 in Asia/Seoul.
+    // Retry every 5 minutes until 12:00 KST; persisted state prevents repeat sends.
+    // Cloudflare weekday numbering differs from POSIX/GitHub: use FRI explicitly.
+    "crons": ["*/5 1-2 * * FRI", "0 3 * * FRI"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "NOTIFIER", "class_name": "SundayNotifier" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SundayNotifier"] }],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    // Fetch traces record full URLs; Discord embeds its secret token in the URL path.
+    // Keep execution/result logs without recording outbound webhook URLs.
+    "traces": { "enabled": false }
+  }
+}

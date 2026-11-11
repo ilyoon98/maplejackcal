@@ -1,8 +1,8 @@
 name: 썬데이 메이플 디스코드 알림
 
 on:
-  schedule:
-    - cron: '47 0 * * 5' # 매주 금요일 09:47 KST (정각은 GitHub 예약 실행이 몰려 밀리기 쉬움, 공지는 최대 2시간 기다림)
+  # 정기 알림은 cloudflare/sunday-discord/wrangler.jsonc에서 관리한다.
+  # GitHub에는 필요 시 실행하는 수동 테스트만 남긴다.
   workflow_dispatch:
     inputs:
       test:

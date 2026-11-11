@@ -37,27 +37,49 @@ function buildPayload(event) {
   return { username: '썬데이 메이플 알리미', embeds, allowed_mentions: { parse: [] } };
 }
 
-async function nexon(url, apiKey) {
-  const response = await fetch(url, { headers: { 'x-nxopen-api-key': apiKey } });
+async function nexon(url, apiKey, request = fetch) {
+  const response = await request(url, { headers: { 'x-nxopen-api-key': apiKey } });
   if (!response.ok) throw new Error(`Nexon API ${response.status}: ${url}`);
   return response.json();
 }
 
 function latestSundayEvent(events) {
   return (Array.isArray(events) ? events : [])
-    .filter((event) => Sunday.isSundayTitle(event && event.title) && Number.isFinite(Date.parse(event.date_event_start)))
+    .filter((event) => isSundayTitle(event && event.title) && Number.isFinite(Date.parse(event.date_event_start)))
     .sort((a, b) => Date.parse(b.date_event_start) - Date.parse(a.date_event_start))[0] || null;
 }
 
-async function findEvent(apiKey, now, test) {
-  const data = await nexon(API_URL, apiKey);
+function isSundayTitle(title) {
+  return /^(?:스페셜\s*)?(?:썬데이|선데이)\s*메이플$/.test(String(title || '').trim());
+}
+
+function selectWeeklyEvent(events, now) {
+  const friday = latestFridayStart(now);
+  return (Array.isArray(events) ? events : []).filter((event) => {
+    const start = Date.parse(event && event.date_event_start);
+    const end = Date.parse(event && event.date_event_end);
+    return isSundayTitle(event && event.title) && Number.isFinite(start) && Number.isFinite(end) &&
+      start >= friday && start < friday + 4 * DAY_MS && end >= start && now < friday + 3 * DAY_MS;
+  }).sort((a, b) => Date.parse(a.date_event_start) - Date.parse(b.date_event_start))[0] || null;
+}
+
+async function findEvent(apiKey, now, test, request = fetch) {
+  const data = await nexon(API_URL, apiKey, request);
   const event = Sunday.safeEvent(test
     ? latestSundayEvent(data.event_notice)
-    : Sunday.selectEvent(data.event_notice, latestFridayStart(now), now));
-  if (!event) return null;
+    : selectWeeklyEvent(data.event_notice, now));
+  if (!event) {
+    const notices = Array.isArray(data.event_notice) ? data.event_notice : [];
+    const sundayNotices = notices.filter((notice) => /썬데이|선데이/.test(String(notice.title || '')));
+    console.log(JSON.stringify({ status: 'notice-not-found', checkedAt: new Date(now).toISOString(),
+      total: notices.length, candidates: (sundayNotices.length ? sundayNotices : notices.slice(0, 8)).map((notice) => ({
+        title: notice.title, start: notice.date_event_start, end: notice.date_event_end, url: notice.url
+      })) }));
+    return null;
+  }
   if (event.notice_id) {
     try {
-      const detail = await nexon(`${DETAIL_API_URL}?notice_id=${encodeURIComponent(event.notice_id)}`, apiKey);
+      const detail = await nexon(`${DETAIL_API_URL}?notice_id=${encodeURIComponent(event.notice_id)}`, apiKey, request);
       event.image_urls = Sunday.extractImageUrls(detail.contents);
     } catch (err) {
       console.warn('상세 이미지를 불러오지 못해 링크만 보냅니다.', err.message);
@@ -109,4 +131,4 @@ if (require.main === module) {
   main().catch((err) => { console.error(err.message); process.exit(1); });
 }
 
-module.exports = { latestFridayStart, latestSundayEvent, buildPayload };
+module.exports = { latestFridayStart, latestSundayEvent, buildPayload, findEvent, isSundayTitle, selectWeeklyEvent };
