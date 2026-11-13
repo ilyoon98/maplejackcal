@@ -39,7 +39,6 @@ function loadPlanner(options = {}) {
       activeItems,
       exclude(value) { state.excludeCompleted = value; },
       setSlack(value) { state.slackPct = value; },
-      applySchedulerState,
       bosses() { return state.bosses; },
       reload() { state = loadState(state); },
       setLegacyDoping(value) { state.doping = value; },
@@ -51,9 +50,9 @@ function loadPlanner(options = {}) {
         return other.value;
       },
       setBosses(bosses) { state.bosses = bosses; },
-      mergeScheduler(data, preserveSelection) {
+      mergeScheduler(data, preserveSelection, refresh) {
         const parsed = bossesFromScheduler(data);
-        state.bosses = mergeSchedulerBosses(parsed.bosses, preserveSelection);
+        state.bosses = mergeSchedulerBosses(parsed.bosses, preserveSelection, refresh);
         return state.bosses;
       },
       clickBoss(name, act) {
@@ -87,6 +86,9 @@ function loadPlanner(options = {}) {
       characterInput() { return charInput; },
       setApiFetch(handler) { globalThis.fetch = handler; window.NexonKey = globalThis.NexonKey = {has:() => true, get:() => 'fake-key'}; },
       importCharacter,
+      refreshScheduler() { return refreshSchedulerBtn.handlers.click(); },
+      schedulerStatus() { return schedulerStatus.textContent; },
+      schedulerLoading() { return refreshSchedulerBtn.disabled; },
       fetching() { return fetchBtn.disabled; },
       searchButton() { return fetchBtn; },
       applyShot,
@@ -281,14 +283,13 @@ test('보스별 도핑 버튼과 시간 입력에 같은 97% 보정을 적용한
 test('저장한 목록의 난이도가 스케줄러 등록 난이도와 다르면 맞추고 완료를 반영한다', () => {
   const engine = loadPlanner();
   engine.setBosses([{name:'검은 마법사', diff:'하드', mult:483.7, on:true}, {name:'듄켈', diff:'하드', mult:1073, on:true}]);
-  const res = engine.applySchedulerState({boss_contents:[
+  engine.mergeScheduler({boss_contents:[
     {content_name:'검은 마법사', difficulty:'hard', cycle:'bossMonthly', registration_flag:'false', complete_flag:'false'},
     {content_name:'검은 마법사', difficulty:'extreme', cycle:'bossMonthly', registration_flag:'true', complete_flag:'true'},
     {content_name:'듄켈', difficulty:'hard', cycle:'bossWeekly', registration_flag:'true', complete_flag:'false'},
-  ]});
-  assert.deepEqual(Array.from(res.changed), ['검은 마법사 하드→익스트림']);
-  assert.equal(res.done, 1);
-  const [bm, dk] = engine.bosses();
+  ]}, true, true);
+  const bm = engine.bosses().find(b => b.name === '검은 마법사');
+  const dk = engine.bosses().find(b => b.name === '듄켈');
   assert.equal(bm.diff, '익스트림');
   assert.equal(bm.completed, true);
   assert.equal(dk.completed, false);
@@ -417,7 +418,7 @@ test('스케줄러를 불러와도 전체 목록을 유지하고 재조회 시 �
   engine.reload();
   engine.mergeScheduler(data, true);
   assert.equal(engine.bosses().find(b => b.name === '벨로나').completed, true);
-  engine.applySchedulerState(data);
+  engine.mergeScheduler(data, true, true);
   assert.equal(engine.bosses().find(b => b.name === '벨로나').completed, false);
   engine.mergeScheduler({boss_contents:[]}, false);
   assert.equal(engine.bosses().length, 25);
@@ -569,6 +570,53 @@ test('캐릭터를 바꾼 뒤 늦게 도착한 이전 조회 응답은 현재 �
   assert.equal(input.value, '토끼털쇼타');
   assert.deepEqual(Array.from(engine.activeItems(), b => b.name), ['검은 마법사']);
   assert.equal(engine.fetching(), false);
+});
+
+test('목록에서 현재 캐릭터의 스케줄러를 새로고침하고 실패 후 다시 시도한다', async () => {
+  const engine = loadPlanner();
+  const item = (name, difficulty, complete = false) =>
+    ({content_name:name, difficulty, cycle:'bossWeekly', registration_flag:true, clear_flag:complete});
+  let respond;
+  const requests = [];
+  engine.setApiFetch((url, options) => {
+    if (!url.includes('/scheduler/character-state')) return Promise.resolve({ok:true, json:async () => null});
+    requests.push([new URL(url).searchParams.get('ocid'), options.cache]);
+    return new Promise(resolve => { respond = body => resolve({ok:true, json:async () => body}); });
+  });
+  const input = engine.characterInput();
+  input.value = '현재캐릭터'; input.dataset.accountOcid = 'current';
+  const initial = engine.importCharacter();
+  await new Promise(setImmediate);
+  respond({boss_contents:[item('스우', 'hard', true), item('루시드', 'hard'), item('듄켈', 'hard')]});
+  await initial;
+  engine.bosses().find(b => b.name === '스우').mult = 245.5;
+  engine.clickBoss('스우', 'on');
+  const before = JSON.stringify(engine.bosses());
+  const failure = engine.refreshScheduler();
+  assert.equal(engine.schedulerLoading(), true);
+  assert.equal(engine.refreshScheduler(), undefined);
+  await new Promise(setImmediate);
+  respond({unexpected:true});
+  await failure;
+  assert.match(engine.schedulerStatus(), /갱신 실패.*마지막 갱신/);
+  assert.equal(engine.schedulerLoading(), false);
+  assert.equal(JSON.stringify(engine.bosses()), before);
+
+  const retry = engine.refreshScheduler();
+  await new Promise(setImmediate);
+  respond({boss_contents:[item('스우', 'hard'), item('루시드', 'normal', true), item('벨로나', 'easy')]});
+  await retry;
+  const boss = name => engine.bosses().find(b => b.name === name);
+  assert.equal(boss('스우').mult, 245.5);
+  assert.equal(boss('스우').on, false);
+  assert.equal(boss('스우').completed, false);
+  assert.equal(boss('루시드').diff, '노멀');
+  assert.equal(boss('루시드').completed, true);
+  assert.equal(boss('벨로나').on, true);
+  assert.equal(boss('듄켈').registered, false);
+  assert.equal(boss('듄켈').on, false);
+  assert.match(engine.schedulerStatus(), /갱신 완료.*3마리 중 1마리 완료.*노멀 루시드/);
+  assert.deepEqual(requests, Array.from({length:3}, () => ['current', 'no-store']));
 });
 
 test('계정 선택은 바로 조회하고 직접 검색 모드에서만 검색 버튼을 보여 준다', async () => {

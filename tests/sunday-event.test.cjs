@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { JSDOM } = require('jsdom');
 const Sunday = require('../sunday_event.js');
 
 test('금요일 10시 30분 KST에 새 주차로 전환한다', () => {
@@ -19,9 +20,58 @@ test('금요일 10시 30분부터 일요일 23시 59분 59초까지만 표시한
   assert.equal(Sunday.isWithinDisplayWindow(Date.parse('2026-10-05T00:00:00+09:00')), false);
 });
 
-test('오늘 하루 안 보기 날짜는 한국 날짜를 사용한다', () => {
+test('예전에 저장한 하루 숨김 날짜는 한국 날짜를 사용한다', () => {
   assert.equal(Sunday.kstDateKey(Date.parse('2026-10-02T00:30:00Z')), '2026-10-02');
   assert.equal(Sunday.kstDateKey(Date.parse('2026-10-02T16:00:00Z')), '2026-10-03');
+});
+
+test('이번 주 안 보기는 새로 연 페이지에서도 일요일까지 유지되고 다음 금요일에 풀린다', (t) => {
+  let now = Date.parse('2026-10-02T10:30:00+09:00');
+  t.mock.method(Date, 'now', () => now);
+  const cacheKey = 'sundayMapleEventV2';
+  const page = (storage = {}) => {
+    const { window } = new JSDOM('', { url: 'https://calculator.example' });
+    t.after(() => window.close());
+    Object.entries(storage).forEach(([key, value]) => window.localStorage.setItem(key, value));
+    window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    window.HTMLDialogElement.prototype.close = function () { this.open = false; };
+    return window;
+  };
+  const cache = window => window.localStorage.setItem(cacheKey, JSON.stringify({
+    refreshAt: Sunday.latestRefreshAt(now),
+    status: 'ready',
+    event: {
+      title: '썬데이 메이플',
+      url: 'https://maplestory.nexon.com/News/Event/1234',
+      date_event_start: new Date(Sunday.latestRefreshAt(now) + 2 * 86400000).toISOString()
+    }
+  }));
+  const load = window => {
+    Sunday.init(window);
+    if (window.document.readyState === 'loading') {
+      window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+    }
+    return window.document.getElementById('sundayMapleDialog');
+  };
+  const friday = page();
+  cache(friday);
+  const dialog = load(friday);
+  assert.equal(dialog.open, true);
+  const hide = dialog.querySelector('.sunday-dialog-week');
+  assert.equal(hide.textContent, '이번 주 안 보기');
+  hide.click();
+  assert.equal(dialog.open, false);
+  const storage = Object.fromEntries(Object.keys(friday.localStorage).map(key => [key, friday.localStorage.getItem(key)]));
+  for (const date of ['2026-10-03T00:00:00+09:00', '2026-10-04T23:59:59.999+09:00']) {
+    now = Date.parse(date);
+    const reopened = page(storage);
+    assert.equal(load(reopened).open, false);
+    assert.equal(reopened.document.getElementById('sundayMapleEvent').hidden, false);
+  }
+  now = Date.parse('2026-10-09T10:30:00+09:00');
+  cache(friday);
+  friday.dispatchEvent(new friday.Event('focus'));
+  assert.equal(dialog.open, true);
 });
 
 test('이번 금요일 이후 열리는 썬데이 메이플만 고른다', () => {

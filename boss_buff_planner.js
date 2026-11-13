@@ -71,7 +71,7 @@
       mult: Math.max(0.01, num(b.mult, 100)), extra: DEFAULT_EXTRA[b.name] || 0,
       on: b.on !== false, rice: b.rice === true, completed: b.completed === true,
       registered: b.registered === true,
-      inList: b.inList === true || b.on !== false,
+      inList: b.inList === true || (b.inList == null && b.on !== false),
       completionOverride: b.completionOverride === true,
       difficultySettings: b.difficultySettings || {}
     };
@@ -158,7 +158,11 @@
         var profile = profiles.find(function(p){ return p.name === activeProfile; });
         if (profile) { profile.state = JSON.parse(JSON.stringify(state)); localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); }
       }
-    } catch (err) { if (typeof setStatus === 'function' && fetchStatus) setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err'); }
+      return true;
+    } catch (err) {
+      if (fetchStatus) setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err');
+      return false;
+    }
   }
   function num(v, fallback) {
     var n = parseFloat(v);
@@ -729,7 +733,6 @@
     state.excludeCompleted = !state.excludeCompleted;
     saveState(); renderAll();
   });
-  document.getElementById('refreshCompletedBtn').addEventListener('click', refreshCompleted);
   document.getElementById('showAllBossesBtn').addEventListener('click', function () {
     state.showAllBosses = !state.showAllBosses;
     saveState(); renderAll();
@@ -763,6 +766,8 @@
   var charInput = document.getElementById('charName');
   var fetchBtn = document.getElementById('fetchBtn');
   var fetchStatus = document.getElementById('fetchStatus');
+  var refreshSchedulerBtn = document.getElementById('refreshSchedulerBtn');
+  var schedulerStatus = document.getElementById('schedulerStatus');
   var keyState = document.getElementById('apiKeyState');
   var characterImportCard = document.getElementById('characterImportCard');
   var characterShowcase = document.getElementById('buffCharacterShowcase');
@@ -770,6 +775,7 @@
   var characterShowcaseName = document.getElementById('buffCharacterShowcaseName');
   var characterShowcaseMeta = document.getElementById('buffCharacterShowcaseMeta');
   var characterRequestId = 0;
+  var pendingCharacter = '';
 
   var characterPicker = window.NexonCharacters
     ? NexonCharacters.mount({
@@ -780,9 +786,16 @@
     }) : null;
   if (!characterPicker) { charInput.hidden = false; fetchBtn.hidden = false; }
 
-  function setStatus(msg, kind) {
-    fetchStatus.textContent = msg || '';
-    fetchStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
+  function setStatus(msg, kind, target) {
+    var status = target || fetchStatus;
+    status.textContent = msg || '';
+    status.classList.toggle('ok', kind === 'ok');
+    status.classList.toggle('err', kind === 'err');
+  }
+  function setCharacterLoading(name) {
+    pendingCharacter = name;
+    fetchBtn.disabled = !!name;
+    refreshSchedulerBtn.disabled = !!name;
   }
   function refreshKeyState() {
     keyState.innerHTML = (window.NexonKey && NexonKey.has())
@@ -793,7 +806,7 @@
     var query = Object.keys(params).map(function (k) {
       return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
     }).join('&');
-    return fetch(API_BASE + path + '?' + query, { headers: { 'x-nxopen-api-key': NexonKey.get() } })
+    return fetch(API_BASE + path + '?' + query, { cache: 'no-store', headers: { 'x-nxopen-api-key': NexonKey.get() } })
       .then(function (res) {
         return res.json().catch(function () { return null; }).then(function (body) {
           if (!res.ok) {
@@ -886,35 +899,49 @@
     return { bosses: out, skipped: skipped };
   }
 
-  function mergeSchedulerBosses(registered, preserveSelection) {
+  function mergeSchedulerBosses(registered, preserveSelection, refresh) {
     var result = catalogBosses(state.bosses), byName = Object.create(null);
     registered.forEach(function (b) { byName[b.name] = b; });
     result.forEach(function (b) {
       var incoming = byName[b.name];
+      if (incoming && !isMine(b)) b.on = true;
+      if (!incoming && b.registered && !b.inList) b.on = false;
       b.registered = !!incoming;
-      if (!preserveSelection) { b.on = !!incoming; b.inList = !!incoming; b.completionOverride = false; }
+      if (!preserveSelection) { b.on = !!incoming; b.inList = false; b.completionOverride = false; }
+      if (refresh) b.completionOverride = false;
       if (!incoming) { if (!b.completionOverride) b.completed = false; return; }
       changeDifficulty(b, incoming.diff);
-      b.mult = incoming.mult; b.rice = incoming.rice;
+      if (incoming.diff === b.diff) b.mult = incoming.mult;
       if (!b.completionOverride) b.completed = incoming.completed;
       delete byName[b.name];
     });
     Object.keys(byName).forEach(function (name) {
-      var extra = normalizeBoss(byName[name], result.length); extra.registered = true;
+      var extra = normalizeBoss(Object.assign({registered:true, inList:false}, byName[name]), result.length);
       result.push(extra);
     });
     return result;
   }
 
-  function importCharacter() {
-    var name = (charInput.value || '').trim();
-    if (!name) { setStatus('캐릭터 이름을 입력하세요.', 'err'); charInput.focus(); return; }
-    if (!window.NexonKey || !NexonKey.has()) { setStatus('먼저 홈에서 넥슨 오픈 API 키를 등록하세요.', 'err'); return; }
+  function importCharacter(refresh) {
+    var inputName = (charInput.value || '').trim();
+    var name = (refresh && activeProfile) || inputName;
+    var status = refresh ? schedulerStatus : fetchStatus;
+    if (pendingCharacter === name && name) return;
+    if (!name) {
+      setStatus(refresh ? '캐릭터 검색에서 캐릭터를 먼저 선택하세요.' : '캐릭터 이름을 입력하세요.', 'err', status);
+      if (!refresh) charInput.focus();
+      return;
+    }
+    if (!window.NexonKey || !NexonKey.has()) {
+      setStatus('먼저 홈에서 넥슨 오픈 API 키를 등록하세요.', 'err', status);
+      return;
+    }
+    var refreshActive = refresh && activeProfile === name;
     var requestId = ++characterRequestId;
-    fetchBtn.disabled = true;
-    setStatus('불러오는 중…');
-    renderCharacterProfile(null);
-    var selectedOcid = charInput.dataset.accountOcid || '';
+    setCharacterLoading(name);
+    setStatus('', null, refresh ? fetchStatus : schedulerStatus);
+    setStatus(name + ' 스케줄러를 불러오는 중…', null, status);
+    var selectedOcid = name === inputName ? charInput.dataset.accountOcid : '';
     return (selectedOcid ? Promise.resolve({ ocid:selectedOcid }) : apiGet('/id', { character_name: name }))
       .then(null, function (e) { e.stage = 'id'; throw e; })
       .then(function (r) {
@@ -922,74 +949,56 @@
         return Promise.all([
           apiGet('/scheduler/character-state', { ocid: r.ocid })
             .then(null, function (e) { e.stage = 'scheduler'; throw e; }),
-          apiGet('/character/basic', { ocid: r.ocid }).then(null, function () { return null; })
+          refreshActive ? null : apiGet('/character/basic', { ocid: r.ocid }).then(null, function () { return null; })
         ]);
       })
       .then(function (results) {
-        if (requestId !== characterRequestId || (charInput.value || '').trim() !== name) return;
+        if (requestId !== characterRequestId) return;
+        if (!refreshActive && (charInput.value || '').trim() !== name) {
+          setStatus('', null, status);
+          return;
+        }
         var data = results[0];
+        if (!data || !Array.isArray(data.boss_contents)) throw new Error('스케줄러 응답에 보스 목록이 없습니다.');
         var characterProfile = normalizeCharacterProfile(results[1], name);
-        renderCharacterProfile(characterProfile);
         var savedProfile = profiles.find(function(p){ return p.name === name; });
-        if (savedProfile) state = loadState(savedProfile.state);
-        else if (activeProfile !== name) state = defaultState();
+        if (activeProfile !== name) state = savedProfile ? loadState(savedProfile.state) : defaultState();
         var parsed = bossesFromScheduler(data);
-        state.bosses = mergeSchedulerBosses(parsed.bosses, !!savedProfile || activeProfile === name);
-        syncProfileInputs();
-        activeProfile = name;
+        var previousDifficulties = new Map(state.bosses.map(function (b) { return [b.name, b.diff]; }));
+        state.bosses = mergeSchedulerBosses(parsed.bosses, !!savedProfile || activeProfile === name, refresh);
+        state.schedulerUpdatedAt = Date.now();
+        if (!refreshActive) {
+          renderCharacterProfile(characterProfile || (savedProfile && savedProfile.character));
+          syncProfileInputs();
+        }
         rememberProfile(name, characterProfile);
-        saveState(); renderAll(); loadPartyRates();
-        setStatus('등록 보스 ' + parsed.bosses.length + '마리를 반영했습니다. 전체 보스에서 동선 포함 여부를 선택하세요.' +
-          (parsed.skipped.length ? ' 아이콘 없는 보스: ' + parsed.skipped.join(', ') : ''), 'ok');
+        var saved = saveState();
+        renderAll();
+        loadPartyRates();
+        if (!refreshActive) renderProfiles();
+        var done = state.bosses.filter(function (b) { return b.registered && b.completed; }).length;
+        var changed = state.bosses.filter(function (b) {
+          return b.registered && previousDifficulties.has(b.name) && previousDifficulties.get(b.name) !== b.diff;
+        }).map(function (b) { return b.diff + ' ' + b.name; });
+        var summary = parsed.bosses.length
+          ? '등록 보스 ' + parsed.bosses.length + '마리 중 ' + done + '마리 완료.'
+          : '스케줄러에 등록된 주간·월간 보스가 없습니다.';
+        if (refresh && changed.length) summary += ' 난이도가 바뀐 ' + changed.join(', ') + '의 배율을 확인하세요.';
+        setStatus((saved ? name + ' 스케줄러 갱신 완료. ' : '스케줄러를 갱신했지만 브라우저에 저장하지 못했습니다. ') + summary, saved ? 'ok' : 'err', status);
         try { localStorage.setItem('bossBuffPlanner.lastChar', name); } catch (err) {}
       })
-      .catch(function (err) { if (requestId === characterRequestId) setStatus(describeApiError(err, err && err.stage), 'err'); })
-      .then(function () { if (requestId === characterRequestId) fetchBtn.disabled = false; });
-  }
-  // 목록·배율은 그대로 두고 완료 여부만 스케줄러에서 다시 받아 반영한다. 저장해 둔 목록의
-  // 난이도가 지금 스케줄러에 등록된 난이도와 다르면(예: 검은 마법사 하드 → 익스트림) 등록된 쪽으로 맞춘다.
-  function applySchedulerState(data) {
-    var reg = Object.create(null);
-    bossesFromScheduler(data).bosses.forEach(function (b) { reg[b.name] = b; });
-    var done = 0, changed = [];
-    state.bosses.forEach(function (b) {
-      var r = reg[b.name];
-      b.registered = !!r;
-      if (r && r.diff && r.diff !== b.diff) {
-        changed.push(b.name + ' ' + (b.diff || '?') + '→' + r.diff);
-        changeDifficulty(b, r.diff);
-        b.mult = r.mult;
-      }
-      b.completed = !!(r && r.diff === b.diff && r.completed);
-      b.completionOverride = false;
-      if (b.completed) done++;
-    });
-    return { done: done, changed: changed };
-  }
-  function refreshCompleted() {
-    var name = (charInput.value || '').trim();
-    if (!name || !window.NexonKey || !NexonKey.has()) {
-      setStatus('스케줄러 완료 상태를 불러오려면 캐릭터와 API 키가 필요합니다. 목록에서는 직접 완료를 표시할 수 있습니다.', 'err');
-      return;
-    }
-    setStatus('완료한 보스를 확인하는 중…');
-    var selectedOcid = charInput.dataset.accountOcid || '';
-    (selectedOcid ? Promise.resolve({ ocid: selectedOcid }) : apiGet('/id', { character_name: name }))
-      .then(null, function (e) { e.stage = 'id'; throw e; })
-      .then(function (r) {
-        if (!r || !r.ocid) throw new Error('캐릭터 식별자(OCID)를 받지 못했습니다.');
-        return apiGet('/scheduler/character-state', { ocid: r.ocid }).then(null, function (e) { e.stage = 'scheduler'; throw e; });
+      .catch(function (err) {
+        if (requestId !== characterRequestId) return;
+        var previous = activeProfile === name && state.schedulerUpdatedAt;
+        var time = previous ? new Date(previous).toLocaleString('ko-KR', { dateStyle:'short', timeStyle:'short', timeZone:'Asia/Seoul' }) : '';
+        setStatus('갱신 실패. ' + describeApiError(err, err && err.stage) +
+          (time ? ' 마지막 갱신 ' + time + '.' : '') + ' 다시 시도하세요.', 'err', status);
       })
-      .then(function (data) {
-        var res = applySchedulerState(data);
-        saveState(); renderAll();
-        setStatus('스케줄러의 완료 상태를 반영했습니다. 완료 ' + res.done + '마리.' +
-          (res.changed.length ? ' 스케줄러 난이도로 바꿨으니 배율을 확인하세요: ' + res.changed.join(', ') : ''), 'ok');
-      })
-      .catch(function (err) { setStatus(describeApiError(err, err && err.stage), 'err'); });
+      .finally(function () { if (requestId === characterRequestId) setCharacterLoading(''); });
   }
-  fetchBtn.addEventListener('click', importCharacter);
-  charInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') importCharacter(); });
+  refreshSchedulerBtn.addEventListener('click', function () { return importCharacter(true); });
+  fetchBtn.addEventListener('click', function () { importCharacter(); });
+  charInput.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) importCharacter(); });
   try { charInput.value = localStorage.getItem('bossBuffPlanner.lastChar') || ''; } catch (err) {}
 
   // ── 스크린샷에서 배율 읽기 ──────────────────────────────────
@@ -1188,12 +1197,8 @@
   function rememberProfile(name, characterProfile) {
     var p = profiles.find(function(p){ return p.name === name; });
     if (!p) { p = {name:name}; profiles.push(p); }
-    p.state = JSON.parse(JSON.stringify(state));
     if (characterProfile) p.character = normalizeCharacterProfile(characterProfile, name);
     activeProfile = name;
-    try { localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); }
-    catch(e) { setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err'); }
-    renderProfiles();
   }
   function renderProfiles() {
     profileBar.replaceChildren();
@@ -1215,6 +1220,12 @@
       del.setAttribute('aria-label', p.name + ' 저장 삭제');
       del.addEventListener('click', function(){
         profiles = profiles.filter(function(x){ return x !== p; });
+        if (pendingCharacter === p.name) {
+          characterRequestId++;
+          setCharacterLoading('');
+          setStatus('');
+          setStatus('', null, schedulerStatus);
+        }
         if(activeProfile === p.name) { activeProfile = ''; renderCharacterProfile(null); }
         try { localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); } catch(e) {}
         renderProfiles();
@@ -1225,7 +1236,8 @@
   function selectProfileCharacter(profile, notify) {
     // 이전 캐릭터를 조회하던 응답이 새로 고른 저장 프로필을 덮지 않게 한다.
     characterRequestId++;
-    fetchBtn.disabled = false;
+    setCharacterLoading('');
+    setStatus('', null, schedulerStatus);
     charInput.value = profile.name;
     charInput.removeAttribute('data-account-ocid');
     charInput.removeAttribute('data-account-world');
@@ -1234,7 +1246,14 @@
   }
   renderProfiles();
   var initialProfile = profiles.find(function(p){ return p.name === charInput.value; });
-  if (initialProfile) { activeProfile = initialProfile.name; selectProfileCharacter(initialProfile, true); renderCharacterProfile(initialProfile.character); renderProfiles(); }
+  if (initialProfile) {
+    activeProfile = initialProfile.name;
+    state = loadState(initialProfile.state);
+    selectProfileCharacter(initialProfile, true);
+    renderCharacterProfile(initialProfile.character);
+    syncProfileInputs();
+    renderProfiles();
+  }
   refreshKeyState();
   // 다른 탭의 파티 보스 스케줄러나 공용 환산 배율에서 바뀌면 파티 배율을 다시 맞춘다.
   if (typeof window.addEventListener === 'function') {

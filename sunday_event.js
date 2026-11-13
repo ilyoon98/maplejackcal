@@ -10,6 +10,7 @@
   var DETAIL_API_URL = 'https://open.api.nexon.com/maplestory/v1/notice-event/detail';
   var STORAGE_KEY = 'sundayMapleEventV2';
   var POPUP_HIDDEN_DATE_KEY = 'sundayMaplePopupHiddenDateV1';
+  var POPUP_HIDDEN_WEEK_KEY = 'sundayMaplePopupHiddenWeekV1';
   var KEY_STORAGE = 'nxopen_api_key';
   var DAY_MS = 24 * 60 * 60 * 1000;
   var KST_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -156,12 +157,12 @@
     dialog.innerHTML = '<header><div><span>WEEKEND EVENT</span><h2 id="sundayMapleDialogTitle">썬데이 메이플</h2><p></p></div>' +
       '<button type="button" class="sunday-dialog-close" aria-label="팝업 닫기">✕</button></header>' +
       '<div class="sunday-dialog-images"></div>' +
-      '<footer><button type="button" class="sunday-dialog-today">오늘 하루 안 보기</button>' +
+      '<footer><button type="button" class="ux-button sunday-dialog-week">이번 주 안 보기</button>' +
       '<button type="button" class="sunday-dialog-dismiss">닫기</button></footer>';
     dialog.querySelector('.sunday-dialog-close').addEventListener('click', function () { dialog.close(); });
     dialog.querySelector('.sunday-dialog-dismiss').addEventListener('click', function () { dialog.close(); });
-    dialog.querySelector('.sunday-dialog-today').addEventListener('click', function () {
-      try { win.localStorage.setItem(POPUP_HIDDEN_DATE_KEY, kstDateKey(Date.now())); } catch (err) {}
+    dialog.querySelector('.sunday-dialog-week').addEventListener('click', function () {
+      try { win.localStorage.setItem(POPUP_HIDDEN_WEEK_KEY, dialog.dataset.refreshAt); } catch (err) {}
       dialog.close();
     });
     dialog.addEventListener('click', function (event) {
@@ -171,9 +172,10 @@
     return dialog;
   }
 
-  function openDialog(win, event) {
+  function openDialog(win, event, refreshAt) {
     if (!event) return;
     var dialog = createDialog(win);
+    dialog.dataset.refreshAt = String(refreshAt);
     var start = new Date(event.date_event_start);
     var dateLabel = new Intl.DateTimeFormat('ko-KR', {
       timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'short'
@@ -222,18 +224,27 @@
     var weeklyTimer = null;
     var hideTimer = null;
     var inFlight = false;
-    var autoOpened = false;
+    var autoOpenedWeek = null;
 
-    function isPopupHiddenToday(nowValue) {
-      try { return win.localStorage.getItem(POPUP_HIDDEN_DATE_KEY) === kstDateKey(nowValue); }
+    function isPopupHidden(nowValue, refreshAt) {
+      try {
+        return win.localStorage.getItem(POPUP_HIDDEN_WEEK_KEY) === String(refreshAt) ||
+          win.localStorage.getItem(POPUP_HIDDEN_DATE_KEY) === kstDateKey(nowValue);
+      }
       catch (err) { return false; }
     }
 
     function present(event, nowValue) {
       render(win, event, nowValue);
-      if (!event || !isWithinDisplayWindow(nowValue) || autoOpened || isPopupHiddenToday(nowValue)) return;
-      autoOpened = true;
-      openDialog(win, event);
+      var refreshAt = latestRefreshAt(nowValue);
+      if (!isWithinDisplayWindow(nowValue)) {
+        var dialog = win.document.getElementById('sundayMapleDialog');
+        if (dialog && dialog.open) dialog.close();
+        return;
+      }
+      if (!event || autoOpenedWeek === refreshAt || isPopupHidden(nowValue, refreshAt)) return;
+      autoOpenedWeek = refreshAt;
+      openDialog(win, event, refreshAt);
     }
 
     function scheduleAt(timestamp, callback, kind) {
