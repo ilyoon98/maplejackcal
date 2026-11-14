@@ -1056,6 +1056,9 @@
       var incoming = byName[b.name];
       if (incoming && !isMine(b)) b.on = true;
       if (!incoming && b.registered && !b.inList) b.on = false;
+      // 스케줄러에 없고 동선에도 넣지 않은 보스는 '내 보스' 목록에서 뺀다(기본 12보스로 들어왔거나 예전에 제외한 보스).
+      // 직접 동선에 넣은 보스는 남기고, 빠진 보스는 전체 보스 보기에서 다시 넣을 수 있다.
+      if (!incoming && !b.on) b.inList = false;
       b.registered = !!incoming;
       if (!preserveSelection) { b.on = !!incoming; b.inList = false; b.completionOverride = false; }
       if (refresh) b.completionOverride = false;

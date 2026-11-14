@@ -707,3 +707,23 @@ test('공용 환산 배율에 없는 캐릭터는 캡처 등록을 안내하고 
   // 스크린샷을 읽는 기능은 이 화면에서 뺐다.
   assert(!require('node:fs').readFileSync(require('node:path').join(__dirname, '../boss_buff_planner.html'), 'utf8').includes('boss_shot_reader.js'));
 });
+
+test('스케줄러에 없고 동선에서 뺀 보스는 새로고침하면 내 보스 목록에서 빠지고 직접 넣은 보스는 남는다', () => {
+  const engine = loadPlanner();
+  const weekly = names => ({boss_contents:names.map(([content_name, difficulty]) => ({content_name, difficulty, cycle:'bossWeekly', registration_flag:true}))});
+  // 기본 12보스로 시작해 가디언 엔젤 슬라임은 동선에서 빼고, 스케줄러에 없는 벨룸은 직접 넣어 둔 상태.
+  engine.setBosses(engine.bosses().map(b => b.name === '가디언 엔젤 슬라임' ? {...b, on:false, inList:true} : b));
+  const names = () => engine.visibleBosses().map(b => b.name);
+  assert(names().includes('가디언 엔젤 슬라임'));
+  engine.mergeScheduler(weekly([['스우', 'extreme'], ['벨룸', 'chaos']]), true, true);
+  engine.clickBoss('벨룸', 'on'); engine.clickBoss('벨룸', 'on');
+  engine.mergeScheduler(weekly([['스우', 'extreme']]), true, true);
+  assert(!names().includes('가디언 엔젤 슬라임'));
+  assert(names().includes('스우'));
+  // 직접 동선에 넣은 보스는 스케줄러에 없어도 남는다.
+  assert(names().includes('벨룸'));
+  assert.equal(engine.bosses().find(b => b.name === '벨룸').on, true);
+  // 빠진 보스도 전체 보스 보기에서는 그대로 보이고 다시 넣을 수 있다.
+  engine.showAll();
+  assert(names().includes('가디언 엔젤 슬라임'));
+});
