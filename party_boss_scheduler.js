@@ -416,7 +416,7 @@
       var [key,difficulty]=boss.id.split('|'),price=Number(win.MapleBossDB[key][difficulty].CrystalPrice),count=members.length;
       var layout=node('div','party-summary-grid'),reward=node('section','party-reward');
       var icon=node('img');
-      icon.src=DAILY_BOSSES.includes(key)?'icons/home/강렬한힘의결정.webp':'icons/home/boss-crystal-'+(key==='BlackMage'?'monthly':'weekly')+'.png';
+      icon.src=DAILY_BOSSES.includes(key)?'icons/home/강렬한힘의결정.webp':'icons/home/boss-crystal-'+(key==='BlackMage'?'monthly':'weekly')+'.webp';
       icon.alt='';
       // 1인당 금액 바로 오른쪽에 전체 금액을 두어 분배 기준을 한 줄에서 읽게 한다.
       var crystal=node('div','party-crystal');crystal.append(icon,metric(count?'1인당 결정석':'결정석 기본가',mesoLabel(Math.floor(price/Math.max(1,count)))));

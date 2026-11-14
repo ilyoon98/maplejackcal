@@ -43,7 +43,7 @@ window.SiteNavigation = {
     'trace_calc.html': 'icons/home/주문의흔적.webp',
     'starforce_calc.html': 'icons/home/스타포스강화권.webp',
     'authentic_symbol_calc.html': 'icons/authentic/cernium.webp',
-    'boss_income_calc.html': 'icons/home/boss-crystal-weekly.png',
+    'boss_income_calc.html': 'icons/home/boss-crystal-weekly.webp',
     'boss_buff_planner.html': 'icons/home/익스트림레드.webp',
     'party_boss_scheduler.html': 'icons/home/탐정수첩.webp',
     'shared_boss_rates.html': 'icons/home/메이프릴카메라.webp',

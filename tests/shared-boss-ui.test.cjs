@@ -117,7 +117,7 @@ test('보스 보상은 선택한 난이도와 편집 중 인원수를 반영하�
   assert.equal(amount('party-detail'),'6억 9,500만 메소');
   assert.match(p.doc.querySelector('#party-detail .party-reward').textContent,/2인 균등 분배/);
   const item=(id,name)=>[...p.doc.querySelectorAll('#'+id+' .party-reward-item')].find(tile=>tile.dataset.tooltip===name);
-  assert.match(item('party-detail','불멸의 유산').firstElementChild.style.backgroundImage,/TheFirstAdversary\.png/);
+  assert.match(item('party-detail','불멸의 유산').firstElementChild.style.backgroundImage,/TheFirstAdversary\.webp/);
   for(const [name,count] of [['이어진 고대의 결의','6'],['에리온의 조각 교환권','30'],['솔 에르다의 기운','450']]){
    assert.equal(item('party-detail',name).querySelector('.party-reward-quantity').textContent,count);
   }
@@ -160,6 +160,15 @@ test('보스 필터는 별칭으로 찾고 해당 보스의 모든 난이도를 
   assert.equal(p.doc.querySelector('#party-view-all').getAttribute('aria-pressed'),'true');
  }finally{p.close();}
 });
+// WebP 헤더에서 가로·세로 크기를 읽는다(무손실 VP8L, 확장 VP8X, 손실 VP8).
+function webpSize(bytes){
+ assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(bytes.toString('ascii',8,12),'WEBP');
+ const chunk=bytes.toString('ascii',12,16);
+ if(chunk==='VP8L'){assert.equal(bytes[20],0x2f);const bits=bytes.readUInt32LE(21);return [(bits&0x3fff)+1,((bits>>14)&0x3fff)+1];}
+ if(chunk==='VP8X')return [bytes.readUIntLE(24,3)+1,bytes.readUIntLE(27,3)+1];
+ if(chunk==='VP8 ')return [bytes.readUInt16LE(26)&0x3fff,bytes.readUInt16LE(28)&0x3fff];
+ throw new Error('Unknown WebP chunk '+chunk);
+}
 test('스케줄러에서 선택 가능한 모든 난이도의 보상 아이콘은 로컬 이미지 안에 있다',()=>{
  const rewards=require('../boss_rewards.js'),db=require('../boss_db.js');
  const cache=new Map();
@@ -168,8 +177,7 @@ test('스케줄러에서 선택 가능한 모든 난이도의 보상 아이콘�
   for(const item of items){
    if(!cache.has(item.image)){
     const bytes=fs.readFileSync(path.join(__dirname,'..',item.image));
-    assert.equal(bytes.toString('hex',0,8),'89504e470d0a1a0a');
-    cache.set(item.image,[bytes.readUInt32BE(16),bytes.readUInt32BE(20)]);
+    cache.set(item.image,webpSize(bytes));
    }
    const [width,height]=cache.get(item.image);
    assert(Number.isInteger(item.x)&&Number.isInteger(item.y)&&item.x>=0&&item.y>=0&&item.x+40<=width&&item.y+40<=height,id+' '+item.name);
