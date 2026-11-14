@@ -484,25 +484,36 @@
     });
     return { rates: found, skipped: skipped };
   }
-  var partyNotes = '';
-  function partyStatus(message) { partyNotes = message || ''; rateStatus(); }
-  // 배율 출처 안내: 공용 환산 배율을 몇 개 쓰는지, 직접 고친 보스가 몇 개인지, 파티 안내를 한 줄로 보여준다.
+  var partyInfo = { count: 0, skipped: [], sharedFailed: false };
+  function partyStatus(info) { partyInfo = info || { count: 0, skipped: [], sharedFailed: false }; rateStatus(); }
+  // 검은 마법사만 월간 보스다.
+  var MONTHLY_BOSSES = ['검은 마법사'];
+  function rateBadge(label, tip, note, kind) {
+    return '<span class="rate-badge' + (kind ? ' ' + kind : '') + '" tabindex="0" data-tooltip="' + esc(tip) + '"' + (note ? ' data-tooltip-note="' + esc(note) + '"' : '') + '>' + esc(label) + '</span>';
+  }
+  // 목록 위 상태는 짧은 배지로 보여주고 자세한 설명은 툴팁에 둔다: 스케줄러 등록 수, 공용 환산 배율, 직접 입력, 파티.
   function rateStatus() {
     var n = document.getElementById('partyRateStatus');
     if (!n) return;
-    var notes = [], visible = state.bosses.filter(function (b) { return b.on; });
-    if (sharedRateName && sharedRateLoaded) {
-      var used = visible.filter(function (b) { return rateSource(b) === 'shared'; }).length;
-      var manual = visible.filter(function (b) { return rateSource(b) === 'manual' && sharedFor(b); }).length;
-      var date = sharedDate();
-      // 등록이 안 됐거나 기록이 없을 때는 위의 공용 환산 배율 등록 안내가 알려준다.
-      if (Object.keys(sharedRates).length) {
-        notes.push(sharedRateName + '의 공용 환산 배율' + (date ? '(' + date + ' 기록)' : '') + '을 배율 기본값으로 씁니다. 동선 보스 중 ' + used + '개에 적용했습니다.' +
-          (manual ? ' 직접 고친 ' + manual + '개는 직접 입력값을 씁니다.' : ''));
-      }
+    var badges = [], visible = state.bosses.filter(function (b) { return b.on; });
+    var registered = state.bosses.filter(function (b) { return b.registered; });
+    if (registered.length) {
+      var monthly = registered.filter(function (b) { return MONTHLY_BOSSES.indexOf(b.name) >= 0; }).length;
+      var done = registered.filter(function (b) { return b.completed; }).length;
+      badges.push(rateBadge('스케줄러 등록 ' + registered.length + '마리', '주간 ' + (registered.length - monthly) + '마리' + (monthly ? ' · 월간 ' + monthly + '마리' : '') + ' · 완료 ' + done + '마리', '게임 스케줄러에 등록한 주간·월간 보스 수입니다.', 'scheduler'));
     }
-    if (partyNotes) notes.push(partyNotes);
-    n.textContent = notes.join(' ');
+    if (sharedRateName && sharedRateLoaded && Object.keys(sharedRates).length) {
+      var used = visible.filter(function (b) { return rateSource(b) === 'shared'; }).length;
+      var date = sharedDate();
+      badges.push(rateBadge('공용 환산 배율 사용', sharedRateName + (date ? ' · ' + date + ' 기록' : ''), '동선 보스 ' + used + '마리의 배율을 공용 환산 배율로 채웠습니다. 직접 고치면 고친 값을 씁니다.', 'shared'));
+    }
+    var manual = visible.filter(function (b) { return rateSource(b) === 'manual'; }).length;
+    if (manual) badges.push(rateBadge('직접 입력 ' + manual + '마리', '직접 입력한 배율을 쓰는 보스', '공용 값으로 되돌리려면 이름 옆 공용 버튼이나 목록 관리를 쓰세요.', 'manual'));
+    if (partyInfo.count) badges.push(rateBadge('파티 ' + partyInfo.count + '개', '파티 환산 합계 사용', '파티 보스 스케줄러의 환산 합계를 배율로 씁니다. 파티 표시를 누르면 그 파티를 엽니다.', 'party'));
+    if (partyInfo.skipped.length) badges.push(rateBadge('혼자 배율 ' + partyInfo.skipped.length + '개', '배율 미등록 파티원이 있는 파티', partyInfo.skipped.join(', ') + ' 파티는 혼자 배율로 계산합니다.', 'warn'));
+    if (partyInfo.sharedFailed) badges.push(rateBadge('공유 파티 확인 못 함', '공유 파티를 불러오지 못했습니다', '이 브라우저의 파티만 확인했습니다.', 'warn'));
+    n.innerHTML = badges.join('');
+    n.hidden = !badges.length;
     sharedRateCta(visible);
   }
   // 캡처 등록 안내: 선택한 캐릭터로 공용 환산 배율 화면을 열고, 등록이 안 됐거나 기록 없는 동선 보스가 있으면 강조한다.
@@ -523,7 +534,7 @@
   function loadPartyRates() {
     var name = (activeProfile || charInput.value || '').trim(), request = ++partyRequest;
     if (sharedRateName !== name) { sharedRates = Object.create(null); sharedRateName = name; sharedRateLoaded = false; sharedRegistered = false; sharedRateAt = ''; }
-    if (!name || typeof fetch !== 'function') { partyRates = Object.create(null); partyStatus(''); renderAll(); return Promise.resolve(); }
+    if (!name || typeof fetch !== 'function') { partyRates = Object.create(null); partyStatus(null); renderAll(); return Promise.resolve(); }
     var local = [];
     try { var saved = JSON.parse(localStorage.getItem(PARTY_STORE) || '{}'); if (saved && Array.isArray(saved.parties)) local = saved.parties; } catch (e) {}
     function json(url) { return fetch(url, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); }); }
@@ -538,11 +549,8 @@
           var own = collectSharedRates(name, res[1]);
           sharedRates = own.rates; sharedRateAt = own.at; sharedRateLoaded = true; sharedRegistered = own.registered;
         }
-        var count = Object.keys(partyRates).length, notes = [];
-        if (count) notes.push(name + '의 파티 ' + count + '개는 파티 보스 스케줄러의 환산 합계를 배율로 씁니다. 파티 표시를 누르면 그 파티를 엽니다.');
-        if (result.skipped.length) notes.push('배율 미등록 파티원이 있는 파티는 혼자 배율을 씁니다: ' + result.skipped.join(', ') + '.');
-        if (!res[0] && !count) notes.push('공유 파티를 불러오지 못해 이 브라우저의 파티만 확인했습니다.');
-        partyStatus(notes.join(' '));
+        var count = Object.keys(partyRates).length;
+        partyStatus({ count: count, skipped: result.skipped, sharedFailed: !res[0] && !count });
         renderAll();
       });
   }

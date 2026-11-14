@@ -62,6 +62,16 @@
   .row-complete { grid-area:complete; }
   .boss-row { grid-template-areas:"include icon name party diff mult time doping complete"; }
   .row-party { grid-area:party; display:flex; justify-content:center; }
+  /* 목록 위 상태 배지: 스케줄러 등록 수, 배율 출처, 파티. 자세한 설명은 툴팁에 있다. */
+  .rate-badges { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px; }
+  .rate-badges[hidden] { display:none; }
+  .rate-badge { display:inline-flex; align-items:center; min-height:24px; padding:2px 9px; border:1px solid var(--border); border-radius:999px; background:#1b2029; color:var(--text); font-size:0.75rem; font-weight:650; white-space:nowrap; cursor:default; }
+  .rate-badge:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .rate-badge.scheduler { border-color:#5c6b82; }
+  .rate-badge.shared { border-color:#3f5f8c; background:#16202f; color:#c3deff; }
+  .rate-badge.party { border-color:#6ea8fe; background:#243f62; color:#c3deff; }
+  .rate-badge.manual { border-color:#7a6a4a; color:#f0d9a8; }
+  .rate-badge.warn { border-color:#8a5a2b; color:#f3c38a; }
   .boss-selection-count { color:var(--text-dim); font-size:0.72rem; font-weight:500; margin-left:8px; white-space:nowrap; }
   .row-include, .row-complete { min-height:34px; width:100%; padding:5px 4px; border:1px solid var(--border); border-radius:7px; background:#11141a; color:var(--text-dim); font:inherit; font-size:0.73rem; font-weight:750; white-space:nowrap; cursor:pointer; }
   .row-include.selected { background:#253f67; border-color:#669cef; color:#e4efff; }
@@ -271,7 +281,7 @@
         </div>
         <p class="note fetch-status boss-scheduler-status" id="schedulerStatus" role="status" aria-live="polite"></p>
         <p class="shared-rate-cta" id="sharedRateCta"><img class="site-title-icon" src="icons/home/메이프릴카메라.webp" alt=""><span id="sharedRateCtaText">배율 캡처 등록은 공용 환산 배율에서 합니다. 등록한 배율은 이 동선과 파티에 함께 쓰입니다.</span><a class="ux-button" id="sharedRateLink" href="shared_boss_rates.html">공용 환산 배율 등록</a></p>
-        <p class="ux-hint">배율은 풀도핑 기준으로, 시간은 선택한 도핑 기준으로 입력하세요. 여유 시간과 윌의 +4분은 별도로 더합니다.</p><p class="note fetch-status" id="partyRateStatus" role="status"></p><div class="boss-head">
+        <p class="ux-hint">배율은 풀도핑 기준으로, 시간은 선택한 도핑 기준으로 입력하세요. 여유 시간과 윌의 +4분은 별도로 더합니다.</p><div class="rate-badges" id="partyRateStatus" role="status" aria-label="배율 출처" hidden></div><div class="boss-head">
           <span>포함</span><span></span><span class="name-col">보스</span><span>파티</span><span>난이도</span><span>배율</span><span>소요</span><span>도핑</span><span>완료 상태</span>
         </div>
         <div id="bossList"></div>

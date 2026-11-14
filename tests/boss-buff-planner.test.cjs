@@ -97,6 +97,8 @@ function loadPlanner(options = {}) {
       },
       boss(name) { return state.bosses.find(b => b.name === name); },
       useSharedAll() { document.getElementById('useSharedAll').handlers.click(); },
+      setPartyInfo(info) { partyInfo = info; },
+      rateBadges() { return document.getElementById('partyRateStatus').innerHTML; },
       sharedCta() { return {text:document.getElementById('sharedRateCtaText').textContent, link:document.getElementById('sharedRateLink').textContent, href:document.getElementById('sharedRateLink').href}; },
       results() { return {pack:packEl.innerHTML, combos:comboEl.innerHTML}; },
     };
@@ -726,4 +728,28 @@ test('스케줄러에 없고 동선에서 뺀 보스는 새로고침하면 내 �
   // 빠진 보스도 전체 보스 보기에서는 그대로 보이고 다시 넣을 수 있다.
   engine.showAll();
   assert(names().includes('가디언 엔젤 슬라임'));
+});
+
+test('목록 위 상태는 스케줄러 등록 수와 배율 출처를 짧은 배지로 보여주고 설명은 툴팁에 둔다', () => {
+  const engine = loadPlanner();
+  const db = require('../boss_db.json');
+  engine.setBosses([
+    {name:'윌', diff:'하드', mult:80, on:true, registered:true, completed:true},
+    {name:'루시드', diff:'하드', mult:90, on:true, registered:true, manual:true},
+    {name:'스우', diff:'하드', mult:90, on:true, registered:true},
+    {name:'검은 마법사', diff:'하드', mult:90, on:false, registered:true},
+    {name:'벨룸', diff:'카오스', mult:90, on:true},
+  ].map((b, i) => ({id:'b' + i, extra:0, ...b})));
+  engine.setSharedRates(db, engine.collectSharedRates('나', {snapshots:[{characterName:'나', preset:'00000', fetchedAt:'2026-11-14T03:00:00Z', rates:[{bossId:'Will|Hard', percent:150}, {bossId:'Lucid|Hard', percent:150}]}]}));
+  engine.setPartyRates(db, {'Lotus|Hard':{total:300, name:'파티', count:2, id:'', scope:'local'}});
+  engine.setPartyInfo({count:1, skipped:['혼자파티'], sharedFailed:false});
+  engine.listRows();
+  const html = engine.rateBadges();
+  const labels = [...html.matchAll(/class="rate-badge[^"]*"[^>]*>([^<]+)</g)].map(m => m[1]);
+  assert.deepEqual(labels, ['스케줄러 등록 4마리', '공용 환산 배율 사용', '직접 입력 1마리', '파티 1개', '혼자 배율 1개']);
+  assert.match(html, /data-tooltip="주간 3마리 · 월간 1마리 · 완료 1마리"/);
+  assert.match(html, /data-tooltip="나 · 11월 14일 기록"/);
+  assert.match(html, /동선 보스 1마리의 배율을 공용 환산 배율로 채웠습니다/);
+  // 예전처럼 긴 문장으로 쓰지 않는다.
+  assert.doesNotMatch(html, /배율 기본값으로 씁니다/);
 });
