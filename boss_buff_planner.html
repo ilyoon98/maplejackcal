@@ -99,6 +99,11 @@
   body[data-ux-page] :is(.wrap, main) :is(a.party-link, a.tag.party) { color:#c3deff; text-decoration:none; }
   span.party-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   a.party-link:hover { filter:brightness(1.18); }
+  /* 공용 환산 배율을 쓰는 칸은 테두리 색으로, 직접 고친 보스는 이름 옆 되돌리기 버튼으로 구분한다. */
+  #bossList .row-input input.rate-shared { border-color:#3f5f8c; }
+  .row-tag.rate-reset { font:inherit; font-size:0.68rem; font-weight:700; color:#c3deff; background:#1d2c44; border-color:#4f74a8; cursor:pointer; }
+  .row-tag.rate-reset:hover { filter:brightness(1.18); }
+  .row-tag.rate-reset:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   a.party-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .row-input input:disabled { opacity:1; color:#c3deff; background:#182438; }
   .route-settings { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:0 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card); font-size:0.8rem; color:var(--text-dim); }
@@ -153,7 +158,7 @@
   .boss-actions-menu > summary::after { content:'···'; font-size:1rem; line-height:1; }
   .boss-actions-menu[open] > summary, .boss-actions-menu > summary:hover { color:var(--text); border-color:var(--accent); }
   .boss-actions-menu > summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-  .boss-actions-popup { position:absolute; z-index:35; top:calc(100% + 7px); right:0; display:grid; width:176px; padding:5px; background:#1b2331; border:1px solid #495a73; border-radius:10px; box-shadow:0 10px 24px #0006; }
+  .boss-actions-popup { position:absolute; z-index:35; top:calc(100% + 7px); right:0; display:grid; width:214px; padding:5px; background:#1b2331; border:1px solid #495a73; border-radius:10px; box-shadow:0 10px 24px #0006; }
   .boss-actions-popup .tool-btn { text-align:left; padding:9px 11px; border:0; border-radius:6px; color:var(--text); }
   .boss-actions-popup .tool-btn:hover { background:#293b55; }
   .boss-actions-popup #resetBtn { margin-top:4px; border-top:1px solid var(--border); border-radius:0 0 6px 6px; color:#f3b8a6; }
@@ -221,6 +226,9 @@
   /* 좁은 화면에서도 난이도와 숫자 칸의 위치·폭을 고정한다. */
   @media (max-width:760px) {
     .boss-head { display:none; }
+    /* 좁은 화면에서는 이름 옆 표시(+4분, 공용으로 되돌리기)를 이름 아래 줄로 내려 이름이 가려지지 않게 한다. */
+    .row-name strong { flex-wrap:wrap; row-gap:3px; }
+    .row-name strong .nm { flex-basis:100%; }
     .boss-row { grid-template-columns:60px 28px minmax(94px,1fr) 52px 108px 68px; grid-template-areas:"include icon name party diff complete" "mult mult mult time doping doping"; gap:8px 6px; }
   }
   /* 결과 패널과 나란히 놓여 왼쪽이 좁아지는 폭에서도 보스 한 마리를 한 줄에 둔다.
@@ -296,6 +304,7 @@
             <div class="boss-actions-popup">
               <button type="button" class="tool-btn" id="allOn">전체 포함</button>
               <button type="button" class="tool-btn" id="allOff">전체 제외</button>
+              <button type="button" class="tool-btn" id="useSharedAll">직접 입력 배율을 공용 값으로</button>
               <button type="button" class="tool-btn" id="resetBtn">초기화</button>
             </div>
           </details>

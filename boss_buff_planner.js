@@ -69,6 +69,8 @@
       diff: b.diff || (preset ? preset.diff : entry ? entry[2][entry[2].length - 1] : ''),
       icon: b.icon || (entry ? 'icons/boss/' + entry[1] + '.webp' : ''),
       mult: Math.max(0.01, num(b.mult, 100)), extra: DEFAULT_EXTRA[b.name] || 0,
+      // 직접 고친 배율(캡처로 넣은 값 포함)은 공용 환산 배율보다 우선한다.
+      manual: b.manual === true,
       on: b.on !== false, rice: b.rice === true, completed: b.completed === true,
       registered: b.registered === true,
       inList: b.inList === true || (b.inList == null && b.on !== false),
@@ -85,8 +87,8 @@
       if (previous) {
         var keep = !previous.on && row.on ? row : previous;
         keep.difficultySettings = Object.assign({}, previous.difficultySettings, row.difficultySettings);
-        keep.difficultySettings[previous.diff] = {mult:previous.mult, rice:previous.rice};
-        keep.difficultySettings[row.diff] = {mult:row.mult, rice:row.rice};
+        keep.difficultySettings[previous.diff] = {mult:previous.mult, rice:previous.rice, manual:previous.manual};
+        keep.difficultySettings[row.diff] = {mult:row.mult, rice:row.rice, manual:row.manual};
         byName[row.name] = keep;
       } else byName[row.name] = row;
     });
@@ -101,10 +103,11 @@
     var entry = catalogEntry(b.name);
     if (!entry || entry[2].indexOf(diff) < 0 || diff === b.diff) return;
     b.difficultySettings = b.difficultySettings || {};
-    b.difficultySettings[b.diff] = {mult:b.mult, rice:b.rice};
+    b.difficultySettings[b.diff] = {mult:b.mult, rice:b.rice, manual:b.manual === true};
     var setting = b.difficultySettings[diff];
     b.diff = diff;
     b.mult = setting ? Math.max(0.01, num(setting.mult, 100)) : 100;
+    b.manual = !!(setting && setting.manual === true);
     if (setting) b.rice = setting.rice === true;
   }
   // 쌀도핑은 풀도핑 기준 입력 배율의 97%로 고정한다.
@@ -393,7 +396,43 @@
   // 파티 보스 스케줄러에서 해당 파티를 바로 열 수 있는 주소.
   function partyLink(p) { return p && p.id ? 'party_boss_scheduler.html?scope=' + p.scope + '&party=' + encodeURIComponent(p.id) : ''; }
   function partyFor(b) { return partyRates[bossIdOf(b)] || null; }
-  function effectiveMult(b) { var p = partyFor(b); return p ? p.total : b.mult; }
+  // ── 공용 환산 배율 연동 ─────────────────────────────────────
+  // 선택한 캐릭터가 공용 환산 배율에 등록돼 있으면 그 보스·난이도 기록을 배율 기본값으로 쓴다.
+  // 우선순위: 파티 환산 합계 → 직접 입력(직접 고친 값과 캡처로 넣은 값) → 공용 환산 배율 → 이 화면에 저장한 배율.
+  var sharedRates = Object.create(null), sharedRateName = '', sharedRateLoaded = false, sharedRegistered = false, sharedRateAt = '';
+  function collectSharedRates(name, store) {
+    var found = Object.create(null);
+    var s = (store && Array.isArray(store.snapshots) ? store.snapshots : []).find(function (x) { return x.characterName === name && x.preset === '00000'; });
+    if (!s) return { rates: found, at: '', registered: false };
+    (Array.isArray(s.rates) ? s.rates : []).forEach(function (r) {
+      // 0%는 입장 불가 표시라 배율로 쓰지 않는다.
+      if (r && typeof r.bossId === 'string' && typeof r.percent === 'number' && r.percent > 0) found[r.bossId] = r.percent;
+    });
+    return { rates: found, at: typeof s.fetchedAt === 'string' ? s.fetchedAt : '', registered: true };
+  }
+  function sharedFor(b) { var id = bossIdOf(b); return id && sharedRates[id] ? sharedRates[id] : null; }
+  function rateSource(b) {
+    if (partyFor(b)) return 'party';
+    if (b.manual) return 'manual';
+    return sharedFor(b) ? 'shared' : 'saved';
+  }
+  function effectiveMult(b) {
+    var p = partyFor(b);
+    if (p) return p.total;
+    var shared = !b.manual && sharedFor(b);
+    return shared || b.mult;
+  }
+  function sharedDate() {
+    var d = sharedRateAt ? new Date(sharedRateAt) : null;
+    return d && !isNaN(d) ? d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', timeZone: 'Asia/Seoul' }) : '';
+  }
+  // 직접 입력값을 버리고 공용 환산 배율을 다시 쓴다. 공용 기록이 없어지면 이 값으로 계산한다.
+  function useSharedRate(b) {
+    var shared = sharedFor(b);
+    if (!shared) return false;
+    b.manual = false; b.mult = shared;
+    return true;
+  }
   function snapshotRate(store, name, bossId) {
     var s = (store && Array.isArray(store.snapshots) ? store.snapshots : []).find(function (x) { return x.characterName === name && x.preset === '00000'; });
     var r = s && (s.rates || []).find(function (x) { return x.bossId === bossId; });
@@ -444,9 +483,29 @@
     });
     return { rates: found, skipped: skipped };
   }
-  function partyStatus(message) { var n = document.getElementById('partyRateStatus'); if (n) n.textContent = message || ''; }
+  var partyNotes = '';
+  function partyStatus(message) { partyNotes = message || ''; rateStatus(); }
+  // 배율 출처 안내: 공용 환산 배율을 몇 개 쓰는지, 직접 고친 보스가 몇 개인지, 파티 안내를 한 줄로 보여준다.
+  function rateStatus() {
+    var n = document.getElementById('partyRateStatus');
+    if (!n) return;
+    var notes = [], visible = state.bosses.filter(function (b) { return b.on; });
+    if (sharedRateName && sharedRateLoaded) {
+      var used = visible.filter(function (b) { return rateSource(b) === 'shared'; }).length;
+      var manual = visible.filter(function (b) { return rateSource(b) === 'manual' && sharedFor(b); }).length;
+      var date = sharedDate();
+      if (!sharedRegistered) notes.push('공용 환산 배율에 ' + sharedRateName + ' 캐릭터가 없어 이 화면에 입력한 배율을 씁니다. 공용 환산 배율에 등록하면 그 값을 기본값으로 씁니다.');
+      else if (Object.keys(sharedRates).length) {
+        notes.push(sharedRateName + '의 공용 환산 배율' + (date ? '(' + date + ' 기록)' : '') + '을 배율 기본값으로 씁니다. 동선 보스 중 ' + used + '개에 적용했습니다.' +
+          (manual ? ' 직접 고친 ' + manual + '개는 직접 입력값을 씁니다.' : ''));
+      } else notes.push('공용 환산 배율에 ' + sharedRateName + ' 캐릭터의 보스 기록이 없어 이 화면에 입력한 배율을 씁니다.');
+    }
+    if (partyNotes) notes.push(partyNotes);
+    n.textContent = notes.join(' ');
+  }
   function loadPartyRates() {
     var name = (activeProfile || charInput.value || '').trim(), request = ++partyRequest;
+    if (sharedRateName !== name) { sharedRates = Object.create(null); sharedRateName = name; sharedRateLoaded = false; sharedRegistered = false; sharedRateAt = ''; }
     if (!name || typeof fetch !== 'function') { partyRates = Object.create(null); partyStatus(''); renderAll(); return Promise.resolve(); }
     var local = [];
     try { var saved = JSON.parse(localStorage.getItem(PARTY_STORE) || '{}'); if (saved && Array.isArray(saved.parties)) local = saved.parties; } catch (e) {}
@@ -457,6 +516,11 @@
         var shared = res[0] && Array.isArray(res[0].parties) ? res[0].parties : [];
         var result = collectPartyRates(name, local, shared, res[1]);
         partyRates = result.rates;
+        // 공용 배율을 못 불러오면 직전에 받은 같은 캐릭터 값을 그대로 둔다.
+        if (res[1]) {
+          var own = collectSharedRates(name, res[1]);
+          sharedRates = own.rates; sharedRateAt = own.at; sharedRateLoaded = true; sharedRegistered = own.registered;
+        }
         var count = Object.keys(partyRates).length, notes = [];
         if (count) notes.push(name + '의 파티 ' + count + '개는 파티 보스 스케줄러의 환산 합계를 배율로 씁니다. 파티 표시를 누르면 그 파티를 엽니다.');
         if (result.skipped.length) notes.push('배율 미등록 파티원이 있는 파티는 혼자 배율을 씁니다: ' + result.skipped.join(', ') + '.');
@@ -496,6 +560,18 @@
         ? '<a class="party-link" href="' + esc(partyLink(party)) + '" aria-label="' + esc((party.name || b.name) + ' 파티 보러 가기') + '"' + partyTooltipAttrs(party, true) + '>파티</a>'
         : '<span class="party-link" tabindex="0"' + partyTooltipAttrs(party, false) + '>파티</span>') : '') + '</div>';
       var lockAttr = usingParty ? ' disabled title="파티 배율을 쓰는 중입니다"' : '';
+      // 배율 칸의 툴팁으로 배율 출처를 알려주고, 직접 고친 보스는 공용 환산 배율로 되돌릴 수 있게 한다.
+      var source = rateSource(b), shared = sharedFor(b), date = sharedDate();
+      var rateTip = source === 'shared'
+        ? ' data-tooltip="공용 환산 배율" data-tooltip-value="' + percentText(shared) + '%" data-tooltip-note="' + esc((date ? date + ' 기록. ' : '') + '직접 고치면 고친 값을 씁니다.') + '"'
+        : source === 'manual'
+          ? ' data-tooltip="직접 입력한 배율" data-tooltip-note="' + esc(shared ? '공용 환산 배율은 ' + percentText(shared) + '%' + (date ? '(' + date + ' 기록)' : '') + '입니다. 이름 옆 공용 버튼으로 되돌릴 수 있습니다.' : '공용 환산 배율에 이 보스·난이도 기록이 없습니다.') + '"'
+          : source === 'saved' && sharedRateLoaded
+            ? ' data-tooltip="이 화면에 입력한 배율" data-tooltip-note="공용 환산 배율에 이 보스·난이도 기록이 없습니다."'
+            : '';
+      var resetTag = source === 'manual' && shared
+        ? '<button type="button" class="row-tag rate-reset" data-act="shared" data-i="' + i + '" aria-label="' + esc(b.name) + ' 배율을 공용 환산 배율 ' + percentText(shared) + '%로 되돌리기" data-tooltip="직접 입력한 배율을 쓰는 중" data-tooltip-note="누르면 공용 환산 배율 ' + percentText(shared) + '%로 되돌립니다.">↺ 공용</button>'
+        : '';
       var excluded = state.excludeCompleted && b.completed;
       var dopingName = b.rice ? '쌀도핑' : '풀도핑';
       var nextDoping = b.rice ? '풀도핑' : '쌀도핑';
@@ -508,11 +584,11 @@
         (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="">' : '<span class="row-icon blank"></span>') +
         // 완료 표시는 고정된 오른쪽 버튼에만 두어 이름·난이도가 밀리지 않는다.
         '<div class="row-name"><strong><span class="nm" data-tooltip="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
-        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') +
+        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') + resetTag +
         '</strong></div>' + partyCell +
         '<div class="row-difficulty">' + (entry ? '<select class="row-diff diff-select ' + (DIFF_CLASS[b.diff] || '') + '" data-act="diff" data-i="' + i + '" aria-label="' + esc(b.name) + ' 난이도">' +
           entry[2].map(function (diff) { return '<option value="' + diff + '"' + (diff === b.diff ? ' selected' : '') + '>' + diff + '</option>'; }).join('') + '</select>' : diffBadge(b.diff)) + '</div>' +
-        '<div class="row-input row-mult"><input type="number" min="0.01" step="0.01" value="' + percentText(mult) + '" data-act="mult" data-i="' + i + '" aria-label="' + esc(b.name) + (usingParty ? ' 파티 배율' : ' 배율') + '"' + lockAttr + '><span class="unit">%</span></div>' +
+        '<div class="row-input row-mult"' + rateTip + '><input type="number" class="' + (source === 'shared' ? 'rate-shared' : '') + '" min="0.01" step="0.01" value="' + percentText(mult) + '" data-act="mult" data-i="' + i + '" aria-label="' + esc(b.name) + (usingParty ? ' 파티 배율' : ' 배율') + '"' + lockAttr + '><span class="unit">%</span></div>' +
         '<div class="row-input row-time"><input type="number" tabindex="-1" min="0.1" step="0.1" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '" aria-label="' + esc(b.name) + ' 소요 시간"' + lockAttr + '><span class="unit">분</span></div>' +
         '<button type="button" class="row-doping ' + (b.rice ? 'rice' : 'full') + '" data-act="rice" data-i="' + i + '" aria-label="' + esc(b.name) + ' 도핑: ' + dopingName + ', ' + nextDoping + '으로 변경" aria-pressed="' + !!b.rice + '" data-tooltip="현재 ' + dopingName + '" data-tooltip-note="누르면 ' + nextDoping + '으로 바뀝니다.">' +
         '<img src="icons/buff/' + dopingIcon + '.webp" width="22" height="22" alt=""><span>' + dopingName + '</span></button>' +
@@ -524,6 +600,7 @@
       var control = listEl.querySelector('[data-act="' + focus.act + '"][data-i="' + focus.index + '"]');
       if (control) control.focus({preventScroll:true});
     }
+    rateStatus();
   }
   // 스케줄러에 등록했거나 목록에 넣은 '내 보스'.
   function isMine(b) { return !!(b && (b.registered || b.inList || b.on)); }
@@ -702,12 +779,14 @@
     var b = state.bosses[i];
     var row = t.closest('.boss-row');
     if (t.dataset.act === 'mult') {
-      b.mult = Math.max(0.01, num(t.value, b.mult));
+      b.mult = Math.max(0.01, num(t.value, effectiveMult(b)));
+      b.manual = true;
       // 입력 중인 칸은 그대로 두고 짝이 되는 칸만 갱신한다(커서가 튀지 않게).
       row.querySelector('[data-act="time"]').value = trim((b.rice ? riceSecOf(b.mult) : secOf(b.mult)) / 60);
     } else if (t.dataset.act === 'time') {
       var min = Math.max(0.1, num(t.value, 1));
       b.mult = Math.round(multOf(min * 60) / (b.rice ? RICE_RATE : 1) * 10) / 10;
+      b.manual = true;
       row.querySelector('[data-act="mult"]').value = percentText(b.mult);
     } else return;
     saveState(); renderResults();
@@ -722,6 +801,14 @@
       state.bosses[i].on = !state.bosses[i].on;
       state.bosses[i].inList = true;
     }
+    else if (t.dataset.act === 'shared') {
+      if (!useSharedRate(state.bosses[i])) return;
+      // 버튼이 사라지므로 같은 행의 배율 칸으로 포커스를 옮긴다.
+      saveState(); renderAll();
+      var input = listEl.querySelector && listEl.querySelector('[data-act="mult"][data-i="' + i + '"]');
+      if (input) input.focus({preventScroll:true});
+      return;
+    }
     else if (t.dataset.act === 'complete') {
       state.bosses[i].completed = !state.bosses[i].completed;
       state.bosses[i].completionOverride = true;
@@ -731,7 +818,10 @@
   });
   listEl.addEventListener('change', function (e) {
     var t = e.target, b = state.bosses[parseInt(t.dataset.i, 10)];
-    if (!b || t.dataset.act !== 'diff') return;
+    if (!b) return;
+    // 배율·시간을 다 고치면 출처 표시(직접 입력, 공용으로 되돌리기)를 새로 그린다.
+    if (t.dataset.act === 'mult' || t.dataset.act === 'time') { renderList(); return; }
+    if (t.dataset.act !== 'diff') return;
     changeDifficulty(b, t.value);
     saveState(); renderAll();
   });
@@ -757,6 +847,12 @@
     moveInput.value = trim(state.moveMin);
     slackInput.value = trim(state.slackPct);
     saveState(); renderAll();
+  });
+  document.getElementById('useSharedAll').addEventListener('click', function () {
+    var changed = state.bosses.filter(function (b) { return b.manual && useSharedRate(b); }).length;
+    bossActionsMenu.open = false;
+    if (changed) { saveState(); renderAll(); }
+    setStatus(changed ? '직접 고친 배율 ' + changed + '개를 공용 환산 배율로 되돌렸습니다.' : '공용 환산 배율로 되돌릴 직접 입력 배율이 없습니다.', changed ? 'ok' : null, schedulerStatus);
   });
   document.getElementById('allOn').addEventListener('click', function () {
     visibleBosses().forEach(function (b) { b.on = true; b.inList = true; });
@@ -1108,8 +1204,8 @@
   function shotRowHtml(row, i, group) {
     var b = state.bosses[row.idx], note, warn = false;
     if (!b) { note = row.covered ? '카드가 가려져 있습니다. 툴팁 없이 다시 캡처하세요.' : '목록의 어느 보스인지 고르세요.'; warn = true; }
-    else if (row.value == null) { note = (row.covered ? '카드가 가려져 있습니다.' : '배율 숫자를 확실히 읽지 못했습니다.') + ' 기존 ' + percentText(b.mult) + '%는 유지됩니다. 다시 캡처하거나 직접 적으세요.'; warn = true; }
-    else note = '지금 ' + percentText(b.mult) + '% → ' + percentText(row.value) + '%';
+    else if (row.value == null) { note = (row.covered ? '카드가 가려져 있습니다.' : '배율 숫자를 확실히 읽지 못했습니다.') + ' 기존 ' + percentText(effectiveMult(b)) + '%는 유지됩니다. 다시 캡처하거나 직접 적으세요.'; warn = true; }
+    else note = '지금 ' + percentText(effectiveMult(b)) + '% → ' + percentText(row.value) + '%';
     var name;
     if (group === 'unknown') {
       // 얼굴과 난이도 배지를 보여주려고 <select> 대신 직접 만든 목록을 쓴다.
@@ -1163,6 +1259,7 @@
       if (b && row.value == null && !row.other) unread++;
       if (!row.on || !b || !(row.value > 0)) return;
       b.mult = Math.max(0.01, row.value);
+      b.manual = true;
       set++;
     });
     saveState(); renderAll();

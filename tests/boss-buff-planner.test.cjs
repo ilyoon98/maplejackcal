@@ -97,6 +97,14 @@ function loadPlanner(options = {}) {
       renderAll,
       collectPartyRates,
       setPartyRates(db, rates) { window.MapleBossDB = db; partyRates = rates; },
+      collectSharedRates,
+      setSharedRates(db, own) { window.MapleBossDB = db; sharedRates = own.rates; sharedRateAt = own.at; sharedRateLoaded = true; sharedRegistered = own.registered; sharedRateName = '나'; },
+      inputBossMult(index, value) {
+        const other = {};
+        listEl.handlers.input({target:{dataset:{i:String(index), act:'mult'}, value:String(value), closest(){return {querySelector(){return other;}};}}});
+      },
+      boss(name) { return state.bosses.find(b => b.name === name); },
+      useSharedAll() { document.getElementById('useSharedAll').handlers.click(); },
       results() { return {pack:packEl.innerHTML, combos:comboEl.innerHTML}; },
     };
   })();`), context);
@@ -326,6 +334,8 @@ test('스크린샷 배율은 소수 둘째 자리와 1% 미만을 유지하고, 
   assert.match(engine.shotPreview(), /value="0.42"/);
   engine.applyShot();
   assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [43.1, 26.13, 0.42, 100, 1006]);
+  // 캡처로 넣은 배율은 직접 입력으로 보고 공용 환산 배율보다 우선한다. 읽지 못한 윌은 그대로다.
+  assert.deepEqual(Array.from(engine.bosses(), b => !!b.manual), [true, true, true, false, false]);
   engine.reload();
   assert.deepEqual(['스우','찬란한 흉성','최초의 대적자','검은 마법사','윌'].map(name => engine.bosses().find(b => b.name === name).mult),
     [43.1, 26.13, 0.42, 100, 1006]);
@@ -729,4 +739,51 @@ test('파티 보스는 항상 파티 배율로 계산하고 고정 칸의 파티
   assert(will.includes('<div class="row-party"></div>'));
   engine.clickBoss('스우', 'party');
   assert.equal(mult('스우'), 140.5);
+});
+
+test('공용 환산 배율을 기본값으로 쓰고 직접 고친 배율이 우선하며 되돌리기와 난이도별 기억을 지원한다', () => {
+  const engine = loadPlanner();
+  const db = require('../boss_db.json');
+  const store = {snapshots:[
+    {characterName:'나', preset:'00000', fetchedAt:'2026-11-06T15:34:35.183Z', rates:[{bossId:'Will|Hard', percent:150.5}, {bossId:'Lucid|Hard', percent:0}, {bossId:'Will|Normal', percent:400}]},
+    {characterName:'남', preset:'00000', rates:[{bossId:'Will|Hard', percent:999}]}
+  ]};
+  const own = engine.collectSharedRates('나', store);
+  // 0%(입장 불가)는 배율로 쓰지 않는다.
+  assert.deepEqual({...own.rates}, {'Will|Hard':150.5, 'Will|Normal':400});
+  assert.equal(engine.collectSharedRates('없는캐릭터', store).registered, false);
+  engine.setBosses([{name:'윌', diff:'하드', mult:80, on:true}, {name:'루시드', diff:'하드', mult:90, on:true}].map((b, i) => ({id:'b' + i, extra:0, ...b})));
+  engine.setSharedRates(db, own);
+  const mult = name => engine.activeItems().find(item => item.name === name).mult;
+  // 공용 기록이 있으면 공용 값, 없으면 이 화면에 저장한 값을 쓴다.
+  assert.equal(mult('윌'), 150.5);
+  assert.equal(mult('루시드'), 90);
+  let [will, lucid] = engine.listRows();
+  assert.match(will, /class="row-input row-mult" data-tooltip="공용 환산 배율" data-tooltip-value="150.5%" data-tooltip-note="11월 7일 기록/);
+  assert.match(will, /class="rate-shared"/);
+  assert.match(lucid, /data-tooltip="이 화면에 입력한 배율"/);
+  assert.doesNotMatch(will, /rate-reset/);
+  // 직접 고치면 그 값이 우선하고, 이름 옆에 공용으로 되돌리기 버튼이 생긴다.
+  engine.inputBossMult(0, 120);
+  assert.equal(mult('윌'), 120);
+  [will] = engine.listRows();
+  assert.match(will, /data-act="shared"[^>]*aria-label="윌 배율을 공용 환산 배율 150.5%로 되돌리기"/);
+  assert.match(will, /data-tooltip="직접 입력한 배율"/);
+  // 다른 난이도로 바꾸면 그 난이도의 공용 값을 쓰고, 돌아오면 직접 고친 값을 기억한다.
+  engine.changeDifficulty('윌', '노멀');
+  assert.equal(mult('윌'), 400);
+  engine.changeDifficulty('윌', '하드');
+  assert.equal(mult('윌'), 120);
+  engine.clickBoss('윌', 'shared');
+  assert.equal(mult('윌'), 150.5);
+  assert.equal(engine.boss('윌').mult, 150.5);
+  // 소요 시간을 고쳐도 직접 입력으로 보고, 목록 관리의 일괄 되돌리기로 공용 값을 다시 쓴다.
+  engine.inputBossTime(0, 10);
+  assert.equal(engine.boss('윌').manual, true);
+  engine.useSharedAll();
+  assert.equal(engine.boss('윌').manual, false);
+  assert.equal(mult('윌'), 150.5);
+  // 파티 환산 합계가 가장 우선한다.
+  engine.setPartyRates(db, {'Will|Hard':{total:300, name:'파티', count:2, id:'', scope:'local'}});
+  assert.equal(mult('윌'), 300);
 });
