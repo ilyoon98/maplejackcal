@@ -753,3 +753,38 @@ test('목록 위 상태는 스케줄러 등록 수와 배율 출처를 짧은 �
   // 예전처럼 긴 문장으로 쓰지 않는다.
   assert.doesNotMatch(html, /배율 기본값으로 씁니다/);
 });
+
+test('버프 수가 같으면 파티 보스와 혼자 도는 보스를 한 버프에 섞지 않는다', () => {
+  const engine = loadPlanner();
+  // 파티 900초·800초, 혼자 850초·750초. 어느 쪽으로 묶어도 버프 2개이므로 파티끼리, 혼자끼리 묶는다.
+  const make = (full, party) => ({full, riceSec:full, rice:false, party:party ? '파티' : ''});
+  for (const items of [[make(900, true), make(850, false), make(800, true), make(750, false)], [make(850, false), make(900, true), make(750, false), make(800, true)]]) {
+    const result = engine.packAll(items, 1800);
+    assert.equal(result.bins.length, 2);
+    for (const bin of result.bins) {
+      const parties = bin.idx.filter(i => items[i].party).length;
+      assert.ok(parties === 0 || parties === bin.idx.length, 'party and solo mixed: ' + JSON.stringify(bin.idx));
+    }
+  }
+  // 섞어야만 버프가 줄어들면 버프 수를 우선한다.
+  const tight = [make(1000, true), make(700, false)];
+  assert.equal(engine.packAll(tight, 1800).bins.length, 1);
+});
+
+test('전체 동선에서 파티 보스는 버프 안에서 먼저 이어서 돌고 파티가 있는 버프를 먼저 보여준다', () => {
+  const engine = loadPlanner();
+  const db = require('../boss_db.json');
+  engine.setBosses([
+    {name:'윌', diff:'하드', mult:200, on:true},
+    {name:'루시드', diff:'하드', mult:400, on:true},
+    {name:'스우', diff:'하드', mult:100, on:true},
+    {name:'데미안', diff:'하드', mult:400, on:true},
+  ].map((b, i) => ({id:'b' + i, extra:0, ...b})));
+  // 스우·데미안은 파티. 윌 10분, 루시드 5분, 스우(파티 400%) 5분, 데미안(파티 400%) 5분 → 한 버프에 들어간다.
+  engine.setPartyRates(db, {'Lotus|Hard':{total:400, name:'스우팟', count:2, id:'p1', scope:'local'}, 'Damien|Hard':{total:400, name:'데미팟', count:2, id:'p2', scope:'local'}});
+  engine.renderAll();
+  const {pack} = engine.results();
+  const route = [...pack.matchAll(/<li class="stop">.*?<span class="nm">([^<]+)</g)].map(m => m[1].trim());
+  assert.deepEqual(route.slice(0, 2).sort(), ['데미안', '스우']);
+  assert.deepEqual(route.slice(2), ['윌', '루시드']);
+});

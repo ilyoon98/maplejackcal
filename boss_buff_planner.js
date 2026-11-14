@@ -117,6 +117,19 @@
   var MAX_ENUM = 20;         // 조합 전수조사 한계(2^n).
   var BIN_W = 1000000;       // DP 점수: 버프 한 개 = 100만점. 남는 초 단위 비교보다 항상 우선한다.
   var INF = 0x3fffffff;
+  // 파티 보스와 혼자 도는 보스를 한 버프에 섞으면 파티 도중에 혼자 돌러 가야 하므로, 버프 수가 같으면 섞지 않는 쪽을 고른다.
+  // 버프 수와 쌀도핑→풀도핑 전환보다는 뒤, 실제 사용 시간보다는 앞에서 비교한다.
+  var PARTY_MIX_W = 10000;
+  function isPartyItem(item) { return !!(item && item.party); }
+  function partyMixPenalty(sub, partyMask, bits) {
+    var parties = bits[sub & partyMask];
+    return parties && parties < bits[sub] ? PARTY_MIX_W : 0;
+  }
+  function partyMaskOf(idxList, items) {
+    var mask = 0;
+    idxList.forEach(function (k, j) { if (isPartyItem(items[k])) mask |= 1 << j; });
+    return mask;
+  }
 
   var profiles = [];
   var activeProfile = '';
@@ -272,7 +285,7 @@
     var fullSums = subsetSums(idxList, items, true);
     var riceSums = subsetSums(idxList, items, false);
     var bits = popcounts(total);
-    var riceMask = 0;
+    var riceMask = 0, partyMask = partyMaskOf(idxList, items);
     idxList.forEach(function (k, j) { if (items[k].rice) riceMask |= 1 << j; });
     var PROMO_W = 1e7, MIX_BIN_W = 1e12;
     var binScore = new Float64Array(total);
@@ -284,6 +297,7 @@
       if (promo === bits[s] && rc <= cap) binScore[s] = rc;          // 전부 쌀도핑 보스면 쌀도핑 판이 우선
       else if (fc <= cap) { binScore[s] = promo * PROMO_W + fc; isFull[s] = 1; }
       else binScore[s] = Infinity;
+      if (binScore[s] !== Infinity) binScore[s] += partyMixPenalty(s, partyMask, bits);
     }
     var dp = new Float64Array(total);
     var pick = new Int32Array(total);
@@ -328,6 +342,7 @@
     var total = 1 << n;
     var sums = subsetSums(idxList, items, full);
     var bits = popcounts(total);
+    var partyMask = partyMaskOf(idxList, items);
     var dp = new Int32Array(total);
     var pick = new Int32Array(total);
     for (var mask = 1; mask < total; mask++) {
@@ -339,7 +354,7 @@
         var c = costOf(sums[sub], bits[sub]);
         if (c > cap) continue;
         // 점수 = 버프 개수 × BIN_W + 실제 사용 시간. 버프 수가 우선, 같으면 시간이 짧은 쪽.
-        var cand = dp[mask ^ sub] + BIN_W + c;
+        var cand = dp[mask ^ sub] + BIN_W + c + partyMixPenalty(sub, partyMask, bits);
         if (cand < dp[mask]) { dp[mask] = cand; pick[mask] = sub; }
       }
     }
@@ -359,7 +374,8 @@
   }
   // 같은 도핑 그룹에서 오래 걸리는 보스부터 채우는 근사 계산.
   function packGreedy(idxList, items, cap, full) {
-    var sorted = idxList.slice().sort(function (a, b) { return secIn(items[b], full) - secIn(items[a], full); });
+    // 파티 보스를 먼저 채워 같은 버프에 모이게 한다.
+    var sorted = idxList.slice().sort(function (a, b) { return (isPartyItem(items[b]) - isPartyItem(items[a])) || (secIn(items[b], full) - secIn(items[a], full)); });
     var bins = [], used = [];
     sorted.forEach(function (i) {
       var sec = secIn(items[i], full);
@@ -659,11 +675,13 @@
     var res = packAll(items, cap);
     var bins = res.bins.slice();
     bins.forEach(function (bin) {
-      bin.idx.sort(function (a, b) { return secIn(items[b], bin.full) - secIn(items[a], bin.full); });
+      // 한 버프 안에서는 파티 보스를 먼저 이어서 돌고, 그다음 혼자 도는 보스를 돈다.
+      bin.idx.sort(function (a, b) { return (isPartyItem(items[b]) - isPartyItem(items[a])) || (secIn(items[b], bin.full) - secIn(items[a], bin.full)); });
       bin.sec = binCost(bin, items);
+      bin.party = bin.idx.some(function (k) { return isPartyItem(items[k]); });
     });
-    // 풀도핑 판을 먼저, 그 안에서는 빡빡한 판부터.
-    bins.sort(function (a, b) { return (b.full - a.full) || (b.sec - a.sec); });
+    // 파티 보스가 있는 버프를 먼저, 그다음 풀도핑 판, 그 안에서는 빡빡한 판부터.
+    bins.sort(function (a, b) { return (b.party - a.party) || (b.full - a.full) || (b.sec - a.sec); });
 
     var usedSec = bins.reduce(function (a, bin) { return a + bin.sec; }, 0);
     var clearSec = bins.reduce(function (a, bin) { return a + binSec(bin, items); }, 0);
