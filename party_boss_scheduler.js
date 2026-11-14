@@ -627,7 +627,8 @@
         if(done)button.classList.add('party-list-done');
         // 같은 보스 파티가 여러 개면 보스 이름으로는 구분이 안 되므로, 보스는 아이콘과 난이도로만 보여주고
         // 제목에는 직접 지은 파티 이름을 쓰고, 없으면 파티원 이름으로 자동 이름을 만든다.
-        // 자동 이름: 1명은 이름 전체, 2명은 3글자씩, 3명은 2글자씩, 4명 이상은 1글자씩. 순서는 본캐 먼저, 그다음 딜 비중 순.
+        // 자동 이름: 1명은 이름 전체, 2명은 3글자씩, 3명은 2글자씩, 4명 이상은 1글자씩을 쉼표로 잇는다. 순서는 본캐 먼저, 그다음 딜 비중 순.
+        // 목록 폭이 좁아 잘릴 수 있으므로, 마우스를 올리면 전체 이름과 파티원을 툴팁으로 보여준다.
         var ordered=orderedMembers(p.members,mains),lead=ordered[0]||null;
         var custom=p.name!==boss.label,identity=visual.create(doc,p.bossId,win.MapleBossDB);
         identity.querySelector('span:not(.diff-badge)')?.classList.add('sr-only');
@@ -637,6 +638,11 @@
           var short=node('span','',accounts.partyTitle(ordered.map(function(m){return {name:m.character.name};})));
           short.setAttribute('aria-hidden','true');
           title.append(short,node('span','sr-only',ordered.map(function(m){return m.character.name;}).join(', ')));
+        }
+        if(ordered.length){
+          var fullNames=ordered.map(function(m){return m.character.name;}).join(', ');
+          title.dataset.tooltip=custom?p.name:fullNames;
+          if(custom)title.dataset.tooltipNote=fullNames;
         }
         identity.append(title);
         // 한 줄에 들어가도록 대표 캐릭터와 미등록 인원은 화면 읽기용으로만 두고, 상세에서 보여준다.

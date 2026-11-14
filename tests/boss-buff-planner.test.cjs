@@ -698,7 +698,7 @@ test('이름 없는 파티는 본캐 먼저 배율 순으로 자동 이름을 �
   const shared = [{id:'party-1', name:'하드 윌', bossId:'Will|Hard', members:['딜러친구', '나의부캐', '나의본캐']}];
   const party = engine.collectPartyRates('나의부캐', [], shared, store).rates['Will|Hard'];
   // 본캐가 먼저, 그다음 배율이 높은 순이다. 3명이라 2글자씩 잇는다.
-  assert.equal(party.name, '나의딜러나의');
+  assert.equal(party.name, '나의,딜러,나의');
   assert.deepEqual(party.members.map(m => [m.name, m.main, m.me]), [['나의본캐', true, false], ['딜러친구', false, false], ['나의부캐', false, true]]);
   // 공유 저장소에 있던 잘못된 이미지 주소는 버린다.
   assert.equal(party.members[1].image, '');
@@ -706,7 +706,7 @@ test('이름 없는 파티는 본캐 먼저 배율 순으로 자동 이름을 �
   engine.setPartyRates(require('../boss_db.json'), {'Will|Hard':{...party, scope:'shared'}});
   const row = engine.listRows()[0].match(/<div class="row-party">.*?<\/div>/)[0];
   const attr = name => row.match(new RegExp(' ' + name + '="([^"]*)"'))[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&');
-  assert.equal(attr('data-tooltip'), '나의딜러나의 파티');
+  assert.equal(attr('data-tooltip'), '나의,딜러,나의 파티');
   assert.equal(attr('data-tooltip-value'), '3명 · 환산 합계 130%');
   const items = JSON.parse(attr('data-tooltip-items'));
   assert.deepEqual(items.map(item => [item.name, item.note, item.value, item.tags]), [

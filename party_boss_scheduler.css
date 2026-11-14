@@ -15,7 +15,8 @@
 .party-app .party-view-state p{margin:0}
 .party-app .party-filter-results{margin-top:16px}
 .party-app .party-filter-results .ux-button{display:grid;align-content:center;gap:4px;overflow-wrap:anywhere}
-.party-board{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start}
+/* 목록 제목(파티 이름)이 잘리지 않도록 목록 칸에 폭을 넉넉히 준다. */
+.party-board{display:grid;grid-template-columns:380px minmax(0,1fr);gap:16px;align-items:start}
 .party-content{display:grid;gap:14px;min-width:0}
 /* 파티가 늘어나도 페이지가 길어지지 않도록 목록은 화면 높이 안에서만 스크롤한다. */
 .party-list-pane{position:sticky;top:16px;display:grid;gap:8px;min-width:0}
@@ -156,7 +157,7 @@
 .party-search .boss-section-head{margin-bottom:12px}
 
 @media(max-width:900px){
-  .party-board{grid-template-columns:280px minmax(0,1fr)}
+  .party-board{grid-template-columns:300px minmax(0,1fr)}
   .party-member{--portrait-size:112px}
 }
 @media(max-width:760px){

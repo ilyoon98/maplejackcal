@@ -31,12 +31,12 @@
       return (score(b.m)-score(a.m))||a.i-b.i;
     }).map(function(x){return x.m;});
   }
-  // 이름 없는 파티의 자동 이름: 1명은 이름 전체, 여러 명은 여섯 글자 폭을 나눠 앞글자를 잇는다(2명 3글자, 3명 2글자, 4명 이상 1글자).
+  // 이름 없는 파티의 자동 이름: 1명은 이름 전체, 여러 명은 여섯 글자 폭을 나눠 앞글자를 쉼표로 잇는다(2명 3글자, 3명 2글자, 4명 이상 1글자).
   function partyTitle(members,mains){
     var ordered=partyOrder(members||[],mains);
     if(ordered.length<2)return ordered[0]?ordered[0].name:'';
     var size=Math.max(1,Math.floor(6/ordered.length));
-    return ordered.map(function(m){return Array.from(m.name).slice(0,size).join('');}).join('');
+    return ordered.map(function(m){return Array.from(m.name).slice(0,size).join('');}).join(',');
   }
   function accountId(store,name){var found=(store.accounts||[]).find(function(a){return a.characters.some(function(c){return (typeof c==='string'?c:c.name)===name;});});return found?found.id:'character:'+name;}
   function conflict(store,members,name){var id=accountId(store,name);return members.some(function(m){return accountId(store,m.character.name)===id;});}

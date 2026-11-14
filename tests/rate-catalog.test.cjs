@@ -91,7 +91,7 @@ test('삭제는 현재 revision일 때만 캐릭터를 숨기고 같은 닉네�
  const handler=createHandler(createStore({command:backend()}),{});const created=await call(handler,'POST',{snapshot:snapshot('핸들러'),expectedRevision:''});
  const removed=await call(handler,'POST',{action:'delete',characterName:'핸들러',expectedRevision:created.body.snapshot.revision});assert.equal(removed.status,200);assert.equal(removed.body.deleted,true);
 });
-test('이름 없는 파티의 자동 이름은 본캐 먼저, 그다음 배율 순으로 인원수에 맞춰 앞글자를 잇는다',()=>{
+test('이름 없는 파티의 자동 이름은 본캐 먼저, 그다음 배율 순으로 인원수에 맞춰 앞글자를 쉼표로 잇는다',()=>{
  const account=require('../account_catalog.js');const now=Date.now()-1000;
  const profile=(name,level)=>({name,profile:{name,world:'루나',job:'비숍',level,updatedAt:now}});
  const store={snapshots:[],accounts:[{id:'one',label:'',characters:[profile('높은본캐다',290),profile('낮은부캐요',260)]},{id:'two',label:'친구본캐',characters:['친구부캐','친구본캐']}]};
@@ -100,8 +100,8 @@ test('이름 없는 파티의 자동 이름은 본캐 먼저, 그다음 배율 �
  assert.deepEqual([...mains].sort(),['높은본캐다','친구본캐']);
  const title=list=>account.partyTitle(list.map(([name,rate])=>({name,rate})),mains);
  assert.equal(title([['혼자서가는캐릭터',10]]),'혼자서가는캐릭터');
- assert.equal(title([['낮은부캐요',90],['높은본캐다',10]]),'높은본낮은부');
- assert.equal(title([['가나다라',50],['마바사아',null],['친구본캐',1]]),'친구가나마바');
- assert.equal(title([['가',1],['나',6],['다',5],['라',4],['마',3],['바',2]]),'나다라마바가');
- assert.equal(title([['abcd',3],['efgh',2],['ijkl',1],['mnop',4]]),'maei');
+ assert.equal(title([['낮은부캐요',90],['높은본캐다',10]]),'높은본,낮은부');
+ assert.equal(title([['가나다라',50],['마바사아',null],['친구본캐',1]]),'친구,가나,마바');
+ assert.equal(title([['가',1],['나',6],['다',5],['라',4],['마',3],['바',2]]),'나,다,라,마,바,가');
+ assert.equal(title([['abcd',3],['efgh',2],['ijkl',1],['mnop',4]]),'m,a,e,i');
 });
