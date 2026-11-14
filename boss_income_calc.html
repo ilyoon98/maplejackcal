@@ -232,6 +232,7 @@
   .tool-btn{ padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text); cursor:pointer; font:inherit; font-size:.8rem; }
   .tool-btn:hover{ border-color:var(--accent); }
   .tool-btn:disabled{ opacity:.45; cursor:default; }
+  .tool-btn[aria-pressed="true"]{ border-color:var(--accent); background:#1d2c44; color:#e4efff; }
   button:focus-visible, input:focus-visible, .char-chip:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
   .summary-stat .v{ font-variant-numeric:tabular-nums; }
   .note:empty{ display:none; }
@@ -469,10 +470,12 @@
     <p class="note">보스 이름·아이콘을 누르면 완료 상태가 바뀝니다. 난이도·인원 변경은 완료 상태를 유지합니다.</p>
     <p class="note" id="bossAddNote"></p>
     <div class="boss-toolbar">
+      <button type="button" class="tool-btn" id="bossViewBtn" aria-pressed="false">전체 보스 보기</button>
       <button type="button" class="tool-btn" id="presetBtn">검밑솔 12보스 적용</button>
       <button type="button" class="tool-btn" id="clearBossBtn">선택 캐릭터 보스 초기화</button>
     </div>
 
+    <p class="note" id="bossViewNote"></p>
     <div class="boss-list" id="bossList"></div>
 
   </section>
@@ -1357,11 +1360,26 @@
   var bossAddNote = document.getElementById('bossAddNote');
   var weeklyQuota = document.getElementById('weeklyQuota');
   var bossList = document.getElementById('bossList');
+  // 보스 목록은 기본으로 이 캐릭터가 체크한 보스만 원래 순서대로 보여준다. 정렬하지 않아 누르는 중에 행이 움직이지 않는다.
+  // 보는 중에 체크를 푼 보스는 캐릭터·보기를 바꾸거나 프리셋·초기화를 쓰기 전까지 같은 자리에 남긴다.
+  var LS_BOSS_VIEW = 'boss_income_boss_view';
+  var bossView = lsGet(LS_BOSS_VIEW) === 'all' ? 'all' : 'mine';
+  var bossViewBtn = document.getElementById('bossViewBtn');
+  var bossViewNote = document.getElementById('bossViewNote');
+  var keptBosses = new Set(), keptFor = null;
+  function resetKeptBosses(){ keptBosses = new Set(); keptFor = null; }
+  function visibleBosses(ch){
+    if (keptFor !== ch) { keptBosses = new Set(); keptFor = ch; }
+    var mine = DISPLAY_BOSSES.filter(function(b){ return ch.bosses[b.name] || keptBosses.has(b.name); });
+    if (bossView === 'all' || !mine.length) return DISPLAY_BOSSES;
+    return mine;
+  }
 
   function toggleDiff(ch, bossIdx, diffIdx){
     var boss = BOSS_BY_NAME[bossIdx];
     var existing = ch.bosses[bossIdx];
     if (existing && existing.diffIdx === diffIdx){
+      if (bossView === 'mine') { if (keptFor !== ch) { keptBosses = new Set(); keptFor = ch; } keptBosses.add(bossIdx); }
 
       delete ch.bosses[bossIdx];
       bossAddNote.textContent = '';
@@ -1384,12 +1402,21 @@
   function renderBossList(){
     var ch = characters[activeIdx];
     var atCap = weeklyCount(ch) >= WEEKLY_CAP;
+    var shown = visibleBosses(ch), registered = Object.keys(ch.bosses).length, filtered = shown.length < DISPLAY_BOSSES.length;
+    bossViewBtn.hidden = !registered && !keptBosses.size;
+    bossViewBtn.setAttribute('aria-pressed', String(bossView === 'all'));
+    bossViewBtn.textContent = bossView === 'all' ? '등록 보스만 보기' : '전체 보스 보기';
+    bossViewNote.textContent = filtered ? '체크한 보스 ' + registered + '마리만 보여줍니다. 다른 보스를 추가하려면 전체 보스 보기를 누르세요.'
+      : !registered ? '체크한 보스가 없어 전체 보스를 보여줍니다.' : '';
     bossList.innerHTML = '';
-    DISPLAY_BOSSES.forEach(function(boss, position){
-      if (position === 0 || boss.monthly){
+    var lastSection = '';
+    shown.forEach(function(boss){
+      var section = boss.monthly ? '월간 보스' : '주간 보스';
+      if (section !== lastSection){
+        lastSection = section;
         var heading = document.createElement('h3');
         heading.className = 'boss-section-title';
-        heading.textContent = boss.monthly ? '월간 보스' : '주간 보스';
+        heading.textContent = section;
         bossList.appendChild(heading);
       }
       var bossIdx = boss.name;
@@ -1490,8 +1517,15 @@
     renderOverall();
   }
 
+  bossViewBtn.addEventListener('click', function(){
+    bossView = bossView === 'all' ? 'mine' : 'all';
+    lsSet(LS_BOSS_VIEW, bossView === 'all' ? 'all' : '');
+    resetKeptBosses();
+    renderAll();
+  });
   document.getElementById('clearBossBtn').addEventListener('click', function(){
     if (activeIdx < 0 || !Object.keys(characters[activeIdx].bosses).length) return;
+    resetKeptBosses();
     characters[activeIdx].bosses = {};
     bossAddNote.textContent = '';
     saveState(); renderAll();
@@ -1509,6 +1543,7 @@
   }
   document.getElementById('presetBtn').addEventListener('click', function(){
     if (activeIdx < 0) return;
+    resetKeptBosses();
     applyPreset(characters[activeIdx]);
     bossAddNote.textContent = '';
     saveState(); renderAll();

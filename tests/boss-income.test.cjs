@@ -24,7 +24,7 @@ const context = {
 vm.createContext(context);
 vm.runInContext(script.replace(/  renderAll\(\);\s*autoRefreshCharacterCompletions\(\);\s*hydrateMissingCharacterProfiles\(\);\s*\}\)\(\);\s*$/, `
   globalThis.engine = {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag, describeApiError, BOSS_DATA, validParty, escapeHtml, characterBossIcon, weeklyCompletionHtml,
-    partyControlsHtml, characterWeeklyIncomeHtml, allWeeklyComplete, apiLinkBadgeHtml, characterProfileHtml, reorderCharacters, normalizeCharacterImage, syncSchedulerBosses, describeSyncChanges,
+    partyControlsHtml, characterWeeklyIncomeHtml, allWeeklyComplete, apiLinkBadgeHtml, characterProfileHtml, reorderCharacters, normalizeCharacterImage, syncSchedulerBosses, describeSyncChanges, visibleBosses, setBossView(v){ bossView = v; resetKeptBosses(); },
     changeDifficulty(ch, name, diff) {
       var original = renderAll;
       renderAll = function(){};
@@ -384,4 +384,29 @@ test('스케줄러 갱신은 등록 보스를 더하고 빠진 스케줄러 보�
   // 자동 갱신은 완료만, 버튼은 전체 동기화를 쓴다.
   assert.match(script, /schedulerRefreshAllBtn\.addEventListener\('click', function\(\)\{ refreshAllCharacterCompletions\(true\); \}\)/);
   assert.match(script, /if \(hasSchedulerTargets\) refreshAllCharacterCompletions\(\);/);
+});
+
+test('보스 목록은 기본으로 체크한 보스만 원래 순서대로 보여주고 체크를 풀어도 그 자리에 남긴다', () => {
+  const diff = (name, label) => BOSS_DATA.find(b => b.name === name).diffs.findIndex(d => d.label === label);
+  const names = ch => [...context.engine.visibleBosses(ch)].map(b => b.name);
+  const ch = normalizeCharacter({name:'나', bosses:{
+    '루시드':{diffIdx:diff('루시드', '하드'), party:1}, '윌':{diffIdx:diff('윌', '하드'), party:1}, '검은 마법사':{diffIdx:diff('검은 마법사', '하드'), party:1},
+  }});
+  context.engine.setBossView('mine');
+  // 체크한 순서가 아니라 화면의 원래 순서를 따른다.
+  assert.deepEqual(names(ch), ['윌', '루시드', '검은 마법사']);
+  // 체크를 풀어도 행이 사라지지 않아 바로 다시 체크할 수 있다.
+  context.engine.changeDifficulty(ch, '윌', diff('윌', '하드'));
+  assert.equal(ch.bosses['윌'], undefined);
+  assert.deepEqual(names(ch), ['윌', '루시드', '검은 마법사']);
+  // 다른 캐릭터를 보면 남겨 둔 행은 정리된다.
+  const other = normalizeCharacter({name:'부캐', bosses:{'윌':{diffIdx:diff('윌', '노멀'), party:1}}});
+  assert.deepEqual(names(other), ['윌']);
+  assert.deepEqual(names(ch), ['루시드', '검은 마법사']);
+  // 체크한 보스가 없으면 전체를, 전체 보기에서는 모든 보스를 보여준다.
+  assert.equal(names(normalizeCharacter({name:'새캐', bosses:{}})).length, BOSS_DATA.length);
+  context.engine.setBossView('all');
+  assert.equal(names(ch).length, BOSS_DATA.length);
+  context.engine.setBossView('mine');
+  assert.match(html, /id="bossViewBtn" aria-pressed="false">전체 보스 보기</);
 });
