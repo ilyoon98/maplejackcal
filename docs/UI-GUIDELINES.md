@@ -154,7 +154,7 @@
 | --- | --- |
 | [파티 보스 스케줄러](../party_boss_scheduler.html) | 파티 목록과 상세의 배지, 보스 선택 창의 선택 버튼 |
 | [공용 환산 배율](../shared_boss_rates.html) | 배율표와 보스 선택의 배지 |
-| [보스 동선](../boss_buff_planner.html) | 보스 목록의 드롭다운, 캡처 인식 결과의 배지 |
+| [보스 동선](../boss_buff_planner.html) | 보스 목록의 드롭다운 |
 | [보스 수익 정산](../boss_income_calc.html) | 보스 목록의 촘촘한 선택 버튼, 캐릭터 요약 아이콘의 표식 |
 | [어센틱 심볼](../authentic_symbol_calc.html) | 목표 보스의 선택 버튼과 요구 포스 |
 

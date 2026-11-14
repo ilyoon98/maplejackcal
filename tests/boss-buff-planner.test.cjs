@@ -73,13 +73,6 @@ function loadPlanner(options = {}) {
       showAll() { document.getElementById('showAllBossesBtn').handlers.click(); },
       allOn() { document.getElementById('allOn').handlers.click(); },
       allOff() { document.getElementById('allOff').handlers.click(); },
-      async readShot(results) {
-        window.BossShotReader = globalThis.BossShotReader = {readBlob:() => Promise.resolve(results)};
-        await readShot({type:'image/png'});
-        return shotRows;
-      },
-      shotPreview() { return shotResult.innerHTML; },
-      shotStatus() { return shotStatus.textContent; },
       addProfile(name, character) { profiles.push({name, character, state:JSON.parse(JSON.stringify(state))}); renderProfiles(); },
       clickProfile(name) { const i = profiles.findIndex(p => p.name === name); profileBar.children[i].children[0].handlers.click(); },
       setCharacterPicker(selectCharacter) { characterPicker = {selectCharacter}; },
@@ -91,7 +84,6 @@ function loadPlanner(options = {}) {
       schedulerLoading() { return refreshSchedulerBtn.disabled; },
       fetching() { return fetchBtn.disabled; },
       searchButton() { return fetchBtn; },
-      applyShot,
       packAll,
       binCost,
       renderAll,
@@ -105,6 +97,7 @@ function loadPlanner(options = {}) {
       },
       boss(name) { return state.bosses.find(b => b.name === name); },
       useSharedAll() { document.getElementById('useSharedAll').handlers.click(); },
+      sharedCta() { return {text:document.getElementById('sharedRateCtaText').textContent, link:document.getElementById('sharedRateLink').textContent, href:document.getElementById('sharedRateLink').href}; },
       results() { return {pack:packEl.innerHTML, combos:comboEl.innerHTML}; },
     };
   })();`), context);
@@ -315,32 +308,6 @@ test('다시 불러올 때 배율은 같은 난이도일 때만 이어 쓴다', 
   assert.equal(bosses[1].mult, 1073);
 });
 
-test('스크린샷 배율은 소수 둘째 자리와 1% 미만을 유지하고, 다른 난이도·불확실한 값은 제외한다', async () => {
-  const engine = loadPlanner();
-  engine.setBosses([
-    {name:'스우', diff:'익스트림', mult:100},
-    {name:'찬란한 흉성', diff:'노멀', mult:100},
-    {name:'최초의 대적자', diff:'익스트림', mult:100},
-    {name:'검은 마법사', diff:'익스트림', mult:100},
-    {name:'윌', diff:'하드', mult:1006},
-  ].map(b => ({...b, on:true})));
-  const row = (name, diff, value) => ({name, diff, value, score:1, scale:1.5, thumb:''});
-  await engine.readShot([
-    row('스우', '익스트림', 43.10), row('찬란한 흉성', '노멀', 26.13),
-    row('최초의 대적자', '익스트림', 0.42), row('검은 마법사', '하드', 362.3),
-    row('윌', '하드', null),
-  ]);
-  assert.match(engine.shotPreview(), /value="26.13"/);
-  assert.match(engine.shotPreview(), /value="0.42"/);
-  engine.applyShot();
-  assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [43.1, 26.13, 0.42, 100, 1006]);
-  // 캡처로 넣은 배율은 직접 입력으로 보고 공용 환산 배율보다 우선한다. 읽지 못한 윌은 그대로다.
-  assert.deepEqual(Array.from(engine.bosses(), b => !!b.manual), [true, true, true, false, false]);
-  engine.reload();
-  assert.deepEqual(['스우','찬란한 흉성','최초의 대적자','검은 마법사','윌'].map(name => engine.bosses().find(b => b.name === name).mult),
-    [43.1, 26.13, 0.42, 100, 1006]);
-});
-
 test('전체 보스 설정을 보관하되 첫 목록과 동선에는 기본 12보스만 표시한다', () => {
   const engine = loadPlanner();
   assert.equal(engine.bosses().length, 25);
@@ -474,67 +441,6 @@ test('전체 보기를 바꿔도 계산·배율은 유지하며 전체 포함은
   engine.clickBoss('벨로나', 'on');
   assert.equal(engine.visibleBosses().length, 2);
   assert.equal(engine.bosses().find(b => b.name === '스우').mult, 2582);
-});
-
-test('가려진 카드의 예전 배율은 유지한다고 안내하고 인식한 값만 적용한다', async () => {
-  const engine = loadPlanner();
-  engine.setBosses([
-    {name:'벨로나', diff:'이지', mult:60016, on:true},
-    {name:'선택받은 세렌', diff:'하드', mult:17679, on:true},
-    {name:'더스크', diff:'카오스', mult:641506, on:true},
-    {name:'윌', diff:'하드', mult:10176, on:true},
-  ]);
-  await engine.readShot([
-    {name:'벨로나', diff:'이지', value:null, covered:true, score:1, scale:1, thumb:''},
-    {name:'선택받은 세렌', diff:'하드', value:244.5, score:1, scale:1, thumb:''},
-    {name:'더스크', diff:'카오스', value:1175, score:1, scale:1, thumb:''},
-    {name:'윌', diff:'하드', value:1395, score:1, scale:1, thumb:''},
-  ]);
-  assert.match(engine.shotPreview(), /기존 60016%는 유지/);
-  assert.match(engine.shotStatus(), /툴팁/);
-  engine.applyShot();
-  assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [60016, 244.5, 1175, 1395]);
-  assert.match(engine.shotStatus(), /읽지 못한 1개는 적용하지 않았으며 기존 배율이 유지/);
-});
-
-test('첨부 스크린샷을 넣으면 벨로나 60016%와 카링 14809%를 실제 소수점 배율로 교체한다', async () => {
-  const {decodePng} = require('./helpers/png-rgba.cjs');
-  require('../boss_shot_reader.js');
-  const reader = globalThis.BossShotReader;
-  const shot = decodePng(path.join(__dirname, 'fixtures/boss_shot_small.png'));
-  const recognized = reader.analyze(shot, reader.siteRefs());
-  const engine = loadPlanner();
-  engine.setBosses([
-    {name:'벨로나', diff:'이지', mult:60016, on:true},
-    {name:'카링', diff:'이지', mult:14809, on:true},
-  ]);
-  await engine.readShot(recognized);
-  assert.match(engine.shotPreview(), /value="176.4"/);
-  assert.match(engine.shotPreview(), /value="209.7"/);
-  engine.applyShot();
-  assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [176.4, 209.7]);
-  engine.reload();
-  assert.equal(engine.bosses().find(b => b.name === '벨로나').mult, 176.4);
-  assert.equal(engine.bosses().find(b => b.name === '카링').mult, 209.7);
-});
-
-test('스크린샷에서 내 목록에 없는 보스는 뒤로 접어 두고 기본으로 넣지 않는다', async () => {
-  const engine = loadPlanner();
-  engine.setBosses([
-    {name:'벨로나', diff:'이지', mult:100, on:true},
-    {name:'림보', diff:'노멀', mult:100, on:false, inList:false, registered:false},
-    {name:'카링', diff:'이지', mult:100, on:false, inList:false, registered:true},
-  ]);
-  const row = (name, diff, value) => ({name, diff, value, score:1, scale:1.25, thumb:''});
-  await engine.readShot([row('림보', '노멀', 10.85), row('벨로나', '이지', 207.1), row('카링', '이지', 244.7)]);
-  const html = engine.shotPreview();
-  assert.match(html, /내 보스 2개를 찾았습니다 · 내 목록에 없는 보스 1개/);
-  // 림보는 접힌 묶음 안에 있고, 내 보스 두 줄이 앞에 온다.
-  const others = html.indexOf('id="shotOthers"');
-  assert.ok(others > html.indexOf('value="207.1"') && others > html.indexOf('value="244.7"') && others < html.indexOf('value="10.85"'));
-  assert.doesNotMatch(html, /스크린샷에 없는 내 보스/);
-  engine.applyShot();
-  assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [207.1, 100, 244.7]);
 });
 
 test('저장 배지를 누르면 캐릭터 선택기에 같은 이름·서버를 전달하고 오래된 조회 정보를 지운다', () => {
@@ -762,6 +668,8 @@ test('공용 환산 배율을 기본값으로 쓰고 직접 고친 배율이 우
   assert.match(will, /class="row-input row-mult" data-tooltip="공용 환산 배율" data-tooltip-value="150.5%" data-tooltip-note="11월 7일 기록/);
   assert.match(will, /class="rate-shared"/);
   assert.match(lucid, /data-tooltip="이 화면에 입력한 배율"/);
+  // 배율 캡처는 공용 환산 배율 화면에서 한다. 기록 없는 동선 보스가 있으면 그 수를 알리고 선택한 캐릭터로 연다.
+  assert.deepEqual({...engine.sharedCta()}, {text:'공용 환산 배율에 기록이 없는 동선 보스가 1개 있습니다. 캡처로 등록하면 이 동선과 파티에 함께 쓰입니다.', link:'공용 환산 배율에서 갱신', href:'shared_boss_rates.html?name=%EB%82%98'});
   assert.doesNotMatch(will, /rate-reset/);
   // 직접 고치면 그 값이 우선하고, 이름 옆에 공용으로 되돌리기 버튼이 생긴다.
   engine.inputBossMult(0, 120);
@@ -786,4 +694,16 @@ test('공용 환산 배율을 기본값으로 쓰고 직접 고친 배율이 우
   // 파티 환산 합계가 가장 우선한다.
   engine.setPartyRates(db, {'Will|Hard':{total:300, name:'파티', count:2, id:'', scope:'local'}});
   assert.equal(mult('윌'), 300);
+});
+
+test('공용 환산 배율에 없는 캐릭터는 캡처 등록을 안내하고 이 화면의 배율을 쓴다', () => {
+  const engine = loadPlanner();
+  engine.setBosses([{id:'b0', name:'윌', diff:'하드', mult:80, on:true, extra:0}]);
+  engine.setSharedRates(require('../boss_db.json'), engine.collectSharedRates('나', {snapshots:[]}));
+  engine.listRows();
+  assert.equal(engine.activeItems()[0].mult, 80);
+  assert.equal(engine.sharedCta().text, '공용 환산 배율에 나 캐릭터를 캡처로 등록하면 그 배율을 이 동선과 파티에 기본값으로 씁니다.');
+  assert.equal(engine.sharedCta().link, '공용 환산 배율에 등록');
+  // 스크린샷을 읽는 기능은 이 화면에서 뺐다.
+  assert(!require('node:fs').readFileSync(require('node:path').join(__dirname, '../boss_buff_planner.html'), 'utf8').includes('boss_shot_reader.js'));
 });

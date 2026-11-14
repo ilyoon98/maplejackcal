@@ -168,53 +168,13 @@
     .character-import-card.has-profile { grid-template-columns:minmax(0,1fr); }
     .buff-character-showcase { min-height:250px; }
   }
-  .shot-box { margin-bottom:16px; }
-  .shot-drop { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:14px; border:1px dashed #3a3f4b; border-radius:12px; background:#11141a; cursor:pointer; font-size:0.82rem; color:var(--text-dim); }
-  .shot-drop strong { color:var(--text); font-size:0.88rem; }
-  .shot-drop .shot-pick { margin-left:auto; border:1px solid var(--border); border-radius:999px; padding:5px 11px; font-weight:700; font-size:0.78rem; white-space:nowrap; }
-  .shot-drop:hover, .shot-drop.over { border-color:var(--accent); }
-  .shot-drop:hover .shot-pick, .shot-drop.over .shot-pick { border-color:var(--accent); color:var(--text); }
-  .shot-steps { flex-basis:100%; margin:2px 0 0; padding-left:20px; line-height:1.75; }
-  .shot-steps b { color:var(--text); }
-  .shot-foot { flex-basis:100%; font-size:0.74rem; }
-  .shot-drop:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-  .shot-box .fetch-status { margin:10px 0 0; }
-  #shotResult { margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:12px; background:#11141a; }
-  .shot-summary { font-size:0.8rem; color:var(--text-dim); margin-bottom:8px; }
-  .shot-row { display:grid; grid-template-columns:20px 30px minmax(0,1fr) 92px; gap:8px; align-items:center; padding:6px 0; border-top:1px solid var(--border); }
-  .shot-row input[type="checkbox"] { width:16px; height:16px; accent-color:var(--accent-strong); cursor:pointer; }
-  .shot-row > img { width:30px; height:30px; border-radius:6px; object-fit:cover; }
-  .shot-row input[type="number"] { width:100%; min-width:0; box-sizing:border-box; padding:5px 6px; border-radius:7px; border:1px solid var(--border); background:var(--card); color:var(--text); font:inherit; font-size:0.82rem; }
-  .shot-row input[type="number"] { font-variant-numeric:tabular-nums; }
-  .shot-row .shot-name { display:flex; flex-direction:column; gap:3px; min-width:0; }
-  .shot-row small { font-size:0.72rem; color:var(--text-dim); }
-  .shot-row small.warn { color:#e5b454; }
-  /* 메뉴까지 흐려지지 않게 줄 전체가 아니라 안쪽 요소만 흐린다. */
-  .shot-row.off > img, .shot-row.off .shot-pct, .shot-row.off small, .shot-row.off .shot-fixed, .shot-row.off .shot-pick-btn { opacity:0.55; }
-  .shot-fixed, .shot-pick-btn, .shot-opt { display:flex; align-items:center; gap:7px; min-width:0; }
-  .shot-face { width:24px; height:24px; border-radius:6px; object-fit:contain; flex:none; }
-  .shot-face.blank { display:inline-block; background:#22262f; }
-  .shot-bname { font-size:0.86rem; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .shot-bname.dim { color:var(--text-dim); font-weight:400; }
+  /* 배율 캡처 등록은 공용 환산 배율 화면에서 한다. 등록 안 된 캐릭터나 기록 없는 보스가 있으면 강조한다. */
+  .shared-rate-cta { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:0 0 16px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:#11141a; color:var(--text-dim); font-size:0.82rem; line-height:1.6; }
+  .shared-rate-cta .site-title-icon { flex:none; }
+  .shared-rate-cta span { flex:1 1 220px; }
+  .shared-rate-cta.attention { border-color:#4f74a8; background:#16202f; color:var(--text); }
+  body[data-ux-page] :is(.wrap, main) .shared-rate-cta a { display:inline-flex; align-items:center; margin-left:auto; color:var(--text); text-decoration:none; white-space:nowrap; }
   .diff-badge { margin-left:auto; }
-  .shot-pick-boss { position:relative; }
-  .shot-pick-btn { width:100%; box-sizing:border-box; padding:5px 8px; border-radius:7px; border:1px solid var(--border); background:var(--card); cursor:pointer; font:inherit; text-align:left; }
-  .shot-pick-btn:hover, .shot-pick-btn[aria-expanded="true"] { border-color:var(--accent); }
-  .shot-pick-btn .diff-badge { margin-left:auto; }
-  .shot-caret { color:var(--text-dim); font-size:0.75rem; flex:none; }
-  .shot-pick-btn .diff-badge + .shot-caret { margin-left:0; }
-  .shot-pick-btn .shot-bname.dim + .shot-caret { margin-left:auto; }
-  .shot-menu { position:absolute; z-index:20; left:0; right:0; top:calc(100% + 4px); max-height:260px; overflow-y:auto; padding:4px; border:1px solid var(--border); border-radius:9px; background:#1b1f27; box-shadow:0 8px 24px rgba(0,0,0,0.45); }
-  .shot-opt { width:100%; padding:6px 8px; border:0; border-radius:6px; background:none; cursor:pointer; font:inherit; text-align:left; }
-  .shot-opt:hover, .shot-opt[aria-selected="true"] { background:#2a2e38; }
-  .shot-skip { margin-top:8px; font-size:0.78rem; color:var(--text-dim); }
-  .shot-skip summary { cursor:pointer; }
-  .shot-skip p { margin:6px 0 0; line-height:1.7; }
-  .shot-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
-  .shot-actions #shotApply { background:var(--accent-strong); border-color:transparent; color:#0b0d12; }
-  @media (max-width:520px) {
-    .shot-row { grid-template-columns:20px 30px minmax(0,1fr) 84px; }
-  }
   .step-no { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#2a2e38; color:var(--text-dim); font-size:0.68rem; font-weight:800; flex:none; }
   .pack-head { margin-bottom:4px; }
   .pack-head .big { font-size:1.6rem; font-weight:900; color:var(--accent); vertical-align:-2px; margin-right:2px; }
@@ -310,24 +270,7 @@
           </details>
         </div>
         <p class="note fetch-status boss-scheduler-status" id="schedulerStatus" role="status" aria-live="polite"></p>
-        <div class="shot-box">
-          <div class="shot-drop" id="shotDrop" role="button" tabindex="0" aria-describedby="shotHelp">
-            <strong><img class="site-title-icon" src="icons/home/메이프릴카메라.webp" alt="">스크린샷으로 배율 채우기</strong>
-            <span class="shot-pick">이미지 고르기</span>
-            <ol class="shot-steps" id="shotHelp">
-              <li>환산주스탯에서 닉네임 검색</li>
-              <li>분석 최적화 → 효율 · 보스컷</li>
-              <li>보스 배율 왼쪽 위 <b>전체보기</b> 누르고, 데스티니/유챔 확인은 끄기</li>
-              <li><b>Win + Shift + S</b>로 보스 배율 부분 캡처</li>
-              <li>이 페이지에서 <b>Ctrl + V</b></li>
-              <li>아래에서 확인 후 <b>선택한 배율 넣기</b></li>
-            </ol>
-            <span class="shot-foot">선택한 난이도의 배율을 채웁니다. 동선 포함·완료 선택은 그대로 유지됩니다.</span>
-          </div>
-          <input type="file" id="shotFile" accept="image/*" hidden>
-          <p class="note fetch-status" id="shotStatus"></p>
-          <div id="shotResult" hidden></div>
-        </div>
+        <p class="shared-rate-cta" id="sharedRateCta"><img class="site-title-icon" src="icons/home/메이프릴카메라.webp" alt=""><span id="sharedRateCtaText">배율 캡처 등록은 공용 환산 배율에서 합니다. 등록한 배율은 이 동선과 파티에 함께 쓰입니다.</span><a class="ux-button" id="sharedRateLink" href="shared_boss_rates.html">공용 환산 배율 등록</a></p>
         <p class="ux-hint">배율은 풀도핑 기준으로, 시간은 선택한 도핑 기준으로 입력하세요. 여유 시간과 윌의 +4분은 별도로 더합니다.</p><p class="note fetch-status" id="partyRateStatus" role="status"></p><div class="boss-head">
           <span>포함</span><span></span><span class="name-col">보스</span><span>파티</span><span>난이도</span><span>배율</span><span>소요</span><span>도핑</span><span>완료 상태</span>
         </div>
@@ -367,7 +310,6 @@
 </div>
 <script src="nexon_key.js"></script>
 <script src="nexon_characters.js"></script>
-<script src="boss_shot_reader.js?v=2"></script>
 <script src="site_tooltips.js"></script>
 <script src="boss_db.js"></script>
 <script src="scouter_data.js"></script>

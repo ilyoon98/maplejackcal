@@ -69,7 +69,7 @@
       diff: b.diff || (preset ? preset.diff : entry ? entry[2][entry[2].length - 1] : ''),
       icon: b.icon || (entry ? 'icons/boss/' + entry[1] + '.webp' : ''),
       mult: Math.max(0.01, num(b.mult, 100)), extra: DEFAULT_EXTRA[b.name] || 0,
-      // 직접 고친 배율(캡처로 넣은 값 포함)은 공용 환산 배율보다 우선한다.
+      // 직접 고친 배율은 공용 환산 배율보다 우선한다. 예전에 캡처로 넣은 값도 직접 입력으로 남아 있다.
       manual: b.manual === true,
       on: b.on !== false, rice: b.rice === true, completed: b.completed === true,
       registered: b.registered === true,
@@ -398,7 +398,8 @@
   function partyFor(b) { return partyRates[bossIdOf(b)] || null; }
   // ── 공용 환산 배율 연동 ─────────────────────────────────────
   // 선택한 캐릭터가 공용 환산 배율에 등록돼 있으면 그 보스·난이도 기록을 배율 기본값으로 쓴다.
-  // 우선순위: 파티 환산 합계 → 직접 입력(직접 고친 값과 캡처로 넣은 값) → 공용 환산 배율 → 이 화면에 저장한 배율.
+  // 우선순위: 파티 환산 합계 → 직접 입력 → 공용 환산 배율 → 이 화면에 저장한 배율.
+  // 캡처로 배율을 넣는 기능은 공용 환산 배율 화면에만 두어, 한 번 등록하면 동선·파티에 함께 반영되게 한다.
   var sharedRates = Object.create(null), sharedRateName = '', sharedRateLoaded = false, sharedRegistered = false, sharedRateAt = '';
   function collectSharedRates(name, store) {
     var found = Object.create(null);
@@ -494,14 +495,30 @@
       var used = visible.filter(function (b) { return rateSource(b) === 'shared'; }).length;
       var manual = visible.filter(function (b) { return rateSource(b) === 'manual' && sharedFor(b); }).length;
       var date = sharedDate();
-      if (!sharedRegistered) notes.push('공용 환산 배율에 ' + sharedRateName + ' 캐릭터가 없어 이 화면에 입력한 배율을 씁니다. 공용 환산 배율에 등록하면 그 값을 기본값으로 씁니다.');
-      else if (Object.keys(sharedRates).length) {
+      // 등록이 안 됐거나 기록이 없을 때는 위의 공용 환산 배율 등록 안내가 알려준다.
+      if (Object.keys(sharedRates).length) {
         notes.push(sharedRateName + '의 공용 환산 배율' + (date ? '(' + date + ' 기록)' : '') + '을 배율 기본값으로 씁니다. 동선 보스 중 ' + used + '개에 적용했습니다.' +
           (manual ? ' 직접 고친 ' + manual + '개는 직접 입력값을 씁니다.' : ''));
-      } else notes.push('공용 환산 배율에 ' + sharedRateName + ' 캐릭터의 보스 기록이 없어 이 화면에 입력한 배율을 씁니다.');
+      }
     }
     if (partyNotes) notes.push(partyNotes);
     n.textContent = notes.join(' ');
+    sharedRateCta(visible);
+  }
+  // 캡처 등록 안내: 선택한 캐릭터로 공용 환산 배율 화면을 열고, 등록이 안 됐거나 기록 없는 동선 보스가 있으면 강조한다.
+  function sharedRateCta(visible) {
+    var box = document.getElementById('sharedRateCta'), text = document.getElementById('sharedRateCtaText'), link = document.getElementById('sharedRateLink');
+    if (!box || !text || !link) return;
+    var name = sharedRateName, known = !!(name && sharedRateLoaded);
+    var missing = known && sharedRegistered ? visible.filter(function (b) { return rateSource(b) === 'saved' && bossIdOf(b); }).length : 0;
+    link.href = 'shared_boss_rates.html' + (name ? '?name=' + encodeURIComponent(name) : '');
+    link.textContent = known && sharedRegistered ? '공용 환산 배율에서 갱신' : '공용 환산 배율에 등록';
+    text.textContent = known && !sharedRegistered
+      ? '공용 환산 배율에 ' + name + ' 캐릭터를 캡처로 등록하면 그 배율을 이 동선과 파티에 기본값으로 씁니다.'
+      : missing
+        ? '공용 환산 배율에 기록이 없는 동선 보스가 ' + missing + '개 있습니다. 캡처로 등록하면 이 동선과 파티에 함께 쓰입니다.'
+        : '배율 캡처 등록은 공용 환산 배율에서 합니다. 등록한 배율은 이 동선과 파티에 함께 쓰입니다.';
+    box.classList.toggle('attention', known && (!sharedRegistered || missing > 0));
   }
   function loadPartyRates() {
     var name = (activeProfile || charInput.value || '').trim(), request = ++partyRequest;
@@ -1133,193 +1150,6 @@
   fetchBtn.addEventListener('click', function () { importCharacter(); });
   charInput.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) importCharacter(); });
   try { charInput.value = localStorage.getItem('bossBuffPlanner.lastChar') || ''; } catch (err) {}
-
-  // ── 스크린샷에서 배율 읽기 ──────────────────────────────────
-  // 다른 사이트의 보스 카드 캡처를 boss_shot_reader.js로 읽고, 목록에 있는 보스(같은 이름·난이도)만
-  // 골라 배율을 넣는다. 목록은 사용자가 고른 보스라 100% 미만이어도 그대로 넣는다.
-  var shotDrop = document.getElementById('shotDrop');
-  var shotFile = document.getElementById('shotFile');
-  var shotStatus = document.getElementById('shotStatus');
-  var shotResult = document.getElementById('shotResult');
-  var shotRows = [], shotUnknown = [], shotOutside = 0, shotBusy = false, shotOpen = -1;
-
-  function setShotStatus(msg, kind) {
-    shotStatus.textContent = msg || '';
-    shotStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
-  }
-  function findBossIndex(name, diff) {
-    for (var i = 0; i < state.bosses.length; i++) {
-      if (state.bosses[i].name === name && state.bosses[i].diff === diff) return i;
-    }
-    return -1;
-  }
-  // 얼굴 · 이름 · 난이도 배지.
-  function bossChip(b) {
-    return (b.icon ? '<img class="shot-face" src="' + b.icon + '" alt="">' : '<span class="shot-face blank"></span>') +
-      '<span class="shot-bname">' + esc(b.name) + '</span>' +
-      (b.diff ? '<span class="diff-badge ' + (DIFF_CLASS[b.diff] || '') + '">' + esc(b.diff) + '</span>' : '');
-  }
-  function readShot(file) {
-    if (!file || !/^image\//.test(file.type || '') || shotBusy) return;
-    if (!window.BossShotReader) { setShotStatus('스크린샷 읽기 모듈을 불러오지 못했습니다.', 'err'); return; }
-    shotBusy = true;
-    setShotStatus('스크린샷을 읽는 중…');
-    var icons = Object.keys(BOSS_ICON).map(function (name) { return { name: name, icon: 'icons/boss/' + BOSS_ICON[name] + '.webp' }; });
-    return BossShotReader.readBlob(file, icons).then(function (list) {
-      if (!list.length) {
-        shotResult.hidden = true;
-        setShotStatus('보스 카드를 찾지 못했습니다. 카드 격자가 보이게 캡처했는지 확인하세요.', 'err');
-        return;
-      }
-      shotRows = []; shotUnknown = []; shotOutside = 0; shotOpen = -1;
-      var taken = Object.create(null);
-      // 덜 닮은 카드가 같은 보스를 차지하지 않게 확실한 것부터 배정한다.
-      list.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (r) {
-        var row = { thumb: r.thumb, value: r.value, covered: r.covered === true, idx: -1, on: false };
-        if (!r.name || !r.diff) { shotUnknown.push(row); return; }
-        var idx = findBossIndex(r.name, r.diff);
-        if (idx < 0) { shotOutside++; return; }
-        if (taken[idx]) { shotUnknown.push(row); return; }
-        taken[idx] = true;
-        row.idx = idx;
-        // 내 보스가 아니면 접어 두고 기본으로 넣지 않는다.
-        row.other = !isMine(state.bosses[idx]);
-        row.on = r.value != null && !row.other;
-        shotRows.push(row);
-      });
-      // 내 보스 먼저, 같은 묶음 안에서는 목록 순서대로.
-      shotRows.sort(function (a, b) { return (a.other - b.other) || (a.idx - b.idx); });
-      var odd = list.some(function (r) { return r.scale > 1.03 && r.scale < 1.4 && r.value == null && !r.covered; });
-      var unread = shotRows.filter(function (r) { return r.value == null && !r.other; }).length;
-      var covered = list.filter(function (r) { return r.covered; }).length;
-      setShotStatus('카드 ' + list.length + '장을 읽었습니다. 확인 후 ‘선택한 배율 넣기’를 누르세요.' +
-        (unread ? ' 배율을 확실히 읽지 못한 보스 ' + unread + '개는 직접 입력하세요.' : '') +
-        (covered ? ' 가려진 카드 ' + covered + '장은 툴팁·메뉴가 없어지도록 마우스를 옮긴 뒤 다시 캡처해 주세요.' : '') +
-        (odd ? ' 숫자가 흐리면 원본 크기로 다시 캡처해 주세요.' : ''), unread ? 'err' : 'ok');
-      renderShot();
-    }).catch(function (err) {
-      setShotStatus('스크린샷을 읽지 못했습니다: ' + (err && err.message ? err.message : err), 'err');
-    }).then(function () { shotBusy = false; shotFile.value = ''; });
-  }
-  function shotRowHtml(row, i, group) {
-    var b = state.bosses[row.idx], note, warn = false;
-    if (!b) { note = row.covered ? '카드가 가려져 있습니다. 툴팁 없이 다시 캡처하세요.' : '목록의 어느 보스인지 고르세요.'; warn = true; }
-    else if (row.value == null) { note = (row.covered ? '카드가 가려져 있습니다.' : '배율 숫자를 확실히 읽지 못했습니다.') + ' 기존 ' + percentText(effectiveMult(b)) + '%는 유지됩니다. 다시 캡처하거나 직접 적으세요.'; warn = true; }
-    else note = '지금 ' + percentText(effectiveMult(b)) + '% → ' + percentText(row.value) + '%';
-    var name;
-    if (group === 'unknown') {
-      // 얼굴과 난이도 배지를 보여주려고 <select> 대신 직접 만든 목록을 쓴다.
-      var open = shotOpen === i;
-      name = '<div class="shot-pick-boss">' +
-        '<button type="button" class="shot-pick-btn" data-shot="pick" data-i="' + i + '" aria-haspopup="listbox" aria-expanded="' + open + '">' +
-          (b ? bossChip(b) : '<span class="shot-bname dim">보스 선택</span>') + '<span class="shot-caret">▾</span></button>' +
-        (open ? '<div class="shot-menu" role="listbox">' + state.bosses.map(function (x, k) { return k; }).sort(function (a, c) {
-          return isMine(state.bosses[c]) - isMine(state.bosses[a]) || a - c;
-        }).map(function (k) {
-          return '<button type="button" role="option" class="shot-opt" data-shot="choose" data-i="' + i + '" data-k="' + k + '" aria-selected="' + (k === row.idx) + '">' + bossChip(state.bosses[k]) + '</button>';
-        }).join('') + '</div>' : '') +
-        '</div>';
-    } else name = '<div class="shot-fixed">' + bossChip(b) + '</div>';
-    return '<div class="shot-row' + (row.on ? '' : ' off') + '">' +
-      '<input type="checkbox" data-shot="on" data-g="' + group + '" data-i="' + i + '"' + (row.on ? ' checked' : '') + ' aria-label="이 배율 넣기">' +
-      '<img src="' + row.thumb + '" alt="" data-tooltip="스크린샷의 카드">' +
-      '<div class="shot-name">' + name + '<small' + (warn ? ' class="warn"' : '') + '>' + esc(note) + '</small></div>' +
-      '<div class="row-input shot-pct"><input type="number" min="0.01" step="0.01" data-shot="value" data-g="' + group + '" data-i="' + i + '" value="' + (row.value != null ? percentText(row.value) : '') + '" aria-label="배율"><span class="unit">%</span></div>' +
-      '</div>';
-  }
-  function renderShot() {
-    var found = Object.create(null);
-    shotRows.concat(shotUnknown).forEach(function (r) { if (r.idx >= 0) found[r.idx] = true; });
-    var missing = state.bosses.filter(function (b, k) { return !found[k] && isMine(b); }).map(function (b) { return b.name + ' ' + b.diff; });
-    var mine = shotRows.filter(function (r) { return !r.other; }).length, others = shotRows.length - mine;
-    var html = '<div class="shot-summary">내 보스 ' + mine + '개를 찾았습니다' +
-      (others ? ' · 내 목록에 없는 보스 ' + others + '개는 아래에 접어 두었습니다' : '') + '</div>';
-    // 내 보스가 앞에 오도록 정렬해 두었으므로 인덱스 그대로 앞뒤로 나눈다.
-    html += shotRows.slice(0, mine).map(function (row, i) { return shotRowHtml(row, i, 'list'); }).join('');
-    if (!mine) html += '<p class="empty">스크린샷에서 내 보스를 찾지 못했습니다.</p>';
-    if (missing.length) html += '<p class="shot-skip">스크린샷에 없는 내 보스: ' + esc(missing.join(' · ')) + '</p>';
-    if (others) {
-      html += '<details class="shot-skip" id="shotOthers"' + (shotOthersOpen ? ' open' : '') + '><summary>내 목록에 없는 보스 ' + others + '개 (필요하면 체크해서 넣기)</summary>' +
-        shotRows.slice(mine).map(function (row, j) { return shotRowHtml(row, mine + j, 'list'); }).join('') + '</details>';
-    }
-    if (shotUnknown.length) {
-      html += '<details class="shot-skip" id="shotUnknown"' + (shotRows.length && shotOpen < 0 && !shotUnknownOpen ? '' : ' open') + '><summary>알아보지 못한 카드 ' + shotUnknown.length + '장 (직접 고르기)</summary>' +
-        shotUnknown.map(function (row, i) { return shotRowHtml(row, i, 'unknown'); }).join('') + '</details>';
-    }
-    html += '<div class="shot-actions"><button type="button" class="tool-btn" id="shotCancel">닫기</button>' +
-      '<button type="button" class="tool-btn" id="shotApply">선택한 배율 넣기</button></div>';
-    shotResult.innerHTML = html;
-    shotResult.hidden = false;
-  }
-  var shotUnknownOpen = false, shotOthersOpen = false;
-  function applyShot() {
-    var set = 0, unread = 0;
-    shotRows.concat(shotUnknown).forEach(function (row) {
-      var b = state.bosses[row.idx];
-      if (b && row.value == null && !row.other) unread++;
-      if (!row.on || !b || !(row.value > 0)) return;
-      b.mult = Math.max(0.01, row.value);
-      b.manual = true;
-      set++;
-    });
-    saveState(); renderAll();
-    shotResult.hidden = true;
-    setShotStatus((set ? '배율 ' + set + '개를 넣었습니다.' : '넣을 배율을 고르지 않았습니다.') +
-      (unread ? ' 읽지 못한 ' + unread + '개는 적용하지 않았으며 기존 배율이 유지됩니다.' : ''), set && !unread ? 'ok' : 'err');
-  }
-  shotResult.addEventListener('change', function (e) {
-    var t = e.target, row = (t.dataset.g === 'unknown' ? shotUnknown : shotRows)[parseInt(t.dataset.i, 10)];
-    if (!row) return;
-    if (t.dataset.shot === 'on') row.on = t.checked;
-    else if (t.dataset.shot === 'value') { row.value = t.value === '' ? null : Math.max(0, num(t.value, 0)); row.on = row.value > 0 && row.idx >= 0; }
-    else return;
-    renderShot();
-  });
-  shotResult.addEventListener('toggle', function (e) {
-    if (e.target.id === 'shotUnknown') shotUnknownOpen = e.target.open;
-    else if (e.target.id === 'shotOthers') shotOthersOpen = e.target.open;
-  }, true);
-  shotResult.addEventListener('click', function (e) {
-    var t = e.target.closest('button');
-    if (!t) return;
-    var i = parseInt(t.dataset.i, 10);
-    if (t.dataset.shot === 'pick') { shotOpen = shotOpen === i ? -1 : i; renderShot(); }
-    else if (t.dataset.shot === 'choose') {
-      var row = shotUnknown[i];
-      row.idx = parseInt(t.dataset.k, 10);
-      row.on = row.value > 0;
-      shotOpen = -1; renderShot();
-    }
-    else if (t.id === 'shotApply') applyShot();
-    else if (t.id === 'shotCancel') { shotResult.hidden = true; setShotStatus(''); }
-  });
-  // 보스 고르기 메뉴는 바깥을 누르거나 Esc를 누르면 닫는다.
-  document.addEventListener('click', function (e) {
-    if (shotOpen >= 0 && !e.target.closest('.shot-pick-boss')) { shotOpen = -1; renderShot(); }
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && shotOpen >= 0) { shotOpen = -1; renderShot(); }
-  });
-  shotDrop.addEventListener('click', function () { shotFile.click(); });
-  shotDrop.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); shotFile.click(); }
-  });
-  shotFile.addEventListener('change', function () { readShot(shotFile.files && shotFile.files[0]); });
-  shotDrop.addEventListener('dragover', function (e) { e.preventDefault(); shotDrop.classList.add('over'); });
-  shotDrop.addEventListener('dragleave', function () { shotDrop.classList.remove('over'); });
-  shotDrop.addEventListener('drop', function (e) {
-    e.preventDefault(); shotDrop.classList.remove('over');
-    readShot(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
-  });
-  // 페이지 어디서든 이미지를 붙여넣으면 읽는다(글자 붙여넣기는 그대로 둔다).
-  document.addEventListener('paste', function (e) {
-    var items = e.clipboardData ? Array.prototype.slice.call(e.clipboardData.items || []) : [];
-    var img = items.filter(function (it) { return it.kind === 'file' && /^image\//.test(it.type); })[0];
-    if (!img) return;
-    e.preventDefault();
-    shotDrop.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    readShot(img.getAsFile());
-  });
 
   var profileBar = document.createElement('div'); profileBar.className = 'nx-character-recents';
   profileBar.setAttribute('aria-label', '저장한 캐릭터');
