@@ -440,7 +440,7 @@
   <section class="card characters-panel">
     <div class="character-heading">
       <h2>내 캐릭터</h2>
-      <button type="button" class="tool-btn scheduler-batch-refresh" id="schedulerRefreshAllBtn" aria-label="API 갱신" title="API 갱신">
+      <button type="button" class="tool-btn scheduler-batch-refresh" id="schedulerRefreshAllBtn" aria-label="스케줄러 갱신" title="스케줄러 갱신: 등록 보스·난이도·완료를 스케줄러에 맞춥니다. N빵 인원과 직접 추가한 보스는 유지합니다.">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg>
       </button>
     </div>
@@ -809,6 +809,7 @@
   var schedulerCharacterName = document.getElementById('schedulerCharacterName');
   var schedulerFetchBtn = document.getElementById('schedulerFetchBtn');
   var schedulerRefreshAllBtn = document.getElementById('schedulerRefreshAllBtn');
+  var SCHEDULER_REFRESH_TITLE = '스케줄러 갱신: 등록 보스·난이도·완료를 스케줄러에 맞춥니다. N빵 인원과 직접 추가한 보스는 유지합니다.';
   var schedulerFetchStatus = document.getElementById('schedulerFetchStatus');
   var schedulerApiKeyState = document.getElementById('schedulerApiKeyState');
   if (window.NexonCharacters) NexonCharacters.mount({ host:'#incomeCharacterPicker', input:schedulerCharacterName });
@@ -916,9 +917,40 @@
     renderAll();
     return { character:character, existed:false };
   }
-  // 캐릭터 카드의 새로고침은 스케줄러에서 "완료" 상태만 읽는다.
-  // 보스 종류·난이도·N빵 인원은 클라이언트에서 저장한 값을 절대 교체하지 않는다.
-  function refreshCharacterCompletion(character){
+  // 스케줄러 갱신: 스케줄러에 새로 등록한 보스는 더하고, 스케줄러에서 가져왔는데 지금은 없는 보스는 빼고,
+  // 난이도는 스케줄러를 따른다. N빵 인원과 직접 추가한 보스는 그대로 둔다.
+  function bossLabel(name, diffIdx){ var diff = BOSS_BY_NAME[name] && BOSS_BY_NAME[name].diffs[diffIdx]; return (diff ? diff.label + ' ' : '') + name; }
+  function syncSchedulerBosses(character, parsed){
+    var next = Object.create(null), changes = { added:[], removed:[], changed:[] };
+    Object.keys(character.bosses).forEach(function(name){
+      var entry = character.bosses[name], incoming = parsed.bosses[name];
+      if (!incoming){
+        if (entry.source === 'scheduler') changes.removed.push(bossLabel(name, entry.diffIdx));
+        else next[name] = Object.assign({}, entry, { complete:false });
+        return;
+      }
+      if (incoming.diffIdx !== entry.diffIdx) changes.changed.push(name + ' ' + BOSS_BY_NAME[name].diffs[entry.diffIdx].label + '→' + BOSS_BY_NAME[name].diffs[incoming.diffIdx].label);
+      next[name] = { diffIdx:incoming.diffIdx, party:validParty(entry.party, name, incoming.diffIdx), complete:incoming.complete, source:'scheduler' };
+    });
+    Object.keys(parsed.bosses).forEach(function(name){
+      if (next[name]) return;
+      next[name] = parsed.bosses[name];
+      changes.added.push(bossLabel(name, parsed.bosses[name].diffIdx));
+    });
+    // 주간 한도 검증은 저장 복원과 같은 규칙을 쓴다.
+    character.bosses = normalizeCharacter({ name:character.name, bosses:next }).bosses;
+    return changes;
+  }
+  function describeSyncChanges(name, changes){
+    var parts = [];
+    if (changes.added.length) parts.push('추가 ' + changes.added.join(', '));
+    if (changes.removed.length) parts.push('제외 ' + changes.removed.join(', '));
+    if (changes.changed.length) parts.push('난이도 ' + changes.changed.join(', '));
+    return parts.length ? name + ': ' + parts.join(' · ') : '';
+  }
+  // 화면 진입 때 자동 갱신은 스케줄러에서 "완료" 상태만 읽어 저장한 보스 구성을 조용히 바꾸지 않는다.
+  // 스케줄러 갱신 버튼(sync)은 보스 구성과 난이도까지 스케줄러에 맞춘다.
+  function refreshCharacterCompletion(character, sync){
     var ocidPromise = character.ocid
       ? Promise.resolve(character.ocid)
       : apiGet('/id', { character_name:character.name }).then(function(result){
@@ -934,8 +966,9 @@
     }).then(function(results){
       var data = results[0];
       var profile = results[1];
-      var parsed = parseSchedulerBosses(data);
-      Object.keys(character.bosses).forEach(function(bossName){
+      var parsed = parseSchedulerBosses(data), changes = null;
+      if (sync) changes = syncSchedulerBosses(character, parsed);
+      else Object.keys(character.bosses).forEach(function(bossName){
         var schedulerEntry = parsed.bosses[bossName];
         character.bosses[bossName].complete = !!(schedulerEntry && schedulerEntry.complete);
       });
@@ -948,45 +981,51 @@
       character.lastSyncedAt = new Date().toISOString();
       saveState();
       renderAll();
-      return charTotals(character);
+      return changes;
     });
   }
-  function refreshAllCharacterCompletions(){
+  function refreshAllCharacterCompletions(sync){
+    sync = sync === true;
     if (!NexonKey.has()){
       refreshSchedulerKeyState();
       setSchedulerStatus('홈에서 API 키를 먼저 등록하세요.', 'err');
       return;
     }
-    var targets = characters.filter(function(character){ return character.ocid && Object.keys(character.bosses).length; });
+    var targets = characters.filter(function(character){ return character.ocid && (sync || Object.keys(character.bosses).length); });
     if (!targets.length){
-      setSchedulerStatus('완료 상태를 확인할 등록 보스가 없습니다.', 'err');
+      setSchedulerStatus(sync ? '스케줄러로 추가한 캐릭터가 없습니다. 위에서 캐릭터를 스케줄러로 추가하세요.' : '완료 상태를 확인할 등록 보스가 없습니다.', 'err');
       return;
     }
-    var completed = 0, failed = [];
+    var completed = 0, failed = [], notes = [];
     schedulerRefreshAllBtn.disabled = true;
     schedulerRefreshAllBtn.classList.toggle('is-refreshing', true);
     schedulerRefreshAllBtn.setAttribute('aria-busy', 'true');
-    schedulerRefreshAllBtn.title = 'API 갱신 중';
+    schedulerRefreshAllBtn.title = '스케줄러 갱신 중';
     setSchedulerStatus('');
     var sequence = Promise.resolve();
     targets.forEach(function(character){
       sequence = sequence.then(function(){
-        return refreshCharacterCompletion(character).then(function(){ completed++; }, function(error){
+        return refreshCharacterCompletion(character, sync).then(function(changes){
+          completed++;
+          var note = changes && describeSyncChanges(character.name, changes);
+          if (note) notes.push(note);
+        }, function(error){
           failed.push(character.name + ': ' + describeApiError(error, error.stage || 'scheduler'));
         });
       });
     });
     sequence.then(function(){
       if (failed.length){
-        setSchedulerStatus('API 갱신 ' + completed + '명 성공 · ' + failed.length + '명 실패 (' + failed.map(function(item){ return item.split(':')[0]; }).join(', ') + ')', 'err');
+        setSchedulerStatus('스케줄러 갱신 ' + completed + '명 성공 · ' + failed.length + '명 실패 (' + failed.map(function(item){ return item.split(':')[0]; }).join(', ') + ')' + (notes.length ? ' · ' + notes.join(' / ') : ''), 'err');
       } else {
-        setSchedulerStatus('');
+        // 바뀐 보스가 있을 때만 무엇이 바뀌었는지 남긴다.
+        setSchedulerStatus(notes.length ? '스케줄러 갱신 · ' + notes.join(' / ') : '', notes.length ? 'ok' : '');
       }
     }).then(function(){
       schedulerRefreshAllBtn.disabled = false;
       schedulerRefreshAllBtn.classList.toggle('is-refreshing', false);
       schedulerRefreshAllBtn.removeAttribute('aria-busy');
-      schedulerRefreshAllBtn.title = 'API 갱신';
+      schedulerRefreshAllBtn.title = SCHEDULER_REFRESH_TITLE;
     });
   }
   function autoRefreshCharacterCompletions(){
@@ -1045,7 +1084,7 @@
       .then(function(){ schedulerFetchBtn.disabled = false; schedulerFetchBtn.innerHTML = originalHtml; });
   });
 
-  schedulerRefreshAllBtn.addEventListener('click', refreshAllCharacterCompletions);
+  schedulerRefreshAllBtn.addEventListener('click', function(){ refreshAllCharacterCompletions(true); });
   schedulerCharacterName.addEventListener('keydown', function(event){ if (event.key === 'Enter' && !event.isComposing) schedulerFetchBtn.click(); });
   schedulerCharacterName.value = lsGet(LS_LAST_SCHEDULER_CHAR);
   refreshSchedulerKeyState();
