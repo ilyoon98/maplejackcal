@@ -416,3 +416,21 @@ test('주소의 party와 scope로 들어오면 해당 파티를 열고 없으면
   assert.match(p.doc.querySelector('#party-storage-status').textContent,/찾는 파티가 없습니다/);
  }finally{p.close();}
 });
+test('이름을 짓지 않은 파티는 본캐 먼저 딜 비중 순으로 파티원 이름 앞글자를 이어 목록 제목으로 쓴다',async()=>{
+ const rates=[42.26,43.34,50.87],snapshots=['첫번째','두번째','세번째'].map((name,index)=>{const saved=snapshot(name);saved.rates[1].percent=rates[index];return saved;});
+ const members=snapshots.map((s,index)=>({character:{...s.character,ocid:'shared:'+s.characterName},rate:rates[index]}));
+ const visible=title=>[...title.childNodes].filter(n=>!n.classList?.contains('sr-only')).map(n=>n.textContent).join('');
+ let p=await boot('party_boss_scheduler',{snapshots,parties:[{id:'p1',name:'하드 윌',bossId:'Will|Hard',members}]});try{
+  const title=p.doc.querySelector('#party-list .party-row-title');
+  // 3명이라 2글자씩, 본캐가 없으면 딜 비중(환산 배율)이 높은 순이다. 화면 읽기용으로는 전체 이름을 둔다.
+  assert.equal(visible(title),'세번두번첫번');
+  assert.equal(title.querySelector('.sr-only').textContent,'세번째, 두번째, 첫번째');
+ }finally{p.close();}
+ // 같은 계정의 본캐(계정 이름과 같은 캐릭터)는 딜 비중과 관계없이 맨 앞에 온다. 2명이면 3글자씩이다.
+ p=await boot('party_boss_scheduler',{snapshots,accounts:[{id:'acc',label:'첫번째',characters:[{name:'첫번째'}]}],parties:[{id:'p1',name:'하드 윌',bossId:'Will|Hard',members:[members[0],members[2]]}]});try{
+  assert.equal(visible(p.doc.querySelector('#party-list .party-row-title')),'첫번째세번째');
+ }finally{p.close();}
+ p=await boot('party_boss_scheduler',{snapshots,parties:[{id:'p1',name:'하드 윌',bossId:'Will|Hard',members:[members[1]]}]});try{
+  assert.equal(p.doc.querySelector('#party-list .party-row-title').textContent,'두번째');
+ }finally{p.close();}
+});

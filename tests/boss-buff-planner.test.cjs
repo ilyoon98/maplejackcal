@@ -28,7 +28,7 @@ function loadPlanner(options = {}) {
       querySelector(){ return null; },
     },
     localStorage:{getItem:() => null, setItem(){}},
-    window:options.mountPicker ? {NexonCharacters:{mount:options.mountPicker}} : {},
+    window:Object.assign(options.mountPicker ? {NexonCharacters:{mount:options.mountPicker}} : {}, options.window),
     NexonCharacters:options.mountPicker ? {mount:options.mountPicker} : undefined,
     Event:class {constructor(type){this.type = type;}},
   });
@@ -675,8 +675,44 @@ test('캐릭터가 들어간 파티는 파티 환산 합계를 찾고 배율 미
   const shared = [{name:'익스트림 스우', bossId:'Lotus|Extreme', members:['나', '친구']}, {name:'남의 파티', bossId:'Dusk|Chaos', members:['친구']}];
   const local = [{name:'하드 윌', bossId:'Will|Hard', members:[{character:{name:'나'}, rate:70}, {character:{name:'미등록'}, rate:null}]}];
   const result = engine.collectPartyRates('나', local, shared, store);
-  assert.deepEqual(JSON.parse(JSON.stringify(result.rates)), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'', scope:'shared'}});
+  const rates = JSON.parse(JSON.stringify(result.rates));
+  assert.deepEqual(rates['Lotus|Extreme'].members.map(m => m.name), ['친구', '나']);
+  delete rates['Lotus|Extreme'].members;
+  assert.deepEqual(rates, {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'', scope:'shared'}});
   assert.deepEqual([...result.skipped], ['하드 윌']);
+});
+
+test('이름 없는 파티는 본캐 먼저 배율 순으로 자동 이름을 짓고 파티 표시 툴팁에 파티원 카드를 넣는다', () => {
+  const engine = loadPlanner({window:{AccountCatalog:require('../account_catalog.js')}});
+  const now = Date.now() - 1000;
+  const character = (name, job, level) => ({name, world:'루나', job, level, image:'https://open.api.nexon.com/static/maplestory/character/look/ABC123', updatedAt:now});
+  const store = {
+    snapshots:[
+      {characterName:'나의본캐', preset:'00000', character:character('나의본캐', '비숍', 290), rates:[{bossId:'Will|Hard', percent:40}]},
+      {characterName:'딜러친구', preset:'00000', character:{...character('딜러친구', '히어로', 285), image:'javascript:alert(1)'}, rates:[{bossId:'Will|Hard', percent:70}]},
+      {characterName:'나의부캐', preset:'00000', rates:[{bossId:'Will|Hard', percent:20}]}
+    ],
+    accounts:[{id:'mine', label:'', characters:[{name:'나의본캐', profile:character('나의본캐', '비숍', 290)}, {name:'나의부캐'}]}]
+  };
+  engine.setPartyRates(require('../boss_db.json'), {});
+  const shared = [{id:'party-1', name:'하드 윌', bossId:'Will|Hard', members:['딜러친구', '나의부캐', '나의본캐']}];
+  const party = engine.collectPartyRates('나의부캐', [], shared, store).rates['Will|Hard'];
+  // 본캐가 먼저, 그다음 배율이 높은 순이다. 3명이라 2글자씩 잇는다.
+  assert.equal(party.name, '나의딜러나의');
+  assert.deepEqual(party.members.map(m => [m.name, m.main, m.me]), [['나의본캐', true, false], ['딜러친구', false, false], ['나의부캐', false, true]]);
+  // 공유 저장소에 있던 잘못된 이미지 주소는 버린다.
+  assert.equal(party.members[1].image, '');
+  engine.setBosses([{id:'b0', name:'윌', diff:'하드', mult:80, on:true, extra:0}]);
+  engine.setPartyRates(require('../boss_db.json'), {'Will|Hard':{...party, scope:'shared'}});
+  const row = engine.listRows()[0].match(/<div class="row-party">.*?<\/div>/)[0];
+  const attr = name => row.match(new RegExp(' ' + name + '="([^"]*)"'))[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+  assert.equal(attr('data-tooltip'), '나의딜러나의 파티');
+  assert.equal(attr('data-tooltip-value'), '3명 · 환산 합계 130%');
+  const items = JSON.parse(attr('data-tooltip-items'));
+  assert.deepEqual(items.map(item => [item.name, item.note, item.value, item.tags]), [
+    ['나의본캐', '비숍 · Lv.290', '40%', ['본캐']], ['딜러친구', '히어로 · Lv.285', '70%', []], ['나의부캐', '', '20%', ['이 캐릭터']]
+  ]);
+  assert.equal(items[0].image, 'https://open.api.nexon.com/static/maplestory/character/look/ABC123');
 });
 
 test('파티 보스는 항상 파티 배율로 계산하고 고정 칸의 파티 표시로 그 파티를 연다', () => {

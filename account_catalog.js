@@ -16,6 +16,28 @@
     if(ungrouped.length)out.push({id:'',customLabel:'미분류 캐릭터',characters:ungrouped});
     out.forEach(function(a){a.characters.sort(function(a,b){return (b.profile?b.profile.level:0)-(a.profile?a.profile.level:0)||a.name.localeCompare(b.name,'ko');});a.label=a.customLabel||a.characters[0]?.name||'새 계정';});return out.filter(function(a){return a.characters.length||a.customLabel;});
   }
+  // 계정별 본캐: 계정 이름과 같은 캐릭터, 없으면 레벨이 가장 높은 캐릭터. 미분류 캐릭터는 본캐로 보지 않는다.
+  function mainNames(store){
+    var out=new Set();
+    groups(store||{}).forEach(function(g){if(!g.id)return;var main=g.characters.find(function(c){return c.name===g.customLabel;})||g.characters[0];if(main)out.add(main.name);});
+    return out;
+  }
+  // 파티원 순서: 본캐 먼저, 그다음 환산 배율(예상 딜 비중)이 높은 순. members는 {name, rate}.
+  function partyOrder(members,mains){
+    var score=function(m){return typeof m.rate==='number'&&Number.isFinite(m.rate)?m.rate:-Infinity;};
+    return members.map(function(m,i){return {m:m,i:i};}).sort(function(a,b){
+      var am=!!(mains&&mains.has(a.m.name)),bm=!!(mains&&mains.has(b.m.name));
+      if(am!==bm)return am?-1:1;
+      return (score(b.m)-score(a.m))||a.i-b.i;
+    }).map(function(x){return x.m;});
+  }
+  // 이름 없는 파티의 자동 이름: 1명은 이름 전체, 여러 명은 여섯 글자 폭을 나눠 앞글자를 잇는다(2명 3글자, 3명 2글자, 4명 이상 1글자).
+  function partyTitle(members,mains){
+    var ordered=partyOrder(members||[],mains);
+    if(ordered.length<2)return ordered[0]?ordered[0].name:'';
+    var size=Math.max(1,Math.floor(6/ordered.length));
+    return ordered.map(function(m){return Array.from(m.name).slice(0,size).join('');}).join('');
+  }
   function accountId(store,name){var found=(store.accounts||[]).find(function(a){return a.characters.some(function(c){return (typeof c==='string'?c:c.name)===name;});});return found?found.id:'character:'+name;}
   function conflict(store,members,name){var id=accountId(store,name);return members.some(function(m){return accountId(store,m.character.name)===id;});}
   function assign(accounts,id,label,characters){
@@ -46,5 +68,5 @@
       catch(e){if(e.message!=='RATE_CONFLICT'||attempt)throw e;var response=await options.fetch('/api/boss-rates',{cache:'no-store'});if(!response.ok)throw new Error('RATE_STORE_UNAVAILABLE');store=await response.json();}
     }
   }
-  return {normalize:normalize,groups:groups,accountId:accountId,conflict:conflict,assign:assign,importOwn:importOwn,save:save,syncOwn:syncOwn};
+  return {normalize:normalize,groups:groups,mainNames:mainNames,partyOrder:partyOrder,partyTitle:partyTitle,accountId:accountId,conflict:conflict,assign:assign,importOwn:importOwn,save:save,syncOwn:syncOwn};
 });

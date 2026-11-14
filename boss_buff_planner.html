@@ -51,7 +51,7 @@
   .pack-head .tag-row { display:flex; gap:5px; margin:5px 0 3px; }
   .pack-bin.rice { border-style:dashed; }
 
-  .boss-head, .boss-row { display:grid; grid-template-columns:32px 28px minmax(0,1fr) 44px 108px 100px 94px 82px 68px; gap:6px; align-items:center; }
+  .boss-head, .boss-row { display:grid; grid-template-columns:32px 28px minmax(0,1fr) 52px 108px 100px 94px 82px 68px; gap:6px; align-items:center; }
   .row-include { grid-area:include; }
   .row-icon { grid-area:icon; }
   .row-name { grid-area:name; }
@@ -92,7 +92,12 @@
   .row-tag.done { color:var(--good); border-color:rgba(76,175,125,.45); }
   /* 파티 배율을 쓰는 보스는 배율·시간 칸 대신 파티 환산 합계를 쓴다. 눌러서 혼자 배율로 되돌릴 수 있다. */
   /* 파티 배율을 쓰는 보스 표시. 누르면 파티 보스 스케줄러에서 그 파티를 연다. */
-  .party-link { display:inline-flex; align-items:center; justify-content:center; min-width:40px; min-height:26px; padding:2px 6px; border:1px solid #6ea8fe; border-radius:6px; background:#243f62; color:#c3deff; font-size:0.7rem; font-weight:800; text-decoration:none; white-space:nowrap; }
+  /* 옆의 난이도 드롭다운과 같은 높이, 글자 크기, 굵기, 모서리로 그려 한 줄에서 같은 크기의 배지로 보이게 한다. */
+  .party-link { display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; width:100%; min-height:var(--ui-control-height,44px); padding:0 6px; border:1px solid #6ea8fe; border-radius:var(--ui-control-radius,8px); background:#243f62; color:#c3deff; font-size:.875rem; font-weight:700; text-decoration:none; white-space:nowrap; cursor:default; }
+  a.party-link { cursor:pointer; }
+  /* 본문 링크 공통 밑줄·색보다 우선해 배지 모양을 유지한다. */
+  body[data-ux-page] :is(.wrap, main) :is(a.party-link, a.tag.party) { color:#c3deff; text-decoration:none; }
+  span.party-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   a.party-link:hover { filter:brightness(1.18); }
   a.party-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .row-input input:disabled { opacity:1; color:#c3deff; background:#182438; }
@@ -216,7 +221,7 @@
   /* 좁은 화면에서도 난이도와 숫자 칸의 위치·폭을 고정한다. */
   @media (max-width:760px) {
     .boss-head { display:none; }
-    .boss-row { grid-template-columns:60px 28px minmax(94px,1fr) 44px 108px 68px; grid-template-areas:"include icon name party diff complete" "mult mult mult time doping doping"; gap:8px 6px; }
+    .boss-row { grid-template-columns:60px 28px minmax(94px,1fr) 52px 108px 68px; grid-template-areas:"include icon name party diff complete" "mult mult mult time doping doping"; gap:8px 6px; }
   }
   /* 결과 패널과 나란히 놓여 왼쪽이 좁아지는 폭에서도 보스 한 마리를 한 줄에 둔다.
      도핑은 아이콘만 보이고(이름은 버튼의 읽기용 이름과 툴팁에 있음) 숫자 칸과 난이도 폭을 줄인다. */
@@ -224,7 +229,7 @@
     .boss-head { display:none; }
     /* 오른쪽 결과 패널을 조금 좁혀 보스 목록에 폭을 더 준다. */
     .layout { grid-template-columns:minmax(0,1fr) 340px; }
-    .boss-row { grid-template-columns:28px 24px minmax(64px,1fr) 42px 96px 72px 62px 36px 46px; gap:4px; }
+    .boss-row { grid-template-columns:28px 24px minmax(64px,1fr) 48px 96px 72px 62px 36px 46px; gap:4px; }
     /* 이름이 가려지지 않게 한다. 윌 +4분은 아래 안내에, 파티 열기는 결과의 파티 표시에 있어 이 폭에서는 숨긴다. */
     .row-name strong .nm { min-width:3.5em; }
     .row-name .row-tag { display:none; }
@@ -236,7 +241,7 @@
     .row-complete { padding:5px 0; font-size:0.66rem; }
   }
   @media (max-width:500px) {
-    .boss-row { grid-template-columns:60px minmax(0,1fr) 44px 108px; grid-template-areas:"icon name party diff" "include doping doping complete" "mult mult mult time"; }
+    .boss-row { grid-template-columns:60px minmax(0,1fr) 52px 108px; grid-template-areas:"icon name party diff" "include doping doping complete" "mult mult mult time"; }
     .row-include { width:var(--ui-control-height); }
     .row-include, .row-complete { min-height:var(--ui-control-height); }
     .boss-selection-count { display:block; margin-left:0; margin-top:4px; }
@@ -356,6 +361,8 @@
 <script src="boss_shot_reader.js?v=2"></script>
 <script src="site_tooltips.js"></script>
 <script src="boss_db.js"></script>
+<script src="scouter_data.js"></script>
+<script src="account_catalog.js"></script>
 <script src="boss_buff_planner.js"></script>
 </body>
 </html>

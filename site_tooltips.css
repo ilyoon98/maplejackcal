@@ -42,3 +42,16 @@
 .site-tooltip-name { font-size:14px; font-weight:800; white-space:pre-line; }
 .site-tooltip-value { color:#a9d0ff; font-size:15px; font-weight:800; }
 .site-tooltip-note { color:#c9d5e8; font-size:12px; white-space:pre-line; }
+/* 파티원 같은 항목 목록: 외형(없으면 이름 첫 글자), 이름과 표시, 보조 정보, 오른쪽 값. */
+.site-tooltip-items { display:flex; flex-direction:column; gap:6px; margin:2px 0 0; padding:0; list-style:none; min-width:220px; }
+.site-tooltip-item { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:10px; padding:6px 8px; border:1px solid #33496d; border-radius:8px; background:#0f1828; }
+.site-tooltip-avatar { position:relative; display:grid; place-items:center; width:40px; height:40px; overflow:hidden; border-radius:7px; background:#22324d; color:#c3deff; font-size:15px; font-weight:800; }
+.site-tooltip-avatar img { position:absolute; left:50%; top:50%; width:72px; height:72px; max-width:none; transform:translate(-50%,-50%); object-fit:contain; opacity:0; }
+.site-tooltip-avatar.has-image { color:transparent; }
+.site-tooltip-avatar.has-image img { opacity:1; }
+.site-tooltip-item-body { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.site-tooltip-item-head { display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; min-width:0; }
+.site-tooltip-item-name { font-size:13px; font-weight:800; }
+.site-tooltip-item-tag { padding:0 6px; border:1px solid #6ea8fe; border-radius:5px; color:#c3deff; font-size:11px; font-weight:700; line-height:1.5; white-space:nowrap; }
+.site-tooltip-item-note { color:#c9d5e8; font-size:12px; }
+.site-tooltip-item-value { color:#a9d0ff; font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }

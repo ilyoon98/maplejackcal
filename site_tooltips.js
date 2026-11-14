@@ -28,6 +28,48 @@
     node.textContent = content;
     tip.appendChild(node);
   }
+  function text(tag, className, content) {
+    var node = document.createElement(tag);
+    node.className = className;
+    node.textContent = content;
+    return node;
+  }
+  // data-tooltip-items: [{name, note, value, image, tags}] JSON. 파티원처럼 사람·항목 목록을 카드로 보여준다.
+  function items(raw) {
+    var list;
+    try { list = JSON.parse(raw || '[]'); } catch (e) { return; }
+    if (!Array.isArray(list) || !list.length) return;
+    var box = document.createElement('ul');
+    box.className = 'site-tooltip-items';
+    list.slice(0, 12).forEach(function (item) {
+      if (!item || typeof item.name !== 'string') return;
+      var row = document.createElement('li'), avatar = document.createElement('span'), body = document.createElement('span'), head = document.createElement('span');
+      row.className = 'site-tooltip-item';
+      avatar.className = 'site-tooltip-avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      avatar.textContent = Array.from(item.name)[0] || '';
+      if (typeof item.image === 'string' && /^https:\/\//.test(item.image)) {
+        var img = document.createElement('img');
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.addEventListener('load', function () { avatar.classList.add('has-image'); });
+        img.src = item.image;
+        avatar.appendChild(img);
+      }
+      body.className = 'site-tooltip-item-body';
+      head.className = 'site-tooltip-item-head';
+      head.appendChild(text('strong', 'site-tooltip-item-name', item.name));
+      (Array.isArray(item.tags) ? item.tags : []).forEach(function (tag) {
+        if (typeof tag === 'string' && tag) head.appendChild(text('span', 'site-tooltip-item-tag', tag));
+      });
+      body.appendChild(head);
+      if (typeof item.note === 'string' && item.note) body.appendChild(text('span', 'site-tooltip-item-note', item.note));
+      row.append(avatar, body);
+      if (typeof item.value === 'string' && item.value) row.appendChild(text('span', 'site-tooltip-item-value', item.value));
+      box.appendChild(row);
+    });
+    if (box.childElementCount) tip.appendChild(box);
+  }
   function show(source) {
     hide();
     if (!source || !source.isConnected || source === dismissed) return;
@@ -35,6 +77,7 @@
     tip.replaceChildren();
     line('strong', 'site-tooltip-name', source.dataset.tooltip);
     line('span', 'site-tooltip-value', source.dataset.tooltipValue);
+    items(source.dataset.tooltipItems);
     line('span', 'site-tooltip-note', source.dataset.tooltipNote);
     described = source.querySelector('input,button,a,[tabindex]') || source;
     var ids = (described.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);

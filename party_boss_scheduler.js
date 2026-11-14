@@ -389,8 +389,10 @@
       if(badge){var line=node('span','party-metric-line');line.append(amount,badge);box.append(line);}else box.append(amount);
       return box;
     }
-    function leadMember(members){
-      return members.reduce(function(best,m){var r=rate(m.rate),b=best?rate(best.rate):null;return !best||r!==null&&(b===null||r>b)?m:best;},null);
+    // 파티원 순서는 본캐 먼저, 그다음 환산 배율(예상 딜 비중)이 높은 순이다. 첫 번째가 대표 캐릭터다.
+    function orderedMembers(members,mains){
+      var byName=new Map(members.map(function(m){return [m.character.name,m];}));
+      return accounts.partyOrder(members.map(function(m){return {name:m.character.name,rate:rate(m.rate)};}),mains).map(function(m){return byName.get(m.name);});
     }
     function doneBadge(){return node('span','party-done-badge','✓ 완료');}
     function mesoLabel(value){
@@ -616,6 +618,7 @@
       var list=el('party-list'),headingHost=el('party-detail-heading'),detail=el('party-detail-content'),formOpen=!el('party-create-form').hidden;
       renderView(shown.length);
       list.replaceChildren();headingHost.replaceChildren();detail.replaceChildren();selectVisible(shown);
+      var mains=accounts.mainNames(shared);
       shown.forEach(function(p){
         var button=node('button'),boss=choices.find(function(c){return c.id===p.bossId;});
         button.type='button';button.disabled=formOpen||remoteWriting;button.setAttribute('aria-pressed',String(p.id===selected));
@@ -623,13 +626,18 @@
         var done=completion(p),sum=summary(p.members),meta=node('span','party-row-meta');
         if(done)button.classList.add('party-list-done');
         // 같은 보스 파티가 여러 개면 보스 이름으로는 구분이 안 되므로, 보스는 아이콘과 난이도로만 보여주고
-        // 제목에는 직접 지은 파티 이름 또는 환산 배율이 가장 높은 파티원(대표 캐릭터)을 쓴다.
-        var lead=leadMember(p.members);
+        // 제목에는 직접 지은 파티 이름을 쓰고, 없으면 파티원 이름으로 자동 이름을 만든다.
+        // 자동 이름: 1명은 이름 전체, 2명은 3글자씩, 3명은 2글자씩, 4명 이상은 1글자씩. 순서는 본캐 먼저, 그다음 딜 비중 순.
+        var ordered=orderedMembers(p.members,mains),lead=ordered[0]||null;
         var custom=p.name!==boss.label,identity=visual.create(doc,p.bossId,win.MapleBossDB);
         identity.querySelector('span:not(.diff-badge)')?.classList.add('sr-only');
-        // 인원은 아래 줄에 있으므로 제목에는 이름만 둔다. 화면 읽기용 이름에는 나머지 인원도 함께 넣는다.
-        var title=node('span','party-row-title',custom?p.name:lead?lead.character.name:'파티원 없음');
-        if(!custom&&lead&&p.members.length>1)title.append(node('span','sr-only',' 외 '+(p.members.length-1)+'명'));
+        var title=node('span','party-row-title',custom?p.name:ordered.length>1?null:lead?lead.character.name:'파티원 없음');
+        if(!custom&&ordered.length>1){
+          // 줄인 이름 대신 화면 읽기용으로는 전체 파티원 이름을 읽는다.
+          var short=node('span','',accounts.partyTitle(ordered.map(function(m){return {name:m.character.name};})));
+          short.setAttribute('aria-hidden','true');
+          title.append(short,node('span','sr-only',ordered.map(function(m){return m.character.name;}).join(', ')));
+        }
         identity.append(title);
         // 한 줄에 들어가도록 대표 캐릭터와 미등록 인원은 화면 읽기용으로만 두고, 상세에서 보여준다.
         if(custom&&lead)title.append(node('span','sr-only',', 대표 '+lead.character.name));

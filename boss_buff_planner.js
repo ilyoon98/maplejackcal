@@ -399,23 +399,47 @@
     var r = s && (s.rates || []).find(function (x) { return x.bossId === bossId; });
     return r && typeof r.percent === 'number' ? r.percent : null;
   }
+  var DIFF_LABEL = { Easy: '이지', Normal: '노멀', Hard: '하드', Chaos: '카오스', Extreme: '익스트림' };
+  // 파티 보스 스케줄러는 이름을 비우면 '난이도 보스' 이름으로 저장하므로, 그 이름이면 직접 지은 이름이 아니다.
+  function partyBossLabel(bossId) {
+    var parts = String(bossId).split('|'), db = window.MapleBossDB, boss = db && db[parts[0]];
+    return boss && DIFF_LABEL[parts[1]] ? DIFF_LABEL[parts[1]] + ' ' + boss.Name : '';
+  }
+  // 툴팁의 파티원 카드에 쓸 공개 정보(직업, 레벨, 외형). 공용 배율의 저장 정보를 먼저 쓴다.
+  function partyMemberInfo(store, name, fallback) {
+    var s = (store && Array.isArray(store.snapshots) ? store.snapshots : []).find(function (x) { return x.characterName === name && x.preset === '00000'; });
+    var c = (s && s.character) || fallback || {};
+    var image = typeof c.image === 'string' && /^https:\/\/open\.api\.nexon\.com\/static\/maplestory\/character\/look\/[A-Za-z0-9]+$/.test(c.image) ? c.image : '';
+    return { job: typeof c.job === 'string' ? c.job.slice(0, 50) : '', level: Number.isInteger(c.level) ? c.level : 0, image: image };
+  }
   function collectPartyRates(name, local, shared, store) {
-    var found = Object.create(null), skipped = [];
-    function add(p, rates, scope) {
+    var found = Object.create(null), skipped = [], catalog = window.AccountCatalog;
+    var mains = catalog ? catalog.mainNames(store || {}) : new Set();
+    function add(p, members, scope) {
       if (!p || !p.bossId || found[p.bossId]) return;
-      if (!rates.length || rates.some(function (r) { return r === null; })) { skipped.push(p.name || '이름 없는 파티'); return; }
-      found[p.bossId] = { total: Math.round(rates.reduce(function (s, r) { return s + r; }, 0) * 100) / 100, name: p.name || '', count: rates.length, id: typeof p.id === 'string' ? p.id : '', scope: scope };
+      // 파티원 순서와 자동 이름은 파티 보스 스케줄러와 같다: 본캐 먼저, 그다음 딜 비중(환산 배율) 순.
+      var ordered = catalog ? catalog.partyOrder(members, mains) : members.slice().sort(function (x, y) { return (y.rate || 0) - (x.rate || 0); });
+      var custom = p.name && p.name !== '새 파티' && p.name !== partyBossLabel(p.bossId);
+      var title = custom ? p.name : catalog ? catalog.partyTitle(ordered, mains) : ordered.map(function (m) { return m.name; }).join(', ');
+      if (!members.length || members.some(function (m) { return m.rate === null; })) { skipped.push(title || '이름 없는 파티'); return; }
+      found[p.bossId] = {
+        total: Math.round(members.reduce(function (s, m) { return s + m.rate; }, 0) * 100) / 100, name: title || '', count: members.length,
+        id: typeof p.id === 'string' ? p.id : '', scope: scope,
+        members: ordered.map(function (m) { return Object.assign({ name: m.name, rate: m.rate, main: mains.has(m.name), me: m.name === name }, m.info); })
+      };
     }
     // 공유 파티를 먼저 본다. 로컬 파티는 공유로 복사하기 전 사본일 수 있다.
     shared.forEach(function (p) {
-      if (Array.isArray(p.members) && p.members.indexOf(name) >= 0) add(p, p.members.map(function (n) { return snapshotRate(store, n, p.bossId); }), 'shared');
+      if (Array.isArray(p.members) && p.members.indexOf(name) >= 0) add(p, p.members.map(function (n) {
+        return { name: n, rate: snapshotRate(store, n, p.bossId), info: partyMemberInfo(store, n) };
+      }), 'shared');
     });
     local.forEach(function (p) {
-      var members = Array.isArray(p.members) ? p.members : [];
-      if (!members.some(function (m) { return m && m.character && m.character.name === name; })) return;
+      var members = Array.isArray(p.members) ? p.members.filter(function (m) { return m && m.character && typeof m.character.name === 'string'; }) : [];
+      if (!members.some(function (m) { return m.character.name === name; })) return;
       add(p, members.map(function (m) {
         var fresh = snapshotRate(store, m.character.name, p.bossId);
-        return fresh !== null ? fresh : typeof m.rate === 'number' ? m.rate : null;
+        return { name: m.character.name, rate: fresh !== null ? fresh : typeof m.rate === 'number' ? m.rate : null, info: partyMemberInfo(store, m.character.name, m.character) };
       }), 'local');
     });
     return { rates: found, skipped: skipped };
@@ -446,7 +470,7 @@
       var mult = effectiveMult(b), party = partyFor(b);
       return {
         name: b.name, diff: b.diff, icon: b.icon, mult: mult, extra: b.extra, rice: b.rice === true,
-        party: party ? (party.name || '파티') : '', partyLink: party ? partyLink(party) : '',
+        party: party ? (party.name || '파티') : '', partyInfo: party, partyLink: party ? partyLink(party) : '',
         full: withSlack(secOf(mult)) + extraSec(b),
         riceSec: withSlack(riceSecOf(mult)) + extraSec(b)
       };
@@ -469,8 +493,8 @@
       var sec = b.rice ? riceSecOf(mult) : secOf(mult);
       // 파티 표시는 난이도처럼 고정 칸에 두어 보스 이름 길이와 관계없이 같은 자리에 오게 하고, 누르면 그 파티를 연다.
       var partyCell = '<div class="row-party">' + (party ? (party.id
-        ? '<a class="party-link" href="' + esc(partyLink(party)) + '" aria-label="' + esc((party.name || b.name) + ' 파티 보러 가기') + '" data-tooltip="' + esc((party.name || '파티') + ' · ' + party.count + '명 환산 합계 ' + percentText(party.total) + '%') + '" data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다.">파티</a>'
-        : '<span class="party-link" data-tooltip="' + esc((party.name || '파티') + ' 환산 합계 ' + percentText(party.total) + '%') + '">파티</span>') : '') + '</div>';
+        ? '<a class="party-link" href="' + esc(partyLink(party)) + '" aria-label="' + esc((party.name || b.name) + ' 파티 보러 가기') + '"' + partyTooltipAttrs(party, true) + '>파티</a>'
+        : '<span class="party-link" tabindex="0"' + partyTooltipAttrs(party, false) + '>파티</span>') : '') + '</div>';
       var lockAttr = usingParty ? ' disabled title="파티 배율을 쓰는 중입니다"' : '';
       var excluded = state.excludeCompleted && b.completed;
       var dopingName = b.rice ? '쌀도핑' : '풀도핑';
@@ -626,8 +650,21 @@
   function partyTagHtml(it) {
     if (!it.party) return '';
     return it.partyLink
-      ? ' <a class="tag party" href="' + esc(it.partyLink) + '" aria-label="' + esc(it.party) + ' 파티 보러 가기" data-tooltip="' + esc(it.party) + ' 파티 배율로 계산" data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다.">파티</a>'
-      : ' <span class="tag party" data-tooltip="' + esc(it.party) + ' 파티 배율로 계산">파티</span>';
+      ? ' <a class="tag party" href="' + esc(it.partyLink) + '" aria-label="' + esc(it.party) + ' 파티 보러 가기"' + partyTooltipAttrs(it.partyInfo, true) + '>파티</a>'
+      : ' <span class="tag party" tabindex="0"' + partyTooltipAttrs(it.partyInfo, false) + '>파티</span>';
+  }
+  // 파티 표시에 마우스를 올리거나 포커스하면 같이 가는 파티원을 카드로 보여준다(공통 툴팁의 파티원 목록).
+  function partyTooltipAttrs(party, linked) {
+    var items = (party.members || []).map(function (m) {
+      var tags = [];
+      if (m.me) tags.push('이 캐릭터');
+      if (m.main) tags.push('본캐');
+      return { name: m.name, note: [m.job, m.level ? 'Lv.' + m.level : ''].filter(Boolean).join(' · '), value: percentText(m.rate) + '%', image: m.image || '', tags: tags };
+    });
+    return ' data-tooltip="' + esc((party.name || '파티') + ' 파티') + '"' +
+      ' data-tooltip-value="' + esc(party.count + '명 · 환산 합계 ' + percentText(party.total) + '%') + '"' +
+      (items.length ? ' data-tooltip-items="' + esc(JSON.stringify(items)) + '"' : '') +
+      (linked ? ' data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다."' : '');
   }
   function chip(it, full) {
     return '<span class="chip">' + (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
