@@ -467,6 +467,160 @@
     updatePreferences();
   });
 
+  const equipment = window.AccessoryEquipment;
+  const nameInput = byId('accessory-character-name');
+  const importButton = byId('accessory-import-button');
+  const presetSelect = byId('accessory-preset');
+  const importStatus = byId('accessory-import-status');
+  const importList = byId('accessory-import-list');
+  const importDetails = byId('accessory-import-details');
+  const importSummary = byId('accessory-import-summary');
+  const keyState = byId('accessory-key-state');
+  const equipmentClient = equipment?.client((...args) => fetch(...args), () => window.NexonKey?.get() || '');
+  let loaded = null;
+  let request = null;
+  let appliedPreset = null;
+
+  function setImportStatus(message, kind) {
+    importStatus.textContent = message;
+    importStatus.className = `note fetch-status${kind ? ` ${kind}` : ''}`;
+  }
+
+  function renderKeyState() {
+    const has = Boolean(window.NexonKey?.has());
+    keyState.hidden = has;
+    keyState.innerHTML = has ? '' : '<span>장신구 불러오기에는 넥슨 오픈 API 키가 필요합니다.</span> <a href="index.html#apiKey">API 키 등록</a>';
+  }
+
+  function optionText(item) {
+    const parts = [item.drop ? `드랍 ${item.drop * lineValue}%` : '', item.meso ? `메획 ${item.meso * lineValue}%` : ''].filter(Boolean);
+    return parts.length ? parts.join(' · ') : '드랍과 메획 없음';
+  }
+
+  // 부위별 결과는 장비창의 보유 표시와 겹치므로 접어 두고, 주의할 부위가 있을 때만 펼친다.
+  function renderImportList(items) {
+    const warnings = items.filter(item => item.partial).length;
+    importDetails.hidden = false;
+    importDetails.open = warnings > 0;
+    importSummary.textContent = warnings ? `불러온 장신구 9부위 보기 · 주의 ${warnings}부위` : '불러온 장신구 9부위 보기';
+    importList.replaceChildren(...items.map((item, slot) => {
+      const row = document.createElement('li');
+      const slotName = document.createElement('span');
+      slotName.className = 'accessory-import-slot';
+      slotName.textContent = slots[slot];
+      const name = document.createElement('span');
+      name.className = 'accessory-import-name';
+      if (item.icon) {
+        const icon = document.createElement('img');
+        icon.src = item.icon;
+        icon.alt = '';
+        icon.referrerPolicy = 'no-referrer';
+        icon.addEventListener('error', () => icon.remove());
+        name.append(icon);
+      }
+      name.append(item.empty ? '장착 안 함' : item.name);
+      const option = document.createElement('span');
+      option.className = 'accessory-import-option';
+      option.dataset.owned = String(item.drop + item.meso > 0);
+      option.textContent = item.empty ? '—' : optionText(item);
+      row.append(slotName, name, option);
+      if (item.partial) {
+        const note = document.createElement('small');
+        const raw = [item.dropPct ? `드랍 ${item.dropPct}%` : '', item.mesoPct ? `메획 ${item.mesoPct}%` : ''].filter(Boolean).join('과 ');
+        const counted = item.drop + item.meso;
+        note.textContent = counted
+          ? `주의: ${raw} 중 20% 단위로 두 줄까지만 반영해 ${optionText(item)}로 계산합니다.`
+          : `주의: ${raw}는 20% 단위가 아니어서 계산에 넣지 않았습니다.`;
+        row.append(note);
+      }
+      return row;
+    }));
+  }
+
+  async function applyEquipment(preset) {
+    if (!loaded) return;
+    if (!equipment.hasPreset(loaded.body, preset)) {
+      setImportStatus(`${loaded.name}의 ${preset ? `프리셋 ${preset}` : '현재 착용'} 장비가 비어 있습니다. 다른 프리셋을 선택하세요.`, 'err');
+      importDetails.hidden = true;
+      return;
+    }
+    const items = equipment.parse(loaded.body, preset);
+    const nextOwned = items.map(item => combos.findIndex(combo => combo.drop === item.drop && combo.meso === item.meso) - 1);
+    const changes = prices.some((slotPrices, slot) => slotPrices.some((entry, option) => entry.owned && option !== nextOwned[slot]));
+    if (changes) {
+      const title = '보유 표시를 불러온 장비로 바꿀까요?';
+      const message = '9부위에 직접 등록한 보유 표시를 지우고 불러온 장비의 옵션만 보유로 표시합니다. 입력한 가격은 그대로 둡니다.';
+      const ok = window.SiteUX ? await window.SiteUX.confirm(title, message, '보유 표시 바꾸기') : window.confirm(`${title}\n${message}`);
+      if (!ok) {
+        if (appliedPreset !== null) presetSelect.value = String(appliedPreset);
+        setImportStatus('불러온 장비를 적용하지 않았습니다. 보유 표시는 그대로입니다.');
+        return;
+      }
+    }
+    appliedPreset = preset;
+    prices.forEach((slotPrices, slot) => slotPrices.forEach((entry, option) => { entry.owned = option === nextOwned[slot]; }));
+    renderPriceInputs();
+    renderPriceErrors();
+    renderSlotButtons();
+    updatePrices();
+    renderImportList(items);
+    const lines = items.reduce((sum, item) => sum + item.drop + item.meso, 0);
+    setImportStatus(`${loaded.name}의 ${preset ? `프리셋 ${preset}` : '현재 착용'} 장신구를 불러왔습니다. 드랍과 메획 ${lines}줄을 보유로 표시했습니다.`, 'ok');
+  }
+
+  async function importEquipment() {
+    if (!equipmentClient) return;
+    const name = nameInput.value.trim();
+    if (!name) {
+      setImportStatus('캐릭터를 선택하거나 이름을 입력하세요.', 'err');
+      if (!nameInput.hidden) nameInput.focus();
+      return;
+    }
+    request?.abort();
+    const controller = new AbortController();
+    request = controller;
+    importButton.disabled = true;
+    importButton.textContent = '불러오는 중…';
+    setImportStatus(`${name}의 장비를 불러오는 중…`);
+    try {
+      const body = await equipmentClient.load(name, nameInput.dataset.accountOcid || '', controller.signal);
+      if (request !== controller) return;
+      loaded = { name, body };
+      appliedPreset = null;
+      await applyEquipment(Number(presetSelect.value));
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      setImportStatus(equipment.describeError(error), 'err');
+    } finally {
+      if (request === controller) {
+        request = null;
+        importButton.disabled = false;
+        importButton.textContent = '장신구 불러오기';
+      }
+    }
+  }
+
+  if (equipmentClient) {
+    window.NexonCharacters?.mount({ host: '#accessory-character-picker', input: nameInput });
+    if (!window.NexonCharacters) nameInput.hidden = false;
+    importButton.addEventListener('click', importEquipment);
+    nameInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.isComposing) {
+        event.preventDefault();
+        importEquipment();
+      }
+    });
+    nameInput.addEventListener('input', () => {
+      if (loaded && loaded.name !== nameInput.value.trim()) loaded = null;
+    });
+    presetSelect.addEventListener('change', () => {
+      if (loaded) applyEquipment(Number(presetSelect.value));
+    });
+    window.addEventListener('nexon-key-changed', renderKeyState);
+    window.addEventListener('storage', renderKeyState);
+    renderKeyState();
+  }
+
   renderGoals();
   renderPreferences();
   selectSlot(0);
