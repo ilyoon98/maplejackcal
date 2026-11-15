@@ -604,7 +604,7 @@
       // 배율 칸의 툴팁으로 배율 출처를 알려주고, 직접 고친 보스는 공용 환산 배율로 되돌릴 수 있게 한다.
       var source = rateSource(b), shared = sharedFor(b), date = sharedDate();
       var rateTip = source === 'shared'
-        ? ' data-tooltip="공용 환산 배율" data-tooltip-value="' + percentText(shared) + '%" data-tooltip-note="' + esc((date ? date + ' 기록. ' : '') + '직접 고치면 고친 값을 씁니다.') + '"'
+        ? ' data-tooltip="공용 환산 배율" data-tooltip-value="' + esc(percentText(shared) + '% · ' + clearTimeText(shared)) + '" data-tooltip-note="' + esc((date ? date + ' 기록. ' : '') + '직접 고치면 고친 값을 씁니다.') + '"'
         : source === 'manual'
           ? ' data-tooltip="직접 입력한 배율" data-tooltip-note="' + esc(shared ? '공용 환산 배율은 ' + percentText(shared) + '%' + (date ? '(' + date + ' 기록)' : '') + '입니다. 이름 옆 공용 버튼으로 되돌릴 수 있습니다.' : '공용 환산 배율에 이 보스·난이도 기록이 없습니다.') + '"'
           : source === 'saved' && sharedRateLoaded
@@ -774,6 +774,12 @@
       : ' <span class="tag party" tabindex="0"' + partyTooltipAttrs(it.partyInfo, false) + '>파티</span>';
   }
   // 파티 표시에 마우스를 올리거나 포커스하면 같이 가는 파티원을 카드로 보여준다(공통 툴팁의 파티원 목록).
+  // 예상 처치 시간: 환산 배율 100%가 풀도핑 20분 처치다(파티 보스 스케줄러의 환산 합계 카드와 같은 기준).
+  function clearTimeText(rate) {
+    if (!(rate > 0)) return '';
+    var sec = Math.round(20 * 60 * 100 / rate), min = Math.floor(sec / 60), rest = sec % 60;
+    return '예상 ' + (min ? min + '분' + (rest ? ' ' : '') : '') + (rest || !min ? rest + '초' : '');
+  }
   function partyTooltipAttrs(party, linked) {
     var items = (party.members || []).map(function (m) {
       var tags = [];
@@ -782,7 +788,7 @@
       return { name: m.name, note: [m.job, m.level ? 'Lv.' + m.level : ''].filter(Boolean).join(' · '), value: percentText(m.rate) + '%', image: m.image || '', tags: tags };
     });
     return ' data-tooltip="' + esc((party.name || '파티') + ' 파티') + '"' +
-      ' data-tooltip-value="' + esc(party.count + '명 · 환산 합계 ' + percentText(party.total) + '%') + '"' +
+      ' data-tooltip-value="' + esc(party.count + '명 · 환산 합계 ' + percentText(party.total) + '% · ' + clearTimeText(party.total)) + '"' +
       (items.length ? ' data-tooltip-items="' + esc(JSON.stringify(items)) + '"' : '') +
       (linked ? ' data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다."' : '');
   }

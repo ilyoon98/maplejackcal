@@ -625,7 +625,8 @@ test('이름 없는 파티는 본캐 먼저 배율 순으로 자동 이름을 �
   const row = engine.listRows()[0].match(/<div class="row-party">.*?<\/div>/)[0];
   const attr = name => row.match(new RegExp(' ' + name + '="([^"]*)"'))[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&');
   assert.equal(attr('data-tooltip'), '나의,딜러,나의 파티');
-  assert.equal(attr('data-tooltip-value'), '3명 · 환산 합계 130%');
+  // 파티 보스 스케줄러의 환산 합계 카드처럼 예상 처치 시간(100% = 20분)을 함께 보여준다.
+  assert.equal(attr('data-tooltip-value'), '3명 · 환산 합계 130% · 예상 15분 23초');
   const items = JSON.parse(attr('data-tooltip-items'));
   assert.deepEqual(items.map(item => [item.name, item.note, item.value, item.tags]), [
     ['나의본캐', '비숍 · Lv.290', '40%', ['본캐']], ['딜러친구', '히어로 · Lv.285', '70%', []], ['나의부캐', '', '20%', ['이 캐릭터']]
@@ -667,7 +668,7 @@ test('공용 환산 배율을 기본값으로 쓰고 직접 고친 배율이 우
   assert.equal(mult('윌'), 150.5);
   assert.equal(mult('루시드'), 90);
   let [will, lucid] = engine.listRows();
-  assert.match(will, /class="row-input row-mult" data-tooltip="공용 환산 배율" data-tooltip-value="150.5%" data-tooltip-note="11월 7일 기록/);
+  assert.match(will, /class="row-input row-mult" data-tooltip="공용 환산 배율" data-tooltip-value="150.5% · 예상 13분 17초" data-tooltip-note="11월 7일 기록/);
   assert.match(will, /class="rate-shared"/);
   assert.match(lucid, /data-tooltip="이 화면에 입력한 배율"/);
   // 배율 캡처는 공용 환산 배율 화면에서 한다. 기록 없는 동선 보스가 있으면 그 수를 알리고 선택한 캐릭터로 연다.
