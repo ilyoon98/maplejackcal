@@ -761,10 +761,17 @@
         repairPortraits(activeParties().find(function(p){return p.id===selected;}));
       }catch(e){if(request===syncVersion)status('공용 캐릭터 목록을 불러오지 못했습니다. 기존 파티는 유지됩니다.',true);}
     }
+    // 내 캐릭터 = API 키 계정 캐릭터 + 이 브라우저에서 켠 "내가 쓰는 계정"(친구 계정 등)의 캐릭터.
     async function loadMine(){
-      owned.clear();if(!win.NexonKey||!win.NexonKey.has()){filterStatus('내 캐릭터 필터는 홈에서 API 키를 등록하면 사용할 수 있습니다.',true);return;}
+      owned.clear();
+      var extras=win.NexonCharacters&&win.NexonCharacters.extraNames?win.NexonCharacters.extraNames():[];
+      extras.forEach(function(name){owned.add(name);});
+      if(!win.NexonKey||!win.NexonKey.has()){
+        if(extras.length){if(view.value==='mine'){filterStatus('내가 쓰는 계정 캐릭터만 확인합니다. API 키를 등록하면 내 계정 캐릭터도 함께 찾습니다.');refreshBoard();}return;}
+        filterStatus('내 캐릭터 필터는 홈에서 API 키를 등록하거나 공용 환산 배율의 계정 관리에서 내가 쓰는 계정을 켜면 사용할 수 있습니다.',true);return;
+      }
       filterStatus('내 캐릭터를 불러오는 중…');
-      try{var chars=await win.NexonCharacters.fetch();chars.forEach(function(c){owned.add(c.name);});if(view.value==='mine'){filterStatus('');refreshBoard();}}catch(e){if(view.value==='mine')filterStatus('내 캐릭터를 불러오지 못했습니다. API 키를 확인하세요.',true);}
+      try{var chars=await win.NexonCharacters.fetch();chars.forEach(function(c){owned.add(c.name);});if(view.value==='mine'){filterStatus('');refreshBoard();}}catch(e){if(view.value==='mine'){filterStatus('내 계정 캐릭터를 불러오지 못했습니다. API 키를 확인하세요.'+(extras.length?' 내가 쓰는 계정 캐릭터만 확인합니다.':''),true);if(extras.length)refreshBoard();}}
     }
     var supported=new Set(win.RateCatalog.choices(win.MapleBossDB).map(function(c){return c.id;}));
     var bossPicker=mountBossPicker(win,choices,supported);
@@ -831,7 +838,11 @@
     });
     win.addEventListener('nexon-key-changed',function(){profileVersion++;if(controller)controller.abort();portraitAttempts.clear();if(current)choose(current.name);ownSyncedKey='';if(ownSyncPending)ownSyncPending.catch(function(){}).finally(function(){ownSyncedKey='';syncSaved();});else syncSaved();if(view.value==='mine')loadMine();loadClears(true).then(function(){renderBoard();});});
     function refresh(){syncSaved();if(scope==='shared')loadRemote().then(function(){loadClears();});else loadClears();}
-    win.addEventListener('storage',function(e){if(e.key==='sharedBossRates.changed'||e.key===win.NexonKey.STORAGE_KEY)syncSaved();});win.addEventListener('focus',refresh);if(win.setInterval)win.setInterval(function(){if(!doc.hidden)refresh();},30000);
+    win.addEventListener('storage',function(e){if(e.key==='sharedBossRates.changed'||e.key===win.NexonKey.STORAGE_KEY)syncSaved();});
+    // 내가 쓰는 계정을 바꾸면 내 캐릭터 필터를 다시 계산한다.
+    function extraChanged(){if(view.value==='mine')loadMine();}
+    win.addEventListener('storage',function(e){if(win.NexonCharacters&&e.key===win.NexonCharacters.EXTRA_KEY)extraChanged();});
+    if(win.NexonCharacters&&win.NexonCharacters.EXTRA_EVENT)win.addEventListener(win.NexonCharacters.EXTRA_EVENT,extraChanged);win.addEventListener('focus',refresh);if(win.setInterval)win.setInterval(function(){if(!doc.hidden)refresh();},30000);
     updateScopeUI();refreshBoard();refresh();
   }
   return {imageUrl:imageUrl,profile:profile,summary:summary,clearStatus:clearStatus,clearSeconds:clearSeconds,clearTimeLabel:clearTimeLabel,periodKey:periodKey,schedulerClears:schedulerClears,catalog:catalog,restore:restore,client:client,scouterClient:scouterClient,applySnapshot:applySnapshot,mount:mount};

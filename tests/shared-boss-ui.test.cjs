@@ -310,7 +310,7 @@ test('공용 계정은 키 없이 등록된 260 이상 캐릭터로 편집하고
   assert.equal(p.doc.querySelector('#shared-group-fields').hidden,true);
   select(p.w,'shared-group-select','friend');
   assert.equal(p.doc.querySelector('#shared-group-fields').hidden,false);
-  const candidates=()=>[...p.doc.querySelectorAll('#shared-group-members button')];
+  const candidates=()=>[...p.doc.querySelectorAll('#shared-group-members button[data-group-action]')];
   const results=()=>[...p.doc.querySelectorAll('#shared-group-results button')];
   assert.deepEqual(candidates().map(n=>n.value),['친구본캐']);assert.equal(candidates()[0].textContent,'빼기');
   assert.equal(p.doc.querySelector('#shared-group-label').closest('details').id,'shared-account-editor');
@@ -445,5 +445,50 @@ test('이름을 짓지 않은 파티는 본캐 먼저 딜 비중 순으로 파�
  }finally{p.close();}
  p=await boot('party_boss_scheduler',{snapshots,parties:[{id:'p1',name:'하드 윌',bossId:'Will|Hard',members:[members[1]]}]});try{
   assert.equal(p.doc.querySelector('#party-list .party-row-title').textContent,'두번째');
+ }finally{p.close();}
+});
+test('계정 관리에서 대표 캐릭터를 지정해 공용 계정에 저장하고 본캐와 자동 이름에 쓴다',async()=>{
+ const high=snapshot('높은부캐'),main=snapshot('지정본캐');high.character.level=297;main.character.level=270;
+ const registry=[{id:'friend',label:'',characters:[{name:high.characterName},{name:main.characterName}]}];
+ const p=await boot('shared_boss_rates',{snapshots:[high,main],accounts:registry});try{
+  select(p.w,'shared-group-select','friend');
+  const mainButton=name=>p.doc.querySelector('#shared-group-members button[data-group-main][value="'+name+'"]');
+  assert.equal(mainButton('지정본캐').getAttribute('aria-pressed'),'false');
+  mainButton('지정본캐').click();
+  assert.equal(mainButton('지정본캐').getAttribute('aria-pressed'),'true');
+  assert.match(mainButton('지정본캐').closest('.shared-group-row').textContent,/대표 캐릭터/);
+  p.doc.querySelector('#shared-group-save').click();await settle();
+  const body=JSON.parse(p.calls.find(c=>c.options.method==='POST').options.body);
+  assert.equal(body.accounts[0].main,'지정본캐');
+  // 계정 이름을 비워 두면 대표 캐릭터 이름을 쓰고, 본캐 판정도 대표를 따른다.
+  const account=require('../account_catalog.js'),store={snapshots:[high,main],accounts:body.accounts};
+  assert.equal(account.groups(store)[0].label,'지정본캐');
+  assert.deepEqual([...account.mainNames(store)],['지정본캐']);
+  // 다시 누르면 대표를 해제한다.
+  mainButton('지정본캐').click();p.doc.querySelector('#shared-group-save').click();await settle();
+  const second=JSON.parse(p.calls.filter(c=>c.options.method==='POST').at(-1).options.body);
+  assert.equal(second.accounts[0].main,undefined);
+ }finally{p.close();}
+});
+test('내가 쓰는 계정을 켜면 API 키 없이도 그 계정 캐릭터가 내 캐릭터 선택기와 파티 필터에 들어간다',async()=>{
+ const a=snapshot('친구캐릭A'),b=snapshot('친구캐릭B');
+ const registry=[{id:'friend',label:'친구 계정',characters:[{name:a.characterName},{name:b.characterName}]}];
+ const p=await boot('shared_boss_rates',{snapshots:[a,b],accounts:registry});try{
+  select(p.w,'shared-group-select','friend');
+  const toggle=p.doc.querySelector('#shared-group-mine');
+  assert.equal(p.doc.querySelector('#shared-group-mine-box').hidden,false);
+  assert.equal(toggle.getAttribute('aria-checked'),'false');
+  toggle.click();
+  assert.equal(toggle.getAttribute('aria-checked'),'true');
+  const saved=JSON.parse(p.w.localStorage.getItem('nexonCharacters.extraAccounts.v1'));
+  assert.deepEqual(saved.map(s=>[s.id,s.label,s.characters.map(c=>c.name).sort()]),[['friend','친구 계정',['친구캐릭A','친구캐릭B']]]);
+  // 공용 저장 요청 없이 이 브라우저에만 저장한다.
+  assert(!p.calls.some(c=>c.options.method==='POST'));
+  const nc=p.w.NexonCharacters;
+  assert.deepEqual([...nc.extraNames()].sort(),['친구캐릭A','친구캐릭B']);
+  const merged=nc.mergeExtra([{accountId:'mine',ocid:'o1',name:'내캐릭',world:'루나',characterClass:'비숍',level:290}]);
+  assert.deepEqual([...merged].map(c=>[c.name,!!c.extra]),[['내캐릭',false],['친구캐릭A',true],['친구캐릭B',true]]);
+  toggle.click();
+  assert.deepEqual([...nc.extraNames()],[]);
  }finally{p.close();}
 });
