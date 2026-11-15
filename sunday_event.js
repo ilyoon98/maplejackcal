@@ -147,6 +147,52 @@
     return link;
   }
 
+  // 화면 하단에 붙은 고정 바(요약 바, 결과 보기 바 등)의 높이를 재서 버튼을 그 위로 올린다.
+  function bottomBarHeight(win, button) {
+    var viewportHeight = win.innerHeight;
+    var viewportWidth = win.document.documentElement.clientWidth || win.innerWidth;
+    var lift = 0;
+    Array.prototype.forEach.call(win.document.body.children, function (element) {
+      if (element === button || element.tagName === 'DIALOG' || element.tagName === 'SCRIPT') return;
+      var style = win.getComputedStyle(element);
+      if (style.position !== 'fixed' || style.display === 'none' || style.visibility === 'hidden') return;
+      var rect = element.getBoundingClientRect();
+      if (!rect.height || rect.width < viewportWidth * 0.5) return;
+      if (rect.bottom < viewportHeight - 2 || rect.top <= viewportHeight / 2) return;
+      lift = Math.max(lift, viewportHeight - rect.top);
+    });
+    return Math.ceil(lift);
+  }
+
+  function watchBottomBars(win, button) {
+    var frame = 0;
+    function sync() {
+      frame = 0;
+      if (button.hidden) return;
+      var lift = bottomBarHeight(win, button);
+      button.style.setProperty('--sunday-fab-lift', lift + 'px');
+    }
+    function schedule() {
+      if (!frame) frame = win.setTimeout(sync, 16);
+    }
+    win.addEventListener('resize', schedule);
+    if (typeof win.ResizeObserver === 'function') {
+      var resizeObserver = new win.ResizeObserver(schedule);
+      var observeChildren = function () {
+        resizeObserver.disconnect();
+        Array.prototype.forEach.call(win.document.body.children, function (element) {
+          if (element !== button && element.tagName !== 'SCRIPT') resizeObserver.observe(element);
+        });
+      };
+      observeChildren();
+      if (typeof win.MutationObserver === 'function') {
+        new win.MutationObserver(function () { observeChildren(); schedule(); })
+          .observe(win.document.body, { childList: true });
+      }
+    }
+    return schedule;
+  }
+
   function createDialog(win) {
     var existing = win.document.getElementById('sundayMapleDialog');
     if (existing) return existing;
@@ -225,6 +271,7 @@
     var hideTimer = null;
     var inFlight = false;
     var autoOpenedWeek = null;
+    var syncBottomLift = function () {};
 
     function isPopupHidden(nowValue, refreshAt) {
       try {
@@ -236,6 +283,7 @@
 
     function present(event, nowValue) {
       render(win, event, nowValue);
+      syncBottomLift();
       var refreshAt = latestRefreshAt(nowValue);
       if (!isWithinDisplayWindow(nowValue)) {
         var dialog = win.document.getElementById('sundayMapleDialog');
@@ -330,7 +378,7 @@
     }
 
     function start() {
-      createButton(win);
+      syncBottomLift = watchBottomBars(win, createButton(win));
       createDialog(win);
       check(false);
       scheduleNextWeekly();
