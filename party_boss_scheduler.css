@@ -73,6 +73,8 @@
 .party-verdict.easy{color:#a8d5ff;background:#233a54}
 .party-verdict.overkill{color:#ffd99d;background:#4d3522}
 .party-verdict.pending{color:#e3d6ac;background:#373225}
+/* 판정 배지 오른쪽의 예상 처치 시간. */
+.party-clear-time{color:var(--text);font-size:.9rem;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .party-done-badge{
   display:inline-block;justify-self:start;padding:4px 8px;border:1px solid #60ba8b;border-radius:6px;
   color:#adf2cb;background:#1b392d;font-size:.8rem;font-weight:800;white-space:nowrap
@@ -82,7 +84,8 @@
 .boss-app .party-complete.ux-complete-toggle[aria-pressed=true]{background:#245840;color:#adf2cb;border-color:#60ba8b}
 .party-complete-note{margin:8px 0 0}
 
-.party-app .party-summary-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:12px;margin:16px 0}
+/* 환산 합계 카드가 배율, 판정, 예상 시간을 한 줄에 담도록 보상 카드보다 넓게 둔다. */
+.party-app .party-summary-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;margin:16px 0}
 .party-app .party-summary-grid .party-totals{margin:0}
 .party-app .party-reward{min-width:0;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
 .party-app .party-reward h4{margin:0 0 10px;font-size:.93rem;color:var(--text)}

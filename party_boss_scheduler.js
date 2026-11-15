@@ -29,6 +29,13 @@
     if(total>=100)return ['clear','클리어 가능'];
     return ['short','불가능'];
   }
+  // 예상 처치 시간(초): 환산 배율 100%가 20분 처치다. 보스 버프 동선 계산기와 공용 환산 배율과 같은 기준이다.
+  function clearSeconds(total){return total>0?Math.round(20*60*100/total):null;}
+  function clearTimeLabel(total){
+    var sec=clearSeconds(total);if(sec===null)return '';
+    var min=Math.floor(sec/60),rest=sec%60;
+    return '예상 '+(min?min+'분'+(rest?' ':''):'')+(rest||!min?rest+'초':'');
+  }
   // 완료 표시는 보스 초기화 주기 안에서만 유효하다. 한국 시간 기준 일간은 매일 0시, 주간은 목요일 0시, 월간은 1일 0시에 바뀐다.
   function periodKey(bossId,now){
     var key=String(bossId||'').split('|')[0],d=new Date((now==null?Date.now():now)+9*3600e3);
@@ -383,10 +390,10 @@
       host.append(memberCard(makeMember(current,targetBoss())));
     }
     function percentLabel(value){return value.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%';}
-    function metric(label,value,badge){
+    function metric(label,value,badge,extra){
       var box=node('span','party-metric'),amount=node('strong','party-metric-value',value);
       box.append(node('span','party-metric-label',label));
-      if(badge){var line=node('span','party-metric-line');line.append(amount,badge);box.append(line);}else box.append(amount);
+      if(badge||extra){var line=node('span','party-metric-line');line.append(amount);if(badge)line.append(badge);if(extra)line.append(extra);box.append(line);}else box.append(amount);
       return box;
     }
     // 파티원 순서는 본캐 먼저, 그다음 환산 배율(예상 딜 비중)이 높은 순이다. 첫 번째가 대표 캐릭터다.
@@ -405,7 +412,11 @@
       var sum=summary(members),known=members.length>sum.missing,shares=damageShares(members);
       var box=node('section','party-totals'),head=node('div','party-overview-head');
       var verdict=sum.missing?['pending','판정 대기']:members.length?clearStatus(Math.round(sum.total*100)/100):null;
-      head.append(metric('환산 합계',known?percentLabel(sum.total):'—',verdict?node('span','party-verdict '+verdict[0],verdict[1]):null));
+      // 판정 배지 오른쪽에 환산 합계로 계산한 예상 처치 시간을 둔다. 미등록 파티원이 있으면 합계를 믿을 수 없어 숨긴다.
+      var time=!sum.missing&&members.length?clearTimeLabel(Math.round(sum.total*100)/100):'';
+      var timeNode=time?node('span','party-clear-time',time):null;
+      if(timeNode)timeNode.title='환산 배율 100%를 20분 처치로 계산한 시간입니다.';
+      head.append(metric('환산 합계',known?percentLabel(sum.total):'—',verdict?node('span','party-verdict '+verdict[0],verdict[1]):null,timeNode));
       head.append(node('span','party-member-count',members.length+' / '+boss.max+'명'));
       box.append(head);
       if(shares)box.append(damageChart(members,shares));
@@ -823,5 +834,5 @@
     win.addEventListener('storage',function(e){if(e.key==='sharedBossRates.changed'||e.key===win.NexonKey.STORAGE_KEY)syncSaved();});win.addEventListener('focus',refresh);if(win.setInterval)win.setInterval(function(){if(!doc.hidden)refresh();},30000);
     updateScopeUI();refreshBoard();refresh();
   }
-  return {imageUrl:imageUrl,profile:profile,summary:summary,clearStatus:clearStatus,periodKey:periodKey,schedulerClears:schedulerClears,catalog:catalog,restore:restore,client:client,scouterClient:scouterClient,applySnapshot:applySnapshot,mount:mount};
+  return {imageUrl:imageUrl,profile:profile,summary:summary,clearStatus:clearStatus,clearSeconds:clearSeconds,clearTimeLabel:clearTimeLabel,periodKey:periodKey,schedulerClears:schedulerClears,catalog:catalog,restore:restore,client:client,scouterClient:scouterClient,applySnapshot:applySnapshot,mount:mount};
 });

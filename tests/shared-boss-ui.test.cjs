@@ -59,6 +59,9 @@ test('파티원 세 명의 예상 딜 비중을 표시하고 파티원을 빼면
   const totals=p.doc.querySelector('#party-detail .party-totals');
   assert.equal(totals.querySelector('.party-metric-value').textContent,'136.47%');
   assert.equal(totals.querySelector('.party-verdict').textContent,'클리어 가능');
+  // 판정 배지 오른쪽에 예상 처치 시간(100% = 20분)을 보여준다.
+  const time=totals.querySelector('.party-metric-line .party-verdict + .party-clear-time');
+  assert.equal(time.textContent,'예상 14분 39초');
   // 예상 딜 비중은 환산 합계 카드 안에 함께 표시한다.
   assert(totals.querySelector('.party-share-chart'));
   const shares=id=>[...p.doc.querySelectorAll('#'+id+' .party-member-metrics .party-metric:nth-child(2) .party-metric-value')].map(n=>n.textContent);
