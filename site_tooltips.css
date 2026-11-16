@@ -43,10 +43,25 @@
 .site-tooltip-value { color:#a9d0ff; font-size:15px; font-weight:800; }
 .site-tooltip-note { color:#c9d5e8; font-size:12px; white-space:pre-line; }
 /* 파티원 같은 항목 목록: 외형(없으면 이름 첫 글자), 이름과 표시, 보조 정보, 오른쪽 값. */
-.site-tooltip-items { display:flex; flex-direction:column; gap:6px; margin:2px 0 0; padding:0; list-style:none; min-width:220px; }
-.site-tooltip-item { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:10px; padding:6px 8px; border:1px solid #33496d; border-radius:8px; background:#0f1828; }
-.site-tooltip-avatar { position:relative; display:grid; place-items:center; width:40px; height:40px; overflow:hidden; border-radius:7px; background:#22324d; color:#c3deff; font-size:15px; font-weight:800; }
-.site-tooltip-avatar img { position:absolute; left:50%; top:50%; width:72px; height:72px; max-width:none; transform:translate(-50%,-50%); object-fit:contain; opacity:0; }
+.site-tooltip-items { --tooltip-avatar-size:clamp(2.25rem,min(16vw,calc((100dvh - 196px) / 6)),4rem); display:flex; flex-direction:column; gap:6px; margin:2px 0 0; padding:0; list-style:none; min-width:min(220px,100%); }
+.site-tooltip-item { display:grid; grid-template-columns:var(--tooltip-avatar-size) minmax(0,1fr) auto; align-items:center; gap:8px; padding:6px 8px; border:1px solid #33496d; border-radius:8px; background:#0f1828; }
+.site-tooltip-avatar { position:relative; display:grid; place-items:center; width:var(--tooltip-avatar-size); aspect-ratio:1; overflow:hidden; border-radius:8px; background:#22324d; color:#c3deff; font-size:15px; font-weight:800; }
+.site-tooltip-avatar img {
+  position:absolute;
+  inset:50% auto auto 50%;
+  width:calc(var(--tooltip-avatar-size) * 6);
+  aspect-ratio:1;
+  max-width:none;
+  transform:translate(-48%,-51%);
+  object-fit:contain;
+  image-rendering:pixelated;
+  opacity:0;
+}
+/* 랭킹 이미지는 Open API 외형보다 투명 여백이 작다. */
+.site-tooltip-avatar img[src^="https://avatar.maplestory.nexon.com/CharacterEx/"] {
+  width:calc(var(--tooltip-avatar-size) * 3.6);
+  transform:translate(-44%,-39%);
+}
 .site-tooltip-avatar.has-image { color:transparent; }
 .site-tooltip-avatar.has-image img { opacity:1; }
 .site-tooltip-item-body { display:flex; flex-direction:column; gap:2px; min-width:0; }

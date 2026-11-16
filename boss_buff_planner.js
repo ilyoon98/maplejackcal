@@ -465,7 +465,8 @@
   function partyMemberInfo(store, name, fallback) {
     var s = (store && Array.isArray(store.snapshots) ? store.snapshots : []).find(function (x) { return x.characterName === name && x.preset === '00000'; });
     var c = (s && s.character) || fallback || {};
-    var image = typeof c.image === 'string' && /^https:\/\/open\.api\.nexon\.com\/static\/maplestory\/character\/look\/[A-Za-z0-9]+$/.test(c.image) ? c.image : '';
+    var imageUrl = window.ScouterData.imageUrl;
+    var image = imageUrl(c.image) || imageUrl(fallback?.image);
     return { job: typeof c.job === 'string' ? c.job.slice(0, 50) : '', level: Number.isInteger(c.level) ? c.level : 0, image: image };
   }
   function collectPartyRates(name, local, shared, store) {

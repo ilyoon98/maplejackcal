@@ -28,7 +28,7 @@ function loadPlanner(options = {}) {
       querySelector(){ return null; },
     },
     localStorage:{getItem:() => null, setItem(){}},
-    window:Object.assign(options.mountPicker ? {NexonCharacters:{mount:options.mountPicker}} : {}, options.window),
+    window:{ScouterData:require('../scouter_data.js'), ...(options.mountPicker && {NexonCharacters:{mount:options.mountPicker}}), ...options.window},
     NexonCharacters:options.mountPicker ? {mount:options.mountPicker} : undefined,
     Event:class {constructor(type){this.type = type;}},
   });
@@ -603,7 +603,8 @@ test('캐릭터가 들어간 파티는 파티 환산 합계를 찾고 배율 미
 test('이름 없는 파티는 본캐 먼저 배율 순으로 자동 이름을 짓고 파티 표시 툴팁에 파티원 카드를 넣는다', () => {
   const engine = loadPlanner({window:{AccountCatalog:require('../account_catalog.js')}});
   const now = Date.now() - 1000;
-  const character = (name, job, level) => ({name, world:'루나', job, level, image:'https://open.api.nexon.com/static/maplestory/character/look/ABC123', updatedAt:now});
+  const image = 'https://open.api.nexon.com/static/maplestory/character/look/ABC123?wmotion=W00';
+  const character = (name, job, level) => ({name, world:'루나', job, level, image, updatedAt:now});
   const store = {
     snapshots:[
       {characterName:'나의본캐', preset:'00000', character:character('나의본캐', '비숍', 290), rates:[{bossId:'Will|Hard', percent:40}]},
@@ -631,7 +632,7 @@ test('이름 없는 파티는 본캐 먼저 배율 순으로 자동 이름을 �
   assert.deepEqual(items.map(item => [item.name, item.note, item.value, item.tags]), [
     ['나의본캐', '비숍 · Lv.290', '40%', ['본캐']], ['딜러친구', '히어로 · Lv.285', '70%', []], ['나의부캐', '', '20%', ['이 캐릭터']]
   ]);
-  assert.equal(items[0].image, 'https://open.api.nexon.com/static/maplestory/character/look/ABC123');
+  assert.equal(items[0].image, image);
 });
 
 test('파티 보스는 항상 파티 배율로 계산하고 고정 칸의 파티 표시로 그 파티를 연다', () => {
