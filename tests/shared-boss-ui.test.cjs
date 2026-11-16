@@ -5,12 +5,13 @@ const image='https://open.api.nexon.com/static/maplestory/character/look/ABC123'
 const profile=name=>({name,world:'루나',job:'히어로',level:285,image,updatedAt:Date.now()});
 function snapshot(name='다른사람'){const s=catalog.snapshot(name,[{bossId:'Lotus|Extreme',percent:49.68},{bossId:'Will|Hard',percent:77}],'manual');return {...s,revision:'v1',character:profile(name)};}
 const settle=async()=>{for(let i=0;i<5;i++)await new Promise(setImmediate);};
-async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,shot=[],ownRows=[],parties=[],url=''}={}){
+async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,shot=[],ownRows=[],parties=[],completed='',url=''}={}){
  const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../'+page+'.html'),'utf8'),{url:'https://example.test/'+(url||page+'.html'),runScripts:'outside-only'}),w=dom.window,calls=[];let values=structuredClone(snapshots),registry=structuredClone(accounts);
  w.confirm=()=>true;w.setInterval=()=>1;if(key)w.localStorage.setItem('nxopen_api_key',key);
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
  w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
  if(parties.length)w.localStorage.setItem('partyBossScheduler.v1',JSON.stringify({parties}));
+ if(completed)w.localStorage.setItem('partyBossScheduler.completed.v1',completed);
  w.fetch=async(url,options={})=>{calls.push({url,options});if(url==='/api/boss-rates'){
    if(options.method==='POST'){const b=JSON.parse(options.body);if(b.action==='delete'){values=values.filter(s=>s.characterName!==b.characterName);return {ok:true,json:async()=>({deleted:true})};}if(b.action==='accounts'){registry=b.accounts;return {ok:true,json:async()=>({accounts:registry,accountRevision:'accounts-v2'})};}const saved={...b.snapshot,revision:'v2'};values=values.filter(s=>s.characterName!==saved.characterName).concat(saved);return {ok:true,json:async()=>({snapshot:saved})};}
    return {ok:true,json:async()=>({schemaVersion:1,persistent:true,snapshots:structuredClone(values),accounts:structuredClone(registry),accountRevision:registry.length?'accounts-v1':''})};
@@ -24,6 +25,47 @@ async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,s
 }
 function select(w,id,value){const n=w.document.getElementById(id);n.value=value;n.dispatchEvent(new w.Event('change',{bubbles:true}));}
 function type(w,id,value){const n=w.document.getElementById(id);n.value=value;n.dispatchEvent(new w.Event('input',{bubbles:true}));}
+test('로컬에서 완료를 저장해도 아직 불러오지 않은 공유 파티의 수동 완료는 유지된다',async()=>{
+ const shared={id:'remote',name:'공유 파티',bossId:'Will|Hard',members:[],canEdit:true};
+ const parties=[{id:'local',name:'로컬 파티',bossId:'Will|Hard',members:[]}];
+ const fetchExtra=async url=>{assert.equal(url,'/api/boss-parties');return {ok:true,json:async()=>({persistent:true,parties:[shared]})};};
+ const first=await boot('party_boss_scheduler',{parties,fetchExtra,url:'party_boss_scheduler.html?scope=shared'});
+ let completed;
+ try{
+  first.doc.querySelector('.party-complete').click();
+  completed=first.w.localStorage.getItem('partyBossScheduler.completed.v1');
+ }finally{first.close();}
+ const next=await boot('party_boss_scheduler',{parties,fetchExtra,completed});
+ try{
+  next.doc.querySelector('.party-complete').click();
+  next.doc.querySelector('#party-scope-shared').click();await settle();
+  assert.equal(next.doc.querySelector('.party-complete').getAttribute('aria-pressed'),'true');
+  assert.match(next.doc.querySelector('#party-list .party-done-badge').textContent,/완료/);
+ }finally{next.close();}
+});
+test('공유 탭을 열거나 목록을 새로고침하면 해당 파티의 자동 완료를 바로 조회한다',async()=>{
+ const character=snapshot();
+ const shared={id:'remote',name:'공유 파티',bossId:'Will|Hard',members:[character.characterName]};
+ let cleared=true,clearsRequests=0;
+ const p=await boot('party_boss_scheduler',{key:'test-key',snapshots:[character],ownRows:[{name:character.characterName,ocid:'own-ocid'}],fetchExtra:async url=>{
+  if(url==='/api/boss-parties')return {ok:true,json:async()=>({persistent:true,parties:[shared]})};
+  const req=new URL(url);
+  assert.equal(req.pathname,'/maplestory/v1/scheduler/character-state');
+  assert.equal(req.searchParams.get('ocid'),'own-ocid');clearsRequests++;
+  return {ok:true,json:async()=>({boss_contents:[{content_name:'윌',difficulty:'hard',clear_flag:cleared}]})};
+ }});
+ try{
+  assert.equal(clearsRequests,0);
+  p.doc.querySelector('#party-scope-shared').click();await settle();
+  assert.equal(clearsRequests,1);
+  assert.equal(p.doc.querySelector('.party-complete').disabled,true);
+  assert.match(p.doc.querySelector('#party-list .party-done-badge').textContent,/완료/);
+  cleared=false;
+  p.doc.querySelector('#party-refresh-shared').click();await settle();
+  assert.equal(clearsRequests,2);
+  assert.equal(p.doc.querySelector('.party-complete').getAttribute('aria-pressed'),'false');
+ }finally{p.close();}
+});
 test('저장된 캐릭터 선택 즉시 프로필과 배율을 열고 중복 열기·조건 확인 버튼 없이 저장한다',async()=>{
  const p=await boot('shared_boss_rates',{snapshots:[snapshot('다른사람'),snapshot('두번째캐릭터')]});try{
   assert.equal(p.doc.querySelector('#shared-open').hidden,false);assert.equal(p.doc.querySelectorAll('#shared-rows tr').length,2);assert(p.doc.querySelector('#shared-profile').textContent.includes('Lv. 285'));assert(p.doc.querySelector('#shared-profile img').src===image);

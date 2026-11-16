@@ -190,9 +190,14 @@
       return manualDone[p.id]===periodKey(p.bossId)?'manual':'';
     }
     function setManualDone(p,done){
-      var next={};
-      Object.keys(manualDone).forEach(function(id){var party=parties.concat(remoteParties).find(function(item){return item.id===id;});if(party&&manualDone[id]===periodKey(party.bossId))next[id]=manualDone[id];});
-      if(done)next[p.id]=periodKey(p.bossId);else delete next[p.id];
+      var next={},now=Date.now(),bosses=new Map(parties.concat(remoteParties).map(function(item){return [item.id,item.bossId];}));
+      var currentPeriods=new Set(['',DAILY_BOSSES[0],'BlackMage'].map(function(bossId){return periodKey(bossId,now);}));
+      Object.keys(manualDone).forEach(function(id){
+        var bossId=bosses.get(id),savedPeriod=manualDone[id];
+        // 공유 목록을 열기 전에도 아직 유효한 공유 파티 체크를 보존한다.
+        if(bossId?savedPeriod===periodKey(bossId,now):currentPeriods.has(savedPeriod))next[id]=savedPeriod;
+      });
+      if(done)next[p.id]=periodKey(p.bossId,now);else delete next[p.id];
       try{win.localStorage.setItem(COMPLETE_STORAGE,JSON.stringify(next));}catch(e){storageStatus('완료 표시를 브라우저에 저장하지 못했습니다.',true);return false;}
       manualDone=next;return true;
     }
@@ -267,7 +272,7 @@
         })};
       });
     }
-    async function loadRemote(){
+    async function loadRemote(forceClears){
       if(remoteWriting)return;
       var request=++remoteVersion;remoteLoading=true;updateScopeUI();
       try{
@@ -280,7 +285,14 @@
         remoteError=remoteAvailable?'':'공유 저장소를 사용할 수 없습니다.';
         hydrateRemote();
       }catch(e){if(request===remoteVersion)remoteError='공유 파티를 불러오지 못했습니다. 목록을 새로고침하세요.';}
-      finally{if(request===remoteVersion){remoteLoading=false;updateScopeUI();if(scope==='shared')refreshBoard();}}
+      finally{
+        if(request===remoteVersion){
+          remoteLoading=false;updateScopeUI();if(scope==='shared')refreshBoard();
+          // 진행 중인 로컬 조회가 새 공유 파티를 포함하지 않았을 수 있다.
+          if(clearsPending)await clearsPending;
+          if(request===remoteVersion)loadClears(forceClears);
+        }
+      }
     }
     async function writeRemote(action,p,revision,notify){
       if(remoteWriting)return null;
@@ -782,7 +794,7 @@
         e.preventDefault();switchScope(e.key==='Home'?'local':e.key==='End'?'shared':value==='local'?'shared':'local');
       });
     });
-    el('party-refresh-shared').addEventListener('click',loadRemote);
+    el('party-refresh-shared').addEventListener('click',function(){loadRemote(true);});
     el('party-saved-character').addEventListener('change',function(){if(this.value)choose(this.value);else{profileVersion++;if(controller)controller.abort();current=null;renderPreview();renderBoard();}});
     el('party-reload-catalog').addEventListener('click',function(){ownSyncedKey='';portraitAttempts.clear();syncSaved();});
     el('party-boss').addEventListener('change',function(){draftStatus('');renderDraft();});
@@ -837,7 +849,7 @@
       doc.querySelector('.party-edit')?.focus();
     });
     win.addEventListener('nexon-key-changed',function(){profileVersion++;if(controller)controller.abort();portraitAttempts.clear();if(current)choose(current.name);ownSyncedKey='';if(ownSyncPending)ownSyncPending.catch(function(){}).finally(function(){ownSyncedKey='';syncSaved();});else syncSaved();if(view.value==='mine')loadMine();loadClears(true).then(function(){renderBoard();});});
-    function refresh(){syncSaved();if(scope==='shared')loadRemote().then(function(){loadClears();});else loadClears();}
+    function refresh(){syncSaved();if(scope==='shared')loadRemote();else loadClears();}
     win.addEventListener('storage',function(e){if(e.key==='sharedBossRates.changed'||e.key===win.NexonKey.STORAGE_KEY)syncSaved();});
     // 내가 쓰는 계정을 바꾸면 내 캐릭터 필터를 다시 계산한다.
     function extraChanged(){if(view.value==='mine')loadMine();}
