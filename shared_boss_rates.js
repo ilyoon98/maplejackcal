@@ -52,6 +52,16 @@
   function groupStatus(message,error){
     var status=el('shared-group-status');status.textContent=message;status.classList.toggle('error',!!error);
   }
+  // 대표 캐릭터 초안: undefined면 저장된 대표를 그대로 쓰고, ''이면 대표 해제.
+  var groupMainDraft;
+  function groupMain(){return groupMainDraft!==undefined?groupMainDraft:selectedGroup()?.main||'';}
+  // 내가 쓰는 계정은 이 브라우저에만 저장한다(NexonCharacters가 내 캐릭터 목록에 합친다).
+  function extraAccount(group){return {label:group.label,characters:group.characters.map(function(c){return {name:c.name,world:c.profile?.world||'',level:c.profile?.level||0,characterClass:c.profile?.job||''};})};}
+  function renderGroupMine(){
+    var box=el('shared-group-mine-box'),button=el('shared-group-mine'),nc=window.NexonCharacters,existing=!!groupEditId&&!!selectedGroup();
+    box.hidden=!existing||!nc||!nc.setExtraAccount;if(box.hidden)return;
+    var on=nc.isExtraAccount(groupEditId);button.setAttribute('aria-checked',String(on));button.querySelector('.switch-state').textContent=on?'켜짐':'꺼짐';button.disabled=busy;
+  }
   function renderGroupEditor(){
     var groups=allGroups(),select=el('shared-group-select');
     select.replaceChildren();option(select,':pick','계정을 선택하세요').disabled=true;
@@ -60,6 +70,7 @@
     el('shared-group-fields').hidden=groupEditId===null;
     if(groupEditId===null)return;
     el('shared-group-label').value=groupLabelDraft??selectedGroup()?.label??'';
+    renderGroupMine();
     renderGroupMembers(groupCandidates(groups));
   }
   function renderGroupMembers(candidates=groupCandidates(allGroups())){
@@ -75,6 +86,8 @@
       var row=node('div'),info=node('span');row.className='shared-group-row';
       info.append(node('strong',c.name),node('small','Lv. '+c.profile.level));
       if(moving&&!included)info.append(node('small','현재 '+c.group.label));
+      var isMain=included&&groupMain()===c.name;
+      if(isMain){var mainTag=node('small','대표 캐릭터');mainTag.className='shared-group-main-tag';info.append(mainTag);}
       if(included!==existing){
         var state=node('small',included?(moving?c.group.label+'에서 이동 예정':'추가 예정'):'제외 예정');
         state.className='shared-group-pending';info.append(state);
@@ -82,7 +95,15 @@
       var verb=included?'빼기':existing?'되돌리기':moving?'이동':'추가',action=node('button',verb);
       action.type='button';action.value=c.name;action.dataset.groupAction=included?'remove':'add';action.disabled=busy;
       action.className='ux-button';action.setAttribute('aria-label',c.name+' '+verb);
-      row.append(info,action);(inRoster?roster:results).append(row);
+      var actions=node('span');actions.className='shared-group-actions';
+      // 소속 캐릭터에는 대표 지정 버튼을 둔다. 다시 누르면 대표를 해제한다.
+      if(included){
+        var main=node('button','대표');main.type='button';main.value=c.name;main.dataset.groupMain='1';main.disabled=busy;
+        main.className='ux-button shared-group-main';main.setAttribute('aria-pressed',String(isMain));main.setAttribute('aria-label',c.name+' 대표 캐릭터'+(isMain?' 해제':'로 지정'));
+        actions.append(main);
+      }
+      actions.append(action);
+      row.append(info,actions);(inRoster?roster:results).append(row);
       if(c.name===focusedName)replacement=action;
     });
     el('shared-group-empty').hidden=roster.childElementCount>0;
@@ -94,6 +115,8 @@
     var select=el('shared-account');select.replaceChildren();
     // 전체 계정은 개별 계정과 구분되도록 굵게 표시하고 아래에 구분선을 둔다. 미분류 계정 앞에도 구분선을 둔다.
     option(select,'','전체 계정').className='shared-account-all';select.append(document.createElement('hr'));
+    // 내가 쓰는 계정으로 켜 둔 계정은 최신 소속·레벨로 맞춰 둔다.
+    if(window.NexonCharacters&&window.NexonCharacters.refreshExtraAccounts)window.NexonCharacters.refreshExtraAccounts(allGroups().filter(function(g){return g.id;}).map(function(g){return {id:g.id,...extraAccount(g)};}));
     allGroups().forEach(function(g){if(!g.id){if(select.lastElementChild.tagName!=='HR')select.append(document.createElement('hr'));option(select,'__unassigned__',g.label+' · 계정 설정 필요').className='shared-unassigned';}else option(select,g.id,g.label);});if(!Array.from(select.options).some(function(o){return o.value===accountFilter;}))accountFilter='';select.value=accountFilter;characterOptions();ownerOptions();renderGroupEditor();}
   async function persistAccounts(next){var result=await accounts.save(fetch,next,store.accountRevision||'',el('shared-pin').value);store.accounts=result.accounts;store.accountRevision=result.accountRevision;return result;}
   async function saveOwner(){
@@ -197,12 +220,20 @@
   el('shared-owner').addEventListener('change',function(){ownerLabel();dirty=true;ownerDirty=true;saveState('계정 변경 · 저장 전');});el('shared-owner-label').addEventListener('input',function(){dirty=true;ownerDirty=true;saveState('계정 이름 변경 · 저장 전');});
   el('shared-group-select').addEventListener('change',async function(){
     var target=this.value,previous=groupEditId;
-    if((groupEdits.size||groupLabelDraft!==null)&&(!await confirmDraft('다른 공용 계정을 수정할까요?','계정 변경')||previous!==groupEditId||busy)){this.value=groupEditId;return;}
+    if((groupEdits.size||groupLabelDraft!==null||groupMainDraft!==undefined)&&(!await confirmDraft('다른 공용 계정을 수정할까요?','계정 변경')||previous!==groupEditId||busy)){this.value=groupEditId;return;}
     if(!Array.from(this.options).some(function(option){return option.value===target;})){this.value=groupEditId;return;}
-    groupEditId=target;groupEdits.clear();groupLabelDraft=null;el('shared-group-search').value='';groupStatus('');renderGroupEditor();controls();
+    groupEditId=target;groupEdits.clear();groupLabelDraft=null;groupMainDraft=undefined;el('shared-group-search').value='';groupStatus('');renderGroupEditor();controls();
   });
   el('shared-group-search').addEventListener('input',function(){renderGroupMembers();});
+  el('shared-group-mine').addEventListener('click',function(){
+    var group=allGroups().find(function(g){return g.id===groupEditId;}),nc=window.NexonCharacters;if(!group||!nc)return;
+    var on=!nc.isExtraAccount(groupEditId);
+    if(!nc.setExtraAccount(groupEditId,on?extraAccount(group):null)){groupStatus('이 브라우저에 저장하지 못했습니다.',true);return;}
+    renderGroupMine();groupStatus('“'+group.label+'” 캐릭터를 '+(on?'이 브라우저의 내 캐릭터 목록에 넣었습니다.':'내 캐릭터 목록에서 뺐습니다.'));
+  });
   el('shared-account-editor').addEventListener('click',function(e){
+    var mainButton=e.target.closest('button[data-group-main]');
+    if(mainButton){groupMainDraft=groupMain()===mainButton.value?'':mainButton.value;if(groupMainDraft===(selectedGroup()?.main||''))groupMainDraft=undefined;groupStatus('');renderGroupMembers();Array.from(el('shared-group-members').querySelectorAll('button[data-group-main]')).find(function(b){return b.value===mainButton.value;})?.focus();return;}
     var action=e.target.closest('button[data-group-action]');if(!action)return;
     var include=action.dataset.groupAction==='add',existing=Boolean(selectedGroup()?.characters.some(function(c){return c.name===action.value;}));
     if(include===existing)groupEdits.delete(action.value);else groupEdits.set(action.value,include);
@@ -220,8 +251,8 @@
     var id=groupEditId||crypto.randomUUID(),label=(groupLabelDraft??account?.label??'').trim();
     busy=true;groupStatus('공용 계정 저장 중…');controls();
     try{
-      await persistAccounts(accounts.assign(store.accounts||[],id,label,Array.from(members.values())));
-      groupEditId=id;groupEdits.clear();groupLabelDraft=null;el('shared-group-search').value='';accountOptions();groupStatus('공용 계정에 저장했습니다.');
+      await persistAccounts(accounts.assign(store.accounts||[],id,label,Array.from(members.values()),groupMainDraft));
+      groupEditId=id;groupEdits.clear();groupLabelDraft=null;groupMainDraft=undefined;el('shared-group-search').value='';accountOptions();groupStatus('공용 계정에 저장했습니다.');
       try{localStorage.setItem('sharedBossRates.changed',String(Date.now()));}catch(e){}
     }catch(e){
       groupStatus(e.message==='RATE_CONFLICT'?'다른 사람이 먼저 저장했습니다. 작성값은 유지했습니다. 목록을 새로고침한 뒤 다시 저장하세요.':errors[e.message]||'공용 계정을 저장하지 못했습니다. 다시 시도하세요.',true);

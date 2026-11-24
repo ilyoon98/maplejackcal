@@ -38,10 +38,77 @@
     return characters;
   }
 
+  // ── 내가 쓰는 계정 ─────────────────────────────────────────
+  // 친구 계정처럼 내 API 키로는 목록에 나오지 않는 계정을 이 브라우저에서 내 캐릭터로 취급한다.
+  // 공용 환산 배율의 계정 관리에서 켜고 끄며, 계정의 캐릭터 정보(이름·서버·레벨·직업)만 저장한다.
+  var EXTRA_KEY = 'nexonCharacters.extraAccounts.v1';
+  var EXTRA_EVENT = 'nexon-extra-accounts-changed';
+  function readExtraAccounts() {
+    try {
+      var saved = JSON.parse(root.localStorage.getItem(EXTRA_KEY) || '[]');
+      return Array.isArray(saved) ? saved.filter(function (a) { return a && typeof a.id === 'string' && Array.isArray(a.characters); }).slice(0, 50) : [];
+    } catch (e) { return []; }
+  }
+  function writeExtraAccounts(list) {
+    try { root.localStorage.setItem(EXTRA_KEY, JSON.stringify(list)); } catch (e) { return false; }
+    try { root.dispatchEvent(new Event(EXTRA_EVENT)); } catch (e) {}
+    return true;
+  }
+  function cleanExtraAccount(account) {
+    return {
+      id: text(account.id).slice(0, 80), label: text(account.label).slice(0, 40),
+      characters: (account.characters || []).slice(0, 200).map(function (c) {
+        return { name: text(c.name).slice(0, 30), world: text(c.world).slice(0, 30), characterClass: text(c.characterClass || c.job).slice(0, 50), level: level(c.level) };
+      }).filter(function (c) { return c.name; })
+    };
+  }
+  function isExtraAccount(id) { return readExtraAccounts().some(function (a) { return a.id === id; }); }
+  // account를 넘기면 켜거나 정보를 갱신하고, null이면 끈다.
+  function setExtraAccount(id, account) {
+    var list = readExtraAccounts().filter(function (a) { return a.id !== id; });
+    if (account) list.push(cleanExtraAccount(Object.assign({}, account, { id: id })));
+    return writeExtraAccounts(list);
+  }
+  // 저장해 둔 계정 정보를 공용 계정 목록의 최신 소속·레벨로 맞춘다. 공용 목록에서 사라진 계정은 그대로 둔다.
+  function refreshExtraAccounts(latest) {
+    var list = readExtraAccounts(), changed = false;
+    var next = list.map(function (a) {
+      var fresh = latest.find(function (g) { return g.id === a.id; });
+      if (!fresh) return a;
+      var clean = cleanExtraAccount(Object.assign({}, fresh, { id: a.id }));
+      if (JSON.stringify(clean) !== JSON.stringify(a)) changed = true;
+      return clean;
+    });
+    if (changed) writeExtraAccounts(next);
+    return changed;
+  }
+  function extraCharacters() {
+    var seen = Object.create(null), out = [];
+    readExtraAccounts().forEach(function (account) {
+      account.characters.forEach(function (c) {
+        if (seen[c.name]) return;
+        seen[c.name] = true;
+        out.push({ accountId: 'extra:' + account.id, accountLabel: account.label, ocid: '', name: c.name, world: c.world || '서버 미확인', characterClass: c.characterClass, level: c.level, extra: true });
+      });
+    });
+    return out;
+  }
+  function extraNames() { return extraCharacters().map(function (c) { return c.name; }); }
+  // API 계정 캐릭터와 내가 쓰는 계정 캐릭터를 합친다. 같은 이름이면 API 쪽을 쓴다.
+  function mergeExtra(characters) {
+    var names = Object.create(null);
+    characters.forEach(function (c) { names[c.name] = true; });
+    return characters.concat(extraCharacters().filter(function (c) { return !names[c.name]; })).sort(function (a, b) {
+      return b.level - a.level || a.world.localeCompare(b.world, 'ko') || a.name.localeCompare(b.name, 'ko');
+    });
+  }
+  function listed(character, minLevel) { return character.level >= minLevel || (character.extra && !character.level); }
+  function pickKey(character) { return character.ocid || 'extra:' + character.name; }
+
   function worlds(characters, minLevel) {
     var seen = Object.create(null), out = [];
     characters.forEach(function (character) {
-      if (character.level < minLevel || seen[character.world]) return;
+      if (!listed(character, minLevel) || seen[character.world]) return;
       seen[character.world] = true;
       out.push(character.world);
     });
@@ -54,7 +121,7 @@
 
   function choose(characters, selectedWorld, minLevel) {
     return characters.filter(function (character) {
-      return character.world === selectedWorld && character.level >= minLevel;
+      return character.world === selectedWorld && listed(character, minLevel);
     });
   }
 
@@ -152,10 +219,11 @@
     }
 
     function applySelection(notify) {
-      var selected = all.find(function (character) { return character.ocid === characterSelect.value; });
+      var selected = all.find(function (character) { return pickKey(character) === characterSelect.value; });
       if (!selected) return;
       input.value = selected.name;
-      input.dataset.accountOcid = selected.ocid;
+      // 내가 쓰는 계정 캐릭터는 OCID를 모르므로 이름으로 조회하게 둔다.
+      if (selected.ocid) input.dataset.accountOcid = selected.ocid; else input.removeAttribute('data-account-ocid');
       input.dataset.accountWorld = selected.world;
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -172,12 +240,12 @@
       var list = choose(all, worldSelect.value, minLevel);
       characterSelect.textContent = '';
       list.forEach(function (character) {
-        var option = create('option', '', characterOptionText(character));
-        option.value = character.ocid;
-        option.title = character.world + ' · Lv.' + character.level + ' · ' + character.characterClass;
+        var option = create('option', '', characterOptionText(character) + (character.extra ? ' · ' + (character.accountLabel || '추가한 계정') : ''));
+        option.value = pickKey(character);
+        option.title = character.world + ' · Lv.' + character.level + ' · ' + character.characterClass + (character.extra ? ' · 내가 쓰는 계정' : '');
         characterSelect.appendChild(option);
       });
-      if (preferredOcid && list.some(function (character) { return character.ocid === preferredOcid; })) characterSelect.value = preferredOcid;
+      if (preferredOcid && list.some(function (character) { return pickKey(character) === preferredOcid; })) characterSelect.value = preferredOcid;
       characterSelect.disabled = !list.length;
       if (list.length) { if (!skipSelection) applySelection(notify); }
       else setNote('이 서버에는 레벨 ' + minLevel + ' 이상 캐릭터가 없습니다.');
@@ -185,8 +253,8 @@
 
     function findCharacter(target) {
       return all.find(function (character) {
-        if (character.level < minLevel) return false;
-        if (target.ocid) return character.ocid === target.ocid;
+        if (!listed(character, minLevel)) return false;
+        if (target.ocid && character.ocid) return character.ocid === target.ocid;
         return character.name === target.name && (!target.world || character.world === target.world);
       });
     }
@@ -199,7 +267,7 @@
       if (selected) {
         worldSelect.value = selected.world;
         setManual(false, false, true);
-        renderCharacters(selected.ocid, false, pendingSelection.notify);
+        renderCharacters(pickKey(selected), false, pendingSelection.notify);
         pendingSelection = null;
         return true;
       }
@@ -233,7 +301,7 @@
       var preferred = findCharacter(wanted);
       if ((wanted.name || wanted.ocid) && !preferred) {
         worldSelect.value = highest && availableWorlds.indexOf(highest.world) >= 0 ? highest.world : availableWorlds[0];
-        renderCharacters(highest && highest.ocid, true);
+        renderCharacters(highest && pickKey(highest), true);
         setManual(true, false);
         input.value = wanted.name;
         return;
@@ -241,7 +309,7 @@
       var selected = preferred || highest;
       worldSelect.value = selected && availableWorlds.indexOf(selected.world) >= 0 ? selected.world : availableWorlds[0];
       setManual(false, false, true);
-      renderCharacters(selected && selected.ocid, false, wanted.notify);
+      renderCharacters(selected && pickKey(selected), false, wanted.notify);
     }
 
     function describe(error) {
@@ -255,7 +323,14 @@
       worldSelect.disabled = true;
       characterSelect.disabled = true;
       setNote('계정 캐릭터를 불러오는 중…');
-      return fetchCharacters().then(renderList).catch(function (error) {
+      return fetchCharacters().then(function (list) { renderList(mergeExtra(list)); }).catch(function (error) {
+        // API 키가 없거나 실패해도 내가 쓰는 계정 캐릭터는 고를 수 있게 한다.
+        var extras = mergeExtra([]);
+        if (extras.length) {
+          renderList(extras);
+          setNote(error && error.message === 'API_KEY_REQUIRED' ? '내가 쓰는 계정 캐릭터만 표시합니다. API 키를 등록하면 내 계정 캐릭터도 함께 나옵니다.' : describe(error) + ' 내가 쓰는 계정 캐릭터만 표시합니다.');
+          return;
+        }
         setNote(describe(error));
         setManual(true, false);
       });
@@ -265,8 +340,9 @@
     characterSelect.addEventListener('change', function () { pendingSelection = null; applySelection(); });
     manualButton.addEventListener('click', function () { pendingSelection = null; setManual(!manual, !manual); });
     root.addEventListener('storage', function (event) {
-      if (root.NexonKey && event.key === root.NexonKey.STORAGE_KEY) reload();
+      if ((root.NexonKey && event.key === root.NexonKey.STORAGE_KEY) || event.key === EXTRA_KEY) reload();
     });
+    root.addEventListener(EXTRA_EVENT, function () { reload(); });
     var ready = reload();
     return { reload: reload, setManual: setManual, selectCharacter: selectCharacter, ready: ready };
   }
@@ -281,6 +357,15 @@
     worldIconPath: worldIconPath,
     characterOptionText: characterOptionText,
     fetch: fetchCharacters,
-    mount: mount
+    mount: mount,
+    EXTRA_KEY: EXTRA_KEY,
+    EXTRA_EVENT: EXTRA_EVENT,
+    extraAccounts: readExtraAccounts,
+    isExtraAccount: isExtraAccount,
+    setExtraAccount: setExtraAccount,
+    refreshExtraAccounts: refreshExtraAccounts,
+    extraCharacters: extraCharacters,
+    extraNames: extraNames,
+    mergeExtra: mergeExtra
   };
 })(typeof window !== 'undefined' ? window : globalThis);

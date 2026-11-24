@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<link rel="icon" type="image/png" href="icons/home/boss-crystal-weekly.png" />
+<link rel="icon" type="image/png" href="icons/home/boss-crystal-weekly.webp" />
 <meta name="description" content="메이플스토리 확률, 비용, 보스 수익, 뽑기를 계산하고 시뮬레이션하는 도구 모음" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="메이플 계산기 모음" />
@@ -232,6 +232,7 @@
   .tool-btn{ padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text); cursor:pointer; font:inherit; font-size:.8rem; }
   .tool-btn:hover{ border-color:var(--accent); }
   .tool-btn:disabled{ opacity:.45; cursor:default; }
+  .tool-btn[aria-pressed="true"]{ border-color:var(--accent); background:#1d2c44; color:#e4efff; }
   button:focus-visible, input:focus-visible, .char-chip:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
   .summary-stat .v{ font-variant-numeric:tabular-nums; }
   .note:empty{ display:none; }
@@ -420,12 +421,12 @@
 <div class="overall-highlights">
   <div class="summary-inner">
     <div class="summary-stat meso primary weekly-summary">
-      <span class="k crystal-label"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/boss-crystal-weekly.png" alt=""></span><span id="weeklyIncomeLabel">주간 완료 수익 / 예상 총수익</span></span>
+      <span class="k crystal-label"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/boss-crystal-weekly.webp" alt=""></span><span id="weeklyIncomeLabel">주간 완료 수익 / 예상 총수익</span></span>
       <div class="weekly-values" id="weeklyIncomeValues"><span id="sumEarned">0</span><span class="income-slash">/</span><span class="income-expected" id="sumWeekly">0</span></div>
       <div class="weekly-progress" role="progressbar" aria-label="전체 주간 보스 완료율" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="overallProgress"><span></span></div>
     </div>
     <div class="summary-stat meso primary monthly-summary">
-      <span class="k crystal-label"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/boss-crystal-monthly.png" alt=""></span>월간 예상 수익</span>
+      <span class="k crystal-label"><span class="site-tab-icon"><img class="site-item-icon" src="icons/home/boss-crystal-monthly.webp" alt=""></span>월간 예상 수익</span>
       <span class="v" id="sumMonthly">0</span>
     </div>
     <div class="summary-stat">
@@ -440,7 +441,7 @@
   <section class="card characters-panel">
     <div class="character-heading">
       <h2>내 캐릭터</h2>
-      <button type="button" class="tool-btn scheduler-batch-refresh" id="schedulerRefreshAllBtn" aria-label="API 갱신" title="API 갱신">
+      <button type="button" class="tool-btn scheduler-batch-refresh" id="schedulerRefreshAllBtn" aria-label="스케줄러 갱신" title="스케줄러 갱신: 등록 보스·난이도·완료를 스케줄러에 맞춥니다. N빵 인원과 직접 추가한 보스는 유지합니다.">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg>
       </button>
     </div>
@@ -469,10 +470,12 @@
     <p class="note">보스 이름·아이콘을 누르면 완료 상태가 바뀝니다. 난이도·인원 변경은 완료 상태를 유지합니다.</p>
     <p class="note" id="bossAddNote"></p>
     <div class="boss-toolbar">
+      <button type="button" class="tool-btn" id="bossViewBtn" aria-pressed="false">전체 보스 보기</button>
       <button type="button" class="tool-btn" id="presetBtn">검밑솔 12보스 적용</button>
       <button type="button" class="tool-btn" id="clearBossBtn">선택 캐릭터 보스 초기화</button>
     </div>
 
+    <p class="note" id="bossViewNote"></p>
     <div class="boss-list" id="bossList"></div>
 
   </section>
@@ -799,6 +802,7 @@
   var schedulerCharacterName = document.getElementById('schedulerCharacterName');
   var schedulerFetchBtn = document.getElementById('schedulerFetchBtn');
   var schedulerRefreshAllBtn = document.getElementById('schedulerRefreshAllBtn');
+  var SCHEDULER_REFRESH_TITLE = '스케줄러 갱신: 등록 보스·난이도·완료를 스케줄러에 맞춥니다. N빵 인원과 직접 추가한 보스는 유지합니다.';
   var schedulerFetchStatus = document.getElementById('schedulerFetchStatus');
   var schedulerApiKeyState = document.getElementById('schedulerApiKeyState');
   if (window.NexonCharacters) NexonCharacters.mount({ host:'#incomeCharacterPicker', input:schedulerCharacterName });
@@ -892,9 +896,40 @@
     renderAll();
     return { character:character, existed:false };
   }
-  // 캐릭터 카드의 새로고침은 스케줄러에서 "완료" 상태만 읽는다.
-  // 보스 종류·난이도·N빵 인원은 클라이언트에서 저장한 값을 절대 교체하지 않는다.
-  function refreshCharacterCompletion(character){
+  // 스케줄러 갱신: 스케줄러에 새로 등록한 보스는 더하고, 스케줄러에서 가져왔는데 지금은 없는 보스는 빼고,
+  // 난이도는 스케줄러를 따른다. N빵 인원과 직접 추가한 보스는 그대로 둔다.
+  function bossLabel(name, diffIdx){ var diff = BOSS_BY_NAME[name] && BOSS_BY_NAME[name].diffs[diffIdx]; return (diff ? diff.label + ' ' : '') + name; }
+  function syncSchedulerBosses(character, parsed){
+    var next = Object.create(null), changes = { added:[], removed:[], changed:[] };
+    Object.keys(character.bosses).forEach(function(name){
+      var entry = character.bosses[name], incoming = parsed.bosses[name];
+      if (!incoming){
+        if (entry.source === 'scheduler') changes.removed.push(bossLabel(name, entry.diffIdx));
+        else next[name] = Object.assign({}, entry, { complete:false });
+        return;
+      }
+      if (incoming.diffIdx !== entry.diffIdx) changes.changed.push(name + ' ' + BOSS_BY_NAME[name].diffs[entry.diffIdx].label + '→' + BOSS_BY_NAME[name].diffs[incoming.diffIdx].label);
+      next[name] = { diffIdx:incoming.diffIdx, party:validParty(entry.party, name, incoming.diffIdx), complete:incoming.complete, source:'scheduler' };
+    });
+    Object.keys(parsed.bosses).forEach(function(name){
+      if (next[name]) return;
+      next[name] = parsed.bosses[name];
+      changes.added.push(bossLabel(name, parsed.bosses[name].diffIdx));
+    });
+    // 주간 한도 검증은 저장 복원과 같은 규칙을 쓴다.
+    character.bosses = normalizeCharacter({ name:character.name, bosses:next }).bosses;
+    return changes;
+  }
+  function describeSyncChanges(name, changes){
+    var parts = [];
+    if (changes.added.length) parts.push('추가 ' + changes.added.join(', '));
+    if (changes.removed.length) parts.push('제외 ' + changes.removed.join(', '));
+    if (changes.changed.length) parts.push('난이도 ' + changes.changed.join(', '));
+    return parts.length ? name + ': ' + parts.join(' · ') : '';
+  }
+  // 화면 진입 때 자동 갱신은 스케줄러에서 "완료" 상태만 읽어 저장한 보스 구성을 조용히 바꾸지 않는다.
+  // 스케줄러 갱신 버튼(sync)은 보스 구성과 난이도까지 스케줄러에 맞춘다.
+  function refreshCharacterCompletion(character, sync){
     var ocidPromise = character.ocid
       ? Promise.resolve(character.ocid)
       : apiGet('/id', { character_name:character.name }).then(function(result){
@@ -910,8 +945,9 @@
     }).then(function(results){
       var data = results[0];
       var profile = results[1];
-      var parsed = parseSchedulerBosses(data);
-      Object.keys(character.bosses).forEach(function(bossName){
+      var parsed = parseSchedulerBosses(data), changes = null;
+      if (sync) changes = syncSchedulerBosses(character, parsed);
+      else Object.keys(character.bosses).forEach(function(bossName){
         var schedulerEntry = parsed.bosses[bossName];
         character.bosses[bossName].complete = !!(schedulerEntry && schedulerEntry.complete);
       });
@@ -924,45 +960,51 @@
       character.lastSyncedAt = new Date().toISOString();
       saveState();
       renderAll();
-      return charTotals(character);
+      return changes;
     });
   }
-  function refreshAllCharacterCompletions(){
+  function refreshAllCharacterCompletions(sync){
+    sync = sync === true;
     if (!NexonKey.has()){
       refreshSchedulerKeyState();
       setSchedulerStatus('홈에서 API 키를 먼저 등록하세요.', 'err');
       return;
     }
-    var targets = characters.filter(function(character){ return character.ocid && Object.keys(character.bosses).length; });
+    var targets = characters.filter(function(character){ return character.ocid && (sync || Object.keys(character.bosses).length); });
     if (!targets.length){
-      setSchedulerStatus('완료 상태를 확인할 등록 보스가 없습니다.', 'err');
+      setSchedulerStatus(sync ? '스케줄러로 추가한 캐릭터가 없습니다. 위에서 캐릭터를 스케줄러로 추가하세요.' : '완료 상태를 확인할 등록 보스가 없습니다.', 'err');
       return;
     }
-    var completed = 0, failed = [];
+    var completed = 0, failed = [], notes = [];
     schedulerRefreshAllBtn.disabled = true;
     schedulerRefreshAllBtn.classList.toggle('is-refreshing', true);
     schedulerRefreshAllBtn.setAttribute('aria-busy', 'true');
-    schedulerRefreshAllBtn.title = 'API 갱신 중';
+    schedulerRefreshAllBtn.title = '스케줄러 갱신 중';
     setSchedulerStatus('');
     var sequence = Promise.resolve();
     targets.forEach(function(character){
       sequence = sequence.then(function(){
-        return refreshCharacterCompletion(character).then(function(){ completed++; }, function(error){
+        return refreshCharacterCompletion(character, sync).then(function(changes){
+          completed++;
+          var note = changes && describeSyncChanges(character.name, changes);
+          if (note) notes.push(note);
+        }, function(error){
           failed.push(character.name + ': ' + describeApiError(error, error.stage || 'scheduler'));
         });
       });
     });
     sequence.then(function(){
       if (failed.length){
-        setSchedulerStatus('API 갱신 ' + completed + '명 성공 · ' + failed.length + '명 실패 (' + failed.map(function(item){ return item.split(':')[0]; }).join(', ') + ')', 'err');
+        setSchedulerStatus('스케줄러 갱신 ' + completed + '명 성공 · ' + failed.length + '명 실패 (' + failed.map(function(item){ return item.split(':')[0]; }).join(', ') + ')' + (notes.length ? ' · ' + notes.join(' / ') : ''), 'err');
       } else {
-        setSchedulerStatus('');
+        // 바뀐 보스가 있을 때만 무엇이 바뀌었는지 남긴다.
+        setSchedulerStatus(notes.length ? '스케줄러 갱신 · ' + notes.join(' / ') : '', notes.length ? 'ok' : '');
       }
     }).then(function(){
       schedulerRefreshAllBtn.disabled = false;
       schedulerRefreshAllBtn.classList.toggle('is-refreshing', false);
       schedulerRefreshAllBtn.removeAttribute('aria-busy');
-      schedulerRefreshAllBtn.title = 'API 갱신';
+      schedulerRefreshAllBtn.title = SCHEDULER_REFRESH_TITLE;
     });
   }
   function autoRefreshCharacterCompletions(){
@@ -1021,7 +1063,7 @@
       .then(function(){ schedulerFetchBtn.disabled = false; schedulerFetchBtn.innerHTML = originalHtml; });
   });
 
-  schedulerRefreshAllBtn.addEventListener('click', refreshAllCharacterCompletions);
+  schedulerRefreshAllBtn.addEventListener('click', function(){ refreshAllCharacterCompletions(true); });
   schedulerCharacterName.addEventListener('keydown', function(event){ if (event.key === 'Enter' && !event.isComposing) schedulerFetchBtn.click(); });
   schedulerCharacterName.value = lsGet(LS_LAST_SCHEDULER_CHAR);
   refreshSchedulerKeyState();
@@ -1294,11 +1336,26 @@
   var bossAddNote = document.getElementById('bossAddNote');
   var weeklyQuota = document.getElementById('weeklyQuota');
   var bossList = document.getElementById('bossList');
+  // 보스 목록은 기본으로 이 캐릭터가 체크한 보스만 원래 순서대로 보여준다. 정렬하지 않아 누르는 중에 행이 움직이지 않는다.
+  // 보는 중에 체크를 푼 보스는 캐릭터·보기를 바꾸거나 프리셋·초기화를 쓰기 전까지 같은 자리에 남긴다.
+  var LS_BOSS_VIEW = 'boss_income_boss_view';
+  var bossView = lsGet(LS_BOSS_VIEW) === 'all' ? 'all' : 'mine';
+  var bossViewBtn = document.getElementById('bossViewBtn');
+  var bossViewNote = document.getElementById('bossViewNote');
+  var keptBosses = new Set(), keptFor = null;
+  function resetKeptBosses(){ keptBosses = new Set(); keptFor = null; }
+  function visibleBosses(ch){
+    if (keptFor !== ch) { keptBosses = new Set(); keptFor = ch; }
+    var mine = DISPLAY_BOSSES.filter(function(b){ return ch.bosses[b.name] || keptBosses.has(b.name); });
+    if (bossView === 'all' || !mine.length) return DISPLAY_BOSSES;
+    return mine;
+  }
 
   function toggleDiff(ch, bossIdx, diffIdx){
     var boss = BOSS_BY_NAME[bossIdx];
     var existing = ch.bosses[bossIdx];
     if (existing && existing.diffIdx === diffIdx){
+      if (bossView === 'mine') { if (keptFor !== ch) { keptBosses = new Set(); keptFor = ch; } keptBosses.add(bossIdx); }
 
       delete ch.bosses[bossIdx];
       bossAddNote.textContent = '';
@@ -1321,12 +1378,21 @@
   function renderBossList(){
     var ch = characters[activeIdx];
     var atCap = weeklyCount(ch) >= WEEKLY_CAP;
+    var shown = visibleBosses(ch), registered = Object.keys(ch.bosses).length, filtered = shown.length < DISPLAY_BOSSES.length;
+    bossViewBtn.hidden = !registered && !keptBosses.size;
+    bossViewBtn.setAttribute('aria-pressed', String(bossView === 'all'));
+    bossViewBtn.textContent = bossView === 'all' ? '등록 보스만 보기' : '전체 보스 보기';
+    bossViewNote.textContent = filtered ? '체크한 보스 ' + registered + '마리만 보여줍니다. 다른 보스를 추가하려면 전체 보스 보기를 누르세요.'
+      : !registered ? '체크한 보스가 없어 전체 보스를 보여줍니다.' : '';
     bossList.innerHTML = '';
-    DISPLAY_BOSSES.forEach(function(boss, position){
-      if (position === 0 || boss.monthly){
+    var lastSection = '';
+    shown.forEach(function(boss){
+      var section = boss.monthly ? '월간 보스' : '주간 보스';
+      if (section !== lastSection){
+        lastSection = section;
         var heading = document.createElement('h3');
         heading.className = 'boss-section-title';
-        heading.textContent = boss.monthly ? '월간 보스' : '주간 보스';
+        heading.textContent = section;
         bossList.appendChild(heading);
       }
       var bossIdx = boss.name;
@@ -1427,8 +1493,15 @@
     renderOverall();
   }
 
+  bossViewBtn.addEventListener('click', function(){
+    bossView = bossView === 'all' ? 'mine' : 'all';
+    lsSet(LS_BOSS_VIEW, bossView === 'all' ? 'all' : '');
+    resetKeptBosses();
+    renderAll();
+  });
   document.getElementById('clearBossBtn').addEventListener('click', function(){
     if (activeIdx < 0 || !Object.keys(characters[activeIdx].bosses).length) return;
+    resetKeptBosses();
     characters[activeIdx].bosses = {};
     bossAddNote.textContent = '';
     saveState(); renderAll();
@@ -1446,6 +1519,7 @@
   }
   document.getElementById('presetBtn').addEventListener('click', function(){
     if (activeIdx < 0) return;
+    resetKeptBosses();
     applyPreset(characters[activeIdx]);
     bossAddNote.textContent = '';
     saveState(); renderAll();

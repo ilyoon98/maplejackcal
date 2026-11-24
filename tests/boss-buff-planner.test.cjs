@@ -30,7 +30,7 @@ function loadPlanner(options = {}) {
       querySelector(){ return null; },
     },
     localStorage:{getItem:() => null, setItem(){}},
-    window:{ScouterData:require('../scouter_data.js'), AccountCatalog:require('../account_catalog.js'), ...(options.mountPicker && {NexonCharacters:{mount:options.mountPicker}})},
+    window:{ScouterData:require('../scouter_data.js'), AccountCatalog:require('../account_catalog.js'), ...(options.mountPicker && {NexonCharacters:{mount:options.mountPicker}}), ...options.window},
     NexonCharacters:options.mountPicker ? {mount:options.mountPicker} : undefined,
     Event:class {constructor(type){this.type = type;}},
   });
@@ -42,7 +42,6 @@ function loadPlanner(options = {}) {
       activeItems,
       exclude(value) { state.excludeCompleted = value; },
       setSlack(value) { state.slackPct = value; },
-      applySchedulerState,
       bosses() { return state.bosses; },
       reload() { state = loadState(state); },
       setLegacyDoping(value) { state.doping = value; },
@@ -54,9 +53,9 @@ function loadPlanner(options = {}) {
         return other.value;
       },
       setBosses(bosses) { state.bosses = bosses; },
-      mergeScheduler(data, preserveSelection) {
+      mergeScheduler(data, preserveSelection, refresh) {
         const parsed = bossesFromScheduler(data);
-        state.bosses = mergeSchedulerBosses(parsed.bosses, preserveSelection);
+        state.bosses = mergeSchedulerBosses(parsed.bosses, preserveSelection, refresh);
         return state.bosses;
       },
       clickBoss(name, act) {
@@ -77,27 +76,33 @@ function loadPlanner(options = {}) {
       showAll() { document.getElementById('showAllBossesBtn').handlers.click(); },
       allOn() { document.getElementById('allOn').handlers.click(); },
       allOff() { document.getElementById('allOff').handlers.click(); },
-      async readShot(results) {
-        window.BossShotReader = globalThis.BossShotReader = {readBlob:() => Promise.resolve(results)};
-        await readShot({type:'image/png'});
-        return shotRows;
-      },
-      shotPreview() { return shotResult.innerHTML; },
-      shotStatus() { return shotStatus.textContent; },
       addProfile(name, character) { profiles.push({name, character, state:JSON.parse(JSON.stringify(state))}); renderProfiles(); },
       clickProfile(name) { const i = profiles.findIndex(p => p.name === name); profileBar.children[i].children[0].handlers.click(); },
       setCharacterPicker(selectCharacter) { characterPicker = {selectCharacter}; },
       characterInput() { return charInput; },
       setApiFetch(handler) { globalThis.fetch = handler; window.NexonKey = globalThis.NexonKey = {has:() => true, get:() => 'fake-key'}; },
       importCharacter,
+      refreshScheduler() { return refreshSchedulerBtn.handlers.click(); },
+      schedulerStatus() { return schedulerStatus.textContent; },
+      schedulerLoading() { return refreshSchedulerBtn.disabled; },
       fetching() { return fetchBtn.disabled; },
       searchButton() { return fetchBtn; },
-      applyShot,
       packAll,
       binCost,
       renderAll,
       collectPartyRates,
       setPartyRates(db, rates) { window.MapleBossDB = db; partyRates = rates; },
+      collectSharedRates,
+      setSharedRates(db, own) { window.MapleBossDB = db; sharedRates = own.rates; sharedRateAt = own.at; sharedRateLoaded = true; sharedRegistered = own.registered; sharedRateName = '나'; },
+      inputBossMult(index, value) {
+        const other = {};
+        listEl.handlers.input({target:{dataset:{i:String(index), act:'mult'}, value:String(value), closest(){return {querySelector(){return other;}};}}});
+      },
+      boss(name) { return state.bosses.find(b => b.name === name); },
+      useSharedAll() { document.getElementById('useSharedAll').handlers.click(); },
+      setPartyInfo(info) { partyInfo = info; },
+      rateBadges() { return document.getElementById('partyRateStatus').innerHTML; },
+      sharedCta() { return {text:document.getElementById('sharedRateCtaText').textContent, link:document.getElementById('sharedRateLink').textContent, href:document.getElementById('sharedRateLink').href}; },
       results() { return {pack:packEl.innerHTML, combos:comboEl.innerHTML}; },
     };
   })();`), context);
@@ -284,14 +289,13 @@ test('보스별 도핑 버튼과 시간 입력에 같은 97% 보정을 적용한
 test('저장한 목록의 난이도가 스케줄러 등록 난이도와 다르면 맞추고 완료를 반영한다', () => {
   const engine = loadPlanner();
   engine.setBosses([{name:'검은 마법사', diff:'하드', mult:483.7, on:true}, {name:'듄켈', diff:'하드', mult:1073, on:true}]);
-  const res = engine.applySchedulerState({boss_contents:[
+  engine.mergeScheduler({boss_contents:[
     {content_name:'검은 마법사', difficulty:'hard', cycle:'bossMonthly', registration_flag:'false', complete_flag:'false'},
     {content_name:'검은 마법사', difficulty:'extreme', cycle:'bossMonthly', registration_flag:'true', complete_flag:'true'},
     {content_name:'듄켈', difficulty:'hard', cycle:'bossWeekly', registration_flag:'true', complete_flag:'false'},
-  ]});
-  assert.deepEqual(Array.from(res.changed), ['검은 마법사 하드→익스트림']);
-  assert.equal(res.done, 1);
-  const [bm, dk] = engine.bosses();
+  ]}, true, true);
+  const bm = engine.bosses().find(b => b.name === '검은 마법사');
+  const dk = engine.bosses().find(b => b.name === '듄켈');
   assert.equal(bm.diff, '익스트림');
   assert.equal(bm.completed, true);
   assert.equal(dk.completed, false);
@@ -307,30 +311,6 @@ test('다시 불러올 때 배율은 같은 난이도일 때만 이어 쓴다', 
   assert.equal(bosses[0].diff, '익스트림');
   assert.equal(bosses[0].mult, 100);
   assert.equal(bosses[1].mult, 1073);
-});
-
-test('스크린샷 배율은 소수 둘째 자리와 1% 미만을 유지하고, 다른 난이도·불확실한 값은 제외한다', async () => {
-  const engine = loadPlanner();
-  engine.setBosses([
-    {name:'스우', diff:'익스트림', mult:100},
-    {name:'찬란한 흉성', diff:'노멀', mult:100},
-    {name:'최초의 대적자', diff:'익스트림', mult:100},
-    {name:'검은 마법사', diff:'익스트림', mult:100},
-    {name:'윌', diff:'하드', mult:1006},
-  ].map(b => ({...b, on:true})));
-  const row = (name, diff, value) => ({name, diff, value, score:1, scale:1.5, thumb:''});
-  await engine.readShot([
-    row('스우', '익스트림', 43.10), row('찬란한 흉성', '노멀', 26.13),
-    row('최초의 대적자', '익스트림', 0.42), row('검은 마법사', '하드', 362.3),
-    row('윌', '하드', null),
-  ]);
-  assert.match(engine.shotPreview(), /value="26.13"/);
-  assert.match(engine.shotPreview(), /value="0.42"/);
-  engine.applyShot();
-  assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [43.1, 26.13, 0.42, 100, 1006]);
-  engine.reload();
-  assert.deepEqual(['스우','찬란한 흉성','최초의 대적자','검은 마법사','윌'].map(name => engine.bosses().find(b => b.name === name).mult),
-    [43.1, 26.13, 0.42, 100, 1006]);
 });
 
 test('전체 보스 설정을 보관하되 첫 목록과 동선에는 기본 12보스만 표시한다', () => {
@@ -420,7 +400,7 @@ test('스케줄러를 불러와도 전체 목록을 유지하고 재조회 시 �
   engine.reload();
   engine.mergeScheduler(data, true);
   assert.equal(engine.bosses().find(b => b.name === '벨로나').completed, true);
-  engine.applySchedulerState(data);
+  engine.mergeScheduler(data, true, true);
   assert.equal(engine.bosses().find(b => b.name === '벨로나').completed, false);
   engine.mergeScheduler({boss_contents:[]}, false);
   assert.equal(engine.bosses().length, 25);
@@ -468,67 +448,6 @@ test('전체 보기를 바꿔도 계산·배율은 유지하며 전체 포함은
   assert.equal(engine.bosses().find(b => b.name === '스우').mult, 2582);
 });
 
-test('가려진 카드의 예전 배율은 유지한다고 안내하고 인식한 값만 적용한다', async () => {
-  const engine = loadPlanner();
-  engine.setBosses([
-    {name:'벨로나', diff:'이지', mult:60016, on:true},
-    {name:'선택받은 세렌', diff:'하드', mult:17679, on:true},
-    {name:'더스크', diff:'카오스', mult:641506, on:true},
-    {name:'윌', diff:'하드', mult:10176, on:true},
-  ]);
-  await engine.readShot([
-    {name:'벨로나', diff:'이지', value:null, covered:true, score:1, scale:1, thumb:''},
-    {name:'선택받은 세렌', diff:'하드', value:244.5, score:1, scale:1, thumb:''},
-    {name:'더스크', diff:'카오스', value:1175, score:1, scale:1, thumb:''},
-    {name:'윌', diff:'하드', value:1395, score:1, scale:1, thumb:''},
-  ]);
-  assert.match(engine.shotPreview(), /기존 60016%는 유지/);
-  assert.match(engine.shotStatus(), /툴팁/);
-  engine.applyShot();
-  assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [60016, 244.5, 1175, 1395]);
-  assert.match(engine.shotStatus(), /읽지 못한 1개는 적용하지 않았으며 기존 배율이 유지/);
-});
-
-test('첨부 스크린샷을 넣으면 벨로나 60016%와 카링 14809%를 실제 소수점 배율로 교체한다', async () => {
-  const {decodePng} = require('./helpers/png-rgba.cjs');
-  require('../boss_shot_reader.js');
-  const reader = globalThis.BossShotReader;
-  const shot = decodePng(path.join(__dirname, 'fixtures/boss_shot_small.png'));
-  const recognized = reader.analyze(shot, reader.siteRefs());
-  const engine = loadPlanner();
-  engine.setBosses([
-    {name:'벨로나', diff:'이지', mult:60016, on:true},
-    {name:'카링', diff:'이지', mult:14809, on:true},
-  ]);
-  await engine.readShot(recognized);
-  assert.match(engine.shotPreview(), /value="176.4"/);
-  assert.match(engine.shotPreview(), /value="209.7"/);
-  engine.applyShot();
-  assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [176.4, 209.7]);
-  engine.reload();
-  assert.equal(engine.bosses().find(b => b.name === '벨로나').mult, 176.4);
-  assert.equal(engine.bosses().find(b => b.name === '카링').mult, 209.7);
-});
-
-test('스크린샷에서 내 목록에 없는 보스는 뒤로 접어 두고 기본으로 넣지 않는다', async () => {
-  const engine = loadPlanner();
-  engine.setBosses([
-    {name:'벨로나', diff:'이지', mult:100, on:true},
-    {name:'림보', diff:'노멀', mult:100, on:false, inList:false, registered:false},
-    {name:'카링', diff:'이지', mult:100, on:false, inList:false, registered:true},
-  ]);
-  const row = (name, diff, value) => ({name, diff, value, score:1, scale:1.25, thumb:''});
-  await engine.readShot([row('림보', '노멀', 10.85), row('벨로나', '이지', 207.1), row('카링', '이지', 244.7)]);
-  const html = engine.shotPreview();
-  assert.match(html, /내 보스 2개를 찾았습니다 · 내 목록에 없는 보스 1개/);
-  // 림보는 접힌 묶음 안에 있고, 내 보스 두 줄이 앞에 온다.
-  const others = html.indexOf('id="shotOthers"');
-  assert.ok(others > html.indexOf('value="207.1"') && others > html.indexOf('value="244.7"') && others < html.indexOf('value="10.85"'));
-  assert.doesNotMatch(html, /스크린샷에 없는 내 보스/);
-  engine.applyShot();
-  assert.deepEqual(Array.from(engine.bosses(), b => b.mult), [207.1, 100, 244.7]);
-});
-
 test('저장 배지를 누르면 캐릭터 선택기에 같은 이름·서버를 전달하고 오래된 조회 정보를 지운다', () => {
   const engine = loadPlanner();
   engine.addProfile('토끼털쇼타', {worldName:'베라'});
@@ -572,6 +491,53 @@ test('캐릭터를 바꾼 뒤 늦게 도착한 이전 조회 응답은 현재 �
   assert.equal(input.value, '토끼털쇼타');
   assert.deepEqual(Array.from(engine.activeItems(), b => b.name), ['검은 마법사']);
   assert.equal(engine.fetching(), false);
+});
+
+test('목록에서 현재 캐릭터의 스케줄러를 새로고침하고 실패 후 다시 시도한다', async () => {
+  const engine = loadPlanner();
+  const item = (name, difficulty, complete = false) =>
+    ({content_name:name, difficulty, cycle:'bossWeekly', registration_flag:true, clear_flag:complete});
+  let respond;
+  const requests = [];
+  engine.setApiFetch((url, options) => {
+    if (!url.includes('/scheduler/character-state')) return Promise.resolve({ok:true, json:async () => null});
+    requests.push([new URL(url).searchParams.get('ocid'), options.cache]);
+    return new Promise(resolve => { respond = body => resolve({ok:true, json:async () => body}); });
+  });
+  const input = engine.characterInput();
+  input.value = '현재캐릭터'; input.dataset.accountOcid = 'current';
+  const initial = engine.importCharacter();
+  await new Promise(setImmediate);
+  respond({boss_contents:[item('스우', 'hard', true), item('루시드', 'hard'), item('듄켈', 'hard')]});
+  await initial;
+  engine.bosses().find(b => b.name === '스우').mult = 245.5;
+  engine.clickBoss('스우', 'on');
+  const before = JSON.stringify(engine.bosses());
+  const failure = engine.refreshScheduler();
+  assert.equal(engine.schedulerLoading(), true);
+  assert.equal(engine.refreshScheduler(), undefined);
+  await new Promise(setImmediate);
+  respond({unexpected:true});
+  await failure;
+  assert.match(engine.schedulerStatus(), /갱신 실패.*마지막 갱신/);
+  assert.equal(engine.schedulerLoading(), false);
+  assert.equal(JSON.stringify(engine.bosses()), before);
+
+  const retry = engine.refreshScheduler();
+  await new Promise(setImmediate);
+  respond({boss_contents:[item('스우', 'hard'), item('루시드', 'normal', true), item('벨로나', 'easy')]});
+  await retry;
+  const boss = name => engine.bosses().find(b => b.name === name);
+  assert.equal(boss('스우').mult, 245.5);
+  assert.equal(boss('스우').on, false);
+  assert.equal(boss('스우').completed, false);
+  assert.equal(boss('루시드').diff, '노멀');
+  assert.equal(boss('루시드').completed, true);
+  assert.equal(boss('벨로나').on, true);
+  assert.equal(boss('듄켈').registered, false);
+  assert.equal(boss('듄켈').on, false);
+  assert.match(engine.schedulerStatus(), /갱신 완료.*3마리 중 1마리 완료.*노멀 루시드/);
+  assert.deepEqual(requests, Array.from({length:3}, () => ['current', 'no-store']));
 });
 
 test('계정 선택은 바로 조회하고 직접 검색 모드에서만 검색 버튼을 보여 준다', async () => {
@@ -633,8 +599,47 @@ test('캐릭터가 들어간 파티는 파티 환산 합계를 찾고 배율 미
   const shared = [{name:'익스트림 스우', bossId:'Lotus|Extreme', members:['나', '친구']}, {name:'남의 파티', bossId:'Dusk|Chaos', members:['친구']}];
   const local = [{name:'하드 윌', bossId:'Will|Hard', members:[{character:{name:'나'}, rate:70}, {character:{name:'미등록'}, rate:null}]}];
   const result = engine.collectPartyRates('나', local, shared, store);
-  assert.deepEqual(JSON.parse(JSON.stringify(result.rates)), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'', scope:'shared', members:[{name:'나', image:openImage}, {name:'친구', image:rankImage}]}});
+  const rates = JSON.parse(JSON.stringify(result.rates));
+  assert.deepEqual(rates['Lotus|Extreme'].members.map(m => m.name), ['친구', '나']);
+  assert.deepEqual(rates['Lotus|Extreme'].members.map(m => m.image), [rankImage, openImage]);
+  delete rates['Lotus|Extreme'].members;
+  assert.deepEqual(rates, {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'', scope:'shared'}});
   assert.deepEqual([...result.skipped], ['하드 윌']);
+});
+
+test('이름 없는 파티는 본캐 먼저 배율 순으로 자동 이름을 짓고 파티 표시 툴팁에 파티원 카드를 넣는다', () => {
+  const engine = loadPlanner({window:{AccountCatalog:require('../account_catalog.js')}});
+  const now = Date.now() - 1000;
+  const image = 'https://open.api.nexon.com/static/maplestory/character/look/ABC123?wmotion=W00';
+  const character = (name, job, level) => ({name, world:'루나', job, level, image, updatedAt:now});
+  const store = {
+    snapshots:[
+      {characterName:'나의본캐', preset:'00000', character:character('나의본캐', '비숍', 290), rates:[{bossId:'Will|Hard', percent:40}]},
+      {characterName:'딜러친구', preset:'00000', character:{...character('딜러친구', '히어로', 285), image:'javascript:alert(1)'}, rates:[{bossId:'Will|Hard', percent:70}]},
+      {characterName:'나의부캐', preset:'00000', rates:[{bossId:'Will|Hard', percent:20}]}
+    ],
+    accounts:[{id:'mine', label:'', characters:[{name:'나의본캐', profile:character('나의본캐', '비숍', 290)}, {name:'나의부캐'}]}]
+  };
+  engine.setPartyRates(require('../boss_db.json'), {});
+  const shared = [{id:'party-1', name:'하드 윌', bossId:'Will|Hard', members:['딜러친구', '나의부캐', '나의본캐']}];
+  const party = engine.collectPartyRates('나의부캐', [], shared, store).rates['Will|Hard'];
+  // 본캐가 먼저, 그다음 배율이 높은 순이다. 3명이라 2글자씩 잇는다.
+  assert.equal(party.name, '나의,딜러,나의');
+  assert.deepEqual(party.members.map(m => [m.name, m.main, m.me]), [['나의본캐', true, false], ['딜러친구', false, false], ['나의부캐', false, true]]);
+  // 공유 저장소에 있던 잘못된 이미지 주소는 버린다.
+  assert.equal(party.members[1].image, '');
+  engine.setBosses([{id:'b0', name:'윌', diff:'하드', mult:80, on:true, extra:0}]);
+  engine.setPartyRates(require('../boss_db.json'), {'Will|Hard':{...party, scope:'shared'}});
+  const row = engine.listRows()[0].match(/<div class="row-party">.*?<\/div>/)[0];
+  const attr = name => row.match(new RegExp(' ' + name + '="([^"]*)"'))[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+  assert.equal(attr('data-tooltip'), '나의,딜러,나의 파티');
+  // 파티 보스 스케줄러의 환산 합계 카드처럼 예상 처치 시간(100% = 20분)을 함께 보여준다.
+  assert.equal(attr('data-tooltip-value'), '3명 · 환산 합계 130% · 예상 15분 23초');
+  const items = JSON.parse(attr('data-tooltip-items'));
+  assert.deepEqual(items.map(item => [item.name, item.note, item.value, item.tags]), [
+    ['나의본캐', '비숍 · Lv.290', '40%', ['본캐']], ['딜러친구', '히어로 · Lv.285', '70%', []], ['나의부캐', '', '20%', ['이 캐릭터']]
+  ]);
+  assert.equal(items[0].image, image);
 });
 
 test('파티 보스는 항상 파티 배율로 계산하고 고정 칸의 파티 표시로 그 파티를 연다', () => {
@@ -646,12 +651,152 @@ test('파티 보스는 항상 파티 배율로 계산하고 고정 칸의 파티
   assert.equal(mult('윌'), 80);
   const [suu, will] = engine.listRows();
   assert(suu.includes('<div class="row-party"><a class="party-link" href="party_boss_scheduler.html?scope=shared&amp;party=party-1"'));
-  assert.match(suu, /data-tooltip-value="2명 환산 합계 140\.5%" data-tooltip-portraits="\[.*친구.*\]"/);
+  assert.match(suu, /data-tooltip-value="2명 · 환산 합계 140\.5% · [^"]+" data-tooltip-items="\[.*친구.*\]"/);
   engine.renderAll();
-  assert.match(engine.results().pack, /data-tooltip-portraits="\[.*친구.*\]"/);
+  assert.match(engine.results().pack, /data-tooltip-items="\[.*친구.*\]"/);
   assert.match(suu, /aria-label="스우 파티 배율" disabled/);
   assert.doesNotMatch(suu, /data-act="party"/);
   assert(will.includes('<div class="row-party"></div>'));
   engine.clickBoss('스우', 'party');
   assert.equal(mult('스우'), 140.5);
+});
+
+test('공용 환산 배율을 기본값으로 쓰고 직접 고친 배율이 우선하며 되돌리기와 난이도별 기억을 지원한다', () => {
+  const engine = loadPlanner();
+  const db = require('../boss_db.json');
+  const store = {snapshots:[
+    {characterName:'나', preset:'00000', fetchedAt:'2026-11-06T15:34:35.183Z', rates:[{bossId:'Will|Hard', percent:150.5}, {bossId:'Lucid|Hard', percent:0}, {bossId:'Will|Normal', percent:400}]},
+    {characterName:'남', preset:'00000', rates:[{bossId:'Will|Hard', percent:999}]}
+  ]};
+  const own = engine.collectSharedRates('나', store);
+  // 0%(입장 불가)는 배율로 쓰지 않는다.
+  assert.deepEqual({...own.rates}, {'Will|Hard':150.5, 'Will|Normal':400});
+  assert.equal(engine.collectSharedRates('없는캐릭터', store).registered, false);
+  engine.setBosses([{name:'윌', diff:'하드', mult:80, on:true}, {name:'루시드', diff:'하드', mult:90, on:true}].map((b, i) => ({id:'b' + i, extra:0, ...b})));
+  engine.setSharedRates(db, own);
+  const mult = name => engine.activeItems().find(item => item.name === name).mult;
+  // 공용 기록이 있으면 공용 값, 없으면 이 화면에 저장한 값을 쓴다.
+  assert.equal(mult('윌'), 150.5);
+  assert.equal(mult('루시드'), 90);
+  let [will, lucid] = engine.listRows();
+  assert.match(will, /class="row-input row-mult" data-tooltip="공용 환산 배율" data-tooltip-value="150.5% · 예상 13분 17초" data-tooltip-note="11월 7일 기록/);
+  assert.match(will, /class="rate-shared"/);
+  assert.match(lucid, /data-tooltip="이 화면에 입력한 배율"/);
+  // 배율 캡처는 공용 환산 배율 화면에서 한다. 기록 없는 동선 보스가 있으면 그 수를 알리고 선택한 캐릭터로 연다.
+  assert.deepEqual({...engine.sharedCta()}, {text:'공용 환산 배율에 기록이 없는 동선 보스가 1개 있습니다. 캡처로 등록하면 이 동선과 파티에 함께 쓰입니다.', link:'공용 환산 배율에서 갱신', href:'shared_boss_rates.html?name=%EB%82%98'});
+  assert.doesNotMatch(will, /rate-reset/);
+  // 직접 고치면 그 값이 우선하고, 이름 옆에 공용으로 되돌리기 버튼이 생긴다.
+  engine.inputBossMult(0, 120);
+  assert.equal(mult('윌'), 120);
+  [will] = engine.listRows();
+  assert.match(will, /data-act="shared"[^>]*aria-label="윌 배율을 공용 환산 배율 150.5%로 되돌리기"/);
+  assert.match(will, /data-tooltip="직접 입력한 배율"/);
+  // 다른 난이도로 바꾸면 그 난이도의 공용 값을 쓰고, 돌아오면 직접 고친 값을 기억한다.
+  engine.changeDifficulty('윌', '노멀');
+  assert.equal(mult('윌'), 400);
+  engine.changeDifficulty('윌', '하드');
+  assert.equal(mult('윌'), 120);
+  engine.clickBoss('윌', 'shared');
+  assert.equal(mult('윌'), 150.5);
+  assert.equal(engine.boss('윌').mult, 150.5);
+  // 소요 시간을 고쳐도 직접 입력으로 보고, 목록 관리의 일괄 되돌리기로 공용 값을 다시 쓴다.
+  engine.inputBossTime(0, 10);
+  assert.equal(engine.boss('윌').manual, true);
+  engine.useSharedAll();
+  assert.equal(engine.boss('윌').manual, false);
+  assert.equal(mult('윌'), 150.5);
+  // 파티 환산 합계가 가장 우선한다.
+  engine.setPartyRates(db, {'Will|Hard':{total:300, name:'파티', count:2, id:'', scope:'local'}});
+  assert.equal(mult('윌'), 300);
+});
+
+test('공용 환산 배율에 없는 캐릭터는 캡처 등록을 안내하고 이 화면의 배율을 쓴다', () => {
+  const engine = loadPlanner();
+  engine.setBosses([{id:'b0', name:'윌', diff:'하드', mult:80, on:true, extra:0}]);
+  engine.setSharedRates(require('../boss_db.json'), engine.collectSharedRates('나', {snapshots:[]}));
+  engine.listRows();
+  assert.equal(engine.activeItems()[0].mult, 80);
+  assert.equal(engine.sharedCta().text, '공용 환산 배율에 나 캐릭터를 캡처로 등록하면 그 배율을 이 동선과 파티에 기본값으로 씁니다.');
+  assert.equal(engine.sharedCta().link, '공용 환산 배율에 등록');
+  // 스크린샷을 읽는 기능은 이 화면에서 뺐다.
+  assert(!require('node:fs').readFileSync(require('node:path').join(__dirname, '../boss_buff_planner.html'), 'utf8').includes('boss_shot_reader.js'));
+});
+
+test('스케줄러에 없고 동선에서 뺀 보스는 새로고침하면 내 보스 목록에서 빠지고 직접 넣은 보스는 남는다', () => {
+  const engine = loadPlanner();
+  const weekly = names => ({boss_contents:names.map(([content_name, difficulty]) => ({content_name, difficulty, cycle:'bossWeekly', registration_flag:true}))});
+  // 기본 12보스로 시작해 가디언 엔젤 슬라임은 동선에서 빼고, 스케줄러에 없는 벨룸은 직접 넣어 둔 상태.
+  engine.setBosses(engine.bosses().map(b => b.name === '가디언 엔젤 슬라임' ? {...b, on:false, inList:true} : b));
+  const names = () => engine.visibleBosses().map(b => b.name);
+  assert(names().includes('가디언 엔젤 슬라임'));
+  engine.mergeScheduler(weekly([['스우', 'extreme'], ['벨룸', 'chaos']]), true, true);
+  engine.clickBoss('벨룸', 'on'); engine.clickBoss('벨룸', 'on');
+  engine.mergeScheduler(weekly([['스우', 'extreme']]), true, true);
+  assert(!names().includes('가디언 엔젤 슬라임'));
+  assert(names().includes('스우'));
+  // 직접 동선에 넣은 보스는 스케줄러에 없어도 남는다.
+  assert(names().includes('벨룸'));
+  assert.equal(engine.bosses().find(b => b.name === '벨룸').on, true);
+  // 빠진 보스도 전체 보스 보기에서는 그대로 보이고 다시 넣을 수 있다.
+  engine.showAll();
+  assert(names().includes('가디언 엔젤 슬라임'));
+});
+
+test('목록 위 상태는 스케줄러 등록 수와 배율 출처를 짧은 배지로 보여주고 설명은 툴팁에 둔다', () => {
+  const engine = loadPlanner();
+  const db = require('../boss_db.json');
+  engine.setBosses([
+    {name:'윌', diff:'하드', mult:80, on:true, registered:true, completed:true},
+    {name:'루시드', diff:'하드', mult:90, on:true, registered:true, manual:true},
+    {name:'스우', diff:'하드', mult:90, on:true, registered:true},
+    {name:'검은 마법사', diff:'하드', mult:90, on:false, registered:true},
+    {name:'벨룸', diff:'카오스', mult:90, on:true},
+  ].map((b, i) => ({id:'b' + i, extra:0, ...b})));
+  engine.setSharedRates(db, engine.collectSharedRates('나', {snapshots:[{characterName:'나', preset:'00000', fetchedAt:'2026-11-14T03:00:00Z', rates:[{bossId:'Will|Hard', percent:150}, {bossId:'Lucid|Hard', percent:150}]}]}));
+  engine.setPartyRates(db, {'Lotus|Hard':{total:300, name:'파티', count:2, id:'', scope:'local'}});
+  engine.setPartyInfo({count:1, skipped:['혼자파티'], sharedFailed:false});
+  engine.listRows();
+  const html = engine.rateBadges();
+  const labels = [...html.matchAll(/class="rate-badge[^"]*"[^>]*>([^<]+)</g)].map(m => m[1]);
+  assert.deepEqual(labels, ['스케줄러 등록 4마리', '공용 환산 배율 사용', '직접 입력 1마리', '파티 1개', '혼자 배율 1개']);
+  assert.match(html, /data-tooltip="주간 3마리 · 월간 1마리 · 완료 1마리"/);
+  assert.match(html, /data-tooltip="나 · 11월 14일 기록"/);
+  assert.match(html, /동선 보스 1마리의 배율을 공용 환산 배율로 채웠습니다/);
+  // 예전처럼 긴 문장으로 쓰지 않는다.
+  assert.doesNotMatch(html, /배율 기본값으로 씁니다/);
+});
+
+test('버프 수가 같으면 파티 보스와 혼자 도는 보스를 한 버프에 섞지 않는다', () => {
+  const engine = loadPlanner();
+  // 파티 900초·800초, 혼자 850초·750초. 어느 쪽으로 묶어도 버프 2개이므로 파티끼리, 혼자끼리 묶는다.
+  const make = (full, party) => ({full, riceSec:full, rice:false, party:party ? '파티' : ''});
+  for (const items of [[make(900, true), make(850, false), make(800, true), make(750, false)], [make(850, false), make(900, true), make(750, false), make(800, true)]]) {
+    const result = engine.packAll(items, 1800);
+    assert.equal(result.bins.length, 2);
+    for (const bin of result.bins) {
+      const parties = bin.idx.filter(i => items[i].party).length;
+      assert.ok(parties === 0 || parties === bin.idx.length, 'party and solo mixed: ' + JSON.stringify(bin.idx));
+    }
+  }
+  // 섞어야만 버프가 줄어들면 버프 수를 우선한다.
+  const tight = [make(1000, true), make(700, false)];
+  assert.equal(engine.packAll(tight, 1800).bins.length, 1);
+});
+
+test('전체 동선에서 파티 보스는 버프 안에서 먼저 이어서 돌고 파티가 있는 버프를 먼저 보여준다', () => {
+  const engine = loadPlanner();
+  const db = require('../boss_db.json');
+  engine.setBosses([
+    {name:'윌', diff:'하드', mult:200, on:true},
+    {name:'루시드', diff:'하드', mult:400, on:true},
+    {name:'스우', diff:'하드', mult:100, on:true},
+    {name:'데미안', diff:'하드', mult:400, on:true},
+  ].map((b, i) => ({id:'b' + i, extra:0, ...b})));
+  // 스우·데미안은 파티. 윌 10분, 루시드 5분, 스우(파티 400%) 5분, 데미안(파티 400%) 5분 → 한 버프에 들어간다.
+  engine.setPartyRates(db, {'Lotus|Hard':{total:400, name:'스우팟', count:2, id:'p1', scope:'local'}, 'Damien|Hard':{total:400, name:'데미팟', count:2, id:'p2', scope:'local'}});
+  engine.renderAll();
+  const {pack} = engine.results();
+  const route = [...pack.matchAll(/<li class="stop">.*?<span class="nm">([^<]+)</g)].map(m => m[1].trim());
+  assert.deepEqual(route.slice(0, 2).sort(), ['데미안', '스우']);
+  assert.deepEqual(route.slice(2), ['윌', '루시드']);
 });

@@ -110,7 +110,7 @@
   };
 
   // The Black Mage panel omits the silver cube awarded since 2026-10-01.
-  var extras={'BlackMage|Hard':[{name:silver,quantity:8,unit:'개',image:'icons/boss-rewards/GuardianAngelSlime.png',x:267,y:45}]};
+  var extras={'BlackMage|Hard':[{name:silver,quantity:8,unit:'개',image:'icons/boss-rewards/GuardianAngelSlime.webp',x:267,y:45}]};
 
   function forBoss(bossId){
     var [boss,difficulty]=bossId.split('|');
@@ -120,7 +120,7 @@
     return slots.flatMap(function(slot,index){
       if(!slot)return [];
       var [name,quantity,unit]=Array.isArray(slot)?slot:[slot];
-      return [{name:name,quantity:quantity,unit:unit||'개',image:'icons/boss-rewards/'+boss+'.png',
+      return [{name:name,quantity:quantity,unit:unit||'개',image:'icons/boss-rewards/'+boss+'.webp',
         x:x+index%columns*stepX-20,y:y+Math.floor(index/columns)*stepY-20}];
     }).concat(extras[bossId]||[]);
   }

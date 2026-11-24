@@ -206,7 +206,7 @@
     characterLoad.disabled = characterClear.disabled = characterInput.readOnly = true;
     characterStatus.textContent = '캐릭터 장비를 불러오는 중…';
     try {
-      const next = await window.AccessoryEquipment.load(name, key);
+      const next = await window.AccessoryEquipment.load(name, key, characterInput.dataset.accountOcid || '');
       const firstPreset = next.presets.findIndex(Boolean);
       if (firstPreset < 0) {
         characterStatus.textContent = '조회 가능한 장비 프리셋이 없습니다.';
@@ -646,4 +646,5 @@
   renderResult();
   keyHelp.hidden = window.NexonKey.has();
   if (characterInput.value && window.NexonKey.has()) void loadCharacter();
+  window.NexonCharacters?.mount({ host: '#accessory-character-picker', input: characterInput });
 })();

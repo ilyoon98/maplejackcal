@@ -1,49 +1,116 @@
-(() => {
+// 넥슨 Open API의 장착 장비 응답에서 장신구 9부위의 드랍과 메획 잠재옵션을 읽는다.
+(function (root, factory) {
+  var api = factory(typeof module === 'object' && module.exports ? require('./nexon_api.js') : root.NexonApi);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.AccessoryEquipment = api;
+})(typeof window !== 'undefined' ? window : globalThis, function (NexonApi) {
   'use strict';
 
-  const slotIndex = new Map([
-    ['반지', 0], ['반지1', 0], ['반지2', 1], ['반지3', 2], ['반지4', 3],
-    ['얼굴장식', 4], ['눈장식', 5], ['펜던트', 6], ['펜던트1', 6], ['펜던트2', 7],
-    ['귀고리', 8], ['귀걸이', 8]
-  ]);
-  const ratePattern = /^(아이템\s*드[롭랍]률|메소\s*획득량)\s*:?\s*\+?\s*(\d+)\s*%$/;
+  // 장신구 맞추기의 부위 순서와 같다.
+  var SLOT_KEYS = ['반지1', '반지2', '반지3', '반지4', '얼굴장식', '눈장식', '펜던트', '펜던트2', '귀고리'];
+  var LINE_VALUE = 20;
+  var PATTERNS = { drop: /^아이템\s*드[롭랍]률\s*:?\s*\+?(\d+(?:\.\d+)?)\s*%$/, meso: /^메소\s*획득량\s*:?\s*\+?(\d+(?:\.\d+)?)\s*%$/ };
+  var SLOT_ALIASES = new Map([['반지', '반지1'], ['펜던트1', '펜던트'], ['귀걸이', '귀고리']]);
 
-  function readPreset(equipment) {
-    if (!Array.isArray(equipment) || !equipment.length) return null;
-    const slots = Array(9).fill(null);
-    for (const item of equipment) {
-      const slot = slotIndex.get(String(item?.item_equipment_slot || '').replace(/\s/g, ''));
-      if (slot === undefined || typeof item.item_name !== 'string' || !item.item_name) continue;
-      const rates = { drop: 0, meso: 0 };
-      for (const prefix of ['potential_option_', 'additional_potential_option_']) {
-        for (let line = 1; line <= 3; line++) {
-          const match = ratePattern.exec(String(item[prefix + line] || '').trim());
-          if (match) rates[match[1].startsWith('메소') ? 'meso' : 'drop'] += Number(match[2]);
-        }
-      }
-      const icon = typeof item.item_icon === 'string' && /^https:\/\//i.test(item.item_icon) ? item.item_icon : '';
-      slots[slot] = { name: item.item_name, icon, ...rates, grid: item.item_name === '그리드 펜던트' };
-    }
-    return slots;
+  function text(value) { return String(value == null ? '' : value).trim(); }
+
+  function slotName(item) {
+    var name = text(item?.item_equipment_slot).replace(/\s/g, '');
+    return SLOT_ALIASES.get(name) || name;
   }
 
-  async function load(name, key) {
-    const client = new NexonApi((...args) => fetch(...args), () => key);
-    const get = (path, params) => client.get(path, params, {
-      signal: AbortSignal.timeout(10000), strictJson: true
+  function readLines(item) {
+    var out = { drop: 0, meso: 0 };
+    ['potential_option_1', 'potential_option_2', 'potential_option_3',
+      'additional_potential_option_1', 'additional_potential_option_2', 'additional_potential_option_3'].forEach(function (key) {
+      var line = text(item && item[key]);
+      Object.keys(PATTERNS).forEach(function (kind) {
+        var match = PATTERNS[kind].exec(line);
+        if (match) out[kind] += Number(match[1]);
+      });
     });
-    const { ocid } = await get('/id', { character_name: name });
-    if (!ocid) throw new Error('OPENAPI00004');
-    const [basic, equipment] = await Promise.all([
-      get('/character/basic', { ocid }), get('/character/item-equipment', { ocid })
+    return out;
+  }
+
+  function presetList(body, preset) {
+    if (!body) return [];
+    var key = preset ? 'item_equipment_preset_' + preset : 'item_equipment';
+    return Array.isArray(body[key]) ? body[key] : [];
+  }
+
+  // preset: 0이면 현재 착용 장비, 1~3이면 해당 프리셋.
+  function parse(body, preset) {
+    var items = presetList(body, preset);
+    return SLOT_KEYS.map(function (key) {
+      var item = items.find(function (entry) { return slotName(entry) === key; });
+      if (!item) return { name: '', icon: '', dropPct: 0, mesoPct: 0, drop: 0, meso: 0, partial: false, empty: true };
+      var pct = readLines(item);
+      var drop = Math.floor(pct.drop / LINE_VALUE), meso = Math.floor(pct.meso / LINE_VALUE);
+      // 장신구 맞추기는 부위마다 20% 두 줄까지만 다룬다.
+      var over = drop + meso > 2;
+      if (over) { var keepDrop = Math.min(drop, 2); meso = Math.min(meso, 2 - keepDrop); drop = keepDrop; }
+      return {
+        name: text(item.item_name),
+        icon: text(item.item_icon),
+        dropPct: pct.drop,
+        mesoPct: pct.meso,
+        drop: drop,
+        meso: meso,
+        partial: over || pct.drop % LINE_VALUE !== 0 || pct.meso % LINE_VALUE !== 0,
+        empty: false
+      };
+    });
+  }
+
+  function hasPreset(body, preset) { return presetList(body, preset).length > 0; }
+
+  async function lookupOcid(api, name, known, signal) {
+    if (known) return known;
+    var id = await api.get('/id', { character_name: name }, { signal });
+    if (!id?.ocid) throw new Error('CHARACTER_NOT_FOUND');
+    return id.ocid;
+  }
+
+  function client(fetchImpl, getKey) {
+    var api = new NexonApi(fetchImpl, getKey);
+    return {
+      load: async function (name, ocid, signal) {
+        ocid = await lookupOcid(api, name, ocid, signal);
+        return api.get('/character/item-equipment', { ocid: ocid }, { signal });
+      }
+    };
+  }
+
+  async function load(name, key, knownOcid) {
+    var api = new NexonApi((...args) => fetch(...args), () => key);
+    var signal = AbortSignal.timeout(10000);
+    var ocid = await lookupOcid(api, name, knownOcid, signal);
+    var [basic, equipment] = await Promise.all([
+      api.get('/character/basic', { ocid }, { signal, strictJson: true }),
+      api.get('/character/item-equipment', { ocid }, { signal, strictJson: true })
     ]);
-    const presets = [1, 2, 3].map(number => readPreset(equipment['item_equipment_preset_' + number]));
-    const active = equipment.preset_no - 1;
-    if (active >= 0 && active < presets.length && !presets[active]) {
-      presets[active] = readPreset(equipment.item_equipment);
+    function readPreset(number) {
+      if (!hasPreset(equipment, number)) return null;
+      return parse(equipment, number).map(slot => slot.empty ? null : {
+        name: slot.name, icon: /^https:\/\//i.test(slot.icon) ? slot.icon : '',
+        drop: slot.dropPct, meso: slot.mesoPct, grid: slot.name === '그리드 펜던트'
+      });
     }
+    var presets = [1, 2, 3].map(readPreset);
+    var active = equipment.preset_no - 1;
+    if (active >= 0 && active < presets.length && !presets[active]) presets[active] = readPreset(0);
     return { name: basic.character_name || name, world: basic.world_name || '', presets, active };
   }
 
-  window.AccessoryEquipment = { load };
-})();
+  function describeError(error) {
+    if (!error) return '장비를 불러오지 못했습니다. 다시 시도하세요.';
+    if (error.message === 'API_KEY_REQUIRED') return '넥슨 오픈 API 키를 등록하면 장비를 불러올 수 있습니다.';
+    if (error.message === 'CHARACTER_NOT_FOUND' || error.code === 'OPENAPI00004') return '캐릭터를 찾지 못했습니다. 이름을 확인하세요.';
+    if (error.code === 'OPENAPI00005') return 'API 키가 유효하지 않습니다. 홈에서 키를 다시 등록하세요.';
+    if (error.code === 'OPENAPI00007') return '요청이 많아 잠시 제한되었습니다. 잠시 뒤 다시 시도하세요.';
+    if (error.code === 'OPENAPI00009') return '아직 장비 데이터가 준비되지 않았습니다. 잠시 뒤 다시 시도하세요.';
+    return '장비를 불러오지 못했습니다. 다시 시도하세요.';
+  }
+
+  return { SLOT_KEYS: SLOT_KEYS, parse: parse, readLines: readLines, hasPreset: hasPreset, client: client, describeError: describeError, load: load };
+});

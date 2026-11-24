@@ -42,37 +42,31 @@
 .site-tooltip-name { font-size:14px; font-weight:800; white-space:pre-line; }
 .site-tooltip-value { color:#a9d0ff; font-size:15px; font-weight:800; }
 .site-tooltip-note { color:#c9d5e8; font-size:12px; white-space:pre-line; }
-.site-tooltip-portraits {
-  display:grid;
-  grid-template-columns:repeat(var(--portrait-columns),minmax(0,4.75rem));
-  gap:4px 8px;
-  margin:2px 0;
-  padding:0;
-  list-style:none;
-  text-align:center;
-  font-size:.8125rem;
-}
-.site-tooltip-portraits li {
-  display:grid;
-  grid-row:span 2;
-  grid-template-rows:subgrid;
-}
-.site-tooltip-portrait-name { grid-row:2; }
-.site-tooltip-portrait-frame {
-  display:block;
-  width:min(100%,4rem);
+/* 파티원 같은 항목 목록: 외형(없으면 이름 첫 글자), 이름과 표시, 보조 정보, 오른쪽 값. */
+.site-tooltip-items { --tooltip-avatar-size:clamp(2.25rem,min(16vw,calc((100dvh - 196px) / 6)),4rem); display:flex; flex-direction:column; gap:6px; margin:2px 0 0; padding:0; list-style:none; min-width:min(220px,100%); }
+.site-tooltip-item { display:grid; grid-template-columns:var(--tooltip-avatar-size) minmax(0,1fr) auto; align-items:center; gap:8px; padding:6px 8px; border:1px solid #33496d; border-radius:8px; background:#0f1828; }
+.site-tooltip-avatar { position:relative; display:grid; place-items:center; width:var(--tooltip-avatar-size); aspect-ratio:1; overflow:hidden; border-radius:8px; background:#22324d; color:#c3deff; font-size:15px; font-weight:800; }
+.site-tooltip-avatar img {
+  position:absolute;
+  inset:50% auto auto 50%;
+  width:calc(var(--tooltip-avatar-size) * 6);
   aspect-ratio:1;
-  margin:0 auto;
-  overflow:hidden;
-  border:1px solid var(--border,#2a2e38);
-  border-radius:8px;
-  background:var(--card,#171a21);
-}
-.site-tooltip-portrait-frame:empty { display:none; }
-.site-tooltip-portrait-frame img {
-  display:block;
-  width:100%;
-  height:100%;
+  max-width:none;
+  transform:translate(-48%,-51%);
   object-fit:contain;
   image-rendering:pixelated;
+  opacity:0;
 }
+/* 랭킹 이미지는 Open API 외형보다 투명 여백이 작다. */
+.site-tooltip-avatar img[src^="https://avatar.maplestory.nexon.com/CharacterEx/"] {
+  width:calc(var(--tooltip-avatar-size) * 3.6);
+  transform:translate(-44%,-39%);
+}
+.site-tooltip-avatar.has-image { color:transparent; }
+.site-tooltip-avatar.has-image img { opacity:1; }
+.site-tooltip-item-body { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.site-tooltip-item-head { display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; min-width:0; }
+.site-tooltip-item-name { font-size:13px; font-weight:800; }
+.site-tooltip-item-tag { padding:0 6px; border:1px solid #6ea8fe; border-radius:5px; color:#c3deff; font-size:11px; font-weight:700; line-height:1.5; white-space:nowrap; }
+.site-tooltip-item-note { color:#c9d5e8; font-size:12px; }
+.site-tooltip-item-value { color:#a9d0ff; font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }

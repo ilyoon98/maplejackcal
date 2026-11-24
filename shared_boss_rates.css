@@ -46,6 +46,12 @@
 .shared-wrap .shared-group-row .ux-button{flex:none;min-width:52px;min-height:44px;padding-inline:8px;background:#202735}
 .shared-wrap .shared-group-members small{color:var(--text-dim)}
 .shared-wrap .shared-group-members .shared-group-pending{color:var(--accent)}
+/* 계정 관리: 대표 캐릭터 지정 버튼과 이 브라우저에서만 쓰는 "내가 쓰는 계정" 스위치. */
+.shared-wrap .shared-group-row .shared-group-actions{display:flex;flex:none;gap:6px}
+.shared-wrap .shared-group-row .shared-group-main[aria-pressed="true"]{border-color:var(--accent);background:#1d2c44;color:#e4efff}
+.shared-wrap .shared-group-members .shared-group-main-tag{color:#a8d5ff;font-weight:700}
+.shared-wrap .shared-group-mine{margin:10px 0 0}
+.shared-wrap .shared-group-mine .ux-toggle{min-height:44px}
 .shared-wrap .shared-group-name{margin-top:12px}
 .shared-wrap #shared-group-name-note{margin:6px 0 12px}
 .shared-wrap #shared-group-save{min-height:44px}

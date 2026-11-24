@@ -28,34 +28,47 @@
     node.textContent = content;
     tip.appendChild(node);
   }
-  function portraits(content) {
-    if (!content) return;
-    var entries;
-    try { entries = JSON.parse(content); } catch (e) { return; }
-    if (!Array.isArray(entries) || !entries.length) return;
-    var list = document.createElement('ul');
-    list.className = 'site-tooltip-portraits';
-    list.setAttribute('role', 'list');
-    list.style.setProperty('--portrait-columns', Math.min(3, entries.length));
-    entries.forEach(function (entry) {
-      var item = document.createElement('li');
-      var frame = document.createElement('span');
-      var name = document.createElement('span');
-      frame.className = 'site-tooltip-portrait-frame';
-      name.className = 'site-tooltip-portrait-name';
-      name.textContent = entry.name;
-      if (entry.image) {
+  function text(tag, className, content) {
+    var node = document.createElement(tag);
+    node.className = className;
+    node.textContent = content;
+    return node;
+  }
+  // data-tooltip-items: [{name, note, value, image, tags}] JSON. 파티원처럼 사람·항목 목록을 카드로 보여준다.
+  function items(raw) {
+    var list;
+    try { list = JSON.parse(raw || '[]'); } catch (e) { return; }
+    if (!Array.isArray(list) || !list.length) return;
+    var box = document.createElement('ul');
+    box.className = 'site-tooltip-items';
+    list.slice(0, 12).forEach(function (item) {
+      if (!item || typeof item.name !== 'string') return;
+      var row = document.createElement('li'), avatar = document.createElement('span'), body = document.createElement('span'), head = document.createElement('span');
+      row.className = 'site-tooltip-item';
+      avatar.className = 'site-tooltip-avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      avatar.textContent = Array.from(item.name)[0] || '';
+      if (typeof item.image === 'string' && /^https:\/\//.test(item.image)) {
         var img = document.createElement('img');
         img.alt = '';
         img.referrerPolicy = 'no-referrer';
-        img.addEventListener('error', function () { img.remove(); });
-        img.src = entry.image;
-        frame.appendChild(img);
+        img.addEventListener('load', function () { avatar.classList.add('has-image'); });
+        img.src = item.image;
+        avatar.appendChild(img);
       }
-      item.append(frame, name);
-      list.appendChild(item);
+      body.className = 'site-tooltip-item-body';
+      head.className = 'site-tooltip-item-head';
+      head.appendChild(text('strong', 'site-tooltip-item-name', item.name));
+      (Array.isArray(item.tags) ? item.tags : []).forEach(function (tag) {
+        if (typeof tag === 'string' && tag) head.appendChild(text('span', 'site-tooltip-item-tag', tag));
+      });
+      body.appendChild(head);
+      if (typeof item.note === 'string' && item.note) body.appendChild(text('span', 'site-tooltip-item-note', item.note));
+      row.append(avatar, body);
+      if (typeof item.value === 'string' && item.value) row.appendChild(text('span', 'site-tooltip-item-value', item.value));
+      box.appendChild(row);
     });
-    tip.appendChild(list);
+    if (box.childElementCount) tip.appendChild(box);
   }
   function show(source) {
     hide();
@@ -64,7 +77,7 @@
     tip.replaceChildren();
     line('strong', 'site-tooltip-name', source.dataset.tooltip);
     line('span', 'site-tooltip-value', source.dataset.tooltipValue);
-    portraits(source.dataset.tooltipPortraits);
+    items(source.dataset.tooltipItems);
     line('span', 'site-tooltip-note', source.dataset.tooltipNote);
     described = source.querySelector('input,button,a,[tabindex]') || source;
     var ids = (described.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);

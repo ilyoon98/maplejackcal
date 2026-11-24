@@ -15,7 +15,8 @@
 .party-app .party-view-state p{margin:0}
 .party-app .party-filter-results{margin-top:16px}
 .party-app .party-filter-results .ux-button{display:grid;align-content:center;gap:4px;overflow-wrap:anywhere}
-.party-board{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start}
+/* 목록 제목(파티 이름)이 잘리지 않도록 목록 칸에 폭을 넉넉히 준다. */
+.party-board{display:grid;grid-template-columns:380px minmax(0,1fr);gap:16px;align-items:start}
 .party-content{display:grid;gap:14px;min-width:0}
 /* 파티가 늘어나도 페이지가 길어지지 않도록 목록은 화면 높이 안에서만 스크롤한다. */
 .party-list-pane{position:sticky;top:16px;display:grid;gap:8px;min-width:0}
@@ -72,6 +73,8 @@
 .party-verdict.easy{color:#a8d5ff;background:#233a54}
 .party-verdict.overkill{color:#ffd99d;background:#4d3522}
 .party-verdict.pending{color:#e3d6ac;background:#373225}
+/* 판정 배지 오른쪽의 예상 처치 시간. */
+.party-clear-time{color:var(--text);font-size:.9rem;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .party-done-badge{
   display:inline-block;justify-self:start;padding:4px 8px;border:1px solid #60ba8b;border-radius:6px;
   color:#adf2cb;background:#1b392d;font-size:.8rem;font-weight:800;white-space:nowrap
@@ -81,7 +84,8 @@
 .boss-app .party-complete.ux-complete-toggle[aria-pressed=true]{background:#245840;color:#adf2cb;border-color:#60ba8b}
 .party-complete-note{margin:8px 0 0}
 
-.party-app .party-summary-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:12px;margin:16px 0}
+/* 환산 합계 카드가 배율, 판정, 예상 시간을 한 줄에 담도록 보상 카드보다 넓게 둔다. */
+.party-app .party-summary-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;margin:16px 0}
 .party-app .party-summary-grid .party-totals{margin:0}
 .party-app .party-reward{min-width:0;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
 .party-app .party-reward h4{margin:0 0 10px;font-size:.93rem;color:var(--text)}
@@ -156,7 +160,7 @@
 .party-search .boss-section-head{margin-bottom:12px}
 
 @media(max-width:900px){
-  .party-board{grid-template-columns:280px minmax(0,1fr)}
+  .party-board{grid-template-columns:300px minmax(0,1fr)}
   .party-member{--portrait-size:112px}
 }
 @media(max-width:760px){

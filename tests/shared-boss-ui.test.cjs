@@ -5,12 +5,13 @@ const image='https://open.api.nexon.com/static/maplestory/character/look/ABC123'
 const profile=name=>({name,world:'루나',job:'히어로',level:285,image,updatedAt:Date.now()});
 function snapshot(name='다른사람'){const s=catalog.snapshot(name,[{bossId:'Lotus|Extreme',percent:49.68},{bossId:'Will|Hard',percent:77}],'manual');return {...s,revision:'v1',character:profile(name)};}
 const settle=async()=>{for(let i=0;i<5;i++)await new Promise(setImmediate);};
-async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,shot=[],ownRows=[],parties=[],url=''}={}){
+async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,shot=[],ownRows=[],parties=[],completed='',url=''}={}){
  const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../'+page+'.html'),'utf8'),{url:'https://example.test/'+(url||page+'.html'),runScripts:'outside-only'}),w=dom.window,calls=[];let values=structuredClone(snapshots),registry=structuredClone(accounts);
  w.confirm=()=>true;w.setInterval=()=>1;if(key)w.localStorage.setItem('nxopen_api_key',key);
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
  w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
  if(parties.length)w.localStorage.setItem('partyBossScheduler.v1',JSON.stringify({parties}));
+ if(completed)w.localStorage.setItem('partyBossScheduler.completed.v1',completed);
  w.fetch=async(url,options={})=>{calls.push({url,options});if(url==='/api/boss-rates'){
    if(options.method==='POST'){const b=JSON.parse(options.body);if(b.action==='delete'){values=values.filter(s=>s.characterName!==b.characterName);return {ok:true,json:async()=>({deleted:true})};}if(b.action==='accounts'){registry=b.accounts;return {ok:true,json:async()=>({accounts:registry,accountRevision:'accounts-v2'})};}const saved={...b.snapshot,revision:'v2'};values=values.filter(s=>s.characterName!==saved.characterName).concat(saved);return {ok:true,json:async()=>({snapshot:saved})};}
    return {ok:true,json:async()=>({schemaVersion:1,persistent:true,snapshots:structuredClone(values),accounts:structuredClone(registry),accountRevision:registry.length?'accounts-v1':''})};
@@ -24,6 +25,47 @@ async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,s
 }
 function select(w,id,value){const n=w.document.getElementById(id);n.value=value;n.dispatchEvent(new w.Event('change',{bubbles:true}));}
 function type(w,id,value){const n=w.document.getElementById(id);n.value=value;n.dispatchEvent(new w.Event('input',{bubbles:true}));}
+test('로컬에서 완료를 저장해도 아직 불러오지 않은 공유 파티의 수동 완료는 유지된다',async()=>{
+ const shared={id:'remote',name:'공유 파티',bossId:'Will|Hard',members:[],canEdit:true};
+ const parties=[{id:'local',name:'로컬 파티',bossId:'Will|Hard',members:[]}];
+ const fetchExtra=async url=>{assert.equal(url,'/api/boss-parties');return {ok:true,json:async()=>({persistent:true,parties:[shared]})};};
+ const first=await boot('party_boss_scheduler',{parties,fetchExtra,url:'party_boss_scheduler.html?scope=shared'});
+ let completed;
+ try{
+  first.doc.querySelector('.party-complete').click();
+  completed=first.w.localStorage.getItem('partyBossScheduler.completed.v1');
+ }finally{first.close();}
+ const next=await boot('party_boss_scheduler',{parties,fetchExtra,completed});
+ try{
+  next.doc.querySelector('.party-complete').click();
+  next.doc.querySelector('#party-scope-shared').click();await settle();
+  assert.equal(next.doc.querySelector('.party-complete').getAttribute('aria-pressed'),'true');
+  assert.match(next.doc.querySelector('#party-list .party-done-badge').textContent,/완료/);
+ }finally{next.close();}
+});
+test('공유 탭을 열거나 목록을 새로고침하면 해당 파티의 자동 완료를 바로 조회한다',async()=>{
+ const character=snapshot();
+ const shared={id:'remote',name:'공유 파티',bossId:'Will|Hard',members:[character.characterName]};
+ let cleared=true,clearsRequests=0;
+ const p=await boot('party_boss_scheduler',{key:'test-key',snapshots:[character],ownRows:[{name:character.characterName,ocid:'own-ocid'}],fetchExtra:async url=>{
+  if(url==='/api/boss-parties')return {ok:true,json:async()=>({persistent:true,parties:[shared]})};
+  const req=new URL(url);
+  assert.equal(req.pathname,'/maplestory/v1/scheduler/character-state');
+  assert.equal(req.searchParams.get('ocid'),'own-ocid');clearsRequests++;
+  return {ok:true,json:async()=>({boss_contents:[{content_name:'윌',difficulty:'hard',clear_flag:cleared}]})};
+ }});
+ try{
+  assert.equal(clearsRequests,0);
+  p.doc.querySelector('#party-scope-shared').click();await settle();
+  assert.equal(clearsRequests,1);
+  assert.equal(p.doc.querySelector('.party-complete').disabled,true);
+  assert.match(p.doc.querySelector('#party-list .party-done-badge').textContent,/완료/);
+  cleared=false;
+  p.doc.querySelector('#party-refresh-shared').click();await settle();
+  assert.equal(clearsRequests,2);
+  assert.equal(p.doc.querySelector('.party-complete').getAttribute('aria-pressed'),'false');
+ }finally{p.close();}
+});
 test('저장된 캐릭터 선택 즉시 프로필과 배율을 열고 중복 열기·조건 확인 버튼 없이 저장한다',async()=>{
  const p=await boot('shared_boss_rates',{snapshots:[snapshot('다른사람'),snapshot('두번째캐릭터')]});try{
   assert.equal(p.doc.querySelector('#shared-open').hidden,false);assert.equal(p.doc.querySelectorAll('#shared-rows tr').length,2);assert(p.doc.querySelector('#shared-profile').textContent.includes('Lv. 285'));assert(p.doc.querySelector('#shared-profile img').src===image);
@@ -59,6 +101,9 @@ test('파티원 세 명의 예상 딜 비중을 표시하고 파티원을 빼면
   const totals=p.doc.querySelector('#party-detail .party-totals');
   assert.equal(totals.querySelector('.party-metric-value').textContent,'136.47%');
   assert.equal(totals.querySelector('.party-verdict').textContent,'클리어 가능');
+  // 판정 배지 오른쪽에 예상 처치 시간(100% = 20분)을 보여준다.
+  const time=totals.querySelector('.party-metric-line .party-verdict + .party-clear-time');
+  assert.equal(time.textContent,'예상 14분 39초');
   // 예상 딜 비중은 환산 합계 카드 안에 함께 표시한다.
   assert(totals.querySelector('.party-share-chart'));
   const shares=id=>[...p.doc.querySelectorAll('#'+id+' .party-member-metrics .party-metric:nth-child(2) .party-metric-value')].map(n=>n.textContent);
@@ -117,7 +162,7 @@ test('보스 보상은 선택한 난이도와 편집 중 인원수를 반영하�
   assert.equal(amount('party-detail'),'6억 9,500만 메소');
   assert.match(p.doc.querySelector('#party-detail .party-reward').textContent,/2인 균등 분배/);
   const item=(id,name)=>[...p.doc.querySelectorAll('#'+id+' .party-reward-item')].find(tile=>tile.dataset.tooltip===name);
-  assert.match(item('party-detail','불멸의 유산').firstElementChild.style.backgroundImage,/TheFirstAdversary\.png/);
+  assert.match(item('party-detail','불멸의 유산').firstElementChild.style.backgroundImage,/TheFirstAdversary\.webp/);
   for(const [name,count] of [['이어진 고대의 결의','6'],['에리온의 조각 교환권','30'],['솔 에르다의 기운','450']]){
    assert.equal(item('party-detail',name).querySelector('.party-reward-quantity').textContent,count);
   }
@@ -160,6 +205,15 @@ test('보스 필터는 별칭으로 찾고 해당 보스의 모든 난이도를 
   assert.equal(p.doc.querySelector('#party-view-all').getAttribute('aria-pressed'),'true');
  }finally{p.close();}
 });
+// WebP 헤더에서 가로·세로 크기를 읽는다(무손실 VP8L, 확장 VP8X, 손실 VP8).
+function webpSize(bytes){
+ assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(bytes.toString('ascii',8,12),'WEBP');
+ const chunk=bytes.toString('ascii',12,16);
+ if(chunk==='VP8L'){assert.equal(bytes[20],0x2f);const bits=bytes.readUInt32LE(21);return [(bits&0x3fff)+1,((bits>>14)&0x3fff)+1];}
+ if(chunk==='VP8X')return [bytes.readUIntLE(24,3)+1,bytes.readUIntLE(27,3)+1];
+ if(chunk==='VP8 ')return [bytes.readUInt16LE(26)&0x3fff,bytes.readUInt16LE(28)&0x3fff];
+ throw new Error('Unknown WebP chunk '+chunk);
+}
 test('스케줄러에서 선택 가능한 모든 난이도의 보상 아이콘은 로컬 이미지 안에 있다',()=>{
  const rewards=require('../boss_rewards.js'),db=require('../boss_db.js');
  const cache=new Map();
@@ -168,8 +222,7 @@ test('스케줄러에서 선택 가능한 모든 난이도의 보상 아이콘�
   for(const item of items){
    if(!cache.has(item.image)){
     const bytes=fs.readFileSync(path.join(__dirname,'..',item.image));
-    assert.equal(bytes.toString('hex',0,8),'89504e470d0a1a0a');
-    cache.set(item.image,[bytes.readUInt32BE(16),bytes.readUInt32BE(20)]);
+    cache.set(item.image,webpSize(bytes));
    }
    const [width,height]=cache.get(item.image);
    assert(Number.isInteger(item.x)&&Number.isInteger(item.y)&&item.x>=0&&item.y>=0&&item.x+40<=width&&item.y+40<=height,id+' '+item.name);
@@ -296,7 +349,7 @@ test('공용 계정은 키 없이 등록된 260 이상 캐릭터로 편집하고
   assert.equal(p.doc.querySelector('#shared-group-fields').hidden,true);
   select(p.w,'shared-group-select','friend');
   assert.equal(p.doc.querySelector('#shared-group-fields').hidden,false);
-  const candidates=()=>[...p.doc.querySelectorAll('#shared-group-members button')];
+  const candidates=()=>[...p.doc.querySelectorAll('#shared-group-members button[data-group-action]')];
   const results=()=>[...p.doc.querySelectorAll('#shared-group-results button')];
   assert.deepEqual(candidates().map(n=>n.value),['친구본캐']);assert.equal(candidates()[0].textContent,'빼기');
   assert.equal(p.doc.querySelector('#shared-group-label').closest('details').id,'shared-account-editor');
@@ -411,5 +464,70 @@ test('주소의 party와 scope로 들어오면 해당 파티를 열고 없으면
  }finally{p.close();}
  p=await boot('party_boss_scheduler',{parties,url:'party_boss_scheduler.html?scope=local&party=missing'});try{
   assert.match(p.doc.querySelector('#party-storage-status').textContent,/찾는 파티가 없습니다/);
+ }finally{p.close();}
+});
+test('이름을 짓지 않은 파티는 본캐 먼저 딜 비중 순으로 파티원 이름 앞글자를 이어 목록 제목으로 쓴다',async()=>{
+ const rates=[42.26,43.34,50.87],snapshots=['첫번째','두번째','세번째'].map((name,index)=>{const saved=snapshot(name);saved.rates[1].percent=rates[index];return saved;});
+ const members=snapshots.map((s,index)=>({character:{...s.character,ocid:'shared:'+s.characterName},rate:rates[index]}));
+ const visible=title=>[...title.childNodes].filter(n=>!n.classList?.contains('sr-only')).map(n=>n.textContent).join('');
+ let p=await boot('party_boss_scheduler',{snapshots,parties:[{id:'p1',name:'하드 윌',bossId:'Will|Hard',members}]});try{
+  const title=p.doc.querySelector('#party-list .party-row-title');
+  // 3명이라 2글자씩, 본캐가 없으면 딜 비중(환산 배율)이 높은 순이다. 화면 읽기용으로는 전체 이름을 둔다.
+  assert.equal(visible(title),'세번,두번,첫번');
+  assert.equal(title.querySelector('.sr-only').textContent,'세번째, 두번째, 첫번째');
+  // 목록 폭이 좁아 잘릴 수 있으므로 마우스를 올리면 전체 파티원 이름을 보여준다.
+  assert.equal(title.dataset.tooltip,'세번째, 두번째, 첫번째');
+ }finally{p.close();}
+ // 같은 계정의 본캐(계정 이름과 같은 캐릭터)는 딜 비중과 관계없이 맨 앞에 온다. 2명이면 3글자씩이다.
+ p=await boot('party_boss_scheduler',{snapshots,accounts:[{id:'acc',label:'첫번째',characters:[{name:'첫번째'}]}],parties:[{id:'p1',name:'하드 윌',bossId:'Will|Hard',members:[members[0],members[2]]}]});try{
+  assert.equal(visible(p.doc.querySelector('#party-list .party-row-title')),'첫번째,세번째');
+ }finally{p.close();}
+ p=await boot('party_boss_scheduler',{snapshots,parties:[{id:'p1',name:'하드 윌',bossId:'Will|Hard',members:[members[1]]}]});try{
+  assert.equal(p.doc.querySelector('#party-list .party-row-title').textContent,'두번째');
+ }finally{p.close();}
+});
+test('계정 관리에서 대표 캐릭터를 지정해 공용 계정에 저장하고 본캐와 자동 이름에 쓴다',async()=>{
+ const high=snapshot('높은부캐'),main=snapshot('지정본캐');high.character.level=297;main.character.level=270;
+ const registry=[{id:'friend',label:'',characters:[{name:high.characterName},{name:main.characterName}]}];
+ const p=await boot('shared_boss_rates',{snapshots:[high,main],accounts:registry});try{
+  select(p.w,'shared-group-select','friend');
+  const mainButton=name=>p.doc.querySelector('#shared-group-members button[data-group-main][value="'+name+'"]');
+  assert.equal(mainButton('지정본캐').getAttribute('aria-pressed'),'false');
+  mainButton('지정본캐').click();
+  assert.equal(mainButton('지정본캐').getAttribute('aria-pressed'),'true');
+  assert.match(mainButton('지정본캐').closest('.shared-group-row').textContent,/대표 캐릭터/);
+  p.doc.querySelector('#shared-group-save').click();await settle();
+  const body=JSON.parse(p.calls.find(c=>c.options.method==='POST').options.body);
+  assert.equal(body.accounts[0].main,'지정본캐');
+  // 계정 이름을 비워 두면 대표 캐릭터 이름을 쓰고, 본캐 판정도 대표를 따른다.
+  const account=require('../account_catalog.js'),store={snapshots:[high,main],accounts:body.accounts};
+  assert.equal(account.groups(store)[0].label,'지정본캐');
+  assert.deepEqual([...account.mainNames(store)],['지정본캐']);
+  // 다시 누르면 대표를 해제한다.
+  mainButton('지정본캐').click();p.doc.querySelector('#shared-group-save').click();await settle();
+  const second=JSON.parse(p.calls.filter(c=>c.options.method==='POST').at(-1).options.body);
+  assert.equal(second.accounts[0].main,undefined);
+ }finally{p.close();}
+});
+test('내가 쓰는 계정을 켜면 API 키 없이도 그 계정 캐릭터가 내 캐릭터 선택기와 파티 필터에 들어간다',async()=>{
+ const a=snapshot('친구캐릭A'),b=snapshot('친구캐릭B');
+ const registry=[{id:'friend',label:'친구 계정',characters:[{name:a.characterName},{name:b.characterName}]}];
+ const p=await boot('shared_boss_rates',{snapshots:[a,b],accounts:registry});try{
+  select(p.w,'shared-group-select','friend');
+  const toggle=p.doc.querySelector('#shared-group-mine');
+  assert.equal(p.doc.querySelector('#shared-group-mine-box').hidden,false);
+  assert.equal(toggle.getAttribute('aria-checked'),'false');
+  toggle.click();
+  assert.equal(toggle.getAttribute('aria-checked'),'true');
+  const saved=JSON.parse(p.w.localStorage.getItem('nexonCharacters.extraAccounts.v1'));
+  assert.deepEqual(saved.map(s=>[s.id,s.label,s.characters.map(c=>c.name).sort()]),[['friend','친구 계정',['친구캐릭A','친구캐릭B']]]);
+  // 공용 저장 요청 없이 이 브라우저에만 저장한다.
+  assert(!p.calls.some(c=>c.options.method==='POST'));
+  const nc=p.w.NexonCharacters;
+  assert.deepEqual([...nc.extraNames()].sort(),['친구캐릭A','친구캐릭B']);
+  const merged=nc.mergeExtra([{accountId:'mine',ocid:'o1',name:'내캐릭',world:'루나',characterClass:'비숍',level:290}]);
+  assert.deepEqual([...merged].map(c=>[c.name,!!c.extra]),[['내캐릭',false],['친구캐릭A',true],['친구캐릭B',true]]);
+  toggle.click();
+  assert.deepEqual([...nc.extraNames()],[]);
  }finally{p.close();}
 });

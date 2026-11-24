@@ -69,9 +69,11 @@
       diff: b.diff || (preset ? preset.diff : entry ? entry[2][entry[2].length - 1] : ''),
       icon: b.icon || (entry ? 'icons/boss/' + entry[1] + '.webp' : ''),
       mult: Math.max(0.01, num(b.mult, 100)), extra: DEFAULT_EXTRA[b.name] || 0,
+      // 직접 고친 배율은 공용 환산 배율보다 우선한다. 예전에 캡처로 넣은 값도 직접 입력으로 남아 있다.
+      manual: b.manual === true,
       on: b.on !== false, rice: b.rice === true, completed: b.completed === true,
       registered: b.registered === true,
-      inList: b.inList === true || b.on !== false,
+      inList: b.inList === true || (b.inList == null && b.on !== false),
       completionOverride: b.completionOverride === true,
       difficultySettings: b.difficultySettings || {}
     };
@@ -85,8 +87,8 @@
       if (previous) {
         var keep = !previous.on && row.on ? row : previous;
         keep.difficultySettings = Object.assign({}, previous.difficultySettings, row.difficultySettings);
-        keep.difficultySettings[previous.diff] = {mult:previous.mult, rice:previous.rice};
-        keep.difficultySettings[row.diff] = {mult:row.mult, rice:row.rice};
+        keep.difficultySettings[previous.diff] = {mult:previous.mult, rice:previous.rice, manual:previous.manual};
+        keep.difficultySettings[row.diff] = {mult:row.mult, rice:row.rice, manual:row.manual};
         byName[row.name] = keep;
       } else byName[row.name] = row;
     });
@@ -101,10 +103,11 @@
     var entry = catalogEntry(b.name);
     if (!entry || entry[2].indexOf(diff) < 0 || diff === b.diff) return;
     b.difficultySettings = b.difficultySettings || {};
-    b.difficultySettings[b.diff] = {mult:b.mult, rice:b.rice};
+    b.difficultySettings[b.diff] = {mult:b.mult, rice:b.rice, manual:b.manual === true};
     var setting = b.difficultySettings[diff];
     b.diff = diff;
     b.mult = setting ? Math.max(0.01, num(setting.mult, 100)) : 100;
+    b.manual = !!(setting && setting.manual === true);
     if (setting) b.rice = setting.rice === true;
   }
   // 쌀도핑은 풀도핑 기준 입력 배율의 97%로 고정한다.
@@ -114,6 +117,19 @@
   var MAX_ENUM = 20;         // 조합 전수조사 한계(2^n).
   var BIN_W = 1000000;       // DP 점수: 버프 한 개 = 100만점. 남는 초 단위 비교보다 항상 우선한다.
   var INF = 0x3fffffff;
+  // 파티 보스와 혼자 도는 보스를 한 버프에 섞으면 파티 도중에 혼자 돌러 가야 하므로, 버프 수가 같으면 섞지 않는 쪽을 고른다.
+  // 버프 수와 쌀도핑→풀도핑 전환보다는 뒤, 실제 사용 시간보다는 앞에서 비교한다.
+  var PARTY_MIX_W = 10000;
+  function isPartyItem(item) { return !!(item && item.party); }
+  function partyMixPenalty(sub, partyMask, bits) {
+    var parties = bits[sub & partyMask];
+    return parties && parties < bits[sub] ? PARTY_MIX_W : 0;
+  }
+  function partyMaskOf(idxList, items) {
+    var mask = 0;
+    idxList.forEach(function (k, j) { if (isPartyItem(items[k])) mask |= 1 << j; });
+    return mask;
+  }
 
   var PROFILE_STORE = 'bossBuffPlanner.profiles';
   var savedProfiles = JsonStorage.local.read(PROFILE_STORE);
@@ -160,6 +176,7 @@
       }
     }
     if (!saved && fetchStatus) setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err');
+    return saved;
   }
   function num(v, fallback) {
     var n = parseFloat(v);
@@ -266,7 +283,7 @@
     var fullSums = subsetSums(idxList, items, true);
     var riceSums = subsetSums(idxList, items, false);
     var bits = popcounts(total);
-    var riceMask = 0;
+    var riceMask = 0, partyMask = partyMaskOf(idxList, items);
     idxList.forEach(function (k, j) { if (items[k].rice) riceMask |= 1 << j; });
     var PROMO_W = 1e7, MIX_BIN_W = 1e12;
     var binScore = new Float64Array(total);
@@ -278,6 +295,7 @@
       if (promo === bits[s] && rc <= cap) binScore[s] = rc;          // 전부 쌀도핑 보스면 쌀도핑 판이 우선
       else if (fc <= cap) { binScore[s] = promo * PROMO_W + fc; isFull[s] = 1; }
       else binScore[s] = Infinity;
+      if (binScore[s] !== Infinity) binScore[s] += partyMixPenalty(s, partyMask, bits);
     }
     var dp = new Float64Array(total);
     var pick = new Int32Array(total);
@@ -322,6 +340,7 @@
     var total = 1 << n;
     var sums = subsetSums(idxList, items, full);
     var bits = popcounts(total);
+    var partyMask = partyMaskOf(idxList, items);
     var dp = new Int32Array(total);
     var pick = new Int32Array(total);
     for (var mask = 1; mask < total; mask++) {
@@ -333,7 +352,7 @@
         var c = costOf(sums[sub], bits[sub]);
         if (c > cap) continue;
         // 점수 = 버프 개수 × BIN_W + 실제 사용 시간. 버프 수가 우선, 같으면 시간이 짧은 쪽.
-        var cand = dp[mask ^ sub] + BIN_W + c;
+        var cand = dp[mask ^ sub] + BIN_W + c + partyMixPenalty(sub, partyMask, bits);
         if (cand < dp[mask]) { dp[mask] = cand; pick[mask] = sub; }
       }
     }
@@ -353,7 +372,8 @@
   }
   // 같은 도핑 그룹에서 오래 걸리는 보스부터 채우는 근사 계산.
   function packGreedy(idxList, items, cap, full) {
-    var sorted = idxList.slice().sort(function (a, b) { return secIn(items[b], full) - secIn(items[a], full); });
+    // 파티 보스를 먼저 채워 같은 버프에 모이게 한다.
+    var sorted = idxList.slice().sort(function (a, b) { return (isPartyItem(items[b]) - isPartyItem(items[a])) || (secIn(items[b], full) - secIn(items[a], full)); });
     var bins = [], used = [];
     sorted.forEach(function (i) {
       var sec = secIn(items[i], full);
@@ -390,57 +410,147 @@
   // 파티 보스 스케줄러에서 해당 파티를 바로 열 수 있는 주소.
   function partyLink(p) { return p && p.id ? 'party_boss_scheduler.html?scope=' + p.scope + '&party=' + encodeURIComponent(p.id) : ''; }
   function partyFor(b) { return partyRates[bossIdOf(b)] || null; }
-  function effectiveMult(b) { var p = partyFor(b); return p ? p.total : b.mult; }
+  // ── 공용 환산 배율 연동 ─────────────────────────────────────
+  // 선택한 캐릭터가 공용 환산 배율에 등록돼 있으면 그 보스·난이도 기록을 배율 기본값으로 쓴다.
+  // 우선순위: 파티 환산 합계 → 직접 입력 → 공용 환산 배율 → 이 화면에 저장한 배율.
+  // 캡처로 배율을 넣는 기능은 공용 환산 배율 화면에만 두어, 한 번 등록하면 동선·파티에 함께 반영되게 한다.
+  var sharedRates = Object.create(null), sharedRateName = '', sharedRateLoaded = false, sharedRegistered = false, sharedRateAt = '';
+  function collectSharedRates(name, store) {
+    var found = Object.create(null);
+    var s = (store && Array.isArray(store.snapshots) ? store.snapshots : []).find(function (x) { return x.characterName === name && x.preset === '00000'; });
+    if (!s) return { rates: found, at: '', registered: false };
+    (Array.isArray(s.rates) ? s.rates : []).forEach(function (r) {
+      // 0%는 입장 불가 표시라 배율로 쓰지 않는다.
+      if (r && typeof r.bossId === 'string' && typeof r.percent === 'number' && r.percent > 0) found[r.bossId] = r.percent;
+    });
+    return { rates: found, at: typeof s.fetchedAt === 'string' ? s.fetchedAt : '', registered: true };
+  }
+  function sharedFor(b) { var id = bossIdOf(b); return id && sharedRates[id] ? sharedRates[id] : null; }
+  function rateSource(b) {
+    if (partyFor(b)) return 'party';
+    if (b.manual) return 'manual';
+    return sharedFor(b) ? 'shared' : 'saved';
+  }
+  function effectiveMult(b) {
+    var p = partyFor(b);
+    if (p) return p.total;
+    var shared = !b.manual && sharedFor(b);
+    return shared || b.mult;
+  }
+  function sharedDate() {
+    var d = sharedRateAt ? new Date(sharedRateAt) : null;
+    return d && !isNaN(d) ? d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', timeZone: 'Asia/Seoul' }) : '';
+  }
+  // 직접 입력값을 버리고 공용 환산 배율을 다시 쓴다. 공용 기록이 없어지면 이 값으로 계산한다.
+  function useSharedRate(b) {
+    var shared = sharedFor(b);
+    if (!shared) return false;
+    b.manual = false; b.mult = shared;
+    return true;
+  }
   function snapshotRate(store, name, bossId) {
     var s = (store && Array.isArray(store.snapshots) ? store.snapshots : []).find(function (x) { return x.characterName === name && x.preset === '00000'; });
     var r = s && (s.rates || []).find(function (x) { return x.bossId === bossId; });
     return r && typeof r.percent === 'number' ? r.percent : null;
   }
+  var DIFF_LABEL = { Easy: '이지', Normal: '노멀', Hard: '하드', Chaos: '카오스', Extreme: '익스트림' };
+  // 파티 보스 스케줄러는 이름을 비우면 '난이도 보스' 이름으로 저장하므로, 그 이름이면 직접 지은 이름이 아니다.
+  function partyBossLabel(bossId) {
+    var parts = String(bossId).split('|'), db = window.MapleBossDB, boss = db && db[parts[0]];
+    return boss && DIFF_LABEL[parts[1]] ? DIFF_LABEL[parts[1]] + ' ' + boss.Name : '';
+  }
+  // 툴팁의 파티원 카드에 쓸 공개 정보(직업, 레벨, 외형). 공용 배율의 저장 정보를 먼저 쓴다.
+  function partyMemberInfo(store, name, fallback) {
+    var s = (store && Array.isArray(store.snapshots) ? store.snapshots : []).find(function (x) { return x.characterName === name && x.preset === '00000'; });
+    var c = (s && s.character) || fallback || {};
+    var imageUrl = window.ScouterData.imageUrl;
+    var saved = profiles.find(function (profile) { return profile.name === name; })?.character;
+    var image = imageUrl(c.image) || imageUrl(fallback?.image) || imageUrl(saved?.characterImage);
+    return { job: typeof c.job === 'string' ? c.job.slice(0, 50) : '', level: Number.isInteger(c.level) ? c.level : 0, image: image };
+  }
   function collectPartyRates(name, local, shared, store) {
-    var found = Object.create(null), skipped = [];
-    var images = new Map();
-    function rememberImage(name, raw) {
-      var image = window.ScouterData.imageUrl(raw);
-      if (image && !images.has(name)) images.set(name, image);
-    }
-    window.AccountCatalog.groups(store || {}).forEach(function (account) {
-      account.characters.forEach(function (c) { rememberImage(c.name, c.profile?.image); });
-    });
-    local.forEach(function (p) {
-      if (!Array.isArray(p.members)) return;
-      p.members.forEach(function (m) {
-        if (m?.character) rememberImage(m.character.name, m.character.image);
-      });
-    });
-    profiles.forEach(function (p) { rememberImage(p.name, p.character?.characterImage); });
-    function add(p, names, rates, scope) {
+    var found = Object.create(null), skipped = [], catalog = window.AccountCatalog;
+    var mains = catalog ? catalog.mainNames(store || {}) : new Set();
+    function add(p, members, scope) {
       if (!p || !p.bossId || found[p.bossId]) return;
-      if (!rates.length || rates.some(function (r) { return r === null; })) { skipped.push(p.name || '이름 없는 파티'); return; }
+      // 파티원 순서와 자동 이름은 파티 보스 스케줄러와 같다: 본캐 먼저, 그다음 딜 비중(환산 배율) 순.
+      var ordered = catalog ? catalog.partyOrder(members, mains) : members.slice().sort(function (x, y) { return (y.rate || 0) - (x.rate || 0); });
+      var custom = p.name && p.name !== '새 파티' && p.name !== partyBossLabel(p.bossId);
+      var title = custom ? p.name : catalog ? catalog.partyTitle(ordered, mains) : ordered.map(function (m) { return m.name; }).join(', ');
+      if (!members.length || members.some(function (m) { return m.rate === null; })) { skipped.push(title || '이름 없는 파티'); return; }
       found[p.bossId] = {
-        total: Math.round(rates.reduce(function (s, r) { return s + r; }, 0) * 100) / 100,
-        name: p.name || '', count: rates.length, id: typeof p.id === 'string' ? p.id : '', scope: scope,
-        members: names.map(function (n) { return { name: n, image: images.get(n) || '' }; })
+        total: Math.round(members.reduce(function (s, m) { return s + m.rate; }, 0) * 100) / 100, name: title || '', count: members.length,
+        id: typeof p.id === 'string' ? p.id : '', scope: scope,
+        members: ordered.map(function (m) { return Object.assign({ name: m.name, rate: m.rate, main: mains.has(m.name), me: m.name === name }, m.info); })
       };
     }
     // 공유 파티를 먼저 본다. 로컬 파티는 공유로 복사하기 전 사본일 수 있다.
     shared.forEach(function (p) {
-      if (Array.isArray(p.members) && p.members.indexOf(name) >= 0) add(p, p.members, p.members.map(function (n) { return snapshotRate(store, n, p.bossId); }), 'shared');
+      if (Array.isArray(p.members) && p.members.indexOf(name) >= 0) add(p, p.members.map(function (n) {
+        return { name: n, rate: snapshotRate(store, n, p.bossId), info: partyMemberInfo(store, n) };
+      }), 'shared');
     });
     local.forEach(function (p) {
-      var members = Array.isArray(p.members) ? p.members.filter(function (m) { return typeof m?.character?.name === 'string'; }) : [];
-      var names = members.map(function (m) { return m.character.name; });
-      if (!names.includes(name)) return;
-      add(p, names, members.map(function (m) {
+      var members = Array.isArray(p.members) ? p.members.filter(function (m) { return m && m.character && typeof m.character.name === 'string'; }) : [];
+      if (!members.some(function (m) { return m.character.name === name; })) return;
+      add(p, members.map(function (m) {
         var fresh = snapshotRate(store, m.character.name, p.bossId);
-        return fresh !== null ? fresh : typeof m.rate === 'number' ? m.rate : null;
+        return { name: m.character.name, rate: fresh !== null ? fresh : typeof m.rate === 'number' ? m.rate : null, info: partyMemberInfo(store, m.character.name, m.character) };
       }), 'local');
     });
     return { rates: found, skipped: skipped };
   }
-  function partyStatus(message) { var n = document.getElementById('partyRateStatus'); if (n) n.textContent = message || ''; }
+  var partyInfo = { count: 0, skipped: [], sharedFailed: false };
+  function partyStatus(info) { partyInfo = info || { count: 0, skipped: [], sharedFailed: false }; rateStatus(); }
+  // 검은 마법사만 월간 보스다.
+  var MONTHLY_BOSSES = ['검은 마법사'];
+  function rateBadge(label, tip, note, kind) {
+    return '<span class="rate-badge' + (kind ? ' ' + kind : '') + '" tabindex="0" data-tooltip="' + esc(tip) + '"' + (note ? ' data-tooltip-note="' + esc(note) + '"' : '') + '>' + esc(label) + '</span>';
+  }
+  // 목록 위 상태는 짧은 배지로 보여주고 자세한 설명은 툴팁에 둔다: 스케줄러 등록 수, 공용 환산 배율, 직접 입력, 파티.
+  function rateStatus() {
+    var n = document.getElementById('partyRateStatus');
+    if (!n) return;
+    var badges = [], visible = state.bosses.filter(function (b) { return b.on; });
+    var registered = state.bosses.filter(function (b) { return b.registered; });
+    if (registered.length) {
+      var monthly = registered.filter(function (b) { return MONTHLY_BOSSES.indexOf(b.name) >= 0; }).length;
+      var done = registered.filter(function (b) { return b.completed; }).length;
+      badges.push(rateBadge('스케줄러 등록 ' + registered.length + '마리', '주간 ' + (registered.length - monthly) + '마리' + (monthly ? ' · 월간 ' + monthly + '마리' : '') + ' · 완료 ' + done + '마리', '게임 스케줄러에 등록한 주간·월간 보스 수입니다.', 'scheduler'));
+    }
+    if (sharedRateName && sharedRateLoaded && Object.keys(sharedRates).length) {
+      var used = visible.filter(function (b) { return rateSource(b) === 'shared'; }).length;
+      var date = sharedDate();
+      badges.push(rateBadge('공용 환산 배율 사용', sharedRateName + (date ? ' · ' + date + ' 기록' : ''), '동선 보스 ' + used + '마리의 배율을 공용 환산 배율로 채웠습니다. 직접 고치면 고친 값을 씁니다.', 'shared'));
+    }
+    var manual = visible.filter(function (b) { return rateSource(b) === 'manual'; }).length;
+    if (manual) badges.push(rateBadge('직접 입력 ' + manual + '마리', '직접 입력한 배율을 쓰는 보스', '공용 값으로 되돌리려면 이름 옆 공용 버튼이나 목록 관리를 쓰세요.', 'manual'));
+    if (partyInfo.count) badges.push(rateBadge('파티 ' + partyInfo.count + '개', '파티 환산 합계 사용', '파티 보스 스케줄러의 환산 합계를 배율로 씁니다. 파티 표시를 누르면 그 파티를 엽니다.', 'party'));
+    if (partyInfo.skipped.length) badges.push(rateBadge('혼자 배율 ' + partyInfo.skipped.length + '개', '배율 미등록 파티원이 있는 파티', partyInfo.skipped.join(', ') + ' 파티는 혼자 배율로 계산합니다.', 'warn'));
+    if (partyInfo.sharedFailed) badges.push(rateBadge('공유 파티 확인 못 함', '공유 파티를 불러오지 못했습니다', '이 브라우저의 파티만 확인했습니다.', 'warn'));
+    n.innerHTML = badges.join('');
+    n.hidden = !badges.length;
+    sharedRateCta(visible);
+  }
+  // 캡처 등록 안내: 선택한 캐릭터로 공용 환산 배율 화면을 열고, 등록이 안 됐거나 기록 없는 동선 보스가 있으면 강조한다.
+  function sharedRateCta(visible) {
+    var box = document.getElementById('sharedRateCta'), text = document.getElementById('sharedRateCtaText'), link = document.getElementById('sharedRateLink');
+    if (!box || !text || !link) return;
+    var name = sharedRateName, known = !!(name && sharedRateLoaded);
+    var missing = known && sharedRegistered ? visible.filter(function (b) { return rateSource(b) === 'saved' && bossIdOf(b); }).length : 0;
+    link.href = 'shared_boss_rates.html' + (name ? '?name=' + encodeURIComponent(name) : '');
+    link.textContent = known && sharedRegistered ? '공용 환산 배율에서 갱신' : '공용 환산 배율에 등록';
+    text.textContent = known && !sharedRegistered
+      ? '공용 환산 배율에 ' + name + ' 캐릭터를 캡처로 등록하면 그 배율을 이 동선과 파티에 기본값으로 씁니다.'
+      : missing
+        ? '공용 환산 배율에 기록이 없는 동선 보스가 ' + missing + '개 있습니다. 캡처로 등록하면 이 동선과 파티에 함께 쓰입니다.'
+        : '배율 캡처 등록은 공용 환산 배율에서 합니다. 등록한 배율은 이 동선과 파티에 함께 쓰입니다.';
+    box.classList.toggle('attention', known && (!sharedRegistered || missing > 0));
+  }
   function loadPartyRates() {
     var name = (activeProfile || charInput.value || '').trim(), request = ++partyRequest;
-    if (!name || typeof fetch !== 'function') { partyRates = Object.create(null); partyStatus(''); renderAll(); return Promise.resolve(); }
+    if (sharedRateName !== name) { sharedRates = Object.create(null); sharedRateName = name; sharedRateLoaded = false; sharedRegistered = false; sharedRateAt = ''; }
+    if (!name || typeof fetch !== 'function') { partyRates = Object.create(null); partyStatus(null); renderAll(); return Promise.resolve(); }
     var local = [];
     var saved = JsonStorage.local.read(PARTY_STORE);
     if (Array.isArray(saved?.parties)) local = saved.parties;
@@ -451,11 +561,13 @@
         var shared = res[0] && Array.isArray(res[0].parties) ? res[0].parties : [];
         var result = collectPartyRates(name, local, shared, res[1]);
         partyRates = result.rates;
-        var count = Object.keys(partyRates).length, notes = [];
-        if (count) notes.push(name + '의 파티 ' + count + '개는 파티 보스 스케줄러의 환산 합계를 배율로 씁니다. 파티 표시를 누르면 그 파티를 엽니다.');
-        if (result.skipped.length) notes.push('배율 미등록 파티원이 있는 파티는 혼자 배율을 씁니다: ' + result.skipped.join(', ') + '.');
-        if (!res[0] && !count) notes.push('공유 파티를 불러오지 못해 이 브라우저의 파티만 확인했습니다.');
-        partyStatus(notes.join(' '));
+        // 공용 배율을 못 불러오면 직전에 받은 같은 캐릭터 값을 그대로 둔다.
+        if (res[1]) {
+          var own = collectSharedRates(name, res[1]);
+          sharedRates = own.rates; sharedRateAt = own.at; sharedRateLoaded = true; sharedRegistered = own.registered;
+        }
+        var count = Object.keys(partyRates).length;
+        partyStatus({ count: count, skipped: result.skipped, sharedFailed: !res[0] && !count });
         renderAll();
       });
   }
@@ -464,7 +576,7 @@
       var mult = effectiveMult(b), party = partyFor(b);
       return {
         name: b.name, diff: b.diff, icon: b.icon, mult: mult, extra: b.extra, rice: b.rice === true,
-        party: party,
+        party: party ? (party.name || '파티') : '', partyInfo: party, partyLink: party ? partyLink(party) : '',
         full: withSlack(secOf(mult)) + extraSec(b),
         riceSec: withSlack(riceSecOf(mult)) + extraSec(b)
       };
@@ -486,8 +598,22 @@
       var party = partyFor(b), usingParty = !!party, mult = effectiveMult(b);
       var sec = b.rice ? riceSecOf(mult) : secOf(mult);
       // 파티 표시는 난이도처럼 고정 칸에 두어 보스 이름 길이와 관계없이 같은 자리에 오게 하고, 누르면 그 파티를 연다.
-      var partyCell = '<div class="row-party">' + partyBadgeHtml(party, 'party-link', b.name) + '</div>';
+      var partyCell = '<div class="row-party">' + (party ? (party.id
+        ? '<a class="party-link" href="' + esc(partyLink(party)) + '" aria-label="' + esc((party.name || b.name) + ' 파티 보러 가기') + '"' + partyTooltipAttrs(party, true) + '>파티</a>'
+        : '<span class="party-link" tabindex="0"' + partyTooltipAttrs(party, false) + '>파티</span>') : '') + '</div>';
       var lockAttr = usingParty ? ' disabled title="파티 배율을 쓰는 중입니다"' : '';
+      // 배율 칸의 툴팁으로 배율 출처를 알려주고, 직접 고친 보스는 공용 환산 배율로 되돌릴 수 있게 한다.
+      var source = rateSource(b), shared = sharedFor(b), date = sharedDate();
+      var rateTip = source === 'shared'
+        ? ' data-tooltip="공용 환산 배율" data-tooltip-value="' + esc(percentText(shared) + '% · ' + clearTimeText(shared)) + '" data-tooltip-note="' + esc((date ? date + ' 기록. ' : '') + '직접 고치면 고친 값을 씁니다.') + '"'
+        : source === 'manual'
+          ? ' data-tooltip="직접 입력한 배율" data-tooltip-note="' + esc(shared ? '공용 환산 배율은 ' + percentText(shared) + '%' + (date ? '(' + date + ' 기록)' : '') + '입니다. 이름 옆 공용 버튼으로 되돌릴 수 있습니다.' : '공용 환산 배율에 이 보스·난이도 기록이 없습니다.') + '"'
+          : source === 'saved' && sharedRateLoaded
+            ? ' data-tooltip="이 화면에 입력한 배율" data-tooltip-note="공용 환산 배율에 이 보스·난이도 기록이 없습니다."'
+            : '';
+      var resetTag = source === 'manual' && shared
+        ? '<button type="button" class="row-tag rate-reset" data-act="shared" data-i="' + i + '" aria-label="' + esc(b.name) + ' 배율을 공용 환산 배율 ' + percentText(shared) + '%로 되돌리기" data-tooltip="직접 입력한 배율을 쓰는 중" data-tooltip-note="누르면 공용 환산 배율 ' + percentText(shared) + '%로 되돌립니다.">↺ 공용</button>'
+        : '';
       var excluded = state.excludeCompleted && b.completed;
       var dopingName = b.rice ? '쌀도핑' : '풀도핑';
       var nextDoping = b.rice ? '풀도핑' : '쌀도핑';
@@ -500,11 +626,11 @@
         (b.icon ? '<img class="row-icon" src="' + b.icon + '" alt="">' : '<span class="row-icon blank"></span>') +
         // 완료 표시는 고정된 오른쪽 버튼에만 두어 이름·난이도가 밀리지 않는다.
         '<div class="row-name"><strong><span class="nm" data-tooltip="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
-        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') +
+        (b.extra ? '<span class="row-tag" data-tooltip="페이즈 이동 등으로 처치 시간에 더하는 시간">+' + trim(b.extra) + '분</span>' : '') + resetTag +
         '</strong></div>' + partyCell +
         '<div class="row-difficulty">' + (entry ? '<select class="row-diff diff-select ' + (DIFF_CLASS[b.diff] || '') + '" data-act="diff" data-i="' + i + '" aria-label="' + esc(b.name) + ' 난이도">' +
           entry[2].map(function (diff) { return '<option value="' + diff + '"' + (diff === b.diff ? ' selected' : '') + '>' + diff + '</option>'; }).join('') + '</select>' : diffBadge(b.diff)) + '</div>' +
-        '<div class="row-input row-mult"><input type="number" min="0.01" step="0.01" value="' + percentText(mult) + '" data-act="mult" data-i="' + i + '" aria-label="' + esc(b.name) + (usingParty ? ' 파티 배율' : ' 배율') + '"' + lockAttr + '><span class="unit">%</span></div>' +
+        '<div class="row-input row-mult"' + rateTip + '><input type="number" class="' + (source === 'shared' ? 'rate-shared' : '') + '" min="0.01" step="0.01" value="' + percentText(mult) + '" data-act="mult" data-i="' + i + '" aria-label="' + esc(b.name) + (usingParty ? ' 파티 배율' : ' 배율') + '"' + lockAttr + '><span class="unit">%</span></div>' +
         '<div class="row-input row-time"><input type="number" tabindex="-1" min="0.1" step="0.1" value="' + trim(sec / 60) + '" data-act="time" data-i="' + i + '" aria-label="' + esc(b.name) + ' 소요 시간"' + lockAttr + '><span class="unit">분</span></div>' +
         '<button type="button" class="row-doping ' + (b.rice ? 'rice' : 'full') + '" data-act="rice" data-i="' + i + '" aria-label="' + esc(b.name) + ' 도핑: ' + dopingName + ', ' + nextDoping + '으로 변경" aria-pressed="' + !!b.rice + '" data-tooltip="현재 ' + dopingName + '" data-tooltip-note="누르면 ' + nextDoping + '으로 바뀝니다.">' +
         '<img src="icons/buff/' + dopingIcon + '.webp" width="22" height="22" alt=""><span>' + dopingName + '</span></button>' +
@@ -516,6 +642,7 @@
       var control = listEl.querySelector('[data-act="' + focus.act + '"][data-i="' + focus.index + '"]');
       if (control) control.focus({preventScroll:true});
     }
+    rateStatus();
   }
   // 스케줄러에 등록했거나 목록에 넣은 '내 보스'.
   function isMine(b) { return !!(b && (b.registered || b.inList || b.on)); }
@@ -549,11 +676,13 @@
     var res = packAll(items, cap);
     var bins = res.bins.slice();
     bins.forEach(function (bin) {
-      bin.idx.sort(function (a, b) { return secIn(items[b], bin.full) - secIn(items[a], bin.full); });
+      // 한 버프 안에서는 파티 보스를 먼저 이어서 돌고, 그다음 혼자 도는 보스를 돈다.
+      bin.idx.sort(function (a, b) { return (isPartyItem(items[b]) - isPartyItem(items[a])) || (secIn(items[b], bin.full) - secIn(items[a], bin.full)); });
       bin.sec = binCost(bin, items);
+      bin.party = bin.idx.some(function (k) { return isPartyItem(items[k]); });
     });
-    // 풀도핑 판을 먼저, 그 안에서는 빡빡한 판부터.
-    bins.sort(function (a, b) { return (b.full - a.full) || (b.sec - a.sec); });
+    // 파티 보스가 있는 버프를 먼저, 그다음 풀도핑 판, 그 안에서는 빡빡한 판부터.
+    bins.sort(function (a, b) { return (b.party - a.party) || (b.full - a.full) || (b.sec - a.sec); });
 
     var usedSec = bins.reduce(function (a, bin) { return a + bin.sec; }, 0);
     var clearSec = bins.reduce(function (a, bin) { return a + binSec(bin, items); }, 0);
@@ -640,18 +769,29 @@
   }
   // 파티 배율로 계산한 보스는 결과에서도 파티로 가는 보스임을 표시한다.
   function partyTagHtml(it) {
-    return it.party ? ' ' + partyBadgeHtml(it.party, 'tag party', it.name) : '';
+    if (!it.party) return '';
+    return it.partyLink
+      ? ' <a class="tag party" href="' + esc(it.partyLink) + '" aria-label="' + esc(it.party) + ' 파티 보러 가기"' + partyTooltipAttrs(it.partyInfo, true) + '>파티</a>'
+      : ' <span class="tag party" tabindex="0"' + partyTooltipAttrs(it.partyInfo, false) + '>파티</span>';
   }
-  function partyBadgeHtml(party, className, bossName) {
-    if (!party) return '';
-    var link = partyLink(party);
-    var tooltip = ' data-tooltip="' + esc(party.name || '파티') + '" data-tooltip-value="' +
-      esc(party.count + '명 환산 합계 ' + percentText(party.total) + '%') + '"' +
-      ' data-tooltip-portraits="' + esc(JSON.stringify(party.members || [])) + '"';
-    return link
-      ? '<a class="' + className + '" href="' + esc(link) + '" aria-label="' + esc((party.name || bossName) + ' 파티 보러 가기') + '"' +
-        tooltip + ' data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다.">파티</a>'
-      : '<span class="' + className + '" tabindex="0"' + tooltip + '>파티</span>';
+  // 파티 표시에 마우스를 올리거나 포커스하면 같이 가는 파티원을 카드로 보여준다(공통 툴팁의 파티원 목록).
+  // 예상 처치 시간: 환산 배율 100%가 풀도핑 20분 처치다(파티 보스 스케줄러의 환산 합계 카드와 같은 기준).
+  function clearTimeText(rate) {
+    if (!(rate > 0)) return '';
+    var sec = Math.round(20 * 60 * 100 / rate), min = Math.floor(sec / 60), rest = sec % 60;
+    return '예상 ' + (min ? min + '분' + (rest ? ' ' : '') : '') + (rest || !min ? rest + '초' : '');
+  }
+  function partyTooltipAttrs(party, linked) {
+    var items = (party.members || []).map(function (m) {
+      var tags = [];
+      if (m.me) tags.push('이 캐릭터');
+      if (m.main) tags.push('본캐');
+      return { name: m.name, note: [m.job, m.level ? 'Lv.' + m.level : ''].filter(Boolean).join(' · '), value: percentText(m.rate) + '%', image: m.image || '', tags: tags };
+    });
+    return ' data-tooltip="' + esc((party.name || '파티') + ' 파티') + '"' +
+      ' data-tooltip-value="' + esc(party.count + '명 · 환산 합계 ' + percentText(party.total) + '% · ' + clearTimeText(party.total)) + '"' +
+      (items.length ? ' data-tooltip-items="' + esc(JSON.stringify(items)) + '"' : '') +
+      (linked ? ' data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다."' : '');
   }
   function chip(it, full) {
     return '<span class="chip">' + (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
@@ -689,12 +829,14 @@
     var b = state.bosses[i];
     var row = t.closest('.boss-row');
     if (t.dataset.act === 'mult') {
-      b.mult = Math.max(0.01, num(t.value, b.mult));
+      b.mult = Math.max(0.01, num(t.value, effectiveMult(b)));
+      b.manual = true;
       // 입력 중인 칸은 그대로 두고 짝이 되는 칸만 갱신한다(커서가 튀지 않게).
       row.querySelector('[data-act="time"]').value = trim((b.rice ? riceSecOf(b.mult) : secOf(b.mult)) / 60);
     } else if (t.dataset.act === 'time') {
       var min = Math.max(0.1, num(t.value, 1));
       b.mult = Math.round(multOf(min * 60) / (b.rice ? RICE_RATE : 1) * 10) / 10;
+      b.manual = true;
       row.querySelector('[data-act="mult"]').value = percentText(b.mult);
     } else return;
     saveState(); renderResults();
@@ -709,6 +851,14 @@
       state.bosses[i].on = !state.bosses[i].on;
       state.bosses[i].inList = true;
     }
+    else if (t.dataset.act === 'shared') {
+      if (!useSharedRate(state.bosses[i])) return;
+      // 버튼이 사라지므로 같은 행의 배율 칸으로 포커스를 옮긴다.
+      saveState(); renderAll();
+      var input = listEl.querySelector && listEl.querySelector('[data-act="mult"][data-i="' + i + '"]');
+      if (input) input.focus({preventScroll:true});
+      return;
+    }
     else if (t.dataset.act === 'complete') {
       state.bosses[i].completed = !state.bosses[i].completed;
       state.bosses[i].completionOverride = true;
@@ -718,7 +868,10 @@
   });
   listEl.addEventListener('change', function (e) {
     var t = e.target, b = state.bosses[parseInt(t.dataset.i, 10)];
-    if (!b || t.dataset.act !== 'diff') return;
+    if (!b) return;
+    // 배율·시간을 다 고치면 출처 표시(직접 입력, 공용으로 되돌리기)를 새로 그린다.
+    if (t.dataset.act === 'mult' || t.dataset.act === 'time') { renderList(); return; }
+    if (t.dataset.act !== 'diff') return;
     changeDifficulty(b, t.value);
     saveState(); renderAll();
   });
@@ -745,6 +898,12 @@
     slackInput.value = trim(state.slackPct);
     saveState(); renderAll();
   });
+  document.getElementById('useSharedAll').addEventListener('click', function () {
+    var changed = state.bosses.filter(function (b) { return b.manual && useSharedRate(b); }).length;
+    bossActionsMenu.open = false;
+    if (changed) { saveState(); renderAll(); }
+    setStatus(changed ? '직접 고친 배율 ' + changed + '개를 공용 환산 배율로 되돌렸습니다.' : '공용 환산 배율로 되돌릴 직접 입력 배율이 없습니다.', changed ? 'ok' : null, schedulerStatus);
+  });
   document.getElementById('allOn').addEventListener('click', function () {
     visibleBosses().forEach(function (b) { b.on = true; b.inList = true; });
     saveState(); renderAll();
@@ -757,7 +916,6 @@
     state.excludeCompleted = !state.excludeCompleted;
     saveState(); renderAll();
   });
-  document.getElementById('refreshCompletedBtn').addEventListener('click', refreshCompleted);
   document.getElementById('showAllBossesBtn').addEventListener('click', function () {
     state.showAllBosses = !state.showAllBosses;
     saveState(); renderAll();
@@ -789,6 +947,8 @@
   var charInput = document.getElementById('charName');
   var fetchBtn = document.getElementById('fetchBtn');
   var fetchStatus = document.getElementById('fetchStatus');
+  var refreshSchedulerBtn = document.getElementById('refreshSchedulerBtn');
+  var schedulerStatus = document.getElementById('schedulerStatus');
   var keyState = document.getElementById('apiKeyState');
   var characterImportCard = document.getElementById('characterImportCard');
   var characterShowcase = document.getElementById('buffCharacterShowcase');
@@ -796,6 +956,7 @@
   var characterShowcaseName = document.getElementById('buffCharacterShowcaseName');
   var characterShowcaseMeta = document.getElementById('buffCharacterShowcaseMeta');
   var characterRequestId = 0;
+  var pendingCharacter = '';
 
   var characterPicker = window.NexonCharacters
     ? NexonCharacters.mount({
@@ -806,9 +967,16 @@
     }) : null;
   if (!characterPicker) { charInput.hidden = false; fetchBtn.hidden = false; }
 
-  function setStatus(msg, kind) {
-    fetchStatus.textContent = msg || '';
-    fetchStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
+  function setStatus(msg, kind, target) {
+    var status = target || fetchStatus;
+    status.textContent = msg || '';
+    status.classList.toggle('ok', kind === 'ok');
+    status.classList.toggle('err', kind === 'err');
+  }
+  function setCharacterLoading(name) {
+    pendingCharacter = name;
+    fetchBtn.disabled = !!name;
+    refreshSchedulerBtn.disabled = !!name;
   }
   function refreshKeyState() {
     keyState.innerHTML = (window.NexonKey && NexonKey.has())
@@ -816,7 +984,7 @@
       : '<span>불러오기에는 넥슨 오픈 API 키가 필요합니다.</span><a href="index.html#apiKey">API 키 등록</a>';
   }
   function apiGet(path, params) {
-    return NexonApi.browser.get(path, params);
+    return NexonApi.browser.get(path, params, { cache: 'no-store' });
   }
   function describeApiError(err, stage) {
     if (err && err.code) {
@@ -891,35 +1059,52 @@
     return { bosses: out, skipped: skipped };
   }
 
-  function mergeSchedulerBosses(registered, preserveSelection) {
+  function mergeSchedulerBosses(registered, preserveSelection, refresh) {
     var result = catalogBosses(state.bosses), byName = Object.create(null);
     registered.forEach(function (b) { byName[b.name] = b; });
     result.forEach(function (b) {
       var incoming = byName[b.name];
+      if (incoming && !isMine(b)) b.on = true;
+      if (!incoming && b.registered && !b.inList) b.on = false;
+      // 스케줄러에 없고 동선에도 넣지 않은 보스는 '내 보스' 목록에서 뺀다(기본 12보스로 들어왔거나 예전에 제외한 보스).
+      // 직접 동선에 넣은 보스는 남기고, 빠진 보스는 전체 보스 보기에서 다시 넣을 수 있다.
+      if (!incoming && !b.on) b.inList = false;
       b.registered = !!incoming;
-      if (!preserveSelection) { b.on = !!incoming; b.inList = !!incoming; b.completionOverride = false; }
+      if (!preserveSelection) { b.on = !!incoming; b.inList = false; b.completionOverride = false; }
+      if (refresh) b.completionOverride = false;
       if (!incoming) { if (!b.completionOverride) b.completed = false; return; }
       changeDifficulty(b, incoming.diff);
-      b.mult = incoming.mult; b.rice = incoming.rice;
+      if (incoming.diff === b.diff) b.mult = incoming.mult;
       if (!b.completionOverride) b.completed = incoming.completed;
       delete byName[b.name];
     });
     Object.keys(byName).forEach(function (name) {
-      var extra = normalizeBoss(byName[name], result.length); extra.registered = true;
+      var extra = normalizeBoss(Object.assign({registered:true, inList:false}, byName[name]), result.length);
       result.push(extra);
     });
     return result;
   }
 
-  function importCharacter() {
-    var name = (charInput.value || '').trim();
-    if (!name) { setStatus('캐릭터 이름을 입력하세요.', 'err'); charInput.focus(); return; }
-    if (!window.NexonKey || !NexonKey.has()) { setStatus('먼저 홈에서 넥슨 오픈 API 키를 등록하세요.', 'err'); return; }
+  function importCharacter(refresh) {
+    var inputName = (charInput.value || '').trim();
+    var name = (refresh && activeProfile) || inputName;
+    var status = refresh ? schedulerStatus : fetchStatus;
+    if (pendingCharacter === name && name) return;
+    if (!name) {
+      setStatus(refresh ? '캐릭터 검색에서 캐릭터를 먼저 선택하세요.' : '캐릭터 이름을 입력하세요.', 'err', status);
+      if (!refresh) charInput.focus();
+      return;
+    }
+    if (!window.NexonKey || !NexonKey.has()) {
+      setStatus('먼저 홈에서 넥슨 오픈 API 키를 등록하세요.', 'err', status);
+      return;
+    }
+    var refreshActive = refresh && activeProfile === name;
     var requestId = ++characterRequestId;
-    fetchBtn.disabled = true;
-    setStatus('불러오는 중…');
-    renderCharacterProfile(null);
-    var selectedOcid = charInput.dataset.accountOcid || '';
+    setCharacterLoading(name);
+    setStatus('', null, refresh ? fetchStatus : schedulerStatus);
+    setStatus(name + ' 스케줄러를 불러오는 중…', null, status);
+    var selectedOcid = name === inputName ? charInput.dataset.accountOcid : '';
     return (selectedOcid ? Promise.resolve({ ocid:selectedOcid }) : apiGet('/id', { character_name: name }))
       .then(null, function (e) { e.stage = 'id'; throw e; })
       .then(function (r) {
@@ -927,261 +1112,57 @@
         return Promise.all([
           apiGet('/scheduler/character-state', { ocid: r.ocid })
             .then(null, function (e) { e.stage = 'scheduler'; throw e; }),
-          apiGet('/character/basic', { ocid: r.ocid }).then(null, function () { return null; })
+          refreshActive ? null : apiGet('/character/basic', { ocid: r.ocid }).then(null, function () { return null; })
         ]);
       })
       .then(function (results) {
-        if (requestId !== characterRequestId || (charInput.value || '').trim() !== name) return;
+        if (requestId !== characterRequestId) return;
+        if (!refreshActive && (charInput.value || '').trim() !== name) {
+          setStatus('', null, status);
+          return;
+        }
         var data = results[0];
+        if (!data || !Array.isArray(data.boss_contents)) throw new Error('스케줄러 응답에 보스 목록이 없습니다.');
         var characterProfile = normalizeCharacterProfile(results[1], name);
-        renderCharacterProfile(characterProfile);
         var savedProfile = profiles.find(function(p){ return p.name === name; });
-        if (savedProfile) state = loadState(savedProfile.state);
-        else if (activeProfile !== name) state = defaultState();
+        if (activeProfile !== name) state = savedProfile ? loadState(savedProfile.state) : defaultState();
         var parsed = bossesFromScheduler(data);
-        state.bosses = mergeSchedulerBosses(parsed.bosses, !!savedProfile || activeProfile === name);
-        syncProfileInputs();
-        activeProfile = name;
+        var previousDifficulties = new Map(state.bosses.map(function (b) { return [b.name, b.diff]; }));
+        state.bosses = mergeSchedulerBosses(parsed.bosses, !!savedProfile || activeProfile === name, refresh);
+        state.schedulerUpdatedAt = Date.now();
+        if (!refreshActive) {
+          renderCharacterProfile(characterProfile || (savedProfile && savedProfile.character));
+          syncProfileInputs();
+        }
         rememberProfile(name, characterProfile);
-        saveState(); renderAll(); loadPartyRates();
-        setStatus('등록 보스 ' + parsed.bosses.length + '마리를 반영했습니다. 전체 보스에서 동선 포함 여부를 선택하세요.' +
-          (parsed.skipped.length ? ' 아이콘 없는 보스: ' + parsed.skipped.join(', ') : ''), 'ok');
+        var saved = saveState();
+        renderAll();
+        loadPartyRates();
+        if (!refreshActive) renderProfiles();
+        var done = state.bosses.filter(function (b) { return b.registered && b.completed; }).length;
+        var changed = state.bosses.filter(function (b) {
+          return b.registered && previousDifficulties.has(b.name) && previousDifficulties.get(b.name) !== b.diff;
+        }).map(function (b) { return b.diff + ' ' + b.name; });
+        var summary = parsed.bosses.length
+          ? '등록 보스 ' + parsed.bosses.length + '마리 중 ' + done + '마리 완료.'
+          : '스케줄러에 등록된 주간·월간 보스가 없습니다.';
+        if (refresh && changed.length) summary += ' 난이도가 바뀐 ' + changed.join(', ') + '의 배율을 확인하세요.';
+        setStatus((saved ? name + ' 스케줄러 갱신 완료. ' : '스케줄러를 갱신했지만 브라우저에 저장하지 못했습니다. ') + summary, saved ? 'ok' : 'err', status);
         try { localStorage.setItem('bossBuffPlanner.lastChar', name); } catch (err) {}
       })
-      .catch(function (err) { if (requestId === characterRequestId) setStatus(describeApiError(err, err && err.stage), 'err'); })
-      .then(function () { if (requestId === characterRequestId) fetchBtn.disabled = false; });
-  }
-  // 목록·배율은 그대로 두고 완료 여부만 스케줄러에서 다시 받아 반영한다. 저장해 둔 목록의
-  // 난이도가 지금 스케줄러에 등록된 난이도와 다르면(예: 검은 마법사 하드 → 익스트림) 등록된 쪽으로 맞춘다.
-  function applySchedulerState(data) {
-    var reg = Object.create(null);
-    bossesFromScheduler(data).bosses.forEach(function (b) { reg[b.name] = b; });
-    var done = 0, changed = [];
-    state.bosses.forEach(function (b) {
-      var r = reg[b.name];
-      b.registered = !!r;
-      if (r && r.diff && r.diff !== b.diff) {
-        changed.push(b.name + ' ' + (b.diff || '?') + '→' + r.diff);
-        changeDifficulty(b, r.diff);
-        b.mult = r.mult;
-      }
-      b.completed = !!(r && r.diff === b.diff && r.completed);
-      b.completionOverride = false;
-      if (b.completed) done++;
-    });
-    return { done: done, changed: changed };
-  }
-  function refreshCompleted() {
-    var name = (charInput.value || '').trim();
-    if (!name || !window.NexonKey || !NexonKey.has()) {
-      setStatus('스케줄러 완료 상태를 불러오려면 캐릭터와 API 키가 필요합니다. 목록에서는 직접 완료를 표시할 수 있습니다.', 'err');
-      return;
-    }
-    setStatus('완료한 보스를 확인하는 중…');
-    var selectedOcid = charInput.dataset.accountOcid || '';
-    (selectedOcid ? Promise.resolve({ ocid: selectedOcid }) : apiGet('/id', { character_name: name }))
-      .then(null, function (e) { e.stage = 'id'; throw e; })
-      .then(function (r) {
-        if (!r || !r.ocid) throw new Error('캐릭터 식별자(OCID)를 받지 못했습니다.');
-        return apiGet('/scheduler/character-state', { ocid: r.ocid }).then(null, function (e) { e.stage = 'scheduler'; throw e; });
+      .catch(function (err) {
+        if (requestId !== characterRequestId) return;
+        var previous = activeProfile === name && state.schedulerUpdatedAt;
+        var time = previous ? new Date(previous).toLocaleString('ko-KR', { dateStyle:'short', timeStyle:'short', timeZone:'Asia/Seoul' }) : '';
+        setStatus('갱신 실패. ' + describeApiError(err, err && err.stage) +
+          (time ? ' 마지막 갱신 ' + time + '.' : '') + ' 다시 시도하세요.', 'err', status);
       })
-      .then(function (data) {
-        var res = applySchedulerState(data);
-        saveState(); renderAll();
-        setStatus('스케줄러의 완료 상태를 반영했습니다. 완료 ' + res.done + '마리.' +
-          (res.changed.length ? ' 스케줄러 난이도로 바꿨으니 배율을 확인하세요: ' + res.changed.join(', ') : ''), 'ok');
-      })
-      .catch(function (err) { setStatus(describeApiError(err, err && err.stage), 'err'); });
+      .finally(function () { if (requestId === characterRequestId) setCharacterLoading(''); });
   }
-  fetchBtn.addEventListener('click', importCharacter);
-  charInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') importCharacter(); });
+  refreshSchedulerBtn.addEventListener('click', function () { return importCharacter(true); });
+  fetchBtn.addEventListener('click', function () { importCharacter(); });
+  charInput.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) importCharacter(); });
   try { charInput.value = localStorage.getItem('bossBuffPlanner.lastChar') || ''; } catch (err) {}
-
-  // ── 스크린샷에서 배율 읽기 ──────────────────────────────────
-  // 다른 사이트의 보스 카드 캡처를 boss_shot_reader.js로 읽고, 목록에 있는 보스(같은 이름·난이도)만
-  // 골라 배율을 넣는다. 목록은 사용자가 고른 보스라 100% 미만이어도 그대로 넣는다.
-  var shotDrop = document.getElementById('shotDrop');
-  var shotFile = document.getElementById('shotFile');
-  var shotStatus = document.getElementById('shotStatus');
-  var shotResult = document.getElementById('shotResult');
-  var shotRows = [], shotUnknown = [], shotOutside = 0, shotBusy = false, shotOpen = -1;
-
-  function setShotStatus(msg, kind) {
-    shotStatus.textContent = msg || '';
-    shotStatus.className = 'note fetch-status' + (kind ? ' ' + kind : '');
-  }
-  function findBossIndex(name, diff) {
-    for (var i = 0; i < state.bosses.length; i++) {
-      if (state.bosses[i].name === name && state.bosses[i].diff === diff) return i;
-    }
-    return -1;
-  }
-  // 얼굴 · 이름 · 난이도 배지.
-  function bossChip(b) {
-    return (b.icon ? '<img class="shot-face" src="' + b.icon + '" alt="">' : '<span class="shot-face blank"></span>') +
-      '<span class="shot-bname">' + esc(b.name) + '</span>' +
-      (b.diff ? '<span class="diff-badge ' + (DIFF_CLASS[b.diff] || '') + '">' + esc(b.diff) + '</span>' : '');
-  }
-  function readShot(file) {
-    if (!file || !/^image\//.test(file.type || '') || shotBusy) return;
-    if (!window.BossShotReader) { setShotStatus('스크린샷 읽기 모듈을 불러오지 못했습니다.', 'err'); return; }
-    shotBusy = true;
-    setShotStatus('스크린샷을 읽는 중…');
-    var icons = Object.keys(BOSS_ICON).map(function (name) { return { name: name, icon: 'icons/boss/' + BOSS_ICON[name] + '.webp' }; });
-    return BossShotReader.readBlob(file, icons).then(function (list) {
-      if (!list.length) {
-        shotResult.hidden = true;
-        setShotStatus('보스 카드를 찾지 못했습니다. 카드 격자가 보이게 캡처했는지 확인하세요.', 'err');
-        return;
-      }
-      shotRows = []; shotUnknown = []; shotOutside = 0; shotOpen = -1;
-      var taken = Object.create(null);
-      // 덜 닮은 카드가 같은 보스를 차지하지 않게 확실한 것부터 배정한다.
-      list.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (r) {
-        var row = { thumb: r.thumb, value: r.value, covered: r.covered === true, idx: -1, on: false };
-        if (!r.name || !r.diff) { shotUnknown.push(row); return; }
-        var idx = findBossIndex(r.name, r.diff);
-        if (idx < 0) { shotOutside++; return; }
-        if (taken[idx]) { shotUnknown.push(row); return; }
-        taken[idx] = true;
-        row.idx = idx;
-        // 내 보스가 아니면 접어 두고 기본으로 넣지 않는다.
-        row.other = !isMine(state.bosses[idx]);
-        row.on = r.value != null && !row.other;
-        shotRows.push(row);
-      });
-      // 내 보스 먼저, 같은 묶음 안에서는 목록 순서대로.
-      shotRows.sort(function (a, b) { return (a.other - b.other) || (a.idx - b.idx); });
-      var odd = list.some(function (r) { return r.scale > 1.03 && r.scale < 1.4 && r.value == null && !r.covered; });
-      var unread = shotRows.filter(function (r) { return r.value == null && !r.other; }).length;
-      var covered = list.filter(function (r) { return r.covered; }).length;
-      setShotStatus('카드 ' + list.length + '장을 읽었습니다. 확인 후 ‘선택한 배율 넣기’를 누르세요.' +
-        (unread ? ' 배율을 확실히 읽지 못한 보스 ' + unread + '개는 직접 입력하세요.' : '') +
-        (covered ? ' 가려진 카드 ' + covered + '장은 툴팁·메뉴가 없어지도록 마우스를 옮긴 뒤 다시 캡처해 주세요.' : '') +
-        (odd ? ' 숫자가 흐리면 원본 크기로 다시 캡처해 주세요.' : ''), unread ? 'err' : 'ok');
-      renderShot();
-    }).catch(function (err) {
-      setShotStatus('스크린샷을 읽지 못했습니다: ' + (err && err.message ? err.message : err), 'err');
-    }).then(function () { shotBusy = false; shotFile.value = ''; });
-  }
-  function shotRowHtml(row, i, group) {
-    var b = state.bosses[row.idx], note, warn = false;
-    if (!b) { note = row.covered ? '카드가 가려져 있습니다. 툴팁 없이 다시 캡처하세요.' : '목록의 어느 보스인지 고르세요.'; warn = true; }
-    else if (row.value == null) { note = (row.covered ? '카드가 가려져 있습니다.' : '배율 숫자를 확실히 읽지 못했습니다.') + ' 기존 ' + percentText(b.mult) + '%는 유지됩니다. 다시 캡처하거나 직접 적으세요.'; warn = true; }
-    else note = '지금 ' + percentText(b.mult) + '% → ' + percentText(row.value) + '%';
-    var name;
-    if (group === 'unknown') {
-      // 얼굴과 난이도 배지를 보여주려고 <select> 대신 직접 만든 목록을 쓴다.
-      var open = shotOpen === i;
-      name = '<div class="shot-pick-boss">' +
-        '<button type="button" class="shot-pick-btn" data-shot="pick" data-i="' + i + '" aria-haspopup="listbox" aria-expanded="' + open + '">' +
-          (b ? bossChip(b) : '<span class="shot-bname dim">보스 선택</span>') + '<span class="shot-caret">▾</span></button>' +
-        (open ? '<div class="shot-menu" role="listbox">' + state.bosses.map(function (x, k) { return k; }).sort(function (a, c) {
-          return isMine(state.bosses[c]) - isMine(state.bosses[a]) || a - c;
-        }).map(function (k) {
-          return '<button type="button" role="option" class="shot-opt" data-shot="choose" data-i="' + i + '" data-k="' + k + '" aria-selected="' + (k === row.idx) + '">' + bossChip(state.bosses[k]) + '</button>';
-        }).join('') + '</div>' : '') +
-        '</div>';
-    } else name = '<div class="shot-fixed">' + bossChip(b) + '</div>';
-    return '<div class="shot-row' + (row.on ? '' : ' off') + '">' +
-      '<input type="checkbox" data-shot="on" data-g="' + group + '" data-i="' + i + '"' + (row.on ? ' checked' : '') + ' aria-label="이 배율 넣기">' +
-      '<img src="' + row.thumb + '" alt="" data-tooltip="스크린샷의 카드">' +
-      '<div class="shot-name">' + name + '<small' + (warn ? ' class="warn"' : '') + '>' + esc(note) + '</small></div>' +
-      '<div class="row-input shot-pct"><input type="number" min="0.01" step="0.01" data-shot="value" data-g="' + group + '" data-i="' + i + '" value="' + (row.value != null ? percentText(row.value) : '') + '" aria-label="배율"><span class="unit">%</span></div>' +
-      '</div>';
-  }
-  function renderShot() {
-    var found = Object.create(null);
-    shotRows.concat(shotUnknown).forEach(function (r) { if (r.idx >= 0) found[r.idx] = true; });
-    var missing = state.bosses.filter(function (b, k) { return !found[k] && isMine(b); }).map(function (b) { return b.name + ' ' + b.diff; });
-    var mine = shotRows.filter(function (r) { return !r.other; }).length, others = shotRows.length - mine;
-    var html = '<div class="shot-summary">내 보스 ' + mine + '개를 찾았습니다' +
-      (others ? ' · 내 목록에 없는 보스 ' + others + '개는 아래에 접어 두었습니다' : '') + '</div>';
-    // 내 보스가 앞에 오도록 정렬해 두었으므로 인덱스 그대로 앞뒤로 나눈다.
-    html += shotRows.slice(0, mine).map(function (row, i) { return shotRowHtml(row, i, 'list'); }).join('');
-    if (!mine) html += '<p class="empty">스크린샷에서 내 보스를 찾지 못했습니다.</p>';
-    if (missing.length) html += '<p class="shot-skip">스크린샷에 없는 내 보스: ' + esc(missing.join(' · ')) + '</p>';
-    if (others) {
-      html += '<details class="shot-skip" id="shotOthers"' + (shotOthersOpen ? ' open' : '') + '><summary>내 목록에 없는 보스 ' + others + '개 (필요하면 체크해서 넣기)</summary>' +
-        shotRows.slice(mine).map(function (row, j) { return shotRowHtml(row, mine + j, 'list'); }).join('') + '</details>';
-    }
-    if (shotUnknown.length) {
-      html += '<details class="shot-skip" id="shotUnknown"' + (shotRows.length && shotOpen < 0 && !shotUnknownOpen ? '' : ' open') + '><summary>알아보지 못한 카드 ' + shotUnknown.length + '장 (직접 고르기)</summary>' +
-        shotUnknown.map(function (row, i) { return shotRowHtml(row, i, 'unknown'); }).join('') + '</details>';
-    }
-    html += '<div class="shot-actions"><button type="button" class="tool-btn" id="shotCancel">닫기</button>' +
-      '<button type="button" class="tool-btn" id="shotApply">선택한 배율 넣기</button></div>';
-    shotResult.innerHTML = html;
-    shotResult.hidden = false;
-  }
-  var shotUnknownOpen = false, shotOthersOpen = false;
-  function applyShot() {
-    var set = 0, unread = 0;
-    shotRows.concat(shotUnknown).forEach(function (row) {
-      var b = state.bosses[row.idx];
-      if (b && row.value == null && !row.other) unread++;
-      if (!row.on || !b || !(row.value > 0)) return;
-      b.mult = Math.max(0.01, row.value);
-      set++;
-    });
-    saveState(); renderAll();
-    shotResult.hidden = true;
-    setShotStatus((set ? '배율 ' + set + '개를 넣었습니다.' : '넣을 배율을 고르지 않았습니다.') +
-      (unread ? ' 읽지 못한 ' + unread + '개는 적용하지 않았으며 기존 배율이 유지됩니다.' : ''), set && !unread ? 'ok' : 'err');
-  }
-  shotResult.addEventListener('change', function (e) {
-    var t = e.target, row = (t.dataset.g === 'unknown' ? shotUnknown : shotRows)[parseInt(t.dataset.i, 10)];
-    if (!row) return;
-    if (t.dataset.shot === 'on') row.on = t.checked;
-    else if (t.dataset.shot === 'value') { row.value = t.value === '' ? null : Math.max(0, num(t.value, 0)); row.on = row.value > 0 && row.idx >= 0; }
-    else return;
-    renderShot();
-  });
-  shotResult.addEventListener('toggle', function (e) {
-    if (e.target.id === 'shotUnknown') shotUnknownOpen = e.target.open;
-    else if (e.target.id === 'shotOthers') shotOthersOpen = e.target.open;
-  }, true);
-  shotResult.addEventListener('click', function (e) {
-    var t = e.target.closest('button');
-    if (!t) return;
-    var i = parseInt(t.dataset.i, 10);
-    if (t.dataset.shot === 'pick') { shotOpen = shotOpen === i ? -1 : i; renderShot(); }
-    else if (t.dataset.shot === 'choose') {
-      var row = shotUnknown[i];
-      row.idx = parseInt(t.dataset.k, 10);
-      row.on = row.value > 0;
-      shotOpen = -1; renderShot();
-    }
-    else if (t.id === 'shotApply') applyShot();
-    else if (t.id === 'shotCancel') { shotResult.hidden = true; setShotStatus(''); }
-  });
-  // 보스 고르기 메뉴는 바깥을 누르거나 Esc를 누르면 닫는다.
-  document.addEventListener('click', function (e) {
-    if (shotOpen >= 0 && !e.target.closest('.shot-pick-boss')) { shotOpen = -1; renderShot(); }
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && shotOpen >= 0) { shotOpen = -1; renderShot(); }
-  });
-  shotDrop.addEventListener('click', function () { shotFile.click(); });
-  shotDrop.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); shotFile.click(); }
-  });
-  shotFile.addEventListener('change', function () { readShot(shotFile.files && shotFile.files[0]); });
-  shotDrop.addEventListener('dragover', function (e) { e.preventDefault(); shotDrop.classList.add('over'); });
-  shotDrop.addEventListener('dragleave', function () { shotDrop.classList.remove('over'); });
-  shotDrop.addEventListener('drop', function (e) {
-    e.preventDefault(); shotDrop.classList.remove('over');
-    readShot(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
-  });
-  // 페이지 어디서든 이미지를 붙여넣으면 읽는다(글자 붙여넣기는 그대로 둔다).
-  document.addEventListener('paste', function (e) {
-    var items = e.clipboardData ? Array.prototype.slice.call(e.clipboardData.items || []) : [];
-    var img = items.filter(function (it) { return it.kind === 'file' && /^image\//.test(it.type); })[0];
-    if (!img) return;
-    e.preventDefault();
-    shotDrop.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    readShot(img.getAsFile());
-  });
 
   var profileBar = document.createElement('div'); profileBar.className = 'nx-character-recents';
   profileBar.setAttribute('aria-label', '저장한 캐릭터');
@@ -1193,11 +1174,8 @@
   function rememberProfile(name, characterProfile) {
     var p = profiles.find(function(p){ return p.name === name; });
     if (!p) { p = {name:name}; profiles.push(p); }
-    p.state = JSON.parse(JSON.stringify(state));
     if (characterProfile) p.character = normalizeCharacterProfile(characterProfile, name);
     activeProfile = name;
-    if (!JsonStorage.local.write(PROFILE_STORE, profiles)) setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err');
-    renderProfiles();
   }
   function renderProfiles() {
     profileBar.replaceChildren();
@@ -1219,6 +1197,12 @@
       del.setAttribute('aria-label', p.name + ' 저장 삭제');
       del.addEventListener('click', function(){
         profiles = profiles.filter(function(x){ return x !== p; });
+        if (pendingCharacter === p.name) {
+          characterRequestId++;
+          setCharacterLoading('');
+          setStatus('');
+          setStatus('', null, schedulerStatus);
+        }
         if(activeProfile === p.name) { activeProfile = ''; renderCharacterProfile(null); }
         JsonStorage.local.write(PROFILE_STORE, profiles);
         renderProfiles();
@@ -1229,7 +1213,8 @@
   function selectProfileCharacter(profile, notify) {
     // 이전 캐릭터를 조회하던 응답이 새로 고른 저장 프로필을 덮지 않게 한다.
     characterRequestId++;
-    fetchBtn.disabled = false;
+    setCharacterLoading('');
+    setStatus('', null, schedulerStatus);
     charInput.value = profile.name;
     charInput.removeAttribute('data-account-ocid');
     charInput.removeAttribute('data-account-world');
@@ -1238,7 +1223,14 @@
   }
   renderProfiles();
   var initialProfile = profiles.find(function(p){ return p.name === charInput.value; });
-  if (initialProfile) { activeProfile = initialProfile.name; selectProfileCharacter(initialProfile, true); renderCharacterProfile(initialProfile.character); renderProfiles(); }
+  if (initialProfile) {
+    activeProfile = initialProfile.name;
+    state = loadState(initialProfile.state);
+    selectProfileCharacter(initialProfile, true);
+    renderCharacterProfile(initialProfile.character);
+    syncProfileInputs();
+    renderProfiles();
+  }
   refreshKeyState();
   // 다른 탭의 파티 보스 스케줄러나 공용 환산 배율에서 바뀌면 파티 배율을 다시 맞춘다.
   if (typeof window.addEventListener === 'function') {

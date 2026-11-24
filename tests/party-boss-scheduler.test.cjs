@@ -64,3 +64,8 @@ test('스케줄러 응답에서 클리어한 보스만 이름·난이도로 찾�
  ]},db);
  assert.deepEqual([...clears].sort(),['BlackMage|Extreme','KalosTheGuardian|Chaos']);
 });
+test('예상 처치 시간은 환산 배율 100%를 20분으로 보고 분과 초로 표시한다',()=>{
+ assert.equal(app.clearSeconds(100),1200);assert.equal(app.clearSeconds(0),null);
+ assert.deepEqual([136.47,100,200,50,1200,6000].map(app.clearTimeLabel),['예상 14분 39초','예상 20분','예상 10분','예상 40분','예상 1분 40초','예상 20초']);
+ assert.equal(app.clearTimeLabel(0),'');
+});

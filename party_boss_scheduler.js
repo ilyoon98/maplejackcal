@@ -31,6 +31,13 @@
     if(total>=100)return ['clear','클리어 가능'];
     return ['short','불가능'];
   }
+  // 예상 처치 시간(초): 환산 배율 100%가 20분 처치다. 보스 버프 동선 계산기와 공용 환산 배율과 같은 기준이다.
+  function clearSeconds(total){return total>0?Math.round(20*60*100/total):null;}
+  function clearTimeLabel(total){
+    var sec=clearSeconds(total);if(sec===null)return '';
+    var min=Math.floor(sec/60),rest=sec%60;
+    return '예상 '+(min?min+'분'+(rest?' ':''):'')+(rest||!min?rest+'초':'');
+  }
   // 완료 표시는 보스 초기화 주기 안에서만 유효하다. 한국 시간 기준 일간은 매일 0시, 주간은 목요일 0시, 월간은 1일 0시에 바뀐다.
   function periodKey(bossId,now){
     var key=String(bossId||'').split('|')[0],d=new Date((now==null?Date.now():now)+9*3600e3);
@@ -186,9 +193,14 @@
       return manualDone[p.id]===periodKey(p.bossId)?'manual':'';
     }
     function setManualDone(p,done){
-      var next={};
-      Object.keys(manualDone).forEach(function(id){var party=parties.concat(remoteParties).find(function(item){return item.id===id;});if(party&&manualDone[id]===periodKey(party.bossId))next[id]=manualDone[id];});
-      if(done)next[p.id]=periodKey(p.bossId);else delete next[p.id];
+      var next={},now=Date.now(),bosses=new Map(parties.concat(remoteParties).map(function(item){return [item.id,item.bossId];}));
+      var currentPeriods=new Set(['',DAILY_BOSSES[0],'BlackMage'].map(function(bossId){return periodKey(bossId,now);}));
+      Object.keys(manualDone).forEach(function(id){
+        var bossId=bosses.get(id),savedPeriod=manualDone[id];
+        // 공유 목록을 열기 전에도 아직 유효한 공유 파티 체크를 보존한다.
+        if(bossId?savedPeriod===periodKey(bossId,now):currentPeriods.has(savedPeriod))next[id]=savedPeriod;
+      });
+      if(done)next[p.id]=periodKey(p.bossId,now);else delete next[p.id];
       if(!storage.write(COMPLETE_STORAGE,next)){storageStatus('완료 표시를 브라우저에 저장하지 못했습니다.',true);return false;}
       manualDone=next;return true;
     }
@@ -261,7 +273,7 @@
         })};
       });
     }
-    async function loadRemote(){
+    async function loadRemote(forceClears){
       if(remoteWriting)return;
       var request=++remoteVersion;remoteLoading=true;updateScopeUI();
       try{
@@ -274,7 +286,14 @@
         remoteError=remoteAvailable?'':'공유 저장소를 사용할 수 없습니다.';
         hydrateRemote();
       }catch(e){if(request===remoteVersion)remoteError='공유 파티를 불러오지 못했습니다. 목록을 새로고침하세요.';}
-      finally{if(request===remoteVersion){remoteLoading=false;updateScopeUI();if(scope==='shared')refreshBoard();}}
+      finally{
+        if(request===remoteVersion){
+          remoteLoading=false;updateScopeUI();if(scope==='shared')refreshBoard();
+          // 진행 중인 로컬 조회가 새 공유 파티를 포함하지 않았을 수 있다.
+          if(clearsPending)await clearsPending;
+          if(request===remoteVersion)loadClears(forceClears);
+        }
+      }
     }
     async function writeRemote(action,p,revision,notify){
       if(remoteWriting)return null;
@@ -384,14 +403,16 @@
       host.append(memberCard(makeMember(current,targetBoss())));
     }
     function percentLabel(value){return value.toLocaleString('ko-KR',{maximumFractionDigits:2})+'%';}
-    function metric(label,value,badge){
+    function metric(label,value,badge,extra){
       var box=node('span','party-metric'),amount=node('strong','party-metric-value',value);
       box.append(node('span','party-metric-label',label));
-      if(badge){var line=node('span','party-metric-line');line.append(amount,badge);box.append(line);}else box.append(amount);
+      if(badge||extra){var line=node('span','party-metric-line');line.append(amount);if(badge)line.append(badge);if(extra)line.append(extra);box.append(line);}else box.append(amount);
       return box;
     }
-    function leadMember(members){
-      return members.reduce(function(best,m){var r=rate(m.rate),b=best?rate(best.rate):null;return !best||r!==null&&(b===null||r>b)?m:best;},null);
+    // 파티원 순서는 본캐 먼저, 그다음 환산 배율(예상 딜 비중)이 높은 순이다. 첫 번째가 대표 캐릭터다.
+    function orderedMembers(members,mains){
+      var byName=new Map(members.map(function(m){return [m.character.name,m];}));
+      return accounts.partyOrder(members.map(function(m){return {name:m.character.name,rate:rate(m.rate)};}),mains).map(function(m){return byName.get(m.name);});
     }
     function doneBadge(){return node('span','party-done-badge','✓ 완료');}
     function mesoLabel(value){
@@ -404,7 +425,11 @@
       var sum=summary(members),known=members.length>sum.missing,shares=damageShares(members);
       var box=node('section','party-totals'),head=node('div','party-overview-head');
       var verdict=sum.missing?['pending','판정 대기']:members.length?clearStatus(Math.round(sum.total*100)/100):null;
-      head.append(metric('환산 합계',known?percentLabel(sum.total):'—',verdict?node('span','party-verdict '+verdict[0],verdict[1]):null));
+      // 판정 배지 오른쪽에 환산 합계로 계산한 예상 처치 시간을 둔다. 미등록 파티원이 있으면 합계를 믿을 수 없어 숨긴다.
+      var time=!sum.missing&&members.length?clearTimeLabel(Math.round(sum.total*100)/100):'';
+      var timeNode=time?node('span','party-clear-time',time):null;
+      if(timeNode)timeNode.title='환산 배율 100%를 20분 처치로 계산한 시간입니다.';
+      head.append(metric('환산 합계',known?percentLabel(sum.total):'—',verdict?node('span','party-verdict '+verdict[0],verdict[1]):null,timeNode));
       head.append(node('span','party-member-count',members.length+' / '+boss.max+'명'));
       box.append(head);
       if(shares)box.append(damageChart(members,shares));
@@ -415,7 +440,7 @@
       var [key,difficulty]=boss.id.split('|'),price=Number(win.MapleBossDB[key][difficulty].CrystalPrice),count=members.length;
       var layout=node('div','party-summary-grid'),reward=node('section','party-reward');
       var icon=node('img');
-      icon.src=DAILY_BOSSES.includes(key)?'icons/home/강렬한힘의결정.webp':'icons/home/boss-crystal-'+(key==='BlackMage'?'monthly':'weekly')+'.png';
+      icon.src=DAILY_BOSSES.includes(key)?'icons/home/강렬한힘의결정.webp':'icons/home/boss-crystal-'+(key==='BlackMage'?'monthly':'weekly')+'.webp';
       icon.alt='';
       // 1인당 금액 바로 오른쪽에 전체 금액을 두어 분배 기준을 한 줄에서 읽게 한다.
       var crystal=node('div','party-crystal');crystal.append(icon,metric(count?'1인당 결정석':'결정석 기본가',mesoLabel(Math.floor(price/Math.max(1,count)))));
@@ -617,6 +642,7 @@
       var list=el('party-list'),headingHost=el('party-detail-heading'),detail=el('party-detail-content'),formOpen=!el('party-create-form').hidden;
       renderView(shown.length);
       list.replaceChildren();headingHost.replaceChildren();detail.replaceChildren();selectVisible(shown);
+      var mains=accounts.mainNames(shared);
       shown.forEach(function(p){
         var button=node('button'),boss=choices.find(function(c){return c.id===p.bossId;});
         button.type='button';button.disabled=formOpen||remoteWriting;button.setAttribute('aria-pressed',String(p.id===selected));
@@ -624,13 +650,24 @@
         var done=completion(p),sum=summary(p.members),meta=node('span','party-row-meta');
         if(done)button.classList.add('party-list-done');
         // 같은 보스 파티가 여러 개면 보스 이름으로는 구분이 안 되므로, 보스는 아이콘과 난이도로만 보여주고
-        // 제목에는 직접 지은 파티 이름 또는 환산 배율이 가장 높은 파티원(대표 캐릭터)을 쓴다.
-        var lead=leadMember(p.members);
+        // 제목에는 직접 지은 파티 이름을 쓰고, 없으면 파티원 이름으로 자동 이름을 만든다.
+        // 자동 이름: 1명은 이름 전체, 2명은 3글자씩, 3명은 2글자씩, 4명 이상은 1글자씩을 쉼표로 잇는다. 순서는 본캐 먼저, 그다음 딜 비중 순.
+        // 목록 폭이 좁아 잘릴 수 있으므로, 마우스를 올리면 전체 이름과 파티원을 툴팁으로 보여준다.
+        var ordered=orderedMembers(p.members,mains),lead=ordered[0]||null;
         var custom=p.name!==boss.label,identity=visual.create(doc,p.bossId,win.MapleBossDB);
         identity.querySelector('span:not(.diff-badge)')?.classList.add('sr-only');
-        // 인원은 아래 줄에 있으므로 제목에는 이름만 둔다. 화면 읽기용 이름에는 나머지 인원도 함께 넣는다.
-        var title=node('span','party-row-title',custom?p.name:lead?lead.character.name:'파티원 없음');
-        if(!custom&&lead&&p.members.length>1)title.append(node('span','sr-only',' 외 '+(p.members.length-1)+'명'));
+        var title=node('span','party-row-title',custom?p.name:ordered.length>1?null:lead?lead.character.name:'파티원 없음');
+        if(!custom&&ordered.length>1){
+          // 줄인 이름 대신 화면 읽기용으로는 전체 파티원 이름을 읽는다.
+          var short=node('span','',accounts.partyTitle(ordered.map(function(m){return {name:m.character.name};})));
+          short.setAttribute('aria-hidden','true');
+          title.append(short,node('span','sr-only',ordered.map(function(m){return m.character.name;}).join(', ')));
+        }
+        if(ordered.length){
+          var fullNames=ordered.map(function(m){return m.character.name;}).join(', ');
+          title.dataset.tooltip=custom?p.name:fullNames;
+          if(custom)title.dataset.tooltipNote=fullNames;
+        }
         identity.append(title);
         // 한 줄에 들어가도록 대표 캐릭터와 미등록 인원은 화면 읽기용으로만 두고, 상세에서 보여준다.
         if(custom&&lead)title.append(node('span','sr-only',', 대표 '+lead.character.name));
@@ -737,10 +774,17 @@
         repairPortraits(activeParties().find(function(p){return p.id===selected;}));
       }catch(e){if(request===syncVersion)status('공용 캐릭터 목록을 불러오지 못했습니다. 기존 파티는 유지됩니다.',true);}
     }
+    // 내 캐릭터 = API 키 계정 캐릭터 + 이 브라우저에서 켠 "내가 쓰는 계정"(친구 계정 등)의 캐릭터.
     async function loadMine(){
-      owned.clear();if(!win.NexonKey||!win.NexonKey.has()){filterStatus('내 캐릭터 필터는 홈에서 API 키를 등록하면 사용할 수 있습니다.',true);return;}
+      owned.clear();
+      var extras=win.NexonCharacters&&win.NexonCharacters.extraNames?win.NexonCharacters.extraNames():[];
+      extras.forEach(function(name){owned.add(name);});
+      if(!win.NexonKey||!win.NexonKey.has()){
+        if(extras.length){if(view.value==='mine'){filterStatus('내가 쓰는 계정 캐릭터만 확인합니다. API 키를 등록하면 내 계정 캐릭터도 함께 찾습니다.');refreshBoard();}return;}
+        filterStatus('내 캐릭터 필터는 홈에서 API 키를 등록하거나 공용 환산 배율의 계정 관리에서 내가 쓰는 계정을 켜면 사용할 수 있습니다.',true);return;
+      }
       filterStatus('내 캐릭터를 불러오는 중…');
-      try{var chars=await win.NexonCharacters.fetch();chars.forEach(function(c){owned.add(c.name);});if(view.value==='mine'){filterStatus('');refreshBoard();}}catch(e){if(view.value==='mine')filterStatus('내 캐릭터를 불러오지 못했습니다. API 키를 확인하세요.',true);}
+      try{var chars=await win.NexonCharacters.fetch();chars.forEach(function(c){owned.add(c.name);});if(view.value==='mine'){filterStatus('');refreshBoard();}}catch(e){if(view.value==='mine'){filterStatus('내 계정 캐릭터를 불러오지 못했습니다. API 키를 확인하세요.'+(extras.length?' 내가 쓰는 계정 캐릭터만 확인합니다.':''),true);if(extras.length)refreshBoard();}}
     }
     var supported=new Set(win.RateCatalog.choices(win.MapleBossDB).map(function(c){return c.id;}));
     var bossPicker=mountBossPicker(win,choices,supported,storage);
@@ -751,7 +795,7 @@
         e.preventDefault();switchScope(e.key==='Home'?'local':e.key==='End'?'shared':value==='local'?'shared':'local');
       });
     });
-    el('party-refresh-shared').addEventListener('click',loadRemote);
+    el('party-refresh-shared').addEventListener('click',function(){loadRemote(true);});
     el('party-saved-character').addEventListener('change',function(){if(this.value)choose(this.value);else{profileVersion++;if(controller)controller.abort();current=null;renderPreview();renderBoard();}});
     el('party-reload-catalog').addEventListener('click',function(){ownSyncedKey='';portraitAttempts.clear();syncSaved();});
     el('party-boss').addEventListener('change',function(){draftStatus('');renderDraft();});
@@ -806,9 +850,13 @@
       doc.querySelector('.party-edit')?.focus();
     });
     win.addEventListener('nexon-key-changed',function(){profileVersion++;if(controller)controller.abort();portraitAttempts.clear();if(current)choose(current.name);ownSyncedKey='';if(ownSyncPending)ownSyncPending.catch(function(){}).finally(function(){ownSyncedKey='';syncSaved();});else syncSaved();if(view.value==='mine')loadMine();loadClears(true).then(function(){renderBoard();});});
-    function refresh(){syncSaved();if(scope==='shared')loadRemote().then(function(){loadClears();});else loadClears();}
-    win.addEventListener('storage',function(e){if(e.key==='sharedBossRates.changed'||e.key===win.NexonKey.STORAGE_KEY)syncSaved();});win.addEventListener('focus',refresh);if(win.setInterval)win.setInterval(function(){if(!doc.hidden)refresh();},30000);
+    function refresh(){syncSaved();if(scope==='shared')loadRemote();else loadClears();}
+    win.addEventListener('storage',function(e){if(e.key==='sharedBossRates.changed'||e.key===win.NexonKey.STORAGE_KEY)syncSaved();});
+    // 내가 쓰는 계정을 바꾸면 내 캐릭터 필터를 다시 계산한다.
+    function extraChanged(){if(view.value==='mine')loadMine();}
+    win.addEventListener('storage',function(e){if(win.NexonCharacters&&e.key===win.NexonCharacters.EXTRA_KEY)extraChanged();});
+    if(win.NexonCharacters&&win.NexonCharacters.EXTRA_EVENT)win.addEventListener(win.NexonCharacters.EXTRA_EVENT,extraChanged);win.addEventListener('focus',refresh);if(win.setInterval)win.setInterval(function(){if(!doc.hidden)refresh();},30000);
     updateScopeUI();refreshBoard();refresh();
   }
-  return {imageUrl:imageUrl,profile:profile,summary:summary,clearStatus:clearStatus,periodKey:periodKey,schedulerClears:schedulerClears,catalog:catalog,restore:restore,client:client,scouterClient:scouterClient,applySnapshot:applySnapshot,mount:mount};
+  return {imageUrl:imageUrl,profile:profile,summary:summary,clearStatus:clearStatus,clearSeconds:clearSeconds,clearTimeLabel:clearTimeLabel,periodKey:periodKey,schedulerClears:schedulerClears,catalog:catalog,restore:restore,client:client,scouterClient:scouterClient,applySnapshot:applySnapshot,mount:mount};
 });
