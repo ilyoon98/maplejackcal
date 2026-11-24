@@ -105,7 +105,7 @@
 
   function readSave() {
     try {
-      const d = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      const d = JsonStorage.local.read(STORE_KEY);
       if (!d || d.v !== 1) return null;
       const game = Core.normalize(d.game);
       if (!game) return null;
@@ -119,7 +119,7 @@
   function save() {
     if (paused || !S) return;
     savedAt = Date.now();
-    try { localStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, owner: TAB, wall: wallAt, game: S, log })); } catch (e) {}
+    JsonStorage.local.write(STORE_KEY, { v: 1, owner: TAB, wall: wallAt, game: S, log });
   }
 
   const LOG_ICON = { buy: 'icons/home/메소주머니.webp', sell: 'icons/home/메소주머니.webp', news: 'icons/home/신문기사.webp', collect: 'icons/craft/보라약초.webp' };
@@ -1384,7 +1384,6 @@
   // 등록한 각자의 키(nexon_key.js)를 이 브라우저에서만 쓰고, 코드에는 넣지 않는다.
   // 계정 캐릭터 선택기(nexon_characters.js)로 고르면 ocid를 이미 알아서 /id 조회를 건너뛴다.
   const ME_KEY = 'herbIdleCharacter';
-  const API_BASE = 'https://open.api.nexon.com/maplestory/v1';
   const IO_BASE = 'https://maplestory.io/api/KMS/latest';
   const IO_VISIBLE_SLOTS = new Set(['모자', '얼굴장식', '눈장식', '귀고리', '상의', '한벌옷', '하의', '신발', '장갑', '망토', '무기', '보조무기']);
   const IO_POSES = {
@@ -1423,17 +1422,7 @@
   const meInput = $('meNameInput'), meLoadBtn = $('meLoad');
 
   function apiGet(path, params) {
-    const qs = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k])).join('&');
-    return fetch(API_BASE + path + '?' + qs, { headers: { 'x-nxopen-api-key': window.NexonKey.get() } })
-      .then(res => res.json().catch(() => null).then(body => {
-        if (!res.ok) {
-          const err = body && body.error ? body.error : {};
-          const e = new Error(err.message || ('HTTP ' + res.status));
-          e.code = err.name || '';
-          throw e;
-        }
-        return body;
-      }));
+    return NexonApi.browser.get(path, params);
   }
   function ioError(message, missing) {
     const e = new Error(message || 'MAPLESTORY_IO');
@@ -1680,7 +1669,7 @@
 
   function readMe() {
     try {
-      const d = JSON.parse(localStorage.getItem(ME_KEY) || 'null');
+      const d = JsonStorage.local.read(ME_KEY);
       if (!d || typeof d.name !== 'string' || !safeImage(d.image)) return null;
       const io = d.io && Number.isSafeInteger(Number(d.io.skinId)) && Array.isArray(d.io.itemIds)
         ? { skinId: Number(d.io.skinId), itemIds: d.io.itemIds.map(Number).filter(Number.isSafeInteger) } : null;
@@ -1689,7 +1678,8 @@
     } catch (e) { return null; }
   }
   function writeMe() {
-    try { if (me) localStorage.setItem(ME_KEY, JSON.stringify(me)); else localStorage.removeItem(ME_KEY); } catch (e) {}
+    if (me) JsonStorage.local.write(ME_KEY, me);
+    else JsonStorage.local.remove(ME_KEY);
   }
   function setMeStatus(text, kind) {
     const n = $('meStatus');

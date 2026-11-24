@@ -255,6 +255,7 @@
     </aside>
   </div>
 </main>
+<script src="json_storage.js"></script>
 <script>
 (function(){
   "use strict";
@@ -491,7 +492,7 @@
 
   function restoreDailyDraw(){
     try {
-      var saved = JSON.parse(localStorage.getItem(DAILY_STORAGE_KEY));
+      var saved = JsonStorage.local.read(DAILY_STORAGE_KEY);
       if (!saved || saved.date !== koreaDateKey()) return null;
       if (saved.boxId !== dailyBoxIdForDate(saved.date)) return null;
       var box = boxById(saved.boxId);
@@ -516,13 +517,10 @@
   }
 
   function saveDailyDraw(box, entry){
-    try {
-      localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify({
-        date:koreaDateKey(), boxId:box.id, name:entry.name, lv:entry.lv
-      }));
-    } catch (error) {
-      // 저장이 제한된 환경에서도 현재 탭에서는 중복 뽑기를 막습니다.
-    }
+    // 저장이 제한된 환경에서도 현재 탭에서는 중복 뽑기를 막습니다.
+    JsonStorage.local.write(DAILY_STORAGE_KEY, {
+      date:koreaDateKey(), boxId:box.id, name:entry.name, lv:entry.lv
+    });
   }
 
   var restoredDaily = restoreDailyDraw();

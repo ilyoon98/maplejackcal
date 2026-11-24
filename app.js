@@ -594,7 +594,7 @@ function renderResult(policyResult, costResult, params, price) {
 
   summaryEl.innerHTML = `
     ${summaryItem('총 기대 주흔', Math.round(costResult.totalTraces).toLocaleString() + ' 개')}
-    ${price ? summaryItem('총 기대 메소', Math.round(totalMeso).toLocaleString() + ' 메소') : ''}
+    ${price ? summaryItem('총 기대 메소', Math.round(totalMeso).toLocaleString() + ' 메소', totalMeso) : ''}
     ${summaryItem('기대 주흔작 시도 횟수', Math.round(policyResult.totalAttempts * 10) / 10 + ' 회')}
     ${summaryItem(`기대 ${resetMode === 'arc' ? '아크 이노센트' : '이노센트'} 사용 횟수`, Math.round(policyResult.totalResets * 10) / 10 + ' 회')}
     ${summaryItem('기대 순백 사용 횟수', Math.round(policyResult.totalProtects * 10) / 10 + ' 회')}
@@ -606,8 +606,9 @@ function renderResult(policyResult, costResult, params, price) {
   renderCutoffTable();
 }
 
-function summaryItem(label, value) {
-  return `<div class="summary-item"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+function summaryItem(label, value, meso) {
+  const hunt = meso === undefined ? '' : `<required-hunt meso="${meso}"></required-hunt>`;
+  return `<div class="summary-item"><div class="label">${label}</div><div class="value">${value}</div>${hunt}</div>`;
 }
 
 // ---------- 손절 기준표 (항상 이노센트 12,000 표준가 전략 기준 — "지금 할 일"과 동일한 전략) ----------

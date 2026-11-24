@@ -1,6 +1,6 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {compareUsage} = require('../actual_record.js');
+const {compareUsage, compareAverage, spendingVerdict, sampledPercentile} = require('../actual_record.js');
 test('실제 비용은 기대값 대비 절약·초과 비율로 비교한다',()=>{
   assert.deepEqual(compareUsage(5e9,3.2e9),{baseline:5e9,difference:-1.8e9,percent:36});
   assert.deepEqual(compareUsage(10000,15000),{baseline:10000,difference:5000,percent:50});
@@ -13,4 +13,11 @@ test('소수 기대 주흔은 표시 개수 기준으로 비교하고 0·동일�
 test('불가능한 목표나 유효하지 않은 입력에는 비교 결과를 만들지 않는다',()=>{
   for(const expected of [NaN,Infinity,-1,1e20]) assert.equal(compareUsage(expected,100),null);
   for(const actual of [NaN,Infinity,-1,0.5,1e20]) assert.equal(compareUsage(100,actual),null);
+});
+
+test('판당 평균은 실제 소수값을 유지하고 같은 판정 UI를 사용한다', () => {
+  assert.deepEqual(compareAverage(10.5, 8.5), { difference: -2, trend: 'under' });
+  assert.match(spendingVerdict(10.5, 12.5, String), /2 메소 더 씀/);
+  assert.equal(sampledPercentile([1, 2, 2, 3], 2).percent, 75);
+  assert.equal(sampledPercentile([], 2), null);
 });

@@ -27,7 +27,7 @@ async function main() {
         if (url.pathname.startsWith('/api/')) return route.fulfill({ json:{schemaVersion:1,persistent:false,snapshots:[],accounts:[],parties:[]} });
         return route.continue();
       });
-      for (const file of [...Object.keys(data), 'shared_boss_rates.html']) {
+      for (const file of Object.keys(data)) {
         const page = await context.newPage();
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
@@ -39,20 +39,79 @@ async function main() {
           await page.keyboard.press('Enter');
           const help = page.locator('#uxHelp');
           assert.equal(await help.evaluate(node => node.open), true, file + ' opens');
-          if (data[file]) {
-            assert.equal(await help.locator('.ux-guide-step').count(), data[file].steps.length, file + ' complete steps');
-            assert.equal(await help.locator('.ux-guide-result').count(), 1);
-            assert.equal(await help.locator('.ux-guide-details').evaluate(node => node.open), false);
-          } else {
-            assert.equal(await help.locator('.shared-capture-steps li').count(), 4);
+          const guide = data[file];
+          await page.evaluate(() => document.fonts.ready);
+          const details = help.locator('.ux-guide-details');
+          if (await details.count()) assert.equal(await details.evaluate(node => node.open), false);
+          const tabs = help.getByRole('tab');
+          if (guide.tabs) {
+            assert.deepEqual(await tabs.allTextContents(), Array.from(guide.tabs, tab => tab.label));
+            assert.equal(await tabs.first().getAttribute('aria-selected'), 'true');
+            await tabs.first().focus();
+            await page.keyboard.press('ArrowRight');
+            assert.equal(await tabs.nth(1).getAttribute('aria-selected'), 'true');
+            await page.keyboard.press('End');
+            assert.equal(await tabs.last().getAttribute('aria-selected'), 'true');
+            await page.keyboard.press('Home');
+            assert.equal(await tabs.first().getAttribute('aria-selected'), 'true');
           }
-          await help.locator('img').evaluateAll(images => images.forEach(image => image.loading = 'eager'));
-          await page.waitForFunction(() => Array.from(document.querySelectorAll('#uxHelp img')).every(image => image.complete && image.naturalWidth > 0));
+          for (const [index, group] of (guide.tabs || [guide]).entries()) {
+            if (guide.tabs) {
+              await tabs.nth(index).click();
+              assert.equal(await tabs.nth(index).getAttribute('aria-selected'), 'true');
+              assert.equal(await help.getByRole('tabpanel').count(), 1);
+            }
+            const steps = help.locator('.ux-guide-step:visible');
+            assert.equal(await steps.count(), group.steps.length, file + ' complete steps');
+            assert.deepEqual(await steps.evaluateAll(rows => rows.map(row => ({
+              order: Array.from(row.children, node => node.tagName),
+              title: row.querySelector('h3')?.innerText,
+              images: row.querySelectorAll('img').length,
+              captions: row.querySelectorAll('figcaption').length,
+              text: row.querySelector('figcaption')?.innerText
+            }))), Array.from(group.steps, (step, stepIndex) => ({
+              order: ['H3', 'FIGURE'], title: (stepIndex + 1) + '단계 ' + step.title, images: 1, captions: 1, text: step.text
+            })));
+            const wrapped = await steps.locator('h3, figcaption').evaluateAll(lines => lines.filter(line => {
+              const range = document.createRange();
+              range.selectNodeContents(line);
+              return range.getClientRects().length > 1;
+            }).map(line => line.textContent));
+            assert.deepEqual(wrapped, [], file + ' titles and captions fit on one line at ' + width);
+            const images = steps.locator('img');
+            await images.evaluateAll(nodes => Promise.all(nodes.map(image => {
+              image.loading = 'eager';
+              return image.decode();
+            })));
+            if (width === 1280) {
+              const missing = await images.evaluateAll(nodes => {
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d', { willReadFrequently: true });
+                return nodes.filter(image => {
+                  canvas.width = image.naturalWidth;
+                  canvas.height = image.naturalHeight;
+                  context.drawImage(image, 0, 0);
+                  const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+                  let goldPixels = 0;
+                  for (let i = 0; i < data.length; i += 4) {
+                    if (data[i] === 255 && data[i + 1] === 216 && data[i + 2] === 102) goldPixels++;
+                  }
+                  return goldPixels < 60;
+                }).map(image => image.getAttribute('src'));
+              });
+              assert.deepEqual(missing, [], file + ' visible highlight pixels');
+            }
+            if (guide.tabs && width === 390) {
+              await help.evaluate(node => node.scrollTop = 0);
+              await page.screenshot({path:path.join(output, file.replace('.html', '') + '-tab-' + (index + 1) + '-390.png')});
+            }
+          }
           const metrics = await help.evaluate(node => ({ width:node.clientWidth, scroll:node.scrollWidth, left:node.getBoundingClientRect().left, right:node.getBoundingClientRect().right }));
           assert(metrics.scroll <= metrics.width + 2, file + ' help horizontal overflow at ' + width + ': ' + JSON.stringify(metrics));
           assert(metrics.left >= -1 && metrics.right <= width + 1, file + ' panel within screen');
-          const imageButton = help.locator('.ux-guide-image-button').first();
-          await imageButton.click();
+          const imageButton = help.locator('.ux-guide-image-button:visible').first();
+          await imageButton.focus();
+          await page.keyboard.press('Enter');
           const viewer = page.locator('#uxHelpImage');
           assert.equal(await viewer.evaluate(node => node.open), true);
           await page.waitForFunction(() => document.querySelector('#uxHelpImage img').complete);
@@ -62,9 +121,9 @@ async function main() {
           assert.equal(await viewer.evaluate(node => node.open), false);
           assert.equal(await help.evaluate(node => node.open), true, 'closing image preserves help');
           assert.equal(await imageButton.evaluate(node => node === document.activeElement), true, 'focus returns to image');
-          if (data[file]) {
-            await help.locator('.ux-guide-details > summary').click();
-            assert.equal(await help.locator('.ux-guide-details').evaluate(node => node.open), true);
+          if (await details.count()) {
+            await details.locator(':scope > summary').click();
+            assert.equal(await details.evaluate(node => node.open), true);
           }
           if (['item_craft_calc.html','trade_margin_calc.html','party_boss_scheduler.html','herb_idle.html','shared_boss_rates.html'].includes(file)) {
             await help.evaluate(node => node.scrollTop = 0);
@@ -77,8 +136,9 @@ async function main() {
             const contextOpener = page.locator('[data-ux-help-trigger]');
             await contextOpener.click();
             assert.equal(await help.evaluate(node => node.open), true);
-            const target = page.locator('#shared-capture-guide-section');
+            const target = help.locator('#shared-capture-guide-section');
             assert.equal(await target.count(), 1, 'original section id is retained');
+            assert.equal(await target.locator('img').count(), guide.steps.length);
             await page.keyboard.press('Escape');
             assert.equal(await contextOpener.evaluate(node => node === document.activeElement), true);
           }
@@ -97,7 +157,7 @@ async function main() {
     await failure.locator('.ux-help-open').click();
     await failure.waitForFunction(() => !!document.querySelector('.ux-guide-image-error'));
     assert(await failure.locator('.ux-guide-image-error').isDisabled());
-    assert(await failure.locator('.ux-guide-step').first().innerText());
+    assert.equal(await failure.locator('.ux-guide-step figcaption').first().innerText(), data['trade_margin_calc.html'].steps[0].text);
     await failure.close();
     // At 200% text zoom, the drawer and enlarged image controls still fit.
     const zoom = await browser.newPage({viewport:{width:390,height:844}});

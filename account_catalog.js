@@ -1,4 +1,5 @@
-(function(root,factory){var api=factory(typeof module==='object'&&module.exports?require('./scouter_data.js'):root.ScouterData);if(typeof module==='object'&&module.exports)module.exports=api;else root.AccountCatalog=api;})(typeof window!=='undefined'?window:globalThis,function(data){
+(function(root,factory){var api=factory(typeof module==='object'&&module.exports?require('./scouter_data.js'):root.ScouterData,
+  typeof module==='object'&&module.exports?require('./rate_catalog.js'):root.RateCatalog);if(typeof module==='object'&&module.exports)module.exports=api;else root.AccountCatalog=api;})(typeof window!=='undefined'?window:globalThis,function(data, rates){
   'use strict';
   function normalize(accounts){
     if(!Array.isArray(accounts)||accounts.length>200)throw new Error('ACCOUNT_INVALID');var ids=new Set(),names=new Set(),count=0;
@@ -37,13 +38,15 @@
     });
     return accounts;
   }
-  async function save(fetchImpl,accounts,revision,pin){var r=await fetchImpl('/api/boss-rates',{method:'POST',headers:{'Content-Type':'application/json','x-rate-pin':pin||''},body:JSON.stringify({action:'accounts',accounts:normalize(accounts),expectedRevision:revision||''})}),b=await r.json();if(!r.ok)throw new Error(b.error&&b.error.code||'RATE_STORE_UNAVAILABLE');return b;}
+  async function save(fetchImpl, accounts, revision, pin) {
+    return rates.saveAccounts(fetchImpl, normalize(accounts), revision, pin);
+  }
   async function syncOwn(store,options){
     if(!store.persistent||store.requiresPin&&!options.pin)return store;var rows=await options.load();if(!Array.isArray(rows)||!rows.length)return store;
     for(var attempt=0;attempt<2;attempt++){
       var next=importOwn(store,rows,options.newId);if(JSON.stringify(next)===JSON.stringify(normalize(store.accounts||[])))return store;
       try{var result=await save(options.fetch,next,store.accountRevision,options.pin);return {...store,...result};}
-      catch(e){if(e.message!=='RATE_CONFLICT'||attempt)throw e;var response=await options.fetch('/api/boss-rates',{cache:'no-store'});if(!response.ok)throw new Error('RATE_STORE_UNAVAILABLE');store=await response.json();}
+      catch(e){if(e.message!=='RATE_CONFLICT'||attempt)throw e;store=await rates.published(options.fetch);}
     }
   }
   return {normalize:normalize,groups:groups,accountId:accountId,conflict:conflict,assign:assign,importOwn:importOwn,save:save,syncOwn:syncOwn};

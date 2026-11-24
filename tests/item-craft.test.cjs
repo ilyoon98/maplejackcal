@@ -7,15 +7,16 @@ const vm = require('node:vm');
 function app(saved = {}) {
   const nodes = new Map(), handlers = {};
   const get = id => {
-    if (!nodes.has(id)) nodes.set(id, { dataset: {}, classList: { toggle() {} } });
+    if (!nodes.has(id)) nodes.set(id, { dataset: {}, classList: { toggle() {} }, setAttribute(key, value) { this[key] = String(value); } });
     return nodes.get(id);
   };
   const context = vm.createContext({
     window: {},
+    ActualRecord: require('../actual_record.js'),
     localStorage: { getItem: () => JSON.stringify(saved), setItem() {} },
     document: { getElementById: get, querySelectorAll: () => [], addEventListener: (name, fn) => { handlers[name] = fn; } }
   });
-  for (const file of ['cube_option_data.js', 'cube_core.js', 'flame_core.js', 'flame_weapon_data.js', 'starforce_data.js', 'starforce_calc.js', 'item_craft_calc.js']) {
+  for (const file of ['json_storage.js', 'cube_option_data.js', 'upgrade_step.js', 'cube_core.js', 'potential_plan.js', 'flame_core.js', 'flame_weapon_data.js', 'flame_goal_ui.js', 'starforce_data.js', 'starforce_calc.js', 'item_craft_calc.js']) {
     let source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
     if (file === 'item_craft_calc.js') source = source.replace(/\}\)\(\);\s*$/, 'window.test = { state, compute, refresh, recordPercentile };})();');
     vm.runInContext(source, context);

@@ -37,13 +37,13 @@
   // ---------------------------------------------------------------- 상태
 
   const state = { buy: 0, qty: 1, extra: 0, sell: 0, fee: DEFAULT_FEE };
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+  {
+    const saved = JsonStorage.local.read(STORE_KEY) ?? {};
     Object.keys(state).forEach(k => { if (Number.isFinite(saved[k])) state[k] = saved[k]; });
-  } catch (e) {}
+  }
   if (!(state.qty >= 1)) state.qty = 1;
   if (!(state.fee >= 0) || state.fee >= 100) state.fee = DEFAULT_FEE;
-  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} };
+  const save = () => { JsonStorage.local.write(STORE_KEY, state); };
 
   // ---------------------------------------------------------------- 계산
 

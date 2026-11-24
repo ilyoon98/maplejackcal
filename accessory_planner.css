@@ -1,6 +1,68 @@
+.accessory-character,
 .accessory-summary,
 .accessory-sheet,
-.accessory-result { margin-top: 14px; }
+.accessory-result { margin-top: 16px; }
+
+.accessory-planner .accessory-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.accessory-planner .accessory-controls > label:not(.accessory-check) {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-size: .875rem;
+  font-weight: 650;
+}
+
+.accessory-planner .accessory-controls input[type="text"] {
+  min-height: var(--ui-control-height, 44px);
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--ux-control-line);
+  border-radius: var(--ui-control-radius, 8px);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.accessory-planner .accessory-controls select {
+  min-width: min(100%, 9rem);
+  cursor: pointer;
+}
+
+.accessory-planner #accessory-preset-summary strong { color: var(--ux-accent); }
+
+.accessory-planner .accessory-controls > .primary {
+  width: auto;
+  min-height: var(--ui-control-height, 44px);
+  margin: 0;
+}
+
+.accessory-planner .accessory-pricing { margin-top: 8px; }
+.accessory-planner .accessory-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  font-size: .875rem;
+}
+
+.accessory-planner .accessory-check input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.accessory-planner .accessory-item-name { display: block; }
 
 .accessory-metrics {
   display: grid;
@@ -106,6 +168,7 @@
 .accessory-slot:hover { background: #2c405c; }
 .accessory-slot[aria-pressed="true"] { border-color: var(--accent); background: #30486c; }
 .accessory-slot-short { display: none; }
+.accessory-slot-icon { width: 20px; height: 20px; object-fit: contain; }
 .accessory-slot small { color: #b9d4fd; font-size: 0.9em; }
 .accessory-slot small:empty { display: none; }
 .accessory-slot[data-option^="메"] small { color: #f5cb79; }
@@ -140,13 +203,30 @@
 
 .accessory-editor h3 { margin: 0 0 7px; color: var(--text); }
 .accessory-editor h4 { margin: 13px 0 4px; font-size: 0.88rem; }
+.accessory-equipped:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--ux-line);
+  border-radius: var(--ui-control-radius);
+  background: var(--ux-surface);
+  overflow-wrap: anywhere;
+}
+.accessory-equipped-icon { flex: none; object-fit: contain; }
+.accessory-equipped-info { flex: 1 1 10rem; min-width: 0; }
+.accessory-planner #accessory-lock-selected-label[hidden] { display: none; }
+.accessory-equipped :is(strong, span, small:not([hidden])) { display: block; }
+.accessory-equipped small { color: var(--ux-muted); font-size: .8125rem; }
+.accessory-equipped #accessory-equipped-stats { color: var(--ux-accent); font-size: .875rem; font-weight: 650; }
 .accessory-lines { display: grid; gap: 8px; }
 .accessory-line { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); align-items: center; gap: 6px; }
 .accessory-line > span { color: var(--text-dim); font-size: 0.8rem; }
 .accessory-line-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 7rem)); gap: 7px; }
 .accessory-line-buttons .ux-button { padding: 6px 2px; font-size: 0.8rem; white-space: nowrap; }
 
-.accessory-editor input {
+.accessory-editor input[type="text"] {
   width: 100%;
   min-width: 0;
   min-height: var(--ui-control-height, 44px);
@@ -208,7 +288,12 @@
 #accessory-result-status { margin: 8px 0; font-size: 0.9rem; overflow-wrap: anywhere; }
 #accessory-result-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 #accessory-preference-status { color: #b9d4fd; }
-.accessory-result:has(#accessory-result-details:not([hidden])) #accessory-result-status { color: #f5cb79; font-size: 1.15rem; font-weight: 800; }
+.accessory-result:has(#accessory-result-details:not([hidden])) #accessory-result-status {
+  color: var(--accent);
+  font-size: clamp(1.625rem, 3vw, 2rem);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
 .accessory-result .ux-details { margin-bottom: 0; }
 .accessory-result .ux-details > summary { min-height: var(--ui-control-height); }
 .accessory-table-scroll { overflow-x: auto; }

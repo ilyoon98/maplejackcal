@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const context = vm.createContext({});
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../upgrade_step.js'), 'utf8'), context);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'cube_core.js'), 'utf8'), context);
 const grades = vm.runInContext('CUBE_GRADE', context);
 
@@ -26,4 +27,13 @@ test('에디셔널 큐브와 메소 재설정은 공식 보장 횟수를 각각 
       assert.ok(context.successCdf(cap - 1, p, cap) < 1);
     }
   }
+});
+
+test('남은 시도는 보장 구간과 보장이 없는 구간을 이어서 계산한다', () => {
+  const mixed = [{ p: .5, cap: 2 }, { p: .5, cap: null }];
+  assert.equal(context.cubeProgressWithin(mixed, 1), 0);
+  assert.equal(context.cubeProgressWithin(mixed, 2), .25);
+  assert.equal(context.cubeProgressWithin(mixed, 3), .625);
+  assert.equal(context.cubeProgressWithin([{ p: .2, cap: 1 }, { p: .5, cap: 2 }], 2), .5);
+  assert.equal(context.cubeProgressWithin([{ p: .2, cap: 1 }, { p: .5, cap: 2 }], 3), 1);
 });

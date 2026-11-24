@@ -76,8 +76,8 @@
 
   const state = { p: {}, on: {}, elixir: 0, crafts: 1, discount: false };
   MATS.forEach(m => { if (m.k) { state.p[m.k] = 0; state.on[m.k] = true; } });
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+  {
+    const saved = JsonStorage.local.read(STORE_KEY) ?? {};
     KEYS.forEach(k => {
       if (saved.p && Number.isFinite(saved.p[k])) state.p[k] = saved.p[k];
       if (saved.on && typeof saved.on[k] === 'boolean') state.on[k] = saved.on[k];
@@ -85,8 +85,8 @@
     if (Number.isFinite(saved.elixir)) state.elixir = saved.elixir;
     if (Number.isFinite(saved.crafts) && saved.crafts >= 1) state.crafts = Math.min(Math.floor(saved.crafts), MAX_CRAFTS);
     if (typeof saved.discount === 'boolean') state.discount = saved.discount;
-  } catch (e) {}
-  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} };
+  }
+  const save = () => { JsonStorage.local.write(STORE_KEY, state); };
 
   // ---------------------------------------------------------------- 계산
 

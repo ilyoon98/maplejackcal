@@ -1,0 +1,171 @@
+{
+  "soul_calc.html": {
+    "tabs": [
+      {
+        "label": "증폭",
+        "steps": [
+          {
+            "title": "증폭 단계 고르기",
+            "image": "capture-guide/soul_calc/amplification.png",
+            "text": "시작과 목표 증폭 단계를 고르세요.",
+            "alt": "미증폭에서 2단계를 선택한 시작과 목표 증폭 단계 입력칸"
+          },
+          {
+            "title": "내 시도 횟수 넣기",
+            "image": "capture-guide/soul_calc/progress-record.png",
+            "text": "증폭 단계 아래에 횟수를 넣으세요.",
+            "alt": "증폭 카드에서 12회와 8회를 넣은 내 시도 횟수"
+          },
+          {
+            "title": "에테르 가격 넣기",
+            "image": "capture-guide/soul_calc/ether-price.png",
+            "text": "구입할 에테르 가격만 넣으세요.",
+            "alt": "1단계 에테르 가격을 넣고 2단계는 비워 둔 화면"
+          },
+          {
+            "title": "기대 메소 확인하기",
+            "image": "capture-guide/soul_calc/amplification-result.png",
+            "text": "전체 비용과 예산을 확인하세요.",
+            "alt": "미증폭에서 2단계까지의 전체 기대 메소와 50% 및 90% 성공 예산"
+          },
+          {
+            "title": "내 기록 합산 보기",
+            "image": "capture-guide/soul_calc/total-record.png",
+            "text": "전체 사용 메소와 횟수를 보세요.",
+            "alt": "증폭부터 목표 옵션까지 합산한 메소, 횟수, 평균과의 차이, 상위 비율"
+          }
+        ]
+      },
+      {
+        "label": "등급 상승",
+        "steps": [
+          {
+            "title": "등급 고르기",
+            "image": "capture-guide/soul_calc/rank-settings.png",
+            "text": "시작 등급과 목표 등급을 고르세요.",
+            "alt": "에픽에서 유니크로 설정한 시작 등급과 목표 등급 선택칸"
+          },
+          {
+            "title": "미라클 타임 설정하기",
+            "image": "capture-guide/soul_calc/rank-miracle.png",
+            "text": "미라클 타임이면 켜세요.",
+            "alt": "켜짐 상태의 미라클 타임 스위치"
+          },
+          {
+            "title": "시도 횟수 넣기",
+            "image": "capture-guide/soul_calc/rank-attempts.png",
+            "text": "등급 상승 카드에 횟수를 넣으세요.",
+            "alt": "에픽에서 유니크로 올라가기까지 시도한 횟수 입력칸"
+          },
+          {
+            "title": "등급 상승 상세 열기",
+            "image": "capture-guide/soul_calc/rank-details.png",
+            "text": "결과에서 등급 상승 상세를 펼치세요.",
+            "alt": "전체 기대 메소 결과 아래의 등급 상승 상세 펼침 항목"
+          },
+          {
+            "title": "등급 상승 기록 보기",
+            "image": "capture-guide/soul_calc/rank-result.png",
+            "text": "내 기록을 평균과 비교하세요.",
+            "alt": "등급 상승 상세의 실제 사용 메소, 횟수와 상위 비율"
+          }
+        ]
+      },
+      {
+        "label": "목표 옵션",
+        "steps": [
+          {
+            "title": "옵션과 합계 정하기",
+            "image": "capture-guide/soul_calc/goal.png",
+            "text": "옵션을 고르고 합계를 정하세요.",
+            "alt": "공격력 옵션 선택칸과 1줄 8%, 2줄 14%, 3줄 20% 배지 및 직접 입력칸"
+          },
+          {
+            "title": "재설정 횟수 넣기",
+            "image": "capture-guide/soul_calc/option-attempts.png",
+            "text": "목표 옵션 카드에 횟수를 넣으세요.",
+            "alt": "목표 옵션 카드의 재설정 횟수 입력칸"
+          },
+          {
+            "title": "목표 옵션 상세 열기",
+            "image": "capture-guide/soul_calc/option-details.png",
+            "text": "결과에서 목표 옵션 상세를 펼치세요.",
+            "alt": "전체 기대 메소 결과 아래의 목표 옵션 상세 펼침 항목"
+          },
+          {
+            "title": "1회 확률 확인하기",
+            "image": "capture-guide/soul_calc/result.png",
+            "text": "재설정 1회 확률을 확인하세요.",
+            "alt": "목표 옵션이 한 번의 재설정에서 나올 확률"
+          },
+          {
+            "title": "옵션 비용 확인하기",
+            "image": "capture-guide/soul_calc/option-cost.png",
+            "text": "옵션을 뽑을 때의 기대 메소를 보세요.",
+            "alt": "목표 옵션 상세의 기대 메소"
+          },
+          {
+            "title": "상위 비율 확인하기",
+            "image": "capture-guide/soul_calc/record.png",
+            "text": "내 기록의 상위 비율을 보세요.",
+            "alt": "재설정 100회의 사용 메소와 두 기준의 상위 비율을 보여주는 내 기록"
+          }
+        ]
+      }
+    ],
+    "notes": [
+      "증폭, 등급 상승, 목표 옵션 중 할 것만 선택하세요.",
+      "미라클 타임에 올린 기록은 등급 상승 카드에서 미라클 타임을 켜고 비교하세요.",
+      "내 시도 횟수가 보장 횟수를 넘으면 최대값으로 맞춰집니다.",
+      "공격력과 마력은 대표 줄 수 배지를 먼저 보여줍니다.",
+      "직접 입력한 합계가 가능한 최대 수치를 넘기면 최대 수치로 맞춰집니다.",
+      "같은 조건에 넣은 옵션은 모두 충족해야 합니다. 또는 조건을 추가하면 조건 중 하나만 충족해도 성공입니다."
+    ],
+    "links": [
+      { "href": "soul_play.html", "label": "소울 잠재능력 시뮬레이터 열기" }
+    ]
+  },
+  "soul_play.html": {
+    "steps": [
+      {
+        "title": "목표 정하기",
+        "image": "capture-guide/soul_play/settings.png",
+        "text": "진행할 항목에 체크하세요.",
+        "alt": "증폭, 잠재능력 등급, 목표 옵션 카드와 등급 제목 옆 미라클 타임"
+      },
+      {
+        "title": "목표 옵션 고르기",
+        "image": "capture-guide/soul_play/goals.png",
+        "text": "배지를 고르거나 직접 입력하세요.",
+        "alt": "공격력 1줄 8%, 2줄 14%, 3줄 20% 배지와 조건 추가 버튼"
+      },
+      {
+        "title": "자동 진행하기",
+        "image": "capture-guide/soul_play/actions.png",
+        "text": "목표까지 자동 진행을 누르세요.",
+        "alt": "현재 소울 상태와 목표까지 자동 진행 버튼"
+      },
+      {
+        "title": "지출과 재획 보기",
+        "image": "capture-guide/soul_play/result.png",
+        "text": "재획 수와 사냥 시간을 보세요.",
+        "alt": "가상 지출과 전체 시도의 상위 비율, 재물획득의 비약 아이콘 옆의 필요 재획과 사냥 시간"
+      },
+      {
+        "title": "시도 횟수 확인하기",
+        "image": "capture-guide/soul_play/ether-log.png",
+        "text": "횟수별 상위 비율을 확인하세요.",
+        "alt": "단계별 에테르 사용량, 등급별 상승 횟수, 잠재 옵션 시도 횟수와 각각의 상위 비율"
+      },
+      {
+        "title": "같은 조건으로 다시하기",
+        "image": "capture-guide/soul_play/retry.png",
+        "text": "다시하기로 바로 시작하세요.",
+        "alt": "목표를 달성한 뒤 표시되는 다시하기 버튼"
+      }
+    ],
+    "links": [
+      { "href": "soul_calc.html", "label": "소울 잠재능력 계산기 열기" }
+    ]
+  }
+}

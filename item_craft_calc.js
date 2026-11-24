@@ -68,7 +68,7 @@
   const MVP_OPTIONS = [[0, '없음'], [0.03, '실버'], [0.05, '골드'], [0.10, '다이아']];
   const MAX_GOALS = 3;
   const MAX_FLAME_GOALS = 4;
-  const FLAME_PRICE = 3000000;
+  const FLAME_PRICE = F.MESO_RESET_PRICE;
   const MAX_SETS = 4;
   const SET_NAMES = ['A', 'B', 'C', 'D'];
   function potentialGoals(cur) {
@@ -137,8 +137,8 @@
     on: { flame: true, star: true, pot: true, addi: true },
     showAll: { flame: false, pot: false, addi: false }
   };
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+  {
+    const saved = JsonStorage.local.read(STORE_KEY) ?? {};
     for (const k of Object.keys(state)) {
       if (saved[k] === undefined) continue;
       if (k === 'miracle' && typeof saved[k] === 'boolean') {
@@ -148,12 +148,12 @@
       if (state[k] && typeof state[k] === 'object' && !Array.isArray(state[k])) Object.assign(state[k], saved[k]);
       else state[k] = saved[k];
     }
-  } catch (e) {}
+  }
   if (!partOf(state.part)) state.part = '무기';
   if (!Array.isArray(state.flameConds)) state.flameConds = [];
   // 스탯을 하나씩 걸던 옛 저장값은 급수 조건으로 바뀌었다
   state.flameConds = state.flameConds.filter(c => c && (c.kind === 'opt' || c.kind === 'grade'));
-  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+  function save() { JsonStorage.local.write(STORE_KEY, state); }
 
   // ---------------------------------------------------------------- 표기
 
@@ -182,7 +182,7 @@
   // 한 단계 = 성공확률 p인 시도를 1회 price 메소에 반복하는 것.
   // minTries 가 0이면 "그 시도가 앞 단계에서 이미 굴려졌다"는 뜻이라 기대 횟수에서도 1회를 뺀다.
   function stage(p, price, minTries) {
-    const tries = p > 0 ? Math.max(1 / p - (1 - minTries), 0) : Infinity;
+    const tries = new UpgradeStep({ chance: p }).expectedAttempts() - (1 - minTries);
     return { p, price, tries, min: minTries * price, avg: p > 0 ? tries * price : Infinity };
   }
 
@@ -229,38 +229,33 @@
     };
   }
 
-  // 미라클 타임은 등급 상승 확률만 2배로 올린다. 원하는 옵션이 뜰 확률과 천장은 그대로다.
-  // (잠재능력 큐브 연구소 cube_calc.js와 같은 규칙)
-  const miracleP = (p, short) => state.miracle[short] ? Math.min(p * 2, 0.999) : p;
-
   // 잠재 / 에디셔널: 메소 재설정으로 레전드리까지 등급을 올린 뒤, 원하는 옵션이 뜰 때까지 다시 돌린다.
   // 등급업에 성공한 그 재설정이 이미 레전드리 옵션을 한 번 굴려준 셈이라 옵션 단계에서 1회를 뺀다.
   function potentialResult(cfg) {
     const cur = cfg.state;
     if (!state.on[cfg.short]) return { label: cfg.label, icon: cfg.icon, min: 0, avg: 0, steps: [], opt: null };
-    const bracket = costBracket(state.level);
-    const prices = PRICE_TABLES[cfg.official][bracket];
-    const grade = CUBE_GRADE[cfg.gradeCube];
     const steps = [];
-    let min = 0, avg = 0;
+    let min = 0;
     for (let i = cur.from; i < cur.to; i++) {
-      const p = miracleP(grade.p[i], cfg.short);
-      const tries = cubeExpected(p, grade.cap[i]);
-      steps.push({ label: RANKS[i] + ' → ' + RANKS[i + 1], p, cap: grade.cap[i], tries, price: prices[i] });
-      min += prices[i];
-      avg += tries * prices[i];
+      const { chance: p, cap, cost: price } = cubeGradeStep(cfg.gradeCube, state.level, i, state.miracle[cfg.short]);
+      const tries = cubeExpected(p, cap);
+      steps.push({ label: RANKS[i] + ' → ' + RANKS[i + 1], p, cap, tries, price });
+      min += price;
     }
     const b = bracketOf(cfg.dataKey, state.part, state.level, RANKS[cur.to]);
     const { goals, excluded } = usablePotentialGoals(cur, b);
     let opt = null;
+    const rolledOnArrival = cur.from < cur.to;
     if (goals.length) {
       const p = successProb(b.lines, goals);
-      opt = stage(p, prices[cur.to], cur.from < cur.to ? 0 : 1);
+      opt = stage(p, cubeMethodPrice(cfg.gradeCube, state.level, cur.to), rolledOnArrival ? 0 : 1);
       opt.missing = !b;
       min += opt.min;
-      avg += opt.avg;
     }
-    return { label: cfg.label, icon: cfg.icon, min, avg, steps, opt, excluded };
+    const phases = opt ? [{ chance: opt.p, arrivalChance: rolledOnArrival ? opt.p : 0, cost: opt.price }] : [];
+    const plan = PotentialPlan.calculate(steps.map(s => ({ chance: s.p, cap: s.cap, cost: s.price })), phases, { budgets: false });
+    if (opt) Object.assign(opt, { tries: plan.optionAttempts, avg: plan.optionCost });
+    return { label: cfg.label, icon: cfg.icon, min, avg: plan.expected, steps, opt, excluded };
   }
 
   function compute() {
@@ -298,9 +293,9 @@
       if (!pending) pending = (async () => {
         let seed = 123456789;
         const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-        const geometric = p => p >= 1 ? 1 : Math.floor(Math.log1p(-random()) / Math.log1p(-p)) + 1;
-        const sampleStage = s => !s || !s.price ? 0 : Math.max(0, geometric(s.p) - (s.min === 0 ? 1 : 0)) * s.price;
-        const samplePotential = pot => pot.steps.reduce((sum, s) => sum + Math.min(geometric(s.p), s.cap || Infinity) * s.price, 0) + sampleStage(pot.opt);
+        const sampleAttempts = (p, cap) => new UpgradeStep({ chance: p, cap }).sampleAttempts(random);
+        const sampleStage = s => !s || !s.price ? 0 : Math.max(0, sampleAttempts(s.p) - (s.min === 0 ? 1 : 0)) * s.price;
+        const samplePotential = pot => pot.steps.reduce((sum, s) => sum + sampleAttempts(s.p, s.cap) * s.price, 0) + sampleStage(pot.opt);
         const count = 5000;
         let stars = Array(count).fill(0);
         if (opts) {
@@ -315,14 +310,7 @@
         }
         return stars.map(cost => cost + base + sampleStage(r.flame) + samplePotential(r.pot) + samplePotential(r.addi)).sort((a, b) => a - b);
       })();
-      const samples = await pending;
-      if (!samples) return null;
-      let lo = 0, hi = samples.length;
-      while (lo < hi) {
-        const mid = (lo + hi) >>> 1;
-        if (samples[mid] <= actual) lo = mid + 1; else hi = mid;
-      }
-      return { percent: lo / samples.length * 100, samples: samples.length };
+      return ActualRecord.sampledPercentile(await pending, actual);
     };
   }
 
@@ -388,7 +376,6 @@
     const tiers = F.tiers(BOSS).slice().reverse();
     const allowed = availableFlameTiers();
     const used = state.flameConds;
-    const full = used.length >= MAX_FLAME_GOALS;
 
     const condHtml = used.map((c, i) => {
       if (c.kind === 'grade') {
@@ -397,27 +384,12 @@
           '<span class="ic-row-val"><input type="number" min="0" step="1" class="ic-num" data-cond="' + i + '" value="' + esc(c.min) + '"> 급 이상</span>' +
           '<button type="button" class="ic-x" data-delcond="' + i + '">×</button></div>';
       }
-      const o = F.BY_ID[c.id];
-      const tierChips = tiers.map((t, k) =>
-        '<button type="button" class="ic-tier' + (Number(c.minTier) === t ? ' active' : '') + '" data-cond="' + i + '" data-tier="' + t + '"' + (allowed.includes(t) ? '' : ' disabled title="이 불꽃에서 나오지 않는 단계입니다"') + '>' +
-        (8 - t) + '추<small>' + flameValueText(o, t) + '</small></button>').join('');
-      return '<div class="ic-row">' +
-        '<span class="ic-row-name">' + esc(flameLabel(o)) + (o.unit || '') + '</span>' +
-        '<span class="ic-row-val">' + (!weapon && ['ATT', 'ALL_PCT'].includes(c.id)
-          ? '<input type="number" class="ic-num" min="' + Math.min(...allowed) + '" max="' + Math.max(...allowed) + '" data-required="' + i + '" value="' + c.minTier + '" aria-label="필수 옵션 최소 수치">' + (o.unit || '') + ' 이상'
-          : flameValueText(o, c.minTier) + ' 이상') + '</span>' +
-        '<button type="button" class="ic-x" data-delcond="' + i + '">×</button>' +
-        '<span class="ic-tiers">' + tierChips + '</span></div>';
+      return FlameGoalUI.optionRow({ option: F.BY_ID[c.id], index: i, selectedTier: c.minTier, tiers, allowed, weapon,
+        label: flameLabel, tierValue: flameValueText });
     }).join('');
 
-    const gradePick = used.some(c => c.kind === 'grade') ? ''
-      : '<button type="button" class="ic-pick" data-addgrade="1"' + (full ? ' disabled' : '') + '>주스탯 급수</button>';
-    // 주스탯·올스탯·HP 같은 건 급수 하나로 다 들어가므로, 따로 걸 만한 것만 앞에 둔다
-    const pick = o => '<button type="button" class="ic-pick" data-addflame="' + o.id + '"' + (full ? ' disabled' : '') + '>' + esc(flameLabel(o)) + (o.unit || '') + '</button>';
-    const free = list.filter(o => !used.some(c => c.kind === 'opt' && c.id === o.id));
-    const primaryIds = weapon ? FLAME_PRIMARY : ['ATT', 'ALL_PCT'];
-    const primary = free.filter(o => primaryIds.includes(o.id));
-    const others = free.filter(o => !primaryIds.includes(o.id));
+    const picks = FlameGoalUI.picks({ options: list, conditions: used, limit: MAX_FLAME_GOALS, weapon,
+      showAll: state.showAll.flame, label: flameLabel });
 
     $('flameBody').innerHTML =
       (weapon ? renderFlameWeapon() : '') +
@@ -426,10 +398,7 @@
       '<div class="ic-sub">목표 추가옵션 <span class="ic-count">' + used.length + '/' + MAX_FLAME_GOALS + '</span></div>' +
       (condHtml || '<p class="ic-empty">아래에서 원하는 추가옵션을 눌러 조건을 넣으세요. 넣지 않으면 추가옵션 단계는 빼고 계산합니다.</p>') +
       '<p class="ic-note">공·마와 올스탯을 고르면 해당 옵션을 반드시 포함하며 목표 급수도 만족해야 합니다. 공·마는 직업에 맞는 한 종류 기준입니다.</p>' +
-      '<div class="ic-picks">' + (weapon ? primary.map(pick).join('') + gradePick : gradePick + primary.map(pick).join('')) + '</div>' +
-      (others.length ? '<button type="button" class="ic-more" data-more="flame">' +
-        (state.showAll.flame ? '세부 조건 접기 ▴' : '세부 조건 추가 ▾') + '</button>' +
-        '<div class="ic-picks' + (state.showAll.flame ? '' : ' hidden') + '">' + others.map(pick).join('') + '</div>' : '') +
+      picks +
       (state.showAll.flame ? '<p class="ic-note">STR을 주스탯으로 대표 계산합니다. 복합 추옵은 급수에 STR 수치만 반영합니다.</p>' : '') +
       '<details class="ic-assume"><summary>단계별로 붙는 수치 보기 (Lv.' + state.level + ' · 1~5추)</summary>' +
       '<div class="ic-scroll">' + tierTable(list, tiers, weapon) + '</div></details>';
@@ -439,8 +408,6 @@
   // 어느 스탯을 주스탯으로 잡든 확률이 같아서 스탯을 따로 고를 필요가 없다.
   const GRADE_HINT = weapon => '주스탯 1 · 올스탯 1% = 10' +
     (weapon ? ' · 무기는 공·마 수치를 몰라 제외' : ' · 공격력(마력) 1 = 4');
-  // 스탯·HP·이속 같은 건 급수 하나에 다 녹아 있어서, 따로 걸 만한 것만 앞줄에 둔다
-  const FLAME_PRIMARY = ['ATT', 'ALL_PCT', 'BOSS_DMG', 'DMG'];
 
   function tierTable(list, tiers, weapon) {
     const head = tiers.map(t => '<th>' + (8 - t) + '추<small>' + t + '단계</small></th>').join('');
@@ -607,6 +574,7 @@
     $('resAvg').textContent = mesoText(r.avg);
     $('resMinSub').textContent = fmt(r.min) + ' 메소';
     $('resAvgSub').textContent = Number.isFinite(r.avg) ? fmt(r.avg) + ' 메소' : '지금 조건은 나올 수 없습니다';
+    $('craft-hunt')?.setAttribute('meso', r.avg);
     $('resRatio').textContent = (r.min > 0 && Number.isFinite(r.avg))
       ? '평균은 대박의 ' + (r.avg / r.min).toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + '배'
       : '';
@@ -779,7 +747,7 @@
     const t = e.target.closest('button');
     if (!t || t.disabled) return;
     if (t.id === 'resetAll') {
-      try { localStorage.removeItem(STORE_KEY); } catch (err) {}
+      JsonStorage.local.remove(STORE_KEY);
       location.reload();
       return;
     }

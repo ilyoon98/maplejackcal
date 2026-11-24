@@ -32,8 +32,8 @@
   function callBudget(key){
     const storageKey='maple-starforce-history-budget-'+keyTag(key);
     return C.createCallBudget({limit:CALL_BUDGET,today:kstToday,
-      load:()=>{try{return JSON.parse(localStorage.getItem(storageKey));}catch(e){return null;}},
-      save:value=>{try{localStorage.setItem(storageKey,JSON.stringify(value));}catch(e){}}});
+      load:()=>JsonStorage.local.read(storageKey),
+      save:value=>JsonStorage.local.write(storageKey,value)});
   }
   function renderBackfill(missing,key){
     const box=$('historyBackfill');
@@ -132,21 +132,18 @@
     let timedOut = false;
     const timer = setTimeout(() => { timedOut=true; request.abort(); },25000);
     try {
-      const response = await fetch('https://open.api.nexon.com/maplestory/v1'+path+'?'+new URLSearchParams(params),{headers:{'x-nxopen-api-key':key},signal:request.signal});
-      const body = await response.json().catch(()=>null);
-      if (!response.ok) {
-        const code = body && body.error && body.error.name;
-        const messages = {OPENAPI00002:'이 API 키로 기록을 조회할 수 없습니다. 본인 계정의 키를 확인하세요.',OPENAPI00003:'조회 가능한 기록을 찾을 수 없습니다.',OPENAPI00004:'조회 날짜와 조건을 확인하세요.',OPENAPI00005:'API 키가 유효하지 않습니다. 홈에서 다시 등록하세요.',OPENAPI00006:'API 경로를 찾을 수 없습니다.',OPENAPI00007:'API 호출 한도를 초과했습니다. 잠시 후 기간을 줄여 다시 조회하세요.',OPENAPI00009:'데이터 준비 중입니다. 잠시 후 다시 조회하세요.',OPENAPI00010:'게임 점검 중입니다.',OPENAPI00011:'API 점검 중입니다.'};
-        const limited = code==='OPENAPI00007' || response.status===429;
-        const error = new Error(limited ? 'API 호출 제한이 계속되고 있습니다. 잠시 후 다시 시도하세요. 개발 단계 키는 초당 5회·하루 1,000회 제한이며, 하루 한도 소진 여부는 넥슨 내 애플리케이션에서 확인하세요. 기간을 줄여도 이미 소진한 한도는 복구되지 않습니다.' : messages[code] || '기록 조회에 실패했습니다. (HTTP '+response.status+')');
-        error.code=code;error.status=response.status;
-        const retryAfter=response.headers.get('Retry-After');
-        if(retryAfter) error.retryAfterMs=/^\d+(\.\d+)?$/.test(retryAfter) ? Number(retryAfter)*1000 : Math.max(0,Date.parse(retryAfter)-Date.now());
-        throw error;
+      const client = new NexonApi((...args) => fetch(...args), () => key);
+      return await client.get(path, params, { signal: request.signal });
+    } catch (error) {
+      if (timedOut) throw new Error('응답 시간이 초과되었습니다. 잠시 후 다시 조회하세요.');
+      if (error instanceof NexonApi.Error) {
+        const messages = {OPENAPI00002:'이 API 키로 기록을 조회할 수 없습니다. 본인 계정의 키를 확인하세요.',OPENAPI00003:'조회 가능한 기록을 찾을 수 없습니다.',OPENAPI00004:'조회 날짜와 조건을 확인하세요.',OPENAPI00005:'API 키가 유효하지 않습니다. 홈에서 다시 등록하세요.',OPENAPI00006:'API 경로를 찾을 수 없습니다.',OPENAPI00009:'데이터 준비 중입니다. 잠시 후 다시 조회하세요.',OPENAPI00010:'게임 점검 중입니다.',OPENAPI00011:'API 점검 중입니다.'};
+        error.message = error.rateLimited
+          ? 'API 호출 제한이 계속되고 있습니다. 잠시 후 다시 시도하세요. 개발 단계 키는 초당 5회·하루 1,000회 제한이며, 하루 한도 소진 여부는 넥슨 내 애플리케이션에서 확인하세요. 기간을 줄여도 이미 소진한 한도는 복구되지 않습니다.'
+          : messages[error.code] || '기록 조회에 실패했습니다. (HTTP ' + error.status + ')';
       }
-      return body;
-    } catch(e) { if(timedOut) throw new Error('응답 시간이 초과되었습니다. 잠시 후 다시 조회하세요.'); throw e; }
-    finally { clearTimeout(timer); signal.removeEventListener('abort',abort); }
+      throw error;
+    } finally { clearTimeout(timer); signal.removeEventListener('abort',abort); }
   }
   function costSummary() {
     const sum=list=>list.reduce((out,g)=>{

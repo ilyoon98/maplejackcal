@@ -26,14 +26,14 @@
   const selectedWeapon = () => state.part === '무기' ? W.resolve(state.weapon, state.weaponSeries) : null;
   const attackId = () => selectedWeapon()?.stat || (state.mainStat === 'INT' ? 'MATT' : 'ATT');
   let state = defaults();
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORE));
+  {
+    const saved = JsonStorage.local.read(STORE);
     if (saved && typeof saved === 'object') {
       for (const key of ['part', 'weapon', 'weaponSeries', 'mainStat', 'flame', 'blackMode', 'flameConds']) if (saved[key] !== undefined) state[key] = saved[key];
       if (['black', 'mesoReset'].includes(state.flame)) state.blackMode = state.flame;
       if (saved.weapon === undefined) state.weapon = '';
     }
-  } catch (_) {}
+  }
   // Open at Lv.200 even when an earlier session saved a different level.
   if (!W.series.some(s => s.id === state.weaponSeries && s.level === state.level)) state.weaponSeries = defaults().weaponSeries;
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -112,7 +112,6 @@
     const tiers = F.tiers(BOSS).slice().reverse();
     const allowed = availableTiers();
     const used = state.flameConds;
-    const full = used.length >= MAX_GOALS;
 
     const condRows = used.map((c, i) => {
       if (c.kind === 'grade') {
@@ -126,31 +125,16 @@
           '<input id="goalGrade" type="number" min="0" max="10000" step="10" inputmode="numeric" class="ic-num fc-grade-input" data-cond="' + i + '" value="' + esc(c.min) + '">' +
           '<button type="button" class="ic-level-step fc-grade-step" data-grade-step="10" data-cond="' + i + '" aria-label="목표 추옵 10급 증가"' + (c.min >= 10000 ? ' disabled' : '') + '>+</button></div><span>급 이상</span></div></div>';
       }
-      const o = F.BY_ID[c.id];
-      const tierChips = tiers.map((t, k) =>
-        '<button type="button" class="ic-tier' + (Number(c.minTier) === t ? ' active' : '') + '" data-cond="' + i + '" data-tier="' + t + '"' + (allowed.includes(t) ? '' : ' disabled title="이 불꽃에서 나오지 않는 단계입니다"') + '>' +
-        (8 - t) + '추<small>' + valueText(o, t) + '</small></button>').join('');
-      return '<div class="ic-row">' +
-        '<span class="ic-row-name">' + esc(flameLabel(o)) + (o.unit || '') + '</span>' +
-        '<span class="ic-row-val">' + (!weapon && ['ATT', 'ALL_PCT'].includes(c.id)
-          ? '<input class="ic-num" type="number" min="' + Math.min(...allowed) + '" max="' + Math.max(...allowed) + '" step="1" data-required="' + i + '" aria-label="필수 ' + esc(flameLabel(o)) + ' 최소 수치" value="' + c.minTier + '">' + (o.unit || '') + ' 이상'
-          : valueText(o, c.minTier) + ' 이상') + '</span>' +
-        '<button type="button" class="ic-x" data-delcond="' + i + '">×</button>' +
-        '<span class="ic-tiers">' + tierChips + '</span></div>';
+      return FlameGoalUI.optionRow({ option: F.BY_ID[c.id], index: i, selectedTier: c.minTier, tiers, allowed, weapon,
+        label: flameLabel, tierValue: valueText });
     });
     // Keep each row's original condition index while placing the armor grade
     // input together with the button that updates it, ahead of detailed goals.
     const gradeHtml = condRows.filter((_, i) => used[i].kind === 'grade').join('');
     const condHtml = condRows.filter((_, i) => weapon || used[i].kind !== 'grade').join('');
 
-    const gradePick = used.some(c => c.kind === 'grade') ? ''
-      : '<button type="button" class="ic-pick" data-addgrade="1"' + (full ? ' disabled' : '') + '>주스탯 급수</button>';
-    // 주스탯·올스탯·HP 같은 건 급수 하나로 다 들어가므로, 따로 걸 만한 것만 앞에 둔다
-    const pick = o => '<button type="button" class="ic-pick" data-addflame="' + o.id + '"' + (full ? ' disabled' : '') + '>' + esc(flameLabel(o)) + (o.unit || '') + '</button>';
-    const free = list.filter(o => !used.some(c => c.kind === 'opt' && c.id === o.id));
-    const primaryIds = weapon ? FLAME_PRIMARY : ['ATT', 'ALL_PCT'];
-    const primary = free.filter(o => primaryIds.includes(o.id));
-    const others = free.filter(o => !primaryIds.includes(o.id));
+    const picks = FlameGoalUI.picks({ options: list, conditions: used, limit: MAX_GOALS, weapon,
+      showAll: state.showAll.flame, label: flameLabel });
 
     const flameHtml = '<section class="fc-flame-settings" aria-label="불꽃 선택"><div class="ic-sub">무엇으로 돌리나요</div>' +
       '<div class="fc-flames">' + [['abyss', '심연 불꽃', '심환불'], ['black', '검은 불꽃', '검환불'], ['burning', '타오르는 불꽃', '타환불']].map(([k, name, icon]) => {
@@ -162,18 +146,13 @@
     $('flameBody').innerHTML =
       '<section id="armorGuide" class="fc-armor-guide" aria-label="목표 급수와 적정 추옵 안내" hidden></section>' +
       (condHtml || (!used.length ? '<p class="ic-empty">목표 옵션을 선택하세요.</p>' : '')) +
-      '<div class="ic-picks">' + (weapon ? primary.map(pick).join('') + gradePick : gradePick + primary.map(pick).join('')) + '</div>' +
-      (others.length ? '<button type="button" class="ic-more" data-more="flame">' +
-        (state.showAll.flame ? '세부 조건 접기 ▴' : '세부 조건 추가 ▾') + '</button>' +
-        '<div class="ic-picks' + (state.showAll.flame ? '' : ' hidden') + '">' + others.map(pick).join('') + '</div>' : '') +
+      picks +
       flameHtml;
     renderArmorGuide(gradeHtml);
   }
 
   // 주스탯 환산 급수: 주스탯 1 = 1, 올스탯 1% = 10, 공격력(마력) 1 = 4.
   // 어느 스탯을 주스탯으로 잡든 확률이 같아서 스탯을 따로 고를 필요가 없다.
-  // 스탯·HP·이속 같은 건 급수 하나에 다 녹아 있어서, 따로 걸 만한 것만 앞줄에 둔다
-  const FLAME_PRIMARY = ['ATT', 'ALL_PCT', 'BOSS_DMG', 'DMG'];
 
   function tierTable(list, tiers, weapon) {
     const head = tiers.map(t => '<th>' + (8 - t) + '추</th>').join('');
@@ -248,19 +227,21 @@
       $('flameResult').innerHTML = '<p class="fc-empty"><span data-result-status>현재 불꽃으로는 달성할 수 없는 목표입니다.</span><br><small>불꽃 종류를 바꾸거나 목표 단계·급수를 낮춰 주세요.</small></p>';
       return;
     }
-    const price = 3000000;
+    const price = F.MESO_RESET_PRICE;
     const pct = (p * 100).toLocaleString('ko-KR', { maximumSignificantDigits: 4 });
-    const roundedCost = fmt(price / p);
+    const expectedCost = price / p;
+    const roundedCost = fmt(expectedCost);
     const exactCost = roundedCost + ' 메소';
     const displayedCost = window.MoneyInput?.koreanAmount(roundedCost) || exactCost;
     $('flameResult').innerHTML =
       '<div class="fc-prob"><span>한 번에 성공할 확률</span><strong>' + pct + '<small>%</small></strong></div>' +
       '<dl class="fc-metrics"><div><dt>평균 사용량</dt><dd>' + (1 / p).toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + '회</dd></div>' +
       '<div><dt>평균 메소 비용</dt><dd><span id="flameExpectedCost">' + displayedCost + '</span>' +
-      (displayedCost === exactCost ? '' : '<small class="fc-exact-cost">' + exactCost + '</small>') + '</dd></div></dl>' +
+      (displayedCost === exactCost ? '' : '<small class="fc-exact-cost">' + exactCost + '</small>') +
+      '<required-hunt meso="' + expectedCost + '"></required-hunt></dd></div></dl>' +
       '<h3>누적 성공 확률별 사용량</h3><div class="fc-chances">' +
       [0.5, 0.9, 0.95, 0.99].map(q => {
-        const count = p >= 1 ? 1 : Math.ceil(Math.log1p(-q) / Math.log1p(-p));
+        const count = new UpgradeStep({ chance: p }).attemptsFor(q);
         return '<article class="fc-chance"><span>성공 확률 ' + Math.round(q * 100) + '%</span><strong>' + fmt(count) + '회</strong><small>' + fmt(count * price) + ' 메소</small></article>';
       }).join('') + '</div>';
   }
@@ -288,7 +269,7 @@
     document.querySelectorAll('[data-delcond]').forEach(el => el.setAttribute('aria-label', '목표 옵션 삭제'));
     document.querySelectorAll('[data-tier]').forEach(el => el.setAttribute('aria-pressed', el.classList.contains('active')));
     document.querySelectorAll('input[data-cond]').forEach(el => el.setAttribute('aria-label', '목표 주스탯 환산 급수'));
-    try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (_) {}
+    JsonStorage.local.write(STORE, state);
   }
   $('part').innerHTML = PARTS.map(p => '<option value="' + p + '">' + (p === '장비' ? '장비 (방어구·장신구)' : p) + '</option>').join('');
   $('weapon').innerHTML = '<option value="">무기 종류 선택</option>' + ['전사', '마법사', '궁수', '도적', '해적'].map(job => '<optgroup label="' + job + '">' + W.items.filter(w => w.job === job).map(w => '<option value="' + w.id + '">' + esc(w.special ? (w.id === 'lazuli' ? '제로 · 라즐리 (태도)' : '제로 · 라피스 (대검)') : w.type) + '</option>').join('') + '</optgroup>').join('');

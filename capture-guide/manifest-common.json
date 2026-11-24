@@ -2,11 +2,13 @@
   {
     "page": "index.html",
     "image": "capture-guide/index/connect.png",
-    "selector": "#apiKey",
-    "width": 1070,
-    "height": 611,
+    "highlights": [
+      "#apiKey > summary"
+    ],
+    "width": 644,
+    "height": 80,
     "viewport": {
-      "width": 760,
+      "width": 490,
       "height": 1000
     },
     "example": true
@@ -14,11 +16,14 @@
   {
     "page": "index.html",
     "image": "capture-guide/index/enter-key.png",
-    "selector": ".api-key-row",
-    "width": 1019,
-    "height": 68,
+    "highlights": [
+      "#apiKeyInput",
+      "#apiKeySaveBtn"
+    ],
+    "width": 653,
+    "height": 107,
     "viewport": {
-      "width": 760,
+      "width": 490,
       "height": 1000
     },
     "example": true
@@ -26,11 +31,13 @@
   {
     "page": "index.html",
     "image": "capture-guide/index/registered.png",
-    "selector": "#apiKey",
-    "width": 1070,
-    "height": 336,
+    "highlights": [
+      "#apiKeyRegistered .key-hero-title"
+    ],
+    "width": 644,
+    "height": 248,
     "viewport": {
-      "width": 760,
+      "width": 490,
       "height": 1000
     },
     "example": true
@@ -38,11 +45,13 @@
   {
     "page": "access_log.html",
     "image": "capture-guide/access_log/conditions.png",
-    "selector": "#accessForm",
-    "width": 1070,
-    "height": 555,
+    "highlights": [
+      ".access-dates"
+    ],
+    "width": 644,
+    "height": 134,
     "viewport": {
-      "width": 760,
+      "width": 490,
       "height": 1000
     },
     "example": true
@@ -50,11 +59,27 @@
   {
     "page": "access_log.html",
     "image": "capture-guide/access_log/characters.png",
-    "selector": "#accessChars",
-    "width": 1019,
-    "height": 245,
+    "highlights": [
+      "#accessCharList label:has(input[value=\"demo-main\"])"
+    ],
+    "width": 605,
+    "height": 186,
     "viewport": {
-      "width": 760,
+      "width": 490,
+      "height": 1000
+    },
+    "example": true
+  },
+  {
+    "page": "access_log.html",
+    "image": "capture-guide/access_log/lookup.png",
+    "highlights": [
+      "#accessSubmit"
+    ],
+    "width": 644,
+    "height": 95,
+    "viewport": {
+      "width": 490,
       "height": 1000
     },
     "example": true
@@ -62,11 +87,14 @@
   {
     "page": "access_log.html",
     "image": "capture-guide/access_log/result.png",
-    "selector": "#accessResult",
-    "width": 1070,
-    "height": 639,
+    "highlights": [
+      "#accessLine",
+      ".access-legend"
+    ],
+    "width": 644,
+    "height": 155,
     "viewport": {
-      "width": 760,
+      "width": 490,
       "height": 1000
     },
     "example": true
@@ -74,36 +102,166 @@
   {
     "page": "starforce_history.html",
     "image": "capture-guide/starforce_history/conditions.png",
-    "selector": ".history-page > .history-panel",
-    "width": 1205,
-    "height": 729,
+    "highlights": [
+      "#historyCharacterSummary",
+      "label:has(#historyFrom)",
+      "label:has(#historyTo)",
+      "#historyFetch"
+    ],
+    "width": 704,
+    "height": 444,
     "viewport": {
-      "width": 850,
-      "height": 1100
+      "width": 530,
+      "height": 1050
     },
     "example": true
   },
   {
     "page": "starforce_history.html",
-    "image": "capture-guide/starforce_history/result.png",
-    "selector": ".history-finance",
-    "width": 1205,
-    "height": 414,
+    "image": "capture-guide/starforce_history/item.png",
+    "highlights": [
+      "locator('#historyItems button').first()"
+    ],
+    "width": 755,
+    "height": 348,
     "viewport": {
-      "width": 850,
-      "height": 1100
+      "width": 530,
+      "height": 1050
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_history.html",
+    "image": "capture-guide/starforce_history/segment.png",
+    "highlights": [
+      ".history-session > label",
+      "#sessionSelect",
+      "#analysisSettings > summary"
+    ],
+    "width": 698,
+    "height": 396,
+    "viewport": {
+      "width": 530,
+      "height": 1050
     },
     "example": true
   },
   {
     "page": "starforce_history.html",
     "image": "capture-guide/starforce_history/analysis.png",
-    "selector": "#analysisSettings",
-    "width": 1148,
-    "height": 921,
+    "highlights": [
+      "#analysisForm button[type=\"submit\"]",
+      "label:has(#analysisConfirmed)"
+    ],
+    "width": 698,
+    "height": 303,
     "viewport": {
-      "width": 850,
-      "height": 1100
+      "width": 530,
+      "height": 1050
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_history.html",
+    "image": "capture-guide/starforce_history/result.png",
+    "highlights": [
+      "#itemComparison"
+    ],
+    "width": 698,
+    "height": 227,
+    "viewport": {
+      "width": 530,
+      "height": 1050
+    },
+    "example": true
+  },
+  {
+    "page": "shared_boss_rates.html",
+    "image": "capture-guide/shared_boss_rates/settings.png",
+    "source": "capture-guide/scouter-settings.png",
+    "highlights": [
+      [
+        130,
+        110,
+        74,
+        33
+      ],
+      [
+        42,
+        171,
+        143,
+        22
+      ]
+    ],
+    "width": 299,
+    "height": 254,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "shared_boss_rates.html",
+    "image": "capture-guide/shared_boss_rates/cards.png",
+    "source": "capture-guide/boss-cards.png",
+    "highlights": [
+      [
+        17,
+        12,
+        607,
+        276
+      ]
+    ],
+    "width": 941,
+    "height": 444,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "shared_boss_rates.html",
+    "image": "capture-guide/shared_boss_rates/character.png",
+    "highlights": [
+      "label:has(#shared-character)"
+    ],
+    "width": 335,
+    "height": 140,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "shared_boss_rates.html",
+    "image": "capture-guide/shared_boss_rates/upload.png",
+    "highlights": [
+      "#shared-drop",
+      "#shared-drop label"
+    ],
+    "width": 659,
+    "height": 158,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "shared_boss_rates.html",
+    "image": "capture-guide/shared_boss_rates/save.png",
+    "highlights": [
+      "locator('#shared-rows .shared-rate-amount').first()",
+      "#shared-save"
+    ],
+    "width": 278,
+    "height": 281,
+    "viewport": {
+      "width": 500,
+      "height": 900
     },
     "example": true
   }

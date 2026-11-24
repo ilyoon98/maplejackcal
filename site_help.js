@@ -72,11 +72,17 @@
     button.setAttribute('aria-haspopup', 'dialog');
     button.setAttribute('aria-label', (image.alt || '도움말 이미지') + ' 확대 보기');
     image.before(button);
-    button.append(image, make('span', 'ux-guide-image-label', '이미지 확대 보기'));
+    const zoom = make('span', 'ux-guide-image-icon');
+    zoom.setAttribute('aria-hidden', 'true');
+    const status = make('span', 'ux-guide-image-status');
+    status.hidden = true;
+    button.append(image, zoom, status);
     const error = () => {
       button.disabled = true;
       button.classList.add('ux-guide-image-error');
-      button.querySelector('.ux-guide-image-label').textContent = '이미지를 불러오지 못했습니다. 설명을 확인하세요.';
+      zoom.hidden = true;
+      status.hidden = false;
+      status.textContent = '이미지를 불러오지 못했습니다.';
     };
     image.addEventListener('error', error);
     if (image.complete && !image.naturalWidth) error();
@@ -84,7 +90,7 @@
       imageViewer();
       imageOpener = button;
       viewerTitle.textContent = image.alt || '도움말 이미지';
-      viewerCaption.textContent = caption || '사용 방법을 설명하는 예시 화면입니다.';
+      viewerCaption.textContent = caption;
       viewerStatus.hidden = false;
       viewerStatus.textContent = '이미지 불러오는 중…';
       viewerImage.hidden = false;
@@ -100,7 +106,6 @@
   }
 
   function figure(item) {
-    if (!item.image) return null;
     const fig = make('figure', 'ux-guide-figure');
     const image = make('img');
     image.src = item.image;
@@ -109,64 +114,102 @@
     image.decoding = 'async';
     if (item.width && item.height) { image.width = item.width; image.height = item.height; }
     fig.append(image);
-    if (item.caption) fig.append(make('figcaption', '', item.caption));
-    enableImage(image, item.caption);
+    fig.append(make('figcaption', '', item.text));
+    enableImage(image, item.text);
     return fig;
+  }
+
+  function stepList(steps, id) {
+    const list = make('ol', 'ux-guide-steps');
+    if (id) list.id = id;
+    list.setAttribute('role', 'list');
+    steps.forEach((step, index) => {
+      const row = make('li', 'ux-guide-step');
+      row.append(make('h3', 'ux-guide-step-title', (index + 1) + '단계 ' + step.title), figure(step));
+      list.append(row);
+    });
+    return list;
+  }
+
+  function renderTabs(help, guides, id) {
+    const tablist = make('div', 'ux-guide-tabs');
+    tablist.id = id || 'uxGuideTabs';
+    tablist.setAttribute('role', 'tablist');
+    tablist.setAttribute('aria-label', '도움말 항목');
+    help.append(tablist);
+    const tabs = guides.map((guide, index) => {
+      const button = make('button', 'ux-button', guide.label);
+      const panel = make('div');
+      button.type = 'button';
+      button.id = 'uxHelpTab-' + (index + 1);
+      button.setAttribute('role', 'tab');
+      panel.id = button.id + '-panel';
+      panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', button.id);
+      panel.tabIndex = 0;
+      button.setAttribute('aria-controls', panel.id);
+      panel.append(stepList(guide.steps));
+      tablist.append(button);
+      help.append(panel);
+      return { button, panel };
+    });
+
+    function select(index) {
+      tabs.forEach(({ button, panel }, current) => {
+        const active = current === index;
+        button.setAttribute('aria-selected', String(active));
+        button.tabIndex = active ? 0 : -1;
+        panel.hidden = !active;
+      });
+    }
+
+    tabs.forEach(({ button }, index) => {
+      button.addEventListener('click', () => select(index));
+      button.addEventListener('keydown', event => {
+        let next;
+        switch (event.key) {
+          case 'ArrowRight': next = (index + 1) % tabs.length; break;
+          case 'ArrowLeft': next = (index - 1 + tabs.length) % tabs.length; break;
+          case 'Home': next = 0; break;
+          case 'End': next = tabs.length - 1; break;
+          default: return;
+        }
+        event.preventDefault();
+        select(next);
+        tabs[next].button.focus();
+      });
+    });
+    select(0);
   }
 
   window.SiteHelp = {
     has(page) { return !!window.SiteHelpData?.[page]; },
     render(help, head, page) {
       const data = window.SiteHelpData?.[page];
-      if (data) {
-        const oldSections = Array.from(help.children).filter(node => node !== head);
-        const intro = make('section', 'ux-guide-intro');
-        intro.append(make('h3', '', data.title), make('p', '', data.intro));
-        intro.append(make('p', 'ux-guide-example-note', '캡처는 사용 방법을 설명하는 예시입니다. 이미지를 누르면 크게 볼 수 있습니다.'));
-        const steps = make('section', 'ux-help-section ux-guide-section');
-        steps.id = 'uxGuideSteps';
-        steps.append(make('h3', '', '따라 해 보기'));
-        const list = make('ol', 'ux-guide-steps');
-        list.setAttribute('role', 'list');
-        data.steps.forEach((step, index) => {
-          const row = make('li', 'ux-guide-step');
-          const heading = make('h4');
-          const number = make('span', 'ux-guide-step-number', String(index + 1));
-          number.setAttribute('aria-hidden', 'true');
-          heading.append(number, document.createTextNode(step.title));
-          row.append(heading, make('p', '', step.text));
-          const picture = figure(step);
-          if (picture) row.append(picture);
-          list.append(row);
-        });
-        steps.append(list);
-        const result = make('section', 'ux-help-section ux-guide-result');
-        result.id = 'uxGuideResult';
-        result.append(make('h3', '', data.result.title || '결과 읽는 법'), make('p', '', data.result.text));
-        const resultPicture = figure(data.result);
-        if (resultPicture) result.append(resultPicture);
-        const details = make('details', 'ux-guide-details');
-        details.append(make('summary', '', '계산 기준과 알아둘 점'));
-        if (data.notes?.length) {
-          const notes = make('ul');
-          data.notes.forEach(note => notes.append(make('li', '', note)));
-          details.append(notes);
-        }
-        details.append(...oldSections);
-        help.append(intro, steps, result, details);
-        if (data.links?.length) {
-          const related = make('section', 'ux-help-section ux-guide-related');
-          related.append(make('h3', '', '함께 보는 도움말'));
-          data.links.forEach(link => {
-            const anchor = make('a', '', link.label);
-            anchor.href = link.href;
-            related.append(anchor);
-          });
-          help.append(related);
-        }
+      if (!data) return;
+      const oldSections = Array.from(help.children).filter(node => node !== head);
+      if (data.tabs) renderTabs(help, data.tabs, data.sectionId);
+      else help.append(stepList(data.steps, data.sectionId || 'uxGuideSteps'));
+      const details = make('details', 'ux-guide-details');
+      details.append(make('summary', '', '계산 기준과 알아둘 점'));
+      if (data.notes?.length) {
+        const notes = make('ul');
+        data.notes.forEach(note => notes.append(make('li', '', note)));
+        details.append(notes);
       }
-      // The original shared-rates walkthrough also gets accessible image enlargement.
-      help.querySelectorAll('.shared-capture-steps img').forEach(image => enableImage(image));
+      details.append(...oldSections);
+      if (data.links?.length) {
+        const related = make('ul', 'ux-guide-related');
+        data.links.forEach(link => {
+          const anchor = make('a', '', link.label);
+          anchor.href = link.href;
+          const item = make('li');
+          item.append(anchor);
+          related.append(item);
+        });
+        details.append(related);
+      }
+      if (details.children.length > 1) help.append(details);
     }
   };
 })();

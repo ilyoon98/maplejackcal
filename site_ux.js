@@ -79,7 +79,8 @@
     }
     const header = q('header');
     const help = make('dialog', 'ux-help'); help.id = 'uxHelp'; help.setAttribute('aria-labelledby', 'uxHelpTitle');
-    const head = make('div', 'ux-help-head'); const title = make('h2', '', '사용법 · 계산 기준'); title.id = 'uxHelpTitle'; title.textContent = '사용법 · 계산 기준';
+    const illustrated = window.SiteHelp?.has(page);
+    const head = make('div', 'ux-help-head'); const title = make('h2', '', illustrated ? '사용법' : '사용법 · 계산 기준'); title.id = 'uxHelpTitle';
     const close = make('button', 'ux-button', '닫기 ✕'); close.type = 'button'; close.setAttribute('aria-label', '도움말 닫기');
     head.append(title, close); help.append(head);
     qa('[data-ux-help]').forEach(n => {
@@ -97,9 +98,8 @@
       'authentic_symbol_calc.html': '캐릭터를 조회하거나 현재 심볼 레벨을 직접 설정하세요. 목표 포스까지 최소 메소가 드는 강화 순서를 보여줍니다. 심볼 보유 수량과 획득 기간을 고려한 경로는 아닙니다.',
       'boss_income_calc.html': 'API 없이 캐릭터를 직접 추가하고 보스·난이도·완료 상태를 선택할 수 있습니다. API를 연결하면 스케줄러에서 보스와 완료 상태를 가져옵니다. 파티 인원은 직접 확인하세요. 주간 완료 수익은 완료한 주간 보스만 합산하며, 검은 마법사 등 월간 보스는 제외합니다. 결정석 판매 여부를 확인한 금액은 아닙니다. 월간 예상은 주간 수익 4회와 월간 보스 수익의 합입니다.',
       'party_boss_scheduler.html': '로컬 탭의 파티는 이 브라우저에 저장됩니다. 공유 탭에서 저장한 파티는 누구나 볼 수 있고 만든 브라우저에서 수정할 수 있습니다. 파티 목록은 보스, 계정, 캐릭터로 필터링할 수 있습니다. 보스로 찾으면 모든 난이도가 표시됩니다.',
-      'shared_boss_rates.html': '캐릭터를 고른 뒤 환산 배율을 불러오거나 캡처에서 읽어 오세요. 값을 확인하고 공용 배율 저장을 누르면 파티 스케줄러에서 사용할 수 있습니다.',
       'flame_calc.html': '장비 레벨과 종류를 선택한 뒤 목표 옵션을 추가하세요. 옵션과 불꽃 종류를 바꾸면 기대값이 갱신됩니다. 장비별 수치는 본문의 1추부터 5추까지에서 볼 수 있습니다.',
-      'cube_calc.html': '현재 등급과 목표 등급을 선택하세요. 천장은 등급업 기준이며 옵션 획득을 보장하지 않습니다. 내 기록 비교에 실제 사용 횟수를 입력할 수 있습니다.',
+      'cube_calc.html': '현재 등급과 목표 등급을 선택하고 원하는 옵션을 추가하세요. 전체 기대 메소와 성공 확률별 예산을 확인할 수 있습니다.',
       'cube_play.html': '한 단계 등급업하면 자동 진행이 멈춥니다. 같은 구간을 다시 도전하거나 다음 등급으로 진행할 수 있어요. 완료한 판의 평균과 누적 기록은 서로 다른 비교 기준입니다.',
       'starforce_play.html': '장비와 시작·목표 별을 고른 뒤 가상 강화를 시작하세요. 목표에 도달한 판의 사용 메소를 기대값과 비교할 수 있습니다.',
       'pet_gacha.html': '원더블랙 2개 또는 원더블랙과 루나 스윗을 합성합니다. 자동 뽑기는 블랙＋스윗을 우선 사용합니다. 보관함의 확률은 원더베리·합성 등 해당 단계 기준이며 서로 더하지 않습니다.',
@@ -108,7 +108,7 @@
       'herb_idle.html': '약초 캐기·오일 만들기·연금술 버튼을 누르면 캐릭터가 그 자리로 가서 알아서 진행합니다. 가공 재료가 떨어지면 약초 캐기로 돌아옵니다. 시세는 3초마다 바뀌니 평소보다 오를 때 파세요. 창을 닫아도 최대 8시간까지 이어서 캡니다.',
       'coin_shop_calc.html': '현재까지 사용 가능은 선택 주차까지의 누적 획득 계획에서 구매 기록을 뺀 값입니다. 이번 주 잔액은 장바구니까지 반영합니다. 종료 예상 잔액에는 앞으로 받을 코인이 포함됩니다. 전부 구매 처리는 이 계산기의 기록만 갱신합니다.'
     };
-    if (!window.SiteHelp?.has(page) && (guides[page] || !help.querySelector('.ux-help-section'))) {
+    if (!illustrated && (guides[page] || !help.querySelector('.ux-help-section'))) {
       const section = make('section', 'ux-help-section');
       section.append(make('h3', '', '사용 방법'), make('p', '', guides[page] || '조건을 설정하면 결과가 바로 갱신됩니다.'));
       head.after(section);
@@ -173,7 +173,7 @@
       });
       const toolbar = make('div', 'ux-home-toolbar'); toolbar.append(filters, count); grid.before(toolbar);
       const sections = qa('.tool-section'); if (api) sections[sections.length - 1].after(api); openKey();
-      qa('.tool-card p').forEach(p => { const href = p.closest('a').getAttribute('href'); const copy = {'trade_margin_calc.html':'본전 판매가와 수수료 제외 순이익','meso_market_calc.html':'바로 거래 vs 직접 등록 실수령 비교','item_craft_calc.html':'노작부터 완성까지 평균 제작 비용','cube_calc.html':'현재 등급에서 목표 등급까지 비용'}; if (copy[href]) p.textContent = copy[href]; });
+      qa('.tool-card p').forEach(p => { const href = p.closest('a').getAttribute('href'); const copy = {'trade_margin_calc.html':'본전 판매가와 수수료 제외 순이익','meso_market_calc.html':'바로 거래 vs 직접 등록 실수령 비교','item_craft_calc.html':'노작부터 완성까지 평균 제작 비용'}; if (copy[href]) p.textContent = copy[href]; });
     }
     if (page === 'item_craft_calc.html') {
       const totals = q('.ic-totals'); totals.prepend(q('.ic-total.avg')); q('#resRatio').hidden = true;
@@ -212,12 +212,6 @@
       expected.classList.add('ux-expected-card');
       expected.insertBefore(make('p','ux-hint','처음부터 완성까지 · 현재 선택한 조건 기준'),q('#summary'));
       const p = q('.note', current); p.textContent = '슬롯을 눌러 성공·실패를 표시하세요. 비어 있는 슬롯은 아직 시도하지 않은 상태입니다.';
-    }
-    if (page === 'cube_option_calc.html') { const cost = q('#resMeso').closest('.primary-metric'); q('.primary-metrics').prepend(cost); q('.primary-metrics').closest('.cube-panel').id='expectedResultCard'; }
-    if (page === 'cube_calc.html' || page === 'cube_option_calc.html') {
-      const host = q('#priceBox') || q('#costInfo'); const note = make('p','ux-scope'); host.after(note);
-      const update = () => { const selected = q('#cubeChoices .active'); setText(note, selected && selected.textContent.includes('재설정') ? '메소 재설정 비용 기준' : '큐브 자체 구입비 제외 · 큐브 사용 수수료만 메소에 반영'); };
-      new MutationObserver(update).observe(q('#cubeChoices'),{childList:true,subtree:true,attributes:true,attributeFilter:['class']}); update();
     }
     if (page === 'trade_margin_calc.html' || page === 'meso_market_calc.html') {
       const verdict = q('#verdictBox'); const result = verdict.parentElement; result.insertBefore(verdict, q('#breakEvenBox') || q('#netBox'));
@@ -271,8 +265,8 @@
     // Mobile result shortcut reads the existing rendered output, never recomputes it.
     const docks = {
       'item_craft_calc.html':['.ic-result','#resAvg','평균 제작 비용'],
-      'cube_option_calc.html':['.cube-layout > aside','#resMeso','평균 비용'],
-      'cube_calc.html':['.cube-layout > aside','#expectedCost','평균 비용'],
+      'cube_calc.html':['#potential-result','#potential-cost','전체 기대 메소'],
+      'soul_calc.html':['#potential-result','#potential-cost','전체 기대 메소'],
       'starforce_calc.html':['#expectedResultCard','.sf-result-value','기대 메소'],
       'flame_calc.html':['.fc-result','#flameExpectedCost','평균 메소 비용','#flameResult [data-result-status]'],
       'hunting_calc.html':['#hunt-result','#results:not([hidden]) #fragments','솔 에르다 조각(개)','#inputError:not([hidden]) [data-result-status]'],
@@ -283,22 +277,29 @@
       'meso_market_calc.html':['.mm-result','#evenValue','손익분기 시세'],
       'wealth_elixir_calc.html':['.mm-result','#recoTitle','추천'],
       'cube_play.html':['.cube-layout > aside','#simLabel','가상 큐브'],
+      'soul_play.html':['.soul-result','#sim-state','현재 소울 상태'],
       'starforce_play.html':['.sf-layout > aside','#stageStar','현재 성'],
       'boutique_gacha.html':['.bt-right','#spent','가상 지출'],
       'pet_gacha.html':['.pet-right','#spent','가상 지출']
     };
     const config = docks[page];
     if (config && q(config[0])) {
-      const [target, source, label, status] = config; const bar = make('div','ux-result-dock'); const go = make('button','ux-dock-main'); go.type='button';
+      const [target, source, label, status, observationRoot] = config; const bar = make('div','ux-result-dock'); const go = make('button','ux-dock-main'); go.type='button';
       const caption = make('span','ux-dock-caption',label); const val = make('strong'); const action = make('span','ux-dock-action','결과 보기'); go.append(caption,val,action); bar.append(go); document.body.append(bar); document.body.classList.add('ux-has-dock');
       const dest=q(target); if(!dest.id) dest.id='ux-result'; go.setAttribute('aria-controls',dest.id);
       if (page === 'starforce_calc.html' && 'IntersectionObserver' in window) {
         bar.hidden = true;
         new IntersectionObserver(([entry]) => { bar.hidden = entry.isIntersecting; }).observe(dest);
       }
-      go.addEventListener('click',()=>{ dest.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'}); dest.setAttribute('tabindex','-1'); dest.focus({preventScroll:true}); });
+      const currentDestination = () => {
+        const activeTarget = observationRoot ? q(target) || dest : dest;
+        if (go.getAttribute('aria-controls') !== activeTarget.id) go.setAttribute('aria-controls', activeTarget.id);
+        return activeTarget;
+      };
+      go.addEventListener('click',()=>{ const activeTarget = currentDestination(); activeTarget.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'}); activeTarget.setAttribute('tabindex','-1'); activeTarget.focus({preventScroll:true}); });
       const update=()=> { let value=text(source); if(page==='boss_buff_planner.html') value='전체 동선 / 버프 한 번'; if(page==='starforce_play.html') value+='★'; if(page!=='wealth_elixir_calc.html' && q('#verdictBox') && !q('#verdictBox').classList.contains('hidden')) {value=text('#verdictValue');setText(caption,page==='trade_margin_calc.html'?'총 순이익':'실수령 차이');} else setText(caption,label); setText(val,value||(status && text(status))||'조건을 입력하세요'); };
-      new MutationObserver(update).observe(dest,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','hidden']}); update();
+      const refresh = () => { if (observationRoot) currentDestination(); update(); };
+      new MutationObserver(refresh).observe(observationRoot ? q(observationRoot) : dest,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','hidden']}); refresh();
     }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

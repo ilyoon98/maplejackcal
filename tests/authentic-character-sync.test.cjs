@@ -32,6 +32,7 @@ function loadCalculator({accountResponse, symbolResponse} = {}) {
     {ocid:'new', character_name:'새캐릭터', world_name:'베라', character_level:280},
   ]}]};
   const env = {
+    URLSearchParams,
     document:{getElementById:get, querySelector:selector => get(selector.slice(1)), createElement:node},
     Event:class {constructor(type){this.type = type;}}, addEventListener:() => {},
     NexonKey:{has:() => true, get:() => 'test-key'},
@@ -49,7 +50,7 @@ function loadCalculator({accountResponse, symbolResponse} = {}) {
   };
   env.window = env;
   vm.createContext(env);
-  vm.runInContext(fs.readFileSync('nexon_characters.js', 'utf8'), env);
+  for (const file of ['json_storage.js', 'nexon_api.js', 'nexon_characters.js']) vm.runInContext(fs.readFileSync(file, 'utf8'), env);
   const html = fs.readFileSync('authentic_symbol_calc.html', 'utf8');
   const source = html.slice(html.indexOf('  // ---------- Character import'), html.indexOf('  renderLevelGrid();', html.indexOf('  // ---------- Character import')));
   vm.runInContext(source + '\nglobalThis.testApi = {picker:characterPicker, select:selectRecentCharacter, fetch:doFetch};', env);

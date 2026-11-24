@@ -17,7 +17,6 @@
 <link rel="stylesheet" href="boss_difficulty.css" />
 <style>
   :root{ --surface-2:#1d212b; }
-  body{ padding-bottom:96px; }
 
   .hero-force{
     display:flex;
@@ -688,8 +687,8 @@
 
   /* summary bar */
   .summary-bar{
-    position:fixed;
-    left:0; right:0; bottom:0;
+    position:sticky;
+    bottom:0;
     background:var(--card);
     border-top:1px solid var(--border);
     padding:14px 20px;
@@ -699,11 +698,10 @@
   .summary-inner{
     width:100%;
     max-width:1280px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    align-items:start;
     gap:16px;
-    flex-wrap:wrap;
   }
   .summary-stat{ display:flex; flex-direction:column; gap:2px; }
   .summary-stat .k{
@@ -716,6 +714,11 @@
     color:var(--text);
   }
   .summary-stat.meso .v, .summary-stat.force .v{ color:var(--accent-strong); }
+  .summary-stat .v{ overflow-wrap:anywhere; }
+  @media (max-width:600px){
+    .summary-bar{ padding:10px 16px; }
+    .summary-inner{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 12px; }
+  }
 </style>
 <link rel="stylesheet" href="site_ux.css">
 <script src="site_header.js" defer></script>
@@ -723,6 +726,8 @@
 <script src="site_help_data.js" defer></script>
 <script src="site_help.js" defer></script>
 <script src="site_ux.js" defer></script>
+<script src="hunting_calc.js" defer></script>
+<script src="required_hunt.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -879,11 +884,13 @@
       <span class="k">합산 메소</span>
       <span class="v" id="sumMeso">0</span>
     </div>
+    <required-hunt id="symbol-hunt" layout="stacked" meso="0"></required-hunt>
   </div>
 </div>
 
 <script src="nexon_key.js"></script>
-<script src="nexon_characters.js"></script>
+<script src="json_storage.js"></script>
+<script src="nexon_api.js"></script><script src="nexon_characters.js"></script>
 <script>
 (function(){
   var SYMBOLS = [
@@ -955,16 +962,14 @@
   var LS_LEVELS = 'authentic_last_levels';
   function loadSavedLevels(){
     try {
-      var raw = lsGet(LS_LEVELS);
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
+      var parsed = JsonStorage.local.read(LS_LEVELS);
       if (!parsed || !Array.isArray(parsed.levels) || !Array.isArray(parsed.unlocked)) return null;
       if (parsed.levels.length !== SYMBOLS.length || parsed.unlocked.length !== SYMBOLS.length) return null;
       return parsed;
     } catch(e){ return null; }
   }
   function saveLevelsState(){
-    lsSet(LS_LEVELS, JSON.stringify({ levels: curLevels, unlocked: unlocked }));
+    JsonStorage.local.write(LS_LEVELS, { levels: curLevels, unlocked: unlocked });
   }
 
   // 새로고침해도 마지막으로 불러온(또는 직접 입력한) 심볼 레벨이 그대로 남아있도록
@@ -1369,16 +1374,16 @@
       button.type = 'button';
       button.dataset.diff = String(j);
       var difficulty = d.label.match(/^(EASY|NORMAL|HARD|CHAOS|EXTREME)\b/);
+      button.className = 'diff-option ' + (difficulty ? difficulty[1].toLowerCase() : 'all');
       button.dataset.level = difficulty ? difficulty[1] : 'ALL';
       button.setAttribute('aria-pressed', 'false');
-      button.className = 'diff-option ' + (difficulty ? difficulty[1].toLowerCase() : 'all');
       var label = d.label.replace(/EASY|NORMAL|HARD|CHAOS|EXTREME/g, function(name){ return difficultyNames[name]; });
       button.setAttribute('aria-label', label + ', 목표 포스 ' + d.target);
       button.title = label + ' · 요구 포스 ' + d.req + ' · 최대효율 목표 ' + d.target;
       var name = document.createElement('span');
+      name.className = 'diff-option-name';
       name.textContent = difficulty ? difficultyNames[difficulty[1]] : label;
       var force = document.createElement('span');
-      name.className = 'diff-option-name';
       force.className = 'diff-option-sub';
       force.textContent = d.target + ' F';
       button.appendChild(name);
@@ -1549,13 +1554,13 @@
     document.getElementById('sumForce').textContent = '+'+force;
     document.getElementById('sumCount').textContent = count+'회';
     document.getElementById('sumMeso').textContent = won(meso);
+    document.getElementById('symbol-hunt').setAttribute('meso', meso);
   }
 
   // ---------- Character import (Nexon Open API) ----------
   // 캐릭터 이름 → ocid → 장착 심볼 정보(symbol-equipment)를 받아서 현재 심볼 레벨에 그대로 채운다.
   // API 키는 홈 화면(index.html)에서 등록하고, nexon_key.js를 통해 이 브라우저의
   // localStorage에서 그대로 읽어온다(계산기별로 다시 입력할 필요 없음).
-  var API_BASE = 'https://open.api.nexon.com/maplestory/v1';
   var LS_LAST_CHAR = 'authentic_last_char';
   var LS_RECENT_CHARS = 'authentic_recent_chars';
   var LS_CHARACTER_PROFILE = 'authentic_character_profile';
@@ -1624,11 +1629,11 @@
   function saveCharacterProfile(raw){
     var profile = normalizeCharacterProfile(raw);
     if (!profile) return;
-    lsSet(LS_CHARACTER_PROFILE, JSON.stringify(profile));
+    JsonStorage.local.write(LS_CHARACTER_PROFILE, profile);
     renderCharacterProfile(profile);
   }
   function restoreCharacterProfile(){
-    try { renderCharacterProfile(JSON.parse(lsGet(LS_CHARACTER_PROFILE) || 'null')); }
+    try { renderCharacterProfile(JsonStorage.local.read(LS_CHARACTER_PROFILE)); }
     catch(e){ renderCharacterProfile(null); }
   }
 
@@ -1650,13 +1655,13 @@
   // 최근 검색 캐릭터 목록: 기존 칩은 위치를 유지하고 신규 검색만 오른쪽에 붙인다.
   function loadRecent(){
     try {
-      var arr = JSON.parse(localStorage.getItem(LS_RECENT_CHARS) || '[]');
+      var arr = JsonStorage.local.read(LS_RECENT_CHARS);
       if (!Array.isArray(arr)) return [];
       return arr.filter(function(n){ return typeof n === 'string' && n.trim(); }).slice(0, RECENT_MAX);
     } catch(e){ return []; }
   }
   function saveRecent(list){
-    try { localStorage.setItem(LS_RECENT_CHARS, JSON.stringify(list)); } catch(e){}
+    JsonStorage.local.write(LS_RECENT_CHARS, list);
   }
   function addRecent(name){
     var list = loadRecent();
@@ -1731,24 +1736,8 @@
     OPENAPI00011: 'API 점검 중입니다.'
   };
 
-  function apiGet(path, params){
-    var qs = Object.keys(params).map(function(k){
-      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-    }).join('&');
-    return fetch(API_BASE + path + '?' + qs, {
-      headers: { 'x-nxopen-api-key': NexonKey.get() }
-    }).then(function(res){
-      return res.json().catch(function(){ return null; }).then(function(body){
-        if (!res.ok){
-          var err = (body && body.error) ? body.error : {};
-          var e = new Error(err.message || ('HTTP ' + res.status));
-          e.code = err.name || '';
-          e.status = res.status;
-          throw e;
-        }
-        return body;
-      });
-    });
+  function apiGet(path, params) {
+    return NexonApi.browser.get(path, params);
   }
 
   function describeError(e, stage){

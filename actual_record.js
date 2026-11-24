@@ -1,32 +1,91 @@
 /* Compare actual usage with the exact expectation published by each calculator. */
 (function () {
   'use strict';
+  function compareAverage(expected, actual, isEqual = difference => Math.round(difference) === 0) {
+    const difference = Number(actual) - expected;
+    if (!Number.isFinite(expected) || !Number.isFinite(difference)) return null;
+    return { difference, trend: isEqual(difference) ? 'same' : difference < 0 ? 'under' : 'over' };
+  }
+
   function compareUsage(expected, actual) {
     if (!Number.isFinite(expected) || expected < 0 || !Number.isSafeInteger(actual) || actual < 0) return null;
     const baseline = Math.round(expected);
     if (!Number.isSafeInteger(baseline)) return null;
-    const difference = actual - baseline;
+    const { difference } = compareAverage(baseline, actual);
     return { baseline, difference, percent: baseline > 0 ? Math.abs(difference) / baseline * 100 : null };
   }
-  if (typeof module !== 'undefined' && module.exports) { module.exports = { compareUsage }; return; }
+
+  // Both simulator cards use the same verdict text and state classes.
+  function spendingVerdict(expected, actual, formatMeso) {
+    const comparison = compareAverage(expected, actual);
+    if (!comparison) return '';
+    if (comparison.trend === 'same') return '<b>기대와 같음</b>';
+    const amount = formatMeso(Math.abs(comparison.difference));
+    return comparison.trend === 'under' ? '<b class="good">' + amount + ' 메소 덜 씀</b>' :
+      '<b class="bad">' + amount + ' 메소 더 씀</b>';
+  }
+
+  function metric(doc, { label, actual, expected, format, placement = '' }) {
+    const row = doc.createElement('div');
+    const term = doc.createElement('dt');
+    const body = doc.createElement('dd');
+    const value = doc.createElement('strong');
+    term.textContent = label;
+    value.textContent = format(actual);
+    body.append(value);
+    const comparison = compareAverage(expected, actual, difference => format(Math.abs(difference)) === format(0));
+    if (comparison) {
+      const change = doc.createElement('small');
+      const { difference, trend } = comparison;
+      change.className = 'actual-metric-change';
+      change.dataset.trend = trend;
+      change.textContent = trend === 'same' ? '평균과 비슷해요' :
+        '평균보다 ' + format(Math.abs(difference)) + (trend === 'under' ? ' 적음' : ' 많음');
+      body.append(change);
+    }
+    if (placement) {
+      const rank = doc.createElement('span');
+      rank.className = 'actual-metric-percentile';
+      rank.textContent = placement;
+      body.append(rank);
+    }
+    row.append(term, body);
+    return row;
+  }
+
+  function sampledPercentile(sorted, actual) {
+    if (!sorted?.length) return null;
+    let low = 0, high = sorted.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (sorted[middle] <= actual) low = middle + 1;
+      else high = middle;
+    }
+    return { percent: low / sorted.length * 100, samples: sorted.length };
+  }
+
+  const api = { compareUsage, compareAverage, spendingVerdict, metric, sampledPercentile };
+  if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
+  window.ActualRecord = api;
 
   function init() {
     const configs = {
       'starforce_calc.html': ['#resMeso', '#expectedResultCard', '실제로 쓴 메소', '메소', '현재 시작 성 → 목표 성까지의 지출입니다. 파괴 후 복구 메소·장비 재구입비는 포함하고, 처음 장비를 산 비용은 제외하세요.'],
-      'cube_option_calc.html': ['#resMeso', '#expectedResultCard', '실제로 쓴 메소', '메소', '목표 옵션을 얻을 때까지 쓴 비용입니다. 메소 재설정은 사용 메소, 큐브는 구입비를 제외한 사용 수수료만 입력하세요.'],
+      'cube_calc.html': ['#resMeso', '#cube-option-record', '사용 횟수', '메소', '목표 등급에서 옵션을 얻을 때까지 쓴 횟수나 비용입니다. 큐브를 사용했다면 사용 수수료를 입력하세요.'],
       'item_craft_calc.html': ['#resAvg', '#resRatio', '실제 총 제작비', '메소', '노작 구입비와 선택한 제작 단계의 지출을 합산하세요. 기대값에 포함되지 않은 비용은 제외하세요.'],
       'trace_calc.html': ['#summary', '#expectedResultCard', '실제로 쓴 주흔', '개', '처음부터 완성까지 사용한 주흔 개수입니다. 순백·이노센트를 주흔으로 마련했다면 해당 소모량도 포함하세요. 현재 조달 설정과 같은 범위로 비교합니다.']
     };
     const page = location.pathname.split('/').pop();
     const config = configs[page];
     if (!config) return;
-    const compact = ['cube_option_calc.html', 'starforce_calc.html', 'item_craft_calc.html'].includes(page);
+    const cube = page === 'cube_calc.html';
+    const compact = cube || ['starforce_calc.html', 'item_craft_calc.html'].includes(page);
     const [sourceSelector, anchorSelector, label, unit, hint] = config;
     const source = document.querySelector(sourceSelector), anchor = document.querySelector(anchorSelector);
     if (!source || !anchor) return;
     const panel = document.createElement('section'); panel.className = 'actual-record';
     panel.setAttribute('aria-labelledby', 'actualRecordTitle');
-    panel.innerHTML = '<h3 id="actualRecordTitle">내 기록 비교</h3>' +
+    panel.innerHTML = '<h3 id="actualRecordTitle">' + (cube ? '내 옵션 재설정 기록' : '내 기록 비교') + '</h3>' +
       '<p class="actual-baseline" id="actualBaseline"></p>' +
       '<label for="actualUsage">' + label + '</label>' +
       '<div class="actual-input-row"><input id="actualUsage" type="text" inputmode="numeric" autocomplete="off" placeholder="사용량 입력" aria-describedby="actualHint"><span>' + unit + '</span></div>' +
@@ -35,6 +94,7 @@
       '<p id="actualPercentile" class="actual-verdict" role="status" aria-live="polite"></p>' +
       '<p id="actualHint" class="actual-hint"></p>';
     if (page === 'starforce_calc.html') document.querySelector('.sf-result-details').prepend(panel);
+    else if (cube) anchor.append(panel);
     else anchor.after(panel);
     if (anchor.id === 'expectedResultCard') {
       panel.classList.add('actual-record-standalone');
@@ -43,23 +103,24 @@
     }
     const input = panel.querySelector('input');
     let countInput = null;
-    let inputMode = 'meso';
-    if (page === 'cube_option_calc.html') {
+    let inputMode = cube ? 'count' : 'meso';
+    if (cube) {
       const modes = document.createElement('div');
       modes.className = 'actual-input-modes';
       modes.setAttribute('role', 'group');
       modes.setAttribute('aria-label', '기록 입력 방식');
-      modes.innerHTML = '<button type="button" data-mode="meso" aria-pressed="true">메소</button><button type="button" data-mode="count" aria-pressed="false">횟수</button>';
+      modes.innerHTML = '<button type="button" data-mode="count" aria-pressed="true">횟수</button><button type="button" data-mode="meso" aria-pressed="false">메소</button>';
       const moneyWrap = document.createElement('div');
       const moneyRow = input.closest('.actual-input-row');
       moneyRow.before(modes, moneyWrap);
       moneyWrap.append(moneyRow);
+      moneyWrap.hidden = true;
       const countRow = document.createElement('div');
       countRow.className = 'actual-input-row';
-      countRow.hidden = true;
       countRow.innerHTML = '<input id="actualCount" type="text" inputmode="numeric" autocomplete="off" placeholder="시도 횟수 입력" aria-describedby="actualHint"><span>회</span>';
       moneyWrap.after(countRow);
       countInput = countRow.querySelector('input');
+      panel.querySelector('label').htmlFor = countInput.id;
       modes.addEventListener('click', event => {
         const button = event.target.closest('button');
         if (!button) return;
@@ -80,7 +141,7 @@
     hintNode.textContent = hint;
     if (compact) {
       panel.classList.add('actual-record-compact');
-      panel.querySelector('label').textContent = '사용 메소';
+      if (!cube) panel.querySelector('label').textContent = '사용 메소';
       baseline.remove();
       attempts.remove();
       rank.after(verdict);

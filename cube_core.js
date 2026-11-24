@@ -1,4 +1,4 @@
-// 큐브 공통 엔진. 큐브 옵션 확률 계산기(cube_option_calc.js)와 잠재능력 큐브 연구소(cube_calc.js),
+// 큐브 공통 엔진. 큐브 잠재능력 계산기(cube_calc.js)와 큐브 시뮬레이터(cube_play.js),
 // 아이템 제작 비용 계산기(item_craft_calc.js)가 같이 쓴다.
 //
 // 여기에는 DOM을 건드리지 않는 것만 둔다: 재설정 비용표, 옵션 이름 파싱, 한 줄씩 펼쳐서
@@ -37,12 +37,54 @@ const CUBE_GRADE = {
   addWhite:{ p:[.047619,.019608,.007], cap:[31,76,214] },
   addSuspicious:{ p:[.004], cap:[null] }
 };
+const CUBE_METHODS = {
+  potentialMeso: { name:'잠재능력 재설정 (메소)', icons:['잠재.webp'], tab:'potential', data:'black', official:'potential' },
+  black: { name:'블랙 큐브', icons:['블랙.webp'], tab:'potential', data:'black' },
+  red: { name:'레드 큐브', icons:['레드.webp'], tab:'potential', data:'red' },
+  meisterMax: { name:'명장의 큐브 / 골드 큐브', icons:['명장.webp','골드.webp'], tab:'potential', data:'artisan' },
+  meister: { name:'장인의 큐브 / 실버 큐브', icons:['장인.webp','실버.webp'], tab:'potential' },
+  suspicious: { name:'수상한 큐브', icons:['수상한.webp'], tab:'potential' },
+  addReset: { name:'에디셔널 잠재능력 재설정 (메소)', icons:['에디잠재.webp'], tab:'additional', data:'addi', official:'additional' },
+  addWhite: { name:'에디셔널 큐브 / 화이트 에디셔널 큐브', icons:['에디큐브.webp','화이트에디.webp'], tab:'additional', data:'addi' },
+  addSuspicious: { name:'수상한 에디셔널 큐브 / 브론즈 에디셔널 큐브', icons:['수상한에디.webp','브론즈.webp'], tab:'additional' }
+};
+for (const [key, method] of Object.entries(CUBE_METHODS)) Object.assign(method, CUBE_GRADE[key]);
+
+// 미라클 타임은 등급업 확률만 두 배로 올리고 천장과 옵션 확률은 그대로 둔다.
+function cubeGradeChance(p, miracle){ return miracle ? Math.min(p * 2, .999) : p; }
 // 천장이 있으면 그 횟수째에 반드시 성공하므로 기대 횟수가 1/p보다 짧아진다
-function cubeExpected(p, cap){ return cap ? (1 - Math.pow(1 - p, cap)) / p : 1 / p; }
+function cubeExpected(p, cap){ return new UpgradeStep({ chance: p, cap }).expectedAttempts(); }
 // k번 안에 성공할 확률. 천장에 닿으면 100%
-function successCdf(k, p, cap){
-  if(cap && k >= cap) return 1;
-  return 1 - Math.pow(1 - p, k);
+function successCdf(k, p, cap){ return new UpgradeStep({ chance: p, cap }).withinAttempts(k); }
+
+function cubeMethodPrice(key, level, rank){
+  const official = CUBE_METHODS[key].official;
+  return official ? PRICE_TABLES[official][costBracket(level)][rank] : cubeFee(level);
+}
+
+function cubeGradeStep(key, level, rank, miracle){
+  const { p, cap } = CUBE_METHODS[key];
+  if (!p[rank]) return undefined;
+  return { chance: cubeGradeChance(p[rank], miracle), cap: cap[rank], cost: cubeMethodPrice(key, level, rank) };
+}
+
+// 각 구간의 시도 횟수 분포를 합성한다. 상한이 없는 구간도 입력한 예산까지만 계산한다.
+function cubeProgressWithin(steps, budget) {
+  if (budget < steps.length) return 0;
+  if (steps.every(step => step.cap) && budget >= steps.reduce((sum, step) => sum + step.cap, 0)) return 1;
+  let previous = new Float64Array(budget + 1).fill(1);
+  for (const { p, cap } of steps) {
+    const result = new Float64Array(budget + 1);
+    const failure = 1 - p;
+    const tail = cap ? Math.pow(failure, cap) : 0;
+    for (let n = 1; n <= budget; n++) {
+      result[n] = failure * result[n - 1] + p * previous[n - 1];
+      // 보장 시도 뒤로 갈 자연 성공 확률을 보장 시도에 합친다.
+      if (cap && n >= cap) result[n] += tail * (previous[n - cap] - (previous[n - cap - 1] ?? 0));
+    }
+    previous = result;
+  }
+  return Math.max(0, Math.min(1, previous[budget]));
 }
 
 // 공식 확률 페이지의 "세 개의 옵션 중 최대 N개" 규칙. 앞 줄에서 한도를 채운 계열은 다음 줄 후보에서 빠지고,
@@ -179,11 +221,7 @@ function successProb(lines, goals){
   return Math.min(P, 1);
 }
 // q 확률로 성공하려면 필요한 큐브 수
-function cubesFor(p, q){
-  if(p >= 1) return 1;
-  if(p <= 0) return Infinity;
-  return Math.ceil(Math.log(1 - q) / Math.log1p(-p));
-}
+function cubesFor(p, q){ return new UpgradeStep({ chance: p }).attemptsFor(q); }
 
 // 사용 메소 이하로 가능한 정수 횟수와 그 안에 목표를 얻을 누적 확률.
 function cubeOptionRecord(actual, price, p){

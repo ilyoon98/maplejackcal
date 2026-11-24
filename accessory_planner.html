@@ -14,6 +14,10 @@
 <script src="site_help.js" defer></script>
 <script src="site_ux.js" defer></script>
   <script src="money_input.js" defer></script>
+  <script src="nexon_key.js" defer></script>
+  <script src="nexon_api.js" defer></script><script src="nexon_characters.js" defer></script>
+  <script src="accessory_equipment.js" defer></script>
+  <script src="json_storage.js" defer></script>
   <script src="accessory_planner.js" defer></script>
 </head>
 <body>
@@ -21,8 +25,30 @@
     <div data-site-navigation></div>
     <header>
       <h1>장신구 맞추기</h1>
-      <p class="sub">목표 드랍과 메획과 선호 옵션을 정하고, 보유 장비와 매물 가격으로 조합을 찾으세요.</p>
+      <p class="sub">유지할 장비를 고르고 목표 드랍과 메획을 채우는 최저비용 조합을 찾으세요.</p>
     </header>
+
+    <section class="card accessory-character" aria-labelledby="accessory-character-title">
+      <h2 id="accessory-character-title">캐릭터 장비 불러오기</h2>
+      <form id="accessory-character-form" class="accessory-controls">
+        <label for="accessory-character-name">캐릭터 닉네임
+          <input id="accessory-character-name" type="text" maxlength="20" autocomplete="off" spellcheck="false" required>
+        </label>
+        <button class="primary" id="accessory-character-load" type="submit">장비 불러오기</button>
+      </form>
+      <p class="accessory-hint" id="accessory-character-status" role="status"></p>
+      <p class="accessory-hint" id="accessory-key-help" hidden><a href="index.html#apiKey">홈에서 넥슨 API 키 등록</a></p>
+      <div id="accessory-character-result" hidden>
+        <div class="accessory-controls">
+          <label for="accessory-preset">장비 프리셋
+            <select id="accessory-preset"></select>
+          </label>
+          <button class="ux-button" id="accessory-character-clear" type="button">캐릭터 해제</button>
+        </div>
+        <p class="accessory-hint" id="accessory-preset-summary" role="status"></p>
+      </div>
+      <p class="accessory-hint" id="accessory-nexon-credit" hidden>Data based on NEXON Open API</p>
+    </section>
 
     <section class="card accessory-summary" aria-labelledby="accessory-summary-title">
       <h2 id="accessory-summary-title">드랍과 메획 목표</h2>
@@ -56,15 +82,31 @@
       </div>
       <div class="accessory-workspace">
         <div>
-          <p class="accessory-hint">장신구 칸을 눌러 선호 옵션과 가격을 입력하세요.</p>
+          <p class="accessory-hint">장신구 칸을 눌러 장착 장비와 교체 후보를 확인하세요.</p>
           <div id="accessory-slots" class="accessory-inventory" role="group" aria-label="장신구 선택"></div>
+          <div id="accessory-lock-all-field" hidden>
+            <label class="accessory-check"><input id="accessory-lock-all" type="checkbox"> 장비 모두 유지</label>
+          </div>
         </div>
         <div class="accessory-editor" aria-labelledby="accessory-slot-title" role="group">
           <h3 id="accessory-slot-title">반지 1</h3>
+          <div id="accessory-equipped" class="accessory-equipped" hidden>
+            <img class="accessory-equipped-icon" alt="" width="36" height="36" hidden>
+            <div class="accessory-equipped-info">
+              <small>선택한 프리셋의 장비</small>
+              <strong id="accessory-equipped-name"></strong>
+              <span id="accessory-equipped-stats"></span>
+              <small id="accessory-equipped-grid" hidden>장비 아이템 드랍 +20% 별도</small>
+            </div>
+            <label class="accessory-check" id="accessory-lock-selected-label"><input id="accessory-lock-selected" type="checkbox"> 이 장비 유지</label>
+          </div>
           <h4 id="accessory-preference-title">선호 옵션</h4>
           <div class="accessory-lines" id="accessory-lines" role="group" aria-labelledby="accessory-preference-title"></div>
-          <h4>옵션 조합별 매물 가격</h4>
-          <p class="accessory-hint">억 메소 단위로 입력하세요. 0.1은 1천만 메소입니다.</p>
+          <h4>옵션 조합별 가격</h4>
+          <div class="accessory-controls accessory-pricing">
+            <label class="accessory-check"><input id="accessory-prefer" type="checkbox"> 가격보다 선호 옵션 우선</label>
+          </div>
+          <p class="accessory-hint" id="accessory-price-hint">억 메소 단위로 입력하세요. 0.1은 1천만 메소입니다.</p>
           <div id="accessory-prices"></div>
         </div>
       </div>
@@ -76,10 +118,10 @@
       <p class="accessory-hint" id="accessory-goal-summary">목표 드랍 200% · 메획 100%</p>
       <p class="accessory-hint" id="accessory-preference-status" hidden></p>
       <div class="accessory-result-gap" id="accessory-result-gap" hidden>
-        <h3>등록한 후보로 목표에 가장 가까운 조합</h3>
+        <h3>현재 후보로 목표에 가장 가까운 조합</h3>
         <dl class="accessory-gap-metrics" id="accessory-gap-metrics"></dl>
         <h3 id="accessory-gap-next"></h3>
-        <p class="accessory-hint">추가 등록하면 기존 후보도 다시 조합해 목표를 맞춥니다.</p>
+        <p class="accessory-hint" id="accessory-gap-register-hint">추가 등록하면 기존 후보도 다시 조합해 목표를 맞춥니다.</p>
         <ul class="accessory-gap-suggestions" id="accessory-gap-suggestions"></ul>
       </div>
       <details class="ux-details" id="accessory-result-details" hidden>
@@ -97,11 +139,12 @@
       <ul>
         <li>장신구마다 최대 2줄까지 고를 수 있고, 각 줄은 드랍률 또는 메획을 20%p 올립니다.</li>
         <li>목표는 20% 단위로 선택합니다. 장비 상한인 드랍 200%와 메획 100%를 함께 채우려면 15줄이 필요합니다.</li>
-        <li>선호 옵션은 두 줄을 합친 정확한 조합입니다. 두 줄을 비워 두면 해당 부위는 자유롭게 선택합니다. 목표를 채우는 조합 중 선호를 가장 많이 반영한 뒤 가격이 낮은 조합을 고릅니다.</li>
+        <li>장비를 유지하면 해당 부위의 프리셋 장비와 잠재 옵션이 고정되고 구매 비용은 0메소입니다. 그리드 펜던트의 장비 아이템 전용 효과는 별도로 표시합니다.</li>
+        <li>기본값은 목표를 채우는 조합 중 구매 비용이 가장 낮은 조합입니다. 가격보다 선호 옵션 우선을 선택하면 선호한 조합을 더 많이 포함하는 세팅부터 비교합니다.</li>
         <li>Enter 또는 Tab으로 다음 가격 칸을 입력할 수 있습니다. 귀걸이의 마지막 가격 칸에서 Enter를 누르면 최저가 조합으로 이동합니다.</li>
         <li>매물 가격은 억 메소 단위입니다. 17은 17억 메소, 0.1은 1천만 메소입니다.</li>
         <li>최저가 조합은 부위마다 보유 장비와 등록한 매물 가격을 비교합니다. 실제 보유한 옵션 조합은 추가 비용 0메소로 계산하며, 부위마다 최대 한 개를 선택합니다.</li>
-        <li>목표, 선호 옵션, 가격, 보유 여부는 이 브라우저에 저장됩니다.</li>
+        <li>목표, 선호 옵션, 가격, 보유 여부와 마지막 캐릭터의 프리셋 및 장비 유지 선택은 이 브라우저에 저장됩니다.</li>
       </ul>
     </section>
   </main>

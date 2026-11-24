@@ -94,7 +94,10 @@
   /* 파티 배율을 쓰는 보스 표시. 누르면 파티 보스 스케줄러에서 그 파티를 연다. */
   .party-link { display:inline-flex; align-items:center; justify-content:center; min-width:40px; min-height:26px; padding:2px 6px; border:1px solid #6ea8fe; border-radius:6px; background:#243f62; color:#c3deff; font-size:0.7rem; font-weight:800; text-decoration:none; white-space:nowrap; }
   a.party-link:hover { filter:brightness(1.18); }
-  a.party-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .buff-planner :is(.party-link,.tag.party):focus-visible { outline:3px solid var(--ux-focus,#9fc7ff); outline-offset:3px; }
+  /* 넥슨 Open API와 랭킹 이미지는 투명 여백이 달라 확대 비율을 따로 맞춘다. */
+  .buff-planner .site-tooltip-portrait-frame img { transform:translate(17%,37%) scale(4.5); }
+  .buff-planner .site-tooltip-portrait-frame img[src^="https://avatar.maplestory.nexon.com/CharacterEx/"] { transform:translate(17%,36%) scale(2.7); }
   .row-input input:disabled { opacity:1; color:#c3deff; background:#182438; }
   .route-settings { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:0 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card); font-size:0.8rem; color:var(--text-dim); }
   .route-settings .route-item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
@@ -248,7 +251,7 @@
 <script src="site_help.js" defer></script>
 <script src="site_ux.js" defer></script>
 </head>
-<body>
+<body class="buff-planner">
 <div class="wrap">
   <div data-site-navigation></div>
 
@@ -350,10 +353,14 @@
   </div>
 </div>
 <script src="nexon_key.js"></script>
-<script src="nexon_characters.js"></script>
+<script src="json_storage.js"></script>
+<script src="nexon_api.js"></script><script src="nexon_characters.js"></script>
 <script src="boss_shot_reader.js?v=2"></script>
 <script src="site_tooltips.js"></script>
-<script src="boss_db.js"></script>
+<script src="boss_db.js"></script><script src="boss_schedule.js"></script>
+<script src="scouter_data.js"></script>
+<script src="rate_catalog.js"></script>
+<script src="account_catalog.js"></script>
 <script src="boss_buff_planner.js"></script>
 </body>
 </html>

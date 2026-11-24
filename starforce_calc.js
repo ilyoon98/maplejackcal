@@ -198,12 +198,7 @@
         } while (!next.done);
         return next.value;
       })();
-      return pending.then(function (samples) {
-        if (!samples) return null;
-        var lo = 0, hi = samples.length;
-        while (lo < hi) { var mid = (lo + hi) >>> 1; if (samples[mid] <= actual) lo = mid + 1; else hi = mid; }
-        return {percent:lo / samples.length * 100, samples:samples.length};
-      });
+      return pending.then(function (samples) { return ActualRecord.sampledPercentile(samples, actual); });
     };
   }
   window.StarforceCalc = { calculate: calculate, buildSteps: buildSteps, breakEvenSpare: breakEvenSpare, sampleCosts:sampleCosts };
@@ -254,15 +249,12 @@
   function $(id) { return document.getElementById(id); }
 
   function save() {
-    try { localStorage.setItem('starforceCalc', JSON.stringify(state)); } catch (e) {}
+    JsonStorage.local.write('starforceCalc', state);
   }
   function load() {
-    try {
-      var raw = localStorage.getItem('starforceCalc');
-      if (!raw) return;
-      var v = JSON.parse(raw);
-      Object.keys(state).forEach(function (k) { if (v[k] !== undefined) state[k] = v[k]; });
-    } catch (e) {}
+    var saved = JsonStorage.local.read('starforceCalc');
+    if (!saved || typeof saved !== 'object') return;
+    Object.keys(state).forEach(function (k) { if (saved[k] !== undefined) state[k] = saved[k]; });
   }
 
   function control(className, onClick) {
@@ -354,6 +346,7 @@
     $('resMeso').textContent = valid ? compact.replace(/ 메소$/, '') : '—';
     $('resMesoUnit').hidden = !valid;
     $('resMesoSub').textContent = valid && compact !== exact ? exact : '';
+    $('starforce-hunt')?.setAttribute('meso', valid ? res.total.meso : '');
     $('resDestroy').textContent = valid ? num(res.total.destroys, 2) + ' 회' : '—';
     $('resTries').textContent = valid ? num(res.total.tries, 1) + ' 회' : '—';
     $('resRange').textContent = valid ? state.level + '레벨 장비, ' + state.start + '성 → ' + state.goal + '성' : '목표 성을 시작 성보다 높게 설정하세요.';
@@ -528,7 +521,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    if (!document.getElementById('levelInput')) return; // 계산기 화면이 아닌 페이지에서는 UI를 만들지 않는다
+    if (!document.getElementById('expectedResultCard')) return; // 계산기 화면이 아닌 페이지에서는 UI를 만들지 않는다
     load();
     bindNumber('levelInput', 'level', 1, 300);
     bindNumber('startInput', 'start', 0, MAX);

@@ -5,6 +5,7 @@
   "scripts": {
     "build": "node tools/build-site.cjs",
     "start": "node tools/static_server.cjs",
+    "start:auction": "node tools/static_server.cjs --auction",
     "build:help": "node tools/build-help.cjs",
     "check:help": "node tools/build-help.cjs --check",
     "test:help": "node tests/illustrated-help-ui.cjs",

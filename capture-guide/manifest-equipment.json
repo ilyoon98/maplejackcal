@@ -2,11 +2,15 @@
   {
     "page": "trace_calc.html",
     "image": "capture-guide/trace_calc/settings.png",
-    "selector": ".layout-left > .card:nth-child(2)",
-    "width": 980,
-    "height": 657,
+    "highlights": [
+      "locator('#tierList button').filter({ hasText: '아케인셰이드' })",
+      "locator('#partList button').filter({ hasText: '모자' })",
+      "locator('#bracketCards button').filter({ hasText: '30%' })"
+    ],
+    "width": 659,
+    "height": 897,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -14,23 +18,14 @@
   {
     "page": "trace_calc.html",
     "image": "capture-guide/trace_calc/materials.png",
-    "selector": ".layout-left > .card:nth-child(3)",
-    "width": 980,
-    "height": 471,
+    "highlights": [
+      "#probModeCards",
+      ".field:has(#jujeonPrice)"
+    ],
+    "width": 659,
+    "height": 533,
     "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "trace_calc.html",
-    "image": "capture-guide/trace_calc/progress.png",
-    "selector": "#resultBody .card-primary",
-    "width": 600,
-    "height": 629,
-    "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -38,11 +33,28 @@
   {
     "page": "trace_calc.html",
     "image": "capture-guide/trace_calc/result.png",
-    "selector": "#expectedResultCard",
-    "width": 600,
-    "height": 530,
+    "highlights": [
+      "#summary"
+    ],
+    "width": 659,
+    "height": 497,
     "viewport": {
-      "width": 1120,
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "trace_calc.html",
+    "image": "capture-guide/trace_calc/progress.png",
+    "highlights": [
+      "locator('#slotPicker button').first()",
+      ".action-hero"
+    ],
+    "width": 659,
+    "height": 318,
+    "viewport": {
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -50,11 +62,29 @@
   {
     "page": "starforce_calc.html",
     "image": "capture-guide/starforce_calc/settings.png",
-    "selector": ".sf-settings > .sf-panel:first-child",
-    "width": 858,
-    "height": 519,
+    "highlights": [
+      ".sf-field:has(#levelInput)",
+      ".sf-field:has(#startInput)",
+      ".sf-field:has(#goalInput)"
+    ],
+    "width": 659,
+    "height": 546,
     "viewport": {
-      "width": 1120,
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "starforce_calc.html",
+    "image": "capture-guide/starforce_calc/replacement.png",
+    "highlights": [
+      ".sf-field:has(#spareInput)"
+    ],
+    "width": 659,
+    "height": 176,
+    "viewport": {
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -62,11 +92,15 @@
   {
     "page": "starforce_calc.html",
     "image": "capture-guide/starforce_calc/events.png",
-    "selector": ".sf-settings > .sf-panel:nth-child(2)",
-    "width": 858,
-    "height": 573,
+    "highlights": [
+      "#mvpChips",
+      ".sf-setting:has(#shiningSwitch)",
+      "#eventChips"
+    ],
+    "width": 659,
+    "height": 432,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -74,11 +108,14 @@
   {
     "page": "starforce_calc.html",
     "image": "capture-guide/starforce_calc/protection.png",
-    "selector": ".sf-settings > .sf-panel:nth-child(3)",
-    "width": 858,
-    "height": 737,
+    "highlights": [
+      ".sf-setting:has(#safeguardSwitch)",
+      ".sf-setting:has(#recoverySwitch)"
+    ],
+    "width": 659,
+    "height": 569,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -86,59 +123,14 @@
   {
     "page": "starforce_calc.html",
     "image": "capture-guide/starforce_calc/result.png",
-    "selector": "#expectedResultCard",
-    "width": 729,
-    "height": 479,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "cube_calc.html",
-    "image": "capture-guide/cube_calc/settings.png",
-    "selector": ".cube-layout > section > .cube-panel:first-child",
-    "width": 918,
-    "height": 782,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "cube_calc.html",
-    "image": "capture-guide/cube_calc/cost.png",
-    "selector": ".cube-layout > section > .cube-panel:nth-child(2)",
-    "width": 918,
-    "height": 498,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "cube_calc.html",
-    "image": "capture-guide/cube_calc/record.png",
-    "selector": ".record-panel",
-    "width": 666,
-    "height": 579,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "cube_calc.html",
-    "image": "capture-guide/cube_calc/result.png",
-    "selector": ".cube-panel.card-primary",
-    "width": 666,
+    "highlights": [
+      ".sf-result-value",
+      ".sf-metric:has(#resDestroy)"
+    ],
+    "width": 659,
     "height": 435,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -146,11 +138,14 @@
   {
     "page": "flame_calc.html",
     "image": "capture-guide/flame_calc/settings.png",
-    "selector": ".fc-layout > section > .ic-panel:first-child",
-    "width": 894,
-    "height": 336,
+    "highlights": [
+      ".ic-field:has(#level)",
+      ".ic-field:has(#part)"
+    ],
+    "width": 659,
+    "height": 140,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -158,11 +153,28 @@
   {
     "page": "flame_calc.html",
     "image": "capture-guide/flame_calc/goal.png",
-    "selector": ".fc-layout > section > .ic-panel:nth-child(2)",
-    "width": 894,
-    "height": 810,
+    "highlights": [
+      "#applyArmorGrade",
+      "#flameBody input[data-cond]"
+    ],
+    "width": 518,
+    "height": 188,
     "viewport": {
-      "width": 1120,
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "flame_calc.html",
+    "image": "capture-guide/flame_calc/flame.png",
+    "highlights": [
+      "#flameBody [data-flame].active"
+    ],
+    "width": 446,
+    "height": 138,
+    "viewport": {
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -170,59 +182,28 @@
   {
     "page": "flame_calc.html",
     "image": "capture-guide/flame_calc/result.png",
-    "selector": ".fc-result",
-    "width": 687,
-    "height": 1326,
+    "highlights": [
+      ".fc-prob",
+      ".fc-metrics > div:first-child"
+    ],
+    "width": 659,
+    "height": 527,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
   },
   {
-    "page": "cube_option_calc.html",
-    "image": "capture-guide/cube_option_calc/settings.png",
-    "selector": ".cube-layout > section > .cube-panel:first-child",
-    "width": 872,
-    "height": 854,
+    "page": "flame_calc.html",
+    "image": "capture-guide/flame_calc/weapon.png",
+    "highlights": [
+      "#flameBody .ic-tiers"
+    ],
+    "width": 614,
+    "height": 99,
     "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "cube_option_calc.html",
-    "image": "capture-guide/cube_option_calc/goal.png",
-    "selector": ".cube-layout > section > .cube-panel:nth-child(3)",
-    "width": 872,
-    "height": 770,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "cube_option_calc.html",
-    "image": "capture-guide/cube_option_calc/alternatives.png",
-    "selector": "#optionRows",
-    "width": 809,
-    "height": 708,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "cube_option_calc.html",
-    "image": "capture-guide/cube_option_calc/result.png",
-    "selector": "#expectedResultCard",
-    "width": 713,
-    "height": 567,
-    "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -230,11 +211,15 @@
   {
     "page": "item_craft_calc.html",
     "image": "capture-guide/item_craft_calc/settings.png",
-    "selector": ".ic-layout > section:first-child > .ic-panel:first-child",
-    "width": 857,
-    "height": 309,
+    "highlights": [
+      ".ic-field:has(#level)",
+      ".ic-field:has(#part)",
+      ".ic-field:has(#basePrice)"
+    ],
+    "width": 659,
+    "height": 302,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -242,11 +227,15 @@
   {
     "page": "item_craft_calc.html",
     "image": "capture-guide/item_craft_calc/stage.png",
-    "selector": "#starPanel",
-    "width": 857,
-    "height": 1316,
+    "highlights": [
+      "#starPanel .ic-toggle",
+      ".ic-field:has(#starStart)",
+      ".ic-field:has(#starGoal)"
+    ],
+    "width": 659,
+    "height": 248,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -254,11 +243,14 @@
   {
     "page": "item_craft_calc.html",
     "image": "capture-guide/item_craft_calc/goal.png",
-    "selector": "#potPanel",
-    "width": 857,
-    "height": 1086,
+    "highlights": [
+      "locator('#potBody [data-addpot=\"pot\"]').filter({ hasText: '주스탯 %' })",
+      "#potBody input[data-pot]"
+    ],
+    "width": 233,
+    "height": 345,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -266,11 +258,13 @@
   {
     "page": "item_craft_calc.html",
     "image": "capture-guide/item_craft_calc/result.png",
-    "selector": ".ic-totals",
-    "width": 665,
-    "height": 359,
+    "highlights": [
+      ".ic-totals > :first-child"
+    ],
+    "width": 659,
+    "height": 390,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -278,9 +272,12 @@
   {
     "page": "authentic_symbol_calc.html",
     "image": "capture-guide/authentic_symbol_calc/levels.png",
-    "selector": "#levelCard",
-    "width": 890,
-    "height": 846,
+    "highlights": [
+      "#levelGrid input[data-idx=\"0\"]",
+      "#levelGrid input[data-idx=\"1\"]"
+    ],
+    "width": 869,
+    "height": 237,
     "viewport": {
       "width": 640,
       "height": 1000
@@ -290,9 +287,11 @@
   {
     "page": "authentic_symbol_calc.html",
     "image": "capture-guide/authentic_symbol_calc/target.png",
-    "selector": ".hero-force",
-    "width": 890,
-    "height": 407,
+    "highlights": [
+      ".hero-force:has(#targetForce)"
+    ],
+    "width": 920,
+    "height": 437,
     "viewport": {
       "width": 640,
       "height": 1000
@@ -302,9 +301,11 @@
   {
     "page": "authentic_symbol_calc.html",
     "image": "capture-guide/authentic_symbol_calc/route.png",
-    "selector": "#panelOpt",
-    "width": 890,
-    "height": 332,
+    "highlights": [
+      "#orderList .step-tile.first"
+    ],
+    "width": 152,
+    "height": 239,
     "viewport": {
       "width": 640,
       "height": 1000
@@ -314,12 +315,327 @@
   {
     "page": "authentic_symbol_calc.html",
     "image": "capture-guide/authentic_symbol_calc/result.png",
-    "selector": ".summary-bar",
-    "width": 938,
-    "height": 117,
+    "highlights": [
+      ".summary-stat:has(#sumMeso)"
+    ],
+    "width": 212,
+    "height": 104,
     "viewport": {
       "width": 640,
       "height": 1000
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/amplification.png",
+    "highlights": [
+      "#amp-route"
+    ],
+    "width": 659,
+    "height": 140,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/progress-record.png",
+    "highlights": [
+      "#amp-attempts"
+    ],
+    "width": 659,
+    "height": 176,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/ether-price.png",
+    "highlights": [
+      "#amp-prices"
+    ],
+    "width": 710,
+    "height": 227,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/amplification-result.png",
+    "highlights": [
+      "#potential-cost",
+      ".potential-budgets:has(#potential-50)"
+    ],
+    "width": 659,
+    "height": 293,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/rank-settings.png",
+    "highlights": [
+      "#rank-route"
+    ],
+    "width": 659,
+    "height": 141,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/rank-miracle.png",
+    "highlights": [
+      "#soul-miracle"
+    ],
+    "width": 344,
+    "height": 98,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/rank-attempts.png",
+    "highlights": [
+      "#rank-attempts"
+    ],
+    "width": 659,
+    "height": 98,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/rank-details.png",
+    "highlights": [
+      "#rank-details > summary"
+    ],
+    "width": 659,
+    "height": 98,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/rank-result.png",
+    "highlights": [
+      "#rank-detail-record"
+    ],
+    "width": 659,
+    "height": 288,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/goal.png",
+    "highlights": [
+      ".field:has(#goal-type)",
+      "[data-goal-picks]"
+    ],
+    "width": 620,
+    "height": 426,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/option-attempts.png",
+    "highlights": [
+      "#option-attempts"
+    ],
+    "width": 659,
+    "height": 204,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/option-details.png",
+    "highlights": [
+      "#option-details > summary"
+    ],
+    "width": 659,
+    "height": 98,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/result.png",
+    "highlights": [
+      ".soul-option-chance"
+    ],
+    "width": 659,
+    "height": 68,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/option-cost.png",
+    "highlights": [
+      "#option-route-metrics > div:first-child"
+    ],
+    "width": 336,
+    "height": 126,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/record.png",
+    "highlights": [
+      "#option-detail-record"
+    ],
+    "width": 659,
+    "height": 327,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_calc.html",
+    "image": "capture-guide/soul_calc/total-record.png",
+    "highlights": [
+      "#total-record"
+    ],
+    "width": 659,
+    "height": 326,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "cube_calc.html",
+    "image": "capture-guide/cube_calc/cost.png",
+    "highlights": [
+      ".cube-equipment"
+    ],
+    "width": 710,
+    "height": 1230,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "cube_calc.html",
+    "image": "capture-guide/cube_calc/settings.png",
+    "highlights": [
+      "#rankGoalRow"
+    ],
+    "width": 659,
+    "height": 140,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "cube_calc.html",
+    "image": "capture-guide/cube_calc/method.png",
+    "highlights": [
+      ".cube-method:has(#gradeCube)",
+      "#miracleCheckbox"
+    ],
+    "width": 659,
+    "height": 582,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "cube_calc.html",
+    "image": "capture-guide/cube_calc/goal.png",
+    "highlights": [
+      ".opt-presets"
+    ],
+    "width": 659,
+    "height": 743,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "cube_calc.html",
+    "image": "capture-guide/cube_calc/result.png",
+    "highlights": [
+      "#potential-cost",
+      ".potential-budgets:has(#potential-50)",
+      ".cube-stage-summary"
+    ],
+    "width": 659,
+    "height": 600,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "cube_calc.html",
+    "image": "capture-guide/cube_calc/record.png",
+    "highlights": [
+      "#recordCount2"
+    ],
+    "width": 659,
+    "height": 228,
+    "viewport": {
+      "width": 500,
+      "height": 900
     },
     "example": true
   }

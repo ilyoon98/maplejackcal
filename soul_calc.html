@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="소울 증폭과 잠재능력 등급 상승, 목표 옵션의 확률과 기대 메소를 계산합니다.">
+  <title>소울 잠재능력 계산기</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="site_ux.css">
+  <link rel="stylesheet" href="potential_plan.css">
+  <link rel="stylesheet" href="soul.css">
+  <script src="site_header.js" defer></script>
+  <script src="site_nav.js" defer></script>
+  <script src="site_help_data.js" defer></script>
+  <script src="site_help.js" defer></script>
+  <script src="site_ux.js" defer></script>
+  <script src="money_input.js" defer></script>
+  <script src="soul_option_data.js" defer></script>
+  <script src="upgrade_step.js" defer></script>
+  <script src="soul_core.js" defer></script>
+  <script src="potential_plan.js" defer></script>
+  <script src="actual_record.js" defer></script>
+  <script src="soul.js" defer></script>
+</head>
+<body class="soul-page potential-workspace" data-ux-page="soul_calc.html">
+  <div data-site-navigation></div>
+  <main class="wrap">
+    <header>
+      <h1>소울 잠재능력 계산기</h1>
+      <p>계산할 강화를 선택하고 필요한 메소를 확인하세요.</p>
+    </header>
+
+    <div class="soul-view-bar"><a href="soul_play.html">시뮬레이터 열기 →</a></div>
+    <div class="potential-layout">
+      <div class="potential-stack">
+        <section class="card">
+          <div class="potential-section-head"><h2><label><input type="checkbox" id="enable-amp" aria-controls="amp-settings">증폭</label></h2></div>
+<div id="amp-settings" hidden>
+          <div class="potential-route" id="amp-route">
+            <div class="field"><label for="amp-start">시작 증폭</label><select id="amp-start"></select></div>
+            <span class="potential-route-arrow" aria-hidden="true">→</span>
+            <div class="field"><label for="amp-target">목표 증폭</label><select id="amp-target"></select></div>
+          </div>
+          <fieldset class="soul-record-fields soul-detail-record">
+            <legend>내 시도 횟수</legend>
+            <p class="ux-hint" id="amp-record-hint">성공까지 몇 번 했나요? (선택)</p>
+            <div class="soul-fields soul-record-inputs" id="amp-attempts"></div>
+          </fieldset>
+          <section class="soul-record" id="amp-record" hidden>
+            <h3>내 기록</h3>
+            <dl class="soul-metrics" id="amp-record-metrics" aria-live="polite"></dl>
+            <p class="ux-hint" id="amp-record-note"></p>
+            </div>
+        </section>
+          <details class="ux-details soul-price-panel" id="amp-price-panel">
+            <summary>에테르 가격 입력</summary>
+            <p class="ux-hint" id="amp-price-hint">1개 가격을 메소로 입력하세요. 보유 중이면 비워 두세요.</p>
+            <div class="soul-fields soul-record-inputs" id="amp-prices"></div>
+          </details>
+        </section>
+        <section class="card">
+          <div class="potential-section-head"><h2><label><input type="checkbox" id="enable-rank" aria-controls="rank-settings">등급 상승</label></h2>
+          <button type="button" hidden id="soul-miracle" class="ux-button ux-toggle" role="switch" aria-checked="false" aria-label="미라클 타임">
+          <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+          <img class="soul-miracle-icon" src="icons/home/행운의네잎클로버.webp" width="20" height="20" alt="">
+          <span>미라클<span class="potential-miracle-suffix"> 타임</span></span>
+          <span class="switch-state" aria-hidden="true">꺼짐</span>
+        </button>
+          </div>
+<div id="rank-settings" hidden>
+          <div class="potential-route" id="rank-route">
+          <div class="field"><label for="rank-start">시작 등급</label><select id="rank-start"></select></div>
+          <span class="potential-route-arrow" aria-hidden="true">→</span>
+          <div class="field"><label for="rank-target">목표 등급</label><select id="rank-target"></select></div>
+        </div>
+          <p id="rank-start-note" class="ux-hint"></p>
+
+          <fieldset class="soul-record-fields soul-detail-record">
+            <legend>내 시도 횟수</legend>
+            <p class="ux-hint" id="rank-record-hint">성공할 때까지 시도한 횟수를 입력하세요.</p>
+            <div class="soul-fields soul-record-inputs" id="rank-attempts"></div>
+          </fieldset>
+          <section class="soul-record" id="rank-record" hidden>
+            <h3>내 기록</h3>
+            <dl class="soul-metrics" id="rank-record-metrics" aria-live="polite"></dl>
+            <p class="ux-hint" id="rank-record-note"></p>
+            </div>
+        </section>
+        </section>
+        <section class="card" id="option-panel">
+          <div class="potential-section-head"><h2><label><input type="checkbox" id="enable-option" aria-controls="option-settings">목표 옵션</label></h2></div>
+<div id="option-settings" hidden>
+            <div class="soul-fields soul-current-settings" id="option-current-settings">
+              <div class="field" id="option-current-stage-field">
+                <label for="option-current-stage">현재 증폭</label><select id="option-current-stage"></select>
+              </div>
+              <div class="field" id="option-current-rank-field">
+                <label for="option-current-rank">현재 등급</label><select id="option-current-rank"></select>
+              </div>
+            </div>
+          <div id="option-editor" class="soul-fields"></div>
+          <fieldset class="soul-record-fields soul-detail-record" id="option-record-fields" hidden>
+            <legend>내 시도 횟수</legend>
+            <p class="ux-hint" id="option-record-hint">옵션을 뽑기까지 몇 번 했나요? (선택)</p>
+            <div class="soul-fields soul-record-inputs">
+              <div class="field soul-number-row">
+                <label for="option-attempts">재설정 횟수</label>
+                <input id="option-attempts" type="number" min="1" step="1" inputmode="numeric" placeholder="예: 100" aria-describedby="option-record-hint option-attempts-hint">
+                <small class="ux-hint" id="option-attempts-hint"></small>
+              </div>
+              <div class="field soul-number-row" id="option-spent-field" hidden>
+                <label for="option-spent">실제 사용 메소</label>
+                <input id="option-spent" type="number" min="0" step="1" inputmode="numeric" placeholder="선택" aria-describedby="option-spent-hint">
+                <small class="ux-hint" id="option-spent-hint"></small>
+              </div>
+            </div>
+          </fieldset>
+          <section class="soul-record" id="option-record" aria-labelledby="option-record-title" hidden>
+            <h3 id="option-record-title">내 기록</h3>
+            <dl class="soul-metrics" id="option-record-metrics" aria-live="polite"></dl>
+            <p class="ux-hint" id="option-record-note"></p>
+          </section>
+          </div>
+        </section>
+      </div>
+      <section class="card card-primary potential-result soul-result" id="potential-result" aria-labelledby="potential-title">
+        <h2 id="potential-title">전체 기대 메소</h2>
+        <p class="potential-amount" id="potential-cost" aria-live="polite">—</p>
+        <p class="ux-hint" id="potential-context"></p>
+        <dl class="potential-budgets">
+          <div><dt>성공 확률 50% 예산</dt><dd id="potential-50">—</dd></div>
+          <div><dt>성공 확률 90% 예산</dt><dd id="potential-90">—</dd></div>
+        </dl>
+          <section class="soul-record" id="total-record" aria-labelledby="total-record-heading" hidden>
+            <h3 id="total-record-heading">내 기록 합산</h3>
+            <dl class="soul-metrics" id="total-record-metrics" aria-live="polite"></dl>
+            <p class="ux-hint" id="total-record-note"></p>
+          </section>
+        <details class="ux-details" id="amp-details">
+          <summary>증폭 상세</summary>
+          <section class="soul-record" id="amp-detail-record" aria-labelledby="amp-detail-record-heading" hidden>
+            <h3 id="amp-detail-record-heading">내 기록 비교</h3>
+            <dl class="soul-metrics" id="amp-detail-record-metrics" aria-live="polite"></dl>
+            <p class="ux-hint" id="amp-detail-record-note"></p>
+          </section>
+          <p class="ux-hint soul-context" id="amp-context"></p>
+          <dl class="soul-metrics" id="amp-metrics"></dl>
+          <section id="amp-materials" hidden>
+            <h3>필요한 에테르</h3>
+            <dl class="soul-metrics" id="amp-ether-counts"></dl>
+          </section>
+          <p class="ux-hint" id="amp-budget-note"></p>
+          <details class="ux-details" id="amp-rates">
+            <summary>단계별 확률과 비용</summary>
+            <div class="soul-table-wrap" tabindex="0" role="region" aria-label="증폭 단계별 확률과 비용">
+              <table>
+                <thead><tr><th scope="col">구간</th><th scope="col">첫 시도 확률</th><th scope="col">평균 횟수</th><th scope="col">보장 횟수</th><th scope="col">1회 비용</th></tr></thead>
+                <tbody id="amp-table"></tbody>
+              </table>
+            </div>
+          </details>
+        </details>
+        <details class="ux-details" id="rank-details">
+          <summary>등급 상승 상세</summary>
+          <section class="soul-record" id="rank-detail-record" aria-labelledby="rank-detail-record-heading" hidden>
+            <h3 id="rank-detail-record-heading">내 기록 비교</h3>
+            <dl class="soul-metrics" id="rank-detail-record-metrics" aria-live="polite"></dl>
+            <p class="ux-hint" id="rank-detail-record-note"></p>
+          </section>
+          <p class="ux-hint soul-context" id="rank-context"></p>
+          <dl class="soul-metrics" id="rank-metrics"></dl>
+          <details class="ux-details" id="rank-rates">
+            <summary>등급별 확률과 비용</summary>
+            <div class="soul-table-wrap" tabindex="0" role="region" aria-label="등급별 확률과 비용">
+              <table>
+                <thead><tr><th scope="col">구간</th><th scope="col">첫 시도 확률</th><th scope="col">평균 횟수</th><th scope="col">보장 횟수</th><th scope="col">1회 비용</th></tr></thead>
+                <tbody id="rank-table"></tbody>
+              </table>
+            </div>
+          </details>
+        </details>
+        <details class="ux-details" id="option-details">
+          <summary>목표 옵션 상세</summary>
+          <section class="soul-record" id="option-detail-record" aria-labelledby="option-detail-record-heading" hidden>
+            <h3 id="option-detail-record-heading">내 기록 비교</h3>
+            <dl class="soul-metrics" id="option-detail-record-metrics" aria-live="polite"></dl>
+            <p class="ux-hint" id="option-detail-record-note"></p>
+          </section>
+          <dl class="soul-metrics" id="option-route-metrics"></dl>
+          <p class="soul-option-chance">재설정 1회 확률 <strong id="option-chance">—</strong></p>
+          <p id="option-context" class="ux-hint soul-context"></p>
+          <details class="ux-details" id="option-budget-section">
+            <summary>목표 등급에서만 돌릴 때</summary>
+            <dl class="soul-metrics" id="option-metrics"></dl>
+            <section class="soul-option-budgets" aria-labelledby="option-budgets-title">
+              <h3 id="option-budgets-title">성공 확률별 필요 메소</h3>
+              <dl class="soul-metrics" id="option-budgets"></dl>
+            </section>
+          </details>
+          <details class="ux-details">
+            <summary>줄별 등장 확률</summary>
+            <div class="soul-table-wrap" tabindex="0" role="region" aria-label="목표 옵션의 줄별 확률 표">
+              <table>
+                <thead><tr><th scope="col">옵션</th><th scope="col">첫째 줄</th><th scope="col">둘째 줄</th><th scope="col">셋째 줄</th></tr></thead>
+                <tbody id="option-table"></tbody>
+              </table>
+            </div>
+          </details>
+        </details>
+      </section>
+    </div>
+    <section data-ux-help="계산 기준">
+      <p>증폭은 실패할 때마다 확률이 오릅니다. 게이지가 차면 다음 시도에 성공합니다. 에테르 가격을 입력하면 시도당 1개씩 비용에 더합니다. 가격을 비워 두면 게임에서 내는 메소만 셉니다.</p>
+      <p>등급별 보장 횟수에 도달하면 등급이 오릅니다. 미라클 타임을 켜면 행사 확률을 씁니다.</p>
+      <p>전체 계산은 목표 증폭을 먼저 완료한 뒤 목표 등급 이상에서 옵션을 찾는 순서입니다. 첫 증폭이나 등급 상승으로 나온 옵션도 목표 조건에 맞으면 즉시 달성합니다. 옵션 상세와 내 기록은 선택한 등급에 머무르는 재설정 기준입니다.</p>
+      <p>예산은 직전과 같은 옵션이 제외되는 효과를 빼고 넉넉하게 잡습니다. 레전드리 전의 평균 비용은 재설정마다 옵션이 새로 나온다고 보고 계산합니다. 입력 가격에 따라 예산 계산에서 1회 비용을 올림할 수 있습니다.</p>
+      <p>공격력과 마력의 줄 수 배지는 대표 조합을 보여줍니다. 성공 여부는 선택한 합계 이상인지로 판단합니다.</p>
+      <p>상위 %는 같은 횟수나 메소로 목표를 달성한 비율입니다. 전체 상위 %는 증폭부터 옵션까지 한 번에 계산한 값입니다. 일부 에테르 가격에서는 메소 기준 상위 %를 범위로 보여줍니다.</p>
+      <p>공시된 옵션 확률의 반올림 오차는 줄별 합이 100%가 되도록 보정합니다. 기대 비용은 만 메소 단위, 시도 기댓값은 소수 둘째 자리까지 반올림합니다.</p>
+      <ul>
+        <li><a href="https://maplestory.nexon.com/Guide/N23GameInformation/Articles/416">넥슨 소울웨폰 가이드</a></li>
+        <li><a href="https://maplestory.nexon.com/Guide/OtherProbability/cube/Soulpotential">넥슨 소울 잠재능력 확률표</a></li>
+        <li><a href="https://maplestory.nexon.com/News/Update/813">넥슨 소울웨폰 개편 공지</a></li>
+        <li><a href="https://maplestory.nexon.com/News/Event/1418">넥슨 미라클 타임 확률표</a></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

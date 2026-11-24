@@ -17,6 +17,8 @@ function loadPlanner(options = {}) {
     };
   }
   const context = vm.createContext({
+    URLSearchParams,
+    RateCatalog:require('../rate_catalog.js'),
     document:{
       getElementById(id) {
         if (!elements.has(id)) elements.set(id, element());
@@ -28,10 +30,11 @@ function loadPlanner(options = {}) {
       querySelector(){ return null; },
     },
     localStorage:{getItem:() => null, setItem(){}},
-    window:options.mountPicker ? {NexonCharacters:{mount:options.mountPicker}} : {},
+    window:{ScouterData:require('../scouter_data.js'), AccountCatalog:require('../account_catalog.js'), ...(options.mountPicker && {NexonCharacters:{mount:options.mountPicker}})},
     NexonCharacters:options.mountPicker ? {mount:options.mountPicker} : undefined,
     Event:class {constructor(type){this.type = type;}},
   });
+  for (const file of ['json_storage.js', 'nexon_api.js', 'boss_schedule.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
   const script = fs.readFileSync(path.join(__dirname, '../boss_buff_planner.js'), 'utf8');
   vm.runInContext(script.replace(/  renderAll\(\);\s*\}\)\(\);\s*$/, `
     globalThis.engine = {
@@ -620,26 +623,32 @@ test('저장 배지로 선택기를 동기화해도 보스 조회를 두 번 호
 
 test('캐릭터가 들어간 파티는 파티 환산 합계를 찾고 배율 미등록 파티원이 있으면 건너뛴다', () => {
   const engine = loadPlanner();
+  const openImage = 'https://open.api.nexon.com/static/maplestory/character/look/ABC123';
+  const rankImage = 'https://avatar.maplestory.nexon.com/CharacterEx/180/ABC.png';
+  engine.addProfile('나', {characterImage:openImage});
   const store = {snapshots:[
     {characterName:'나', preset:'00000', rates:[{bossId:'Lotus|Extreme', percent:60.5}, {bossId:'Will|Hard', percent:70}]},
-    {characterName:'친구', preset:'00000', rates:[{bossId:'Lotus|Extreme', percent:80}]}
+    {characterName:'친구', preset:'00000', rates:[{bossId:'Lotus|Extreme', percent:80}], character:{name:'친구', world:'루나', job:'비숍', level:280, image:rankImage, updatedAt:Date.now()}}
   ]};
   const shared = [{name:'익스트림 스우', bossId:'Lotus|Extreme', members:['나', '친구']}, {name:'남의 파티', bossId:'Dusk|Chaos', members:['친구']}];
   const local = [{name:'하드 윌', bossId:'Will|Hard', members:[{character:{name:'나'}, rate:70}, {character:{name:'미등록'}, rate:null}]}];
   const result = engine.collectPartyRates('나', local, shared, store);
-  assert.deepEqual(JSON.parse(JSON.stringify(result.rates)), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'', scope:'shared'}});
+  assert.deepEqual(JSON.parse(JSON.stringify(result.rates)), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'', scope:'shared', members:[{name:'나', image:openImage}, {name:'친구', image:rankImage}]}});
   assert.deepEqual([...result.skipped], ['하드 윌']);
 });
 
 test('파티 보스는 항상 파티 배율로 계산하고 고정 칸의 파티 표시로 그 파티를 연다', () => {
   const engine = loadPlanner();
   engine.setBosses([{name:'스우', diff:'익스트림', mult:50, on:true}, {name:'윌', diff:'하드', mult:80, on:true}].map((b, i) => ({id:'b' + i, extra:0, ...b})));
-  engine.setPartyRates(require('../boss_db.json'), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'party-1', scope:'shared'}});
+  engine.setPartyRates(require('../boss_db.json'), {'Lotus|Extreme':{total:140.5, name:'익스트림 스우', count:2, id:'party-1', scope:'shared', members:[{name:'나', image:''}, {name:'친구', image:''}]}});
   const mult = name => engine.activeItems().find(item => item.name === name).mult;
   assert.equal(mult('스우'), 140.5);
   assert.equal(mult('윌'), 80);
   const [suu, will] = engine.listRows();
   assert(suu.includes('<div class="row-party"><a class="party-link" href="party_boss_scheduler.html?scope=shared&amp;party=party-1"'));
+  assert.match(suu, /data-tooltip-value="2명 환산 합계 140\.5%" data-tooltip-portraits="\[.*친구.*\]"/);
+  engine.renderAll();
+  assert.match(engine.results().pack, /data-tooltip-portraits="\[.*친구.*\]"/);
   assert.match(suu, /aria-label="스우 파티 배율" disabled/);
   assert.doesNotMatch(suu, /data-act="party"/);
   assert(will.includes('<div class="row-party"></div>'));

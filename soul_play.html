@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="가상 메소와 에테르로 소울 증폭, 등급 상승, 목표 옵션을 자동으로 시도합니다.">
+  <title>소울 잠재능력 시뮬레이터</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="site_ux.css">
+  <link rel="stylesheet" href="potential_plan.css">
+  <link rel="stylesheet" href="soul.css">
+  <script src="site_header.js" defer></script>
+  <script src="site_nav.js" defer></script>
+  <script src="site_help_data.js" defer></script>
+  <script src="site_help.js" defer></script>
+  <script src="site_ux.js" defer></script>
+  <script src="money_input.js" defer></script>
+  <script src="soul_option_data.js" defer></script>
+  <script src="upgrade_step.js" defer></script>
+  <script src="soul_core.js" defer></script>
+  <script src="potential_plan.js" defer></script>
+  <script src="hunting_calc.js" defer></script>
+  <script src="required_hunt.js" defer></script>
+  <script src="actual_record.js" defer></script>
+  <script src="soul.js" defer></script>
+</head>
+<body class="soul-page potential-workspace" data-ux-page="soul_play.html">
+  <div data-site-navigation></div>
+  <main class="wrap">
+    <header>
+      <h1>소울 잠재능력 시뮬레이터</h1>
+      <p>가상 메소와 소울 에테르로 증폭부터 목표 옵션까지 자동으로 시도하세요.</p>
+    </header>
+    <div class="soul-view-bar"><a href="soul_calc.html">계산기 열기 →</a></div>
+    <div class="layout">
+      <fieldset id="sim-fields" class="potential-stack" aria-label="시작 조건과 목표">
+        <section class="card" aria-labelledby="sim-amp-title">
+          <div class="potential-section-head">
+            <h2 id="sim-amp-title"><label><input type="checkbox" id="sim-want-amp" aria-controls="sim-amp-settings">증폭</label></h2>
+          </div>
+          <div class="potential-route" id="sim-amp-settings" hidden>
+            <div class="field"><label for="sim-start-stage">시작 단계</label><select id="sim-start-stage"></select></div>
+            <span class="potential-route-arrow" aria-hidden="true">→</span>
+            <div class="field"><label for="sim-stage">목표 단계</label><select id="sim-stage"></select></div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="sim-rank-title">
+          <div class="potential-section-head">
+            <h2 id="sim-rank-title"><label><input type="checkbox" id="sim-want-rank" aria-controls="sim-rank-settings">잠재능력 등급</label></h2>
+            <label class="soul-check" id="sim-miracle-field" hidden>
+              <input id="sim-miracle" type="checkbox" aria-label="미라클 타임">
+              <img class="soul-miracle-icon" src="icons/home/행운의네잎클로버.webp" width="20" height="20" alt="">
+              <span>미라클<span class="potential-miracle-suffix"> 타임</span></span>
+            </label>
+          </div>
+          <div class="potential-route" id="sim-rank-settings" hidden>
+            <div class="field"><label for="sim-start-rank">시작 등급</label><select id="sim-start-rank"></select></div>
+            <span class="potential-route-arrow" aria-hidden="true">→</span>
+            <div class="field"><label for="sim-rank">목표 등급</label><select id="sim-rank"></select></div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="sim-option-title">
+          <div class="potential-section-head">
+            <h2 id="sim-option-title"><label><input type="checkbox" id="sim-want-option" aria-controls="sim-goal-fields">목표 옵션</label></h2>
+          </div>
+          <div id="sim-goal-fields" class="soul-fields" hidden>
+            <div class="field" id="sim-option-stage-field"><label for="sim-option-stage">현재 증폭</label><select id="sim-option-stage"></select></div>
+            <div class="field" id="sim-option-rank-field"><label for="sim-option-rank">현재 등급</label><select id="sim-option-rank"></select></div>
+            <div id="option-editor" class="soul-fields soul-wide"></div>
+            <p class="ux-hint soul-wide" id="sim-goal-hint">목표 등급부터 옵션을 확인합니다. 옵션을 뽑는 중에도 등급이 오를 수 있습니다.</p>
+          </div>
+        </section>
+      </fieldset>
+      <div class="soul-sim-results">
+        <section class="card card-primary soul-result" aria-labelledby="sim-result-title">
+          <h2 id="sim-result-title">현재 소울 상태</h2>
+          <p class="soul-amount" id="sim-state">—</p>
+          <p class="ux-hint soul-target" id="sim-target"></p>
+          <p class="ux-hint soul-context" id="sim-next"></p>
+          <div class="soul-gauge" id="sim-gauge" hidden>
+            <label for="sim-counter" id="sim-counter-label"></label>
+            <progress id="sim-counter" value="0" max="1"></progress>
+          </div>
+          <ol class="soul-options" id="sim-options" hidden></ol>
+          <p id="sim-status" class="soul-status" role="status"></p>
+          <div class="soul-actions">
+            <button type="button" class="primary" id="sim-auto">목표까지 자동 진행</button>
+            <button type="button" class="primary" id="sim-stop" hidden>자동 진행 멈추기</button>
+            <button type="button" class="ux-button" id="sim-reset" hidden>다시하기</button>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="sim-summary-title">
+          <h2 id="sim-summary-title">가상 지출과 시도 내역</h2>
+          <div id="sim-totals" class="soul-metrics">
+            <dl>
+              <dt>가상 지출</dt>
+              <dd>
+                <strong id="sim-spend">—</strong>
+                <span class="soul-record-percentile" id="sim-spend-rank" aria-live="polite"></span>
+              </dd>
+            </dl>
+            <dl>
+              <dt>전체 시도</dt>
+              <dd>
+                <strong id="sim-attempts">—</strong>
+                <span class="soul-record-percentile" id="sim-attempts-rank"></span>
+              </dd>
+            </dl>
+            <required-hunt id="sim-hunt" layout="stacked" meso="0"></required-hunt>
+          </div>
+          <dl class="soul-metrics soul-sim-breakdown">
+            <div>
+              <dt>가상 소울 에테르 사용</dt>
+              <dd><strong id="sim-ether-empty">0개</strong><ul id="sim-ether" class="soul-sim-count-list" hidden></ul></dd>
+            </div>
+            <div id="sim-grade-usage" hidden>
+              <dt>등급 상승 시도</dt>
+              <dd><strong id="sim-grade-empty">0회</strong><ul id="sim-grade-attempts" class="soul-sim-count-list" hidden></ul></dd>
+            </div>
+            <div id="sim-option-usage" hidden>
+              <dt>잠재 옵션 시도</dt>
+              <dd><ul id="sim-option-attempts" class="soul-sim-count-list"></ul></dd>
+            </div>
+          </dl>
+          <required-hunt-basis></required-hunt-basis>
+        </section>
+      </div>
+    </div>
+    <section data-ux-help="시뮬레이션 기준">
+      <p>증폭, 잠재능력 등급, 목표 옵션 중 진행할 항목에 체크하세요. 각 판의 시도 횟수는 0회부터 시작합니다.</p>
+      <p>증폭이 목표 단계에 도달하면 등급 상승과 옵션 재설정을 진행합니다. 처음 증폭에 성공하면 레어 잠재능력이 생깁니다. 현재 옵션을 입력하지 않은 경우 첫 재설정에서는 전체 옵션표로 추첨합니다. 이후 직전과 동일한 3줄 조합은 다시 추첨합니다.</p>
+      <p>미라클 타임을 체크하면 등급 상승에 행사 확률을 적용합니다. 증폭 게이지가 찬 다음 시도와 등급 상승 보장 횟수째에는 확정으로 처리합니다. 모든 지출은 가상입니다.</p>
+      <p>자동 진행은 한 번에 최대 100,000회를 시도합니다. 목표에 도달하거나 등급이 바뀌어 목표 옵션을 더 뽑을 수 없게 되면 멈춥니다.</p>
+      <p>상위 %는 같은 조건에서 표시된 메소, 횟수 또는 에테르 개수 이하로 해당 목표를 달성할 확률입니다. 증폭과 등급 상승은 각 단계에 성공하면 표시합니다. 목표 옵션을 찾는 중에 등급이 오른 시도는 잠재 옵션에 집계합니다. 직전 옵션 조합을 제외하는 효과는 범위에 반영합니다.</p>
+      <p>다시하기를 누르면 같은 조건으로 자동 진행합니다.</p>
+      <p>자동 진행을 멈추거나 완료하면 조건을 바로 수정할 수 있습니다. 조건을 바꾸면 새 판으로 초기화됩니다.</p>
+      <ul>
+        <li><a href="https://maplestory.nexon.com/Guide/N23GameInformation/Articles/416">넥슨 소울웨폰 가이드</a></li>
+        <li><a href="https://maplestory.nexon.com/guide/n23gameinformation/articles/459">넥슨 보스 보상 아이콘</a></li>
+        <li><a href="https://maplestory.nexon.com/Guide/OtherProbability/cube/Soulpotential">넥슨 소울 잠재능력 확률표</a></li>
+        <li><a href="https://maplestory.nexon.com/News/Update/813">넥슨 소울웨폰 개편 공지</a></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

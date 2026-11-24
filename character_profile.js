@@ -1,13 +1,18 @@
 (function(root,factory){
-  var api=factory(typeof module==='object'&&module.exports?require('./scouter_data.js'):root.ScouterData);
+  var api=factory(typeof module==='object'&&module.exports?require('./scouter_data.js'):root.ScouterData,
+    typeof module==='object'&&module.exports?require('./nexon_api.js'):root.NexonApi);
   if(typeof module==='object'&&module.exports)module.exports=api;else root.CharacterProfile=api;
-})(typeof window!=='undefined'?window:globalThis,function(data){
+})(typeof window!=='undefined'?window:globalThis,function(data, NexonApi){
   'use strict';
   function client(fetchImpl,getKey){
-    async function get(path,params,signal){
-      var key=getKey();if(!key)throw new Error('API_KEY_REQUIRED');if(signal&&signal.aborted)throw new DOMException('Aborted','AbortError');
-      var response=await fetchImpl('https://open.api.nexon.com/maplestory/v1'+path+'?'+new URLSearchParams(params),{headers:{'x-nxopen-api-key':key},signal:signal});
-      var body=await response.json();if(!response.ok){var e=new Error('NEXON_API_ERROR');e.code=body&&body.error&&body.error.name;throw e;}return body;
+    var api = new NexonApi(fetchImpl, getKey);
+    async function get(path, params, signal) {
+      try {
+        return await api.get(path, params, { signal, strictJson: true });
+      } catch (error) {
+        if (error instanceof NexonApi.Error) error.message = 'NEXON_API_ERROR';
+        throw error;
+      }
     }
     return {load:async function(name,signal){
       if(!data.validName(name))throw new Error('PROFILE_INVALID');

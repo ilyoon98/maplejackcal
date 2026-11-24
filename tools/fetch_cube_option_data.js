@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 넥슨 공식 확률 페이지 → cube_option_data.js
-// (큐브 옵션 확률 계산기 cube_option_calc.html, 아이템 제작 비용 계산기 item_craft_calc.html이 읽는다)
+// (큐브 잠재능력 계산기 cube_calc.html, 아이템 제작 비용 계산기 item_craft_calc.html이 읽는다)
 //
 // maplestory.nexon.com/Guide/OtherProbability/cube/* 의 "확률 검색"이 쓰는 API를 그대로 호출해
 // 옵션별 등장 확률을 큐브 × 등급 × 장비 분류 × 레벨 구간으로 모은다.

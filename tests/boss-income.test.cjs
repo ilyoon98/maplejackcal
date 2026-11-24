@@ -15,6 +15,7 @@ function fakeElement(){
   };
 }
 const context = {
+  BossSchedule: require('../boss_schedule.js'),
   MapleBossDB: require('../boss_db.js'),
   document: {getElementById: () => fakeElement()},
   localStorage: {getItem: () => null, setItem(){}, removeItem(){}},
@@ -22,8 +23,9 @@ const context = {
   window: {addEventListener(){}},
 };
 vm.createContext(context);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../json_storage.js'), 'utf8'), context);
 vm.runInContext(script.replace(/  renderAll\(\);\s*autoRefreshCharacterCompletions\(\);\s*hydrateMissingCharacterProfiles\(\);\s*\}\)\(\);\s*$/, `
-  globalThis.engine = {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag, describeApiError, BOSS_DATA, validParty, escapeHtml, characterBossIcon, weeklyCompletionHtml,
+  globalThis.engine = {normalizeCharacter, charTotals, applyPreset, parseSchedulerBosses, trueFlag: BossSchedule.isTrue, describeApiError, BOSS_DATA, validParty, escapeHtml, characterBossIcon, weeklyCompletionHtml,
     partyControlsHtml, characterWeeklyIncomeHtml, allWeeklyComplete, apiLinkBadgeHtml, characterProfileHtml, reorderCharacters, normalizeCharacterImage,
     changeDifficulty(ch, name, diff) {
       var original = renderAll;

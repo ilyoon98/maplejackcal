@@ -8,10 +8,10 @@
     return Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('');
   }
   function readLinks(){
-    try{const value=JSON.parse(localStorage.getItem(LINKS));if(value&&typeof value.keys==='object'&&typeof value.accounts==='object')return value;}catch(e){}
+    const value = JsonStorage.local.read(LINKS);
+    if (value?.keys && typeof value.keys === 'object' && value.accounts && typeof value.accounts === 'object') return value;
     return {keys:{},accounts:{}};
   }
-  function writeLinks(value){try{localStorage.setItem(LINKS,JSON.stringify(value));}catch(e){}}
   async function isLinked(key){return !!readLinks().keys[await hash(key)];}
   async function link(key,accountIds){
     const ids=[...new Set((accountIds||[]).map(String).filter(Boolean))].sort();
@@ -21,7 +21,7 @@
     const namespace=accountHashes.map(h=>links.accounts[h]).find(Boolean)||links.keys[keyHash]||'account:'+accountHashes[0];
     links.keys[keyHash]=namespace;
     accountHashes.forEach(h=>{links.accounts[h]=namespace;});
-    writeLinks(links);
+    JsonStorage.local.write(LINKS, links);
     return namespace;
   }
   // Moves days saved under the key hash into the account namespace, keeping the newer copy of each day.

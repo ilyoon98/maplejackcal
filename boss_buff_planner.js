@@ -115,9 +115,10 @@
   var BIN_W = 1000000;       // DP 점수: 버프 한 개 = 100만점. 남는 초 단위 비교보다 항상 우선한다.
   var INF = 0x3fffffff;
 
-  var profiles = [];
+  var PROFILE_STORE = 'bossBuffPlanner.profiles';
+  var savedProfiles = JsonStorage.local.read(PROFILE_STORE);
+  var profiles = Array.isArray(savedProfiles) ? savedProfiles.filter(function(p){return p && typeof p.name === 'string' && p.state && Array.isArray(p.state.bosses);}) : [];
   var activeProfile = '';
-  try { profiles = JSON.parse(localStorage.getItem('bossBuffPlanner.profiles') || '[]').filter(function(p){return p && typeof p.name === 'string' && p.state && Array.isArray(p.state.bosses);}); } catch (e) {}
   var state = loadState();
 
   function defaultState() {
@@ -135,9 +136,7 @@
   }
   function loadState(snapshot) {
     try {
-      var raw = snapshot ? JSON.stringify(snapshot) : localStorage.getItem(STORE_KEY);
-      if (!raw) return defaultState();
-      var s = JSON.parse(raw);
+      var s = snapshot ? JSON.parse(JSON.stringify(snapshot)) : JsonStorage.local.read(STORE_KEY);
       if (!s || !Array.isArray(s.bosses)) return defaultState();
       // 버프 지속 30분 · 배율 100% 기준 20분은 고정값이다(화면에서 바꾸지 않는다).
       s.buffMin = 30;
@@ -152,13 +151,15 @@
     } catch (err) { return defaultState(); }
   }
   function saveState() {
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(state));
-      if (activeProfile) {
-        var profile = profiles.find(function(p){ return p.name === activeProfile; });
-        if (profile) { profile.state = JSON.parse(JSON.stringify(state)); localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); }
+    var saved = JsonStorage.local.write(STORE_KEY, state);
+    if (saved && activeProfile) {
+      var profile = profiles.find(function(p){ return p.name === activeProfile; });
+      if (profile) {
+        profile.state = JSON.parse(JSON.stringify(state));
+        saved = JsonStorage.local.write(PROFILE_STORE, profiles);
       }
-    } catch (err) { if (typeof setStatus === 'function' && fetchStatus) setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err'); }
+    }
+    if (!saved && fetchStatus) setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err');
   }
   function num(v, fallback) {
     var n = parseFloat(v);
@@ -397,19 +398,39 @@
   }
   function collectPartyRates(name, local, shared, store) {
     var found = Object.create(null), skipped = [];
-    function add(p, rates, scope) {
+    var images = new Map();
+    function rememberImage(name, raw) {
+      var image = window.ScouterData.imageUrl(raw);
+      if (image && !images.has(name)) images.set(name, image);
+    }
+    window.AccountCatalog.groups(store || {}).forEach(function (account) {
+      account.characters.forEach(function (c) { rememberImage(c.name, c.profile?.image); });
+    });
+    local.forEach(function (p) {
+      if (!Array.isArray(p.members)) return;
+      p.members.forEach(function (m) {
+        if (m?.character) rememberImage(m.character.name, m.character.image);
+      });
+    });
+    profiles.forEach(function (p) { rememberImage(p.name, p.character?.characterImage); });
+    function add(p, names, rates, scope) {
       if (!p || !p.bossId || found[p.bossId]) return;
       if (!rates.length || rates.some(function (r) { return r === null; })) { skipped.push(p.name || '이름 없는 파티'); return; }
-      found[p.bossId] = { total: Math.round(rates.reduce(function (s, r) { return s + r; }, 0) * 100) / 100, name: p.name || '', count: rates.length, id: typeof p.id === 'string' ? p.id : '', scope: scope };
+      found[p.bossId] = {
+        total: Math.round(rates.reduce(function (s, r) { return s + r; }, 0) * 100) / 100,
+        name: p.name || '', count: rates.length, id: typeof p.id === 'string' ? p.id : '', scope: scope,
+        members: names.map(function (n) { return { name: n, image: images.get(n) || '' }; })
+      };
     }
     // 공유 파티를 먼저 본다. 로컬 파티는 공유로 복사하기 전 사본일 수 있다.
     shared.forEach(function (p) {
-      if (Array.isArray(p.members) && p.members.indexOf(name) >= 0) add(p, p.members.map(function (n) { return snapshotRate(store, n, p.bossId); }), 'shared');
+      if (Array.isArray(p.members) && p.members.indexOf(name) >= 0) add(p, p.members, p.members.map(function (n) { return snapshotRate(store, n, p.bossId); }), 'shared');
     });
     local.forEach(function (p) {
-      var members = Array.isArray(p.members) ? p.members : [];
-      if (!members.some(function (m) { return m && m.character && m.character.name === name; })) return;
-      add(p, members.map(function (m) {
+      var members = Array.isArray(p.members) ? p.members.filter(function (m) { return typeof m?.character?.name === 'string'; }) : [];
+      var names = members.map(function (m) { return m.character.name; });
+      if (!names.includes(name)) return;
+      add(p, names, members.map(function (m) {
         var fresh = snapshotRate(store, m.character.name, p.bossId);
         return fresh !== null ? fresh : typeof m.rate === 'number' ? m.rate : null;
       }), 'local');
@@ -421,9 +442,10 @@
     var name = (activeProfile || charInput.value || '').trim(), request = ++partyRequest;
     if (!name || typeof fetch !== 'function') { partyRates = Object.create(null); partyStatus(''); renderAll(); return Promise.resolve(); }
     var local = [];
-    try { var saved = JSON.parse(localStorage.getItem(PARTY_STORE) || '{}'); if (saved && Array.isArray(saved.parties)) local = saved.parties; } catch (e) {}
+    var saved = JsonStorage.local.read(PARTY_STORE);
+    if (Array.isArray(saved?.parties)) local = saved.parties;
     function json(url) { return fetch(url, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); }); }
-    return Promise.all([json('/api/boss-parties').catch(function () { return null; }), json('/api/boss-rates').catch(function () { return null; })])
+    return Promise.all([json('/api/boss-parties').catch(function () { return null; }), RateCatalog.published(fetch).catch(function () { return null; })])
       .then(function (res) {
         if (request !== partyRequest) return;
         var shared = res[0] && Array.isArray(res[0].parties) ? res[0].parties : [];
@@ -442,7 +464,7 @@
       var mult = effectiveMult(b), party = partyFor(b);
       return {
         name: b.name, diff: b.diff, icon: b.icon, mult: mult, extra: b.extra, rice: b.rice === true,
-        party: party ? (party.name || '파티') : '', partyLink: party ? partyLink(party) : '',
+        party: party,
         full: withSlack(secOf(mult)) + extraSec(b),
         riceSec: withSlack(riceSecOf(mult)) + extraSec(b)
       };
@@ -464,9 +486,7 @@
       var party = partyFor(b), usingParty = !!party, mult = effectiveMult(b);
       var sec = b.rice ? riceSecOf(mult) : secOf(mult);
       // 파티 표시는 난이도처럼 고정 칸에 두어 보스 이름 길이와 관계없이 같은 자리에 오게 하고, 누르면 그 파티를 연다.
-      var partyCell = '<div class="row-party">' + (party ? (party.id
-        ? '<a class="party-link" href="' + esc(partyLink(party)) + '" aria-label="' + esc((party.name || b.name) + ' 파티 보러 가기') + '" data-tooltip="' + esc((party.name || '파티') + ' · ' + party.count + '명 환산 합계 ' + percentText(party.total) + '%') + '" data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다.">파티</a>'
-        : '<span class="party-link" data-tooltip="' + esc((party.name || '파티') + ' 환산 합계 ' + percentText(party.total) + '%') + '">파티</span>') : '') + '</div>';
+      var partyCell = '<div class="row-party">' + partyBadgeHtml(party, 'party-link', b.name) + '</div>';
       var lockAttr = usingParty ? ' disabled title="파티 배율을 쓰는 중입니다"' : '';
       var excluded = state.excludeCompleted && b.completed;
       var dopingName = b.rice ? '쌀도핑' : '풀도핑';
@@ -620,10 +640,18 @@
   }
   // 파티 배율로 계산한 보스는 결과에서도 파티로 가는 보스임을 표시한다.
   function partyTagHtml(it) {
-    if (!it.party) return '';
-    return it.partyLink
-      ? ' <a class="tag party" href="' + esc(it.partyLink) + '" aria-label="' + esc(it.party) + ' 파티 보러 가기" data-tooltip="' + esc(it.party) + ' 파티 배율로 계산" data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다.">파티</a>'
-      : ' <span class="tag party" data-tooltip="' + esc(it.party) + ' 파티 배율로 계산">파티</span>';
+    return it.party ? ' ' + partyBadgeHtml(it.party, 'tag party', it.name) : '';
+  }
+  function partyBadgeHtml(party, className, bossName) {
+    if (!party) return '';
+    var link = partyLink(party);
+    var tooltip = ' data-tooltip="' + esc(party.name || '파티') + '" data-tooltip-value="' +
+      esc(party.count + '명 환산 합계 ' + percentText(party.total) + '%') + '"' +
+      ' data-tooltip-portraits="' + esc(JSON.stringify(party.members || [])) + '"';
+    return link
+      ? '<a class="' + className + '" href="' + esc(link) + '" aria-label="' + esc((party.name || bossName) + ' 파티 보러 가기') + '"' +
+        tooltip + ' data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다.">파티</a>'
+      : '<span class="' + className + '" tabindex="0"' + tooltip + '>파티</span>';
   }
   function chip(it, full) {
     return '<span class="chip">' + (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
@@ -737,7 +765,6 @@
 
   // ── 넥슨 스케줄러에서 보스 목록 불러오기 ──────────────────
   // 보스 수익 정산과 같은 방식: 캐릭터 이름 → ocid → 스케줄러의 주간·월간 보스.
-  var API_BASE = 'https://open.api.nexon.com/maplestory/v1';
   var BOSS_ICON = {
     '검은 마법사': 'black_mage', '카링': 'kaling', '유피테르': 'jupiter',
     '최초의 대적자': 'first_challenger', '감시자 칼로스': 'watcher_kalos', '발드릭스': 'baldrix',
@@ -748,7 +775,6 @@
     '피에르': 'pierre', '반반': 'banban', '블러디 퀸': 'bloody_queen', '자쿰': 'zakum'
   };
   var API_BOSS_NAME = { '블러디퀸': '블러디 퀸' };
-  var API_DIFFICULTY = { easy: '이지', normal: '노멀', hard: '하드', chaos: '카오스', extreme: '익스트림' };
   var API_ERROR_MSG = {
     OPENAPI00001: 'API 서버 오류입니다. 잠시 후 다시 시도하세요.',
     OPENAPI00002: '이 API 키로 조회할 수 없는 캐릭터입니다. 본인 계정의 캐릭터인지 확인하세요.',
@@ -790,21 +816,7 @@
       : '<span>불러오기에는 넥슨 오픈 API 키가 필요합니다.</span><a href="index.html#apiKey">API 키 등록</a>';
   }
   function apiGet(path, params) {
-    var query = Object.keys(params).map(function (k) {
-      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-    }).join('&');
-    return fetch(API_BASE + path + '?' + query, { headers: { 'x-nxopen-api-key': NexonKey.get() } })
-      .then(function (res) {
-        return res.json().catch(function () { return null; }).then(function (body) {
-          if (!res.ok) {
-            var e = body && body.error ? body.error : {};
-            var err = new Error(e.message || ('HTTP ' + res.status));
-            err.code = e.name || '';
-            throw err;
-          }
-          return body;
-        });
-      });
+    return NexonApi.browser.get(path, params);
   }
   function describeApiError(err, stage) {
     if (err && err.code) {
@@ -817,8 +829,6 @@
     if (err && err.name === 'TypeError') return '네트워크 오류로 넥슨 API에 연결하지 못했습니다.';
     return '불러오지 못했습니다: ' + (err && err.message ? err.message : err);
   }
-  function trueFlag(v) { return v === true || String(v).toLowerCase() === 'true'; }
-
   function normalizeCharacterImage(value) {
     var image = typeof value === 'string' ? value.trim() : '';
     return /^https:\/\/open\.api\.nexon\.com\/static\/maplestory\/character\/look\/[A-Za-z0-9]+(?:\?[^\s"'<>]*)?$/.test(image) ? image : '';
@@ -861,26 +871,21 @@
       prevSettings[b.name] = b.difficultySettings || {};
     });
     var out = [], skipped = [];
-    (data && Array.isArray(data.boss_contents) ? data.boss_contents : []).forEach(function (item) {
-      if (!item || !trueFlag(item.registration_flag)) return;
-      var cycle = String(item.cycle || '').toLowerCase();
-      if (cycle !== 'bossweekly' && cycle !== 'bossmonthly') return;
-      var apiName = String(item.content_name || '').trim();
-      var name = API_BOSS_NAME[apiName] || apiName;
+    new BossSchedule(data).registeredRecurringBosses.forEach(function (boss) {
+      var name = API_BOSS_NAME[boss.name] || boss.name;
       var icon = BOSS_ICON[name];
       if (!icon) skipped.push(name);
       out.push({
         id: 'a' + out.length,
         name: name,
-        diff: API_DIFFICULTY[String(item.difficulty || '').toLowerCase()] || '',
+        diff: boss.difficultyLabel,
         icon: icon ? 'icons/boss/' + icon + '.webp' : '',
-        mult: prevMult[name + '|' + (API_DIFFICULTY[String(item.difficulty || '').toLowerCase()] || '')] || prevMult[name + '|'] || 100,
+        mult: prevMult[name + '|' + (boss.difficultyLabel)] || prevMult[name + '|'] || 100,
         rice: prevRice[name] || false,
         difficultySettings: prevSettings[name] || {},
         extra: DEFAULT_EXTRA[name] || 0,
         on: true,
-        // clear_flag가 제공되면 우선 사용하고, 기존 complete_flag 응답도 지원한다.
-        completed: trueFlag(item.clear_flag != null ? item.clear_flag : item.complete_flag)
+        completed: boss.completed
       });
     });
     return { bosses: out, skipped: skipped };
@@ -1191,8 +1196,7 @@
     p.state = JSON.parse(JSON.stringify(state));
     if (characterProfile) p.character = normalizeCharacterProfile(characterProfile, name);
     activeProfile = name;
-    try { localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); }
-    catch(e) { setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err'); }
+    if (!JsonStorage.local.write(PROFILE_STORE, profiles)) setStatus('브라우저 저장 공간에 저장하지 못했습니다.', 'err');
     renderProfiles();
   }
   function renderProfiles() {
@@ -1216,7 +1220,7 @@
       del.addEventListener('click', function(){
         profiles = profiles.filter(function(x){ return x !== p; });
         if(activeProfile === p.name) { activeProfile = ''; renderCharacterProfile(null); }
-        try { localStorage.setItem('bossBuffPlanner.profiles', JSON.stringify(profiles)); } catch(e) {}
+        JsonStorage.local.write(PROFILE_STORE, profiles);
         renderProfiles();
       });
       group.append(b, del); profileBar.append(group);

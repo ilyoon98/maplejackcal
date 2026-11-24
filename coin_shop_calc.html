@@ -409,6 +409,7 @@
 </div>
 
 <script src="coin_shop_data.js"></script>
+<script src="json_storage.js"></script>
 <script>
 (function(){
   // 상점 데이터는 CoinShopData.xlsx → coin_shop_data.js 로 만들어진다 (tools/build_coin_shop_data.js).
@@ -462,9 +463,8 @@
 
   function load(){
     try {
-      var raw = localStorage.getItem(STORE_KEY);
-      if (!raw) return;
-      var saved = JSON.parse(raw);
+      var saved = JsonStorage.local.read(STORE_KEY);
+      if (!saved) return;
       function restore(src, target, capOf){
         if (!src) return;
         Object.keys(src).forEach(function(id){
@@ -484,9 +484,7 @@
     } catch (e) { /* 저장값이 깨졌으면 기본값으로 시작 */ }
   }
   function save(){
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ cart:cart, owned:owned, settings:settings, tab:activeTab }));
-    } catch (e) {}
+    JsonStorage.local.write(STORE_KEY, { cart:cart, owned:owned, settings:settings, tab:activeTab });
   }
 
   function coinsOf(map){

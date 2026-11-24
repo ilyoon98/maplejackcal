@@ -50,14 +50,14 @@
   // ---------------------------------------------------------------- 상태
 
   const state = { base: DEFAULT_BASE, buyFee: DEFAULT_BUY_FEE, sellFee: DEFAULT_SELL_FEE, sell: 0, amount: 1 };
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+  {
+    const saved = JsonStorage.local.read(STORE_KEY) ?? {};
     Object.keys(state).forEach(k => { if (Number.isFinite(saved[k])) state[k] = saved[k]; });
-  } catch (e) {}
+  }
   if (!(state.amount > 0)) state.amount = 1;
   if (!(state.buyFee >= 0) || state.buyFee >= 100) state.buyFee = DEFAULT_BUY_FEE;
   if (!(state.sellFee >= 0) || state.sellFee >= 100) state.sellFee = DEFAULT_SELL_FEE;
-  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} };
+  const save = () => { JsonStorage.local.write(STORE_KEY, state); };
 
   // ---------------------------------------------------------------- 계산
 

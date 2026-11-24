@@ -8,7 +8,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const context = vm.createContext({ window: {}, document: { addEventListener() {} } });
-for (const file of ['cube_option_data.js', 'cube_core.js', 'flame_core.js', 'starforce_data.js', 'starforce_calc.js']) {
+for (const file of ['cube_option_data.js', 'upgrade_step.js', 'cube_core.js', 'flame_core.js', 'starforce_data.js', 'starforce_calc.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context);
 }
 const get = expression => vm.runInContext(expression, context);

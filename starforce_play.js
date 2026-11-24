@@ -1,63 +1,17 @@
 // 스타포스 시뮬레이터. 기댓값 계산기(starforce_calc.js)와 같은 모델로 실제로 굴려 본다.
 //
 // 한 판 = 시작 성에서 목표 성에 도달할 때까지. 파괴되면 12성으로 되돌아가고
-// 노작값(대체 장비값)이 그 자리에서 지출에 더해진다. 계산기의 기댓값 식을 그대로
-// 가져와서, 굴려서 나온 실제 지출을 같은 기준의 기대 지출과 나란히 비교한다.
+// 노작값(대체 장비값)이 그 자리에서 지출에 더해진다. 공용 계산기의 결과를 사용해
+// 굴려서 나온 실제 지출을 같은 기준의 기대 지출과 나란히 비교한다.
 //
 // 하락·찬스타임은 다루지 않는다. 계산기와 마찬가지로 한 번의 강화를 성공 / 유지 / 파괴
 // 세 갈래로만 본다.
 (function () {
   var D = window.StarforceData;
+  var calculator = window.StarforceCalc;
   var MAX = D.MAX_STAR;
   var RESET = D.DESTROY_RESET_STAR;
   var AUTO_SPEED = 70; // ms. 별이 올라가는 게 눈에 보일 정도
-
-  // ---------------------------------------------------------------- 확률·비용 (계산기와 동일)
-
-  function buildSteps(opts) {
-    var steps = [];
-    for (var s = 0; s < MAX; s++) {
-      var r = D.RATES[s];
-      var p = r.success, d = r.destroy;
-      if (opts.lucky5 && (s === 5 || s === 10 || s === 15)) { p = 1; d = 0; }
-      if (opts.destroyDown30 && s <= 21) d *= 0.7;
-
-      var base = D.baseCost(s, opts.level);
-      var rate = 1;
-      if (s < 17) rate -= (opts.mvp || 0) + (opts.pcRoom ? 0.05 : 0);
-      if (opts.discount30) rate -= 0.3;
-      var cost = base * Math.max(rate, 0);
-
-      var guarded = opts.safeguard && opts.safeguard[s] && D.PROTECT_STARS.indexOf(s) >= 0;
-      if (guarded) { cost += base * (D.PROTECT_COST_MULTIPLIER - 1); d = 0; }
-      steps.push({ star: s, p: p, d: d, cost: Math.round(cost), guarded: !!guarded });
-    }
-    return steps;
-  }
-
-  // 12성 복귀가 섞인 재귀식. 자세한 유도는 starforce_calc.js 주석 참고.
-  function expected(opts) {
-    var steps = buildSteps(opts);
-    var spare = opts.spare || 0;
-    var per = [], sumMeso = 0, sumDestroy = 0, sumTries = 0;
-    for (var s = 0; s < MAX; s++) {
-      var st = steps[s], ratio = st.d / st.p, meso, destroys, tries;
-      if (s < RESET) {
-        meso = st.cost / st.p; destroys = 0; tries = 1 / st.p;
-      } else {
-        meso = st.cost / st.p + ratio * (spare + sumMeso);
-        destroys = ratio * (1 + sumDestroy);
-        tries = 1 / st.p + ratio * sumTries;
-        sumMeso += meso; sumDestroy += destroys; sumTries += tries;
-      }
-      per.push({ meso: meso, destroys: destroys, tries: tries });
-    }
-    var total = { meso: 0, destroys: 0, tries: 0 };
-    for (var k = opts.start; k < opts.goal; k++) {
-      total.meso += per[k].meso; total.destroys += per[k].destroys; total.tries += per[k].tries;
-    }
-    return total;
-  }
 
   // ---------------------------------------------------------------- 한 판 지출 분포
 
@@ -76,30 +30,18 @@
   function samples() {
     var key = sampleKey();
     if (sampleCache.key === key) return sampleCache.costs;
-    var costs = new Float64Array(SAMPLE_N);
-    var spare = settings.spare || 0;
-    for (var i = 0; i < SAMPLE_N; i++) {
-      var star = settings.start, sum = 0;
-      while (star < settings.goal) {
-        var st = steps[star];
-        sum += st.cost;
-        var r = Math.random();
-        if (r < st.p) star++;
-        else if (r < st.p + st.d) { sum += spare; star = RESET; }
-      }
-      costs[i] = sum;
-    }
-    costs.sort();
+    var sampler = calculator.sampleCosts(settings, SAMPLE_N, Math.random, 5000000), next;
+    do { next = sampler.next(); } while (!next.done);
+    var costs = next.value;
     sampleCache = { key: key, costs: costs };
     return costs;
   }
   // 내 지출 이하로 끝난 표본의 비율. 0%로는 적지 않는다(표본 1개분이 하한).
   function percentileOf(cost) {
-    var c = samples(), lo = 0, hi = c.length;
-    while (lo < hi) { var mid = (lo + hi) >> 1; if (c[mid] <= cost) lo = mid + 1; else hi = mid; }
-    return Math.max(lo, 1) / c.length;
+    var result = ActualRecord.sampledPercentile(samples(), cost);
+    return result ? Math.max(result.percent / 100, 1 / result.samples) : null;
   }
-  function medianCost() { var c = samples(); return c[Math.floor(c.length / 2)]; }
+  function medianCost() { var c = samples(); return c ? c[Math.floor(c.length / 2)] : null; }
 
   // ---------------------------------------------------------------- 상태
 
@@ -126,6 +68,7 @@
       runs: 0,                  // 완료한 판
       doneAttempts: 0, doneDestroys: 0, doneMeso: 0, // 끝난 판만의 누적
       pctSum: 0,                // 판별 상위 % 합계(평균용)
+      rankedRuns: 0,
       log: [],
       cleared: false            // 목표 도달 후 "다음 판" 대기 상태
     };
@@ -134,15 +77,12 @@
   function $(id) { return document.getElementById(id); }
 
   function save() {
-    try { localStorage.setItem('starforcePlay', JSON.stringify(settings)); } catch (e) {}
+    JsonStorage.local.write('starforcePlay', settings);
   }
   function load() {
-    try {
-      var raw = localStorage.getItem('starforcePlay');
-      if (!raw) return;
-      var v = JSON.parse(raw);
-      Object.keys(settings).forEach(function (k) { if (v[k] !== undefined) settings[k] = v[k]; });
-    } catch (e) {}
+    var saved = JsonStorage.local.read('starforcePlay');
+    if (!saved || typeof saved !== 'object') return;
+    Object.keys(settings).forEach(function (k) { if (saved[k] !== undefined) settings[k] = saved[k]; });
   }
 
   // ---------------------------------------------------------------- 표기
@@ -163,6 +103,7 @@
   function pct(n) { return (n * 100).toFixed(4).replace(/\.?0+$/, '') + '%'; }
   // 등수는 표본에서 읽은 값이라 소수점을 길게 적을 이유가 없다.
   function rankPct(n) {
+    if (n === null) return '—';
     var v = n * 100;
     return (v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : v.toFixed(0)) + '%';
   }
@@ -269,11 +210,11 @@
     var parts = [];
     var perRunExp = expTotal;
     var lastRun = session.log[session.log.length - 1];
-    if (lastRun) parts.push('<div hidden class="ux-score-source"><span data-ux-rank>상위 ' + rankPct(lastRun.rank) + '</span><span data-ux-cost>' + verdict(lastRun.meso - perRunExp.meso) + '</span></div>');
+    if (lastRun) parts.push('<div hidden class="ux-score-source"><span data-ux-rank>' + (lastRun.rank === null ? '' : '상위 ' + rankPct(lastRun.rank)) + '</span><span data-ux-cost>' + verdict(perRunExp.meso, lastRun.meso) + '</span></div>');
 
     // 방금 끝난 판의 등수. 진행 중인 판은 아직 총지출이 정해지지 않아 띄우지 않는다.
-    if (session.cleared && session.log.length) {
-      var last = session.log[session.log.length - 1];
+    if (session.cleared && lastRun && lastRun.rank !== null) {
+      var last = lastRun;
       parts.push('<div class="stat-tile hero"><div class="label">이번 판 결과</div>' +
         '<div class="value">상위 ' + rankPct(last.rank) + '</div>' +
         '<div class="sub">같은 설정으로 굴린 판 100개 중 ' + Math.max(Math.round(last.rank * 100), 1) + '개만 이만큼 싸게 끝나요</div></div>');
@@ -282,23 +223,23 @@
     parts.push('<div class="stage-tiles">' +
       '<div class="stat-tile"><div class="label">이번 판 시도</div><div class="value">' + session.runAttempts + '회</div><div class="sub">기대 ' + num(perRunExp.tries, 1) + '회</div></div>' +
       '<div class="stat-tile"><div class="label">이번 판 파괴</div><div class="value' + (session.runDestroys ? ' boom' : '') + '">' + session.runDestroys + '회</div><div class="sub">기대 ' + num(perRunExp.destroys, 2) + '회</div></div>' +
-      '<div class="stat-tile"><div class="label">이번 판 지출</div><div class="value">' + mesoHtml(session.runMeso) + '</div><div class="sub">기대 ' + meso(perRunExp.meso) + '</div></div>' +
+      '<div class="stat-tile"><div class="label">이번 판 지출</div><div class="value">' + mesoHtml(session.runMeso) + '</div><div class="sub">기대 ' + meso(perRunExp.meso) + '</div>' +
+      '<required-hunt meso="' + session.runMeso + '"></required-hunt></div>' +
       '</div>');
 
     if (session.runs > 0) {
       var avgActual = session.doneMeso / session.runs;
-      var diff = avgActual - perRunExp.meso;
       var median = medianCost();
       parts.push('<div class="stat-tile compare">' +
         '<div class="cmp-col"><div class="label">판당 실제 지출</div><div class="value">' + mesoHtml(avgActual) + '</div></div>' +
         '<div class="cmp-vs">vs</div>' +
         '<div class="cmp-col expected"><div class="label">판당 기대 지출</div><div class="value">' + mesoHtml(perRunExp.meso) + '</div>' +
-        '<div class="sub">중앙값 ' + meso(median) + '</div></div>' +
-        '<div class="cmp-verdict"><span>판당 손익 · ' + session.runs + '판 평균</span>' + verdict(diff) + '</div>' +
-        '<div class="cmp-note">평균 상위 <b>' + rankPct(session.pctSum / session.runs) + '</b> · 평균 시도 ' +
+        (median === null ? '' : '<div class="sub">중앙값 ' + meso(median) + '</div>') + '</div>' +
+        '<div class="cmp-verdict"><span>판당 손익 · ' + session.runs + '판 평균</span>' + verdict(perRunExp.meso, avgActual) + '</div>' +
+        '<div class="cmp-note">' + (session.rankedRuns ? '평균 상위 <b>' + rankPct(session.pctSum / session.rankedRuns) + '</b> · ' : '') + '평균 시도 ' +
         num(session.doneAttempts / session.runs, 1) + '회 · 평균 파괴 ' +
         num(session.doneDestroys / session.runs, 2) + '회 (기대 ' + num(perRunExp.destroys, 2) + '회)<br>' +
-        '판의 절반은 ' + meso(median) + ' 메소 안에 끝나요. 파괴가 몰리는 소수의 판이 평균을 끌어올려서, 기대 지출보다 싸게 끝나는 판이 더 흔합니다.</div>' +
+        (median === null ? '표본을 확보하지 못해 지출 순위를 계산할 수 없어요.' : '판의 절반은 ' + meso(median) + ' 메소 안에 끝나요.') + '</div>' +
         '</div>');
     }
 
@@ -309,21 +250,17 @@
     if (totalMeso > 0 && !(session.runs === 1 && liveMeso === 0)) {
       var expSoFar = perRunExp.meso * session.runs;
       parts.push('<div class="stat-tile compare cumulative">' +
-        '<div class="cmp-col"><div class="label">누적 실제 지출</div><div class="value">' + mesoHtml(totalMeso) + '</div></div>' +
+        '<div class="cmp-col"><div class="label">누적 실제 지출</div><div class="value">' + mesoHtml(totalMeso) + '</div>' +
+        '<required-hunt meso="' + totalMeso + '"></required-hunt></div>' +
         '<div class="cmp-vs">vs</div>' +
         '<div class="cmp-col expected"><div class="label">누적 기대 지출</div><div class="value">' + mesoHtml(expSoFar) + '</div></div>' +
         '<div class="cmp-verdict"><span>누적 손익 · ' + (liveMeso > 0 ? session.runs + '판 + 진행 중' : session.runs + '판 전체') + '</span>' +
-        verdict(session.doneMeso - expSoFar) + '</div></div>');
+        verdict(expSoFar, session.doneMeso) + '</div></div>');
     }
     $('simStats').innerHTML = parts.join('');
   }
 
-  function verdict(diff) {
-    if (Math.round(diff) === 0) return '<b>기대와 같음</b>';
-    return diff > 0
-      ? '<b class="bad">' + mesoHtml(diff) + ' 메소 더 씀</b>'
-      : '<b class="good">' + mesoHtml(-diff) + ' 메소 덜 씀</b>';
-  }
+  function verdict(expected, actual) { return ActualRecord.spendingVerdict(expected, actual, mesoHtml); }
 
   function renderLog() {
     var box = $('runLog');
@@ -332,7 +269,7 @@
       return '<div class="run-log-row"><b class="rl-n">' + r.n + '판</b>' +
         '<span>' + r.attempts + '회</span>' +
         '<span class="rl-boom' + (r.destroys ? ' on' : '') + '">파괴 ' + r.destroys + '</span>' +
-        '<span class="rl-rank">상위 ' + rankPct(r.rank) + '</span>' +
+        '<span class="rl-rank">' + (r.rank === null ? '순위 미산정' : '상위 ' + rankPct(r.rank)) + '</span>' +
         '<span class="rl-meso">' + mesoHtml(r.meso) + ' 메소</span></div>';
     }).join('');
     box.innerHTML = '<div class="run-log-head">판별 기록 <small>최신순</small></div>' + rows;
@@ -365,7 +302,7 @@
         session.doneDestroys += session.runDestroys;
         session.doneMeso += session.runMeso;
         var rank = percentileOf(session.runMeso);
-        session.pctSum += rank;
+        if (rank !== null) { session.pctSum += rank; session.rankedRuns++; }
         session.log.push({ n: session.runs, attempts: session.runAttempts, destroys: session.runDestroys, meso: session.runMeso, rank: rank });
         session.cleared = true;
         stopAuto();
@@ -407,8 +344,9 @@
   function refresh() {
     settings.level = Math.min(300, Math.max(1, Math.round(settings.level || 1)));
     var maxStar = D.maxStarForLevel(settings.level);
-    settings.start = Math.min(maxStar - 1, Math.max(0, Math.round(settings.start)));
-    settings.goal = Math.min(maxStar, Math.max(settings.start + 1, Math.round(settings.goal)));
+    var start = Number(settings.start), goal = Number(settings.goal);
+    settings.start = Math.min(maxStar - 1, Math.max(0, Number.isFinite(start) ? Math.round(start) : RESET));
+    settings.goal = Math.min(maxStar, Math.max(settings.start + 1, Number.isFinite(goal) ? Math.round(goal) : 22));
     if (!session.cleared && (session.star < settings.start || session.star >= settings.goal)) {
       session.star = settings.start;
     }
@@ -418,11 +356,12 @@
       destroyDown30: settings.destroyDown30, lucky5: settings.lucky5, safeguard: settings.safeguard
     };
     if (settings.autoSafeguard) {
-      settings.safeguard = D.bestSafeguard(opts, function (o) { return expected(o).meso; });
+      settings.safeguard = D.bestSafeguard(opts, function (o) { return calculator.calculate(o).total.meso; });
       opts.safeguard = settings.safeguard;
     }
-    steps = buildSteps(opts);
-    expTotal = expected(opts);
+    var result = calculator.calculate(opts);
+    steps = result.steps;
+    expTotal = result.total;
     renderControls();
     renderGame();
     save();

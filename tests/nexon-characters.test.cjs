@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 const code = fs.readFileSync('nexon_characters.js', 'utf8');
+const apiCode = fs.readFileSync('nexon_api.js', 'utf8');
 const css = fs.readFileSync('nexon_characters.css', 'utf8');
 const context = { globalThis: {}, Number, String, Object, Array };
 context.globalThis = context;
@@ -95,11 +96,14 @@ function mountPicker(response = Promise.resolve(payload)) {
     return n;
   }
   const env = {
+    URLSearchParams,
     document:{createElement:node}, Event:class {constructor(type){this.type = type;}},
     addEventListener(){}, NexonKey:{has:() => true, get:() => 'fake-key'},
     fetch:() => response.then(body => ({ok:true, json:() => Promise.resolve(body)})),
   };
-  vm.runInNewContext(code, env);
+  vm.createContext(env);
+  vm.runInContext(apiCode, env);
+  vm.runInContext(code, env);
   const host = node('div'), input = node('input'), selections = [];
   const picker = env.NexonCharacters.mount({host, input, onSelect:c => selections.push(c.name)});
   function find(className, root = host) {

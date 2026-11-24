@@ -2,11 +2,15 @@
   {
     "page": "cube_play.html",
     "image": "capture-guide/cube_play/settings.png",
-    "selector": ".cube-layout > section > .cube-panel",
-    "width": 918,
-    "height": 759,
+    "highlights": [
+      "#kindTabs",
+      "#rankGoalRow",
+      "#cubeChoices"
+    ],
+    "width": 659,
+    "height": 612,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -14,11 +18,13 @@
   {
     "page": "cube_play.html",
     "image": "capture-guide/cube_play/start.png",
-    "selector": ".sim-action-stack",
-    "width": 603,
-    "height": 98,
+    "highlights": [
+      "#autoBtn"
+    ],
+    "width": 659,
+    "height": 318,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -26,23 +32,14 @@
   {
     "page": "cube_play.html",
     "image": "capture-guide/cube_play/decision.png",
-    "selector": "#decisionRow",
-    "width": 603,
-    "height": 98,
+    "highlights": [
+      "#retryBtn",
+      "#nextBtn"
+    ],
+    "width": 659,
+    "height": 128,
     "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "cube_play.html",
-    "image": "capture-guide/cube_play/result.png",
-    "selector": "#simPercentiles",
-    "width": 603,
-    "height": 470,
-    "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -50,11 +47,14 @@
   {
     "page": "starforce_play.html",
     "image": "capture-guide/starforce_play/settings.png",
-    "selector": ".sf-layout > section > .sf-panel",
-    "width": 857,
-    "height": 1124,
+    "highlights": [
+      ".sf-field:has(#startInput)",
+      ".sf-field:has(#goalInput)"
+    ],
+    "width": 444,
+    "height": 138,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -62,11 +62,13 @@
   {
     "page": "starforce_play.html",
     "image": "capture-guide/starforce_play/start.png",
-    "selector": "#starBox",
-    "width": 665,
-    "height": 333,
+    "highlights": [
+      "#autoBtn"
+    ],
+    "width": 659,
+    "height": 531,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -74,107 +76,13 @@
   {
     "page": "starforce_play.html",
     "image": "capture-guide/starforce_play/decision.png",
-    "selector": "#clearedActions",
-    "width": 665,
-    "height": 96,
+    "highlights": [
+      "#clearedActions button"
+    ],
+    "width": 659,
+    "height": 125,
     "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "starforce_play.html",
-    "image": "capture-guide/starforce_play/result.png",
-    "selector": "#simStats",
-    "width": 665,
-    "height": 356,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "boutique_gacha.html",
-    "image": "capture-guide/boutique_gacha/open.png",
-    "selector": ".bt-card:has(#pullTen)",
-    "width": 887,
-    "height": 366,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "boutique_gacha.html",
-    "image": "capture-guide/boutique_gacha/auto.png",
-    "selector": "#autoCard",
-    "width": 887,
-    "height": 488,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "boutique_gacha.html",
-    "image": "capture-guide/boutique_gacha/draw.png",
-    "selector": "#resultCard",
-    "width": 698,
-    "height": 452,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "boutique_gacha.html",
-    "image": "capture-guide/boutique_gacha/result.png",
-    "selector": ".bt-card:has(#tickets)",
-    "width": 698,
-    "height": 786,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "seedring_gacha.html",
-    "image": "capture-guide/seedring_gacha/mode.png",
-    "selector": ".sr-card:has(#modeDaily)",
-    "width": 887,
-    "height": 236,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "seedring_gacha.html",
-    "image": "capture-guide/seedring_gacha/boxes.png",
-    "selector": "[data-box=\"black\"]",
-    "width": 824,
-    "height": 317,
-    "viewport": {
-      "width": 1120,
-      "height": 900
-    },
-    "example": true
-  },
-  {
-    "page": "seedring_gacha.html",
-    "image": "capture-guide/seedring_gacha/result.png",
-    "selector": "#vaultPanel",
-    "width": 887,
-    "height": 687,
-    "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -182,11 +90,14 @@
   {
     "page": "pet_gacha.html",
     "image": "capture-guide/pet_gacha/open.png",
-    "selector": ".pet-actions",
-    "width": 380,
-    "height": 251,
+    "highlights": [
+      "#pullOne",
+      "#pullEleven"
+    ],
+    "width": 659,
+    "height": 281,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -194,11 +105,13 @@
   {
     "page": "pet_gacha.html",
     "image": "capture-guide/pet_gacha/inventory.png",
-    "selector": ".pet-card:has(#inventory)",
-    "width": 911,
-    "height": 434,
+    "highlights": [
+      "#inventory .material-wonder-black"
+    ],
+    "width": 659,
+    "height": 230,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -206,11 +119,13 @@
   {
     "page": "pet_gacha.html",
     "image": "capture-guide/pet_gacha/synthesis.png",
-    "selector": ".pet-card:has(#synthBox)",
-    "width": 443,
-    "height": 512,
+    "highlights": [
+      "#quickBlack"
+    ],
+    "width": 659,
+    "height": 134,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -218,23 +133,115 @@
   {
     "page": "pet_gacha.html",
     "image": "capture-guide/pet_gacha/result.png",
-    "selector": ".pet-card:has(#spent)",
-    "width": 674,
-    "height": 893,
+    "highlights": [
+      "#resultName"
+    ],
+    "width": 635,
+    "height": 395,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
   },
   {
-    "page": "herb_idle.html",
-    "image": "capture-guide/herb_idle/field.png",
-    "selector": "#stage",
-    "width": 999,
-    "height": 419,
+    "page": "boutique_gacha.html",
+    "image": "capture-guide/boutique_gacha/open.png",
+    "highlights": [
+      "#pullOne",
+      "#pullTen"
+    ],
+    "width": 659,
+    "height": 293,
     "viewport": {
-      "width": 1120,
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boutique_gacha.html",
+    "image": "capture-guide/boutique_gacha/auto.png",
+    "highlights": [
+      "[data-target=\"100\"]",
+      "#autoStart"
+    ],
+    "width": 659,
+    "height": 281,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "boutique_gacha.html",
+    "image": "capture-guide/boutique_gacha/draw.png",
+    "highlights": [
+      "#resultName"
+    ],
+    "width": 626,
+    "height": 354,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "seedring_gacha.html",
+    "image": "capture-guide/seedring_gacha/mode.png",
+    "highlights": [
+      "#modeDaily",
+      "#modeUnlimited"
+    ],
+    "width": 659,
+    "height": 102,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "seedring_gacha.html",
+    "image": "capture-guide/seedring_gacha/boxes.png",
+    "highlights": [
+      "[data-box=\"black\"]"
+    ],
+    "width": 659,
+    "height": 464,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "seedring_gacha.html",
+    "image": "capture-guide/seedring_gacha/draw.png",
+    "highlights": [
+      "#drawOne"
+    ],
+    "width": 659,
+    "height": 102,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "seedring_gacha.html",
+    "image": "capture-guide/seedring_gacha/result.png",
+    "highlights": [
+      "#result .result-item",
+      "#result .result-lv"
+    ],
+    "width": 569,
+    "height": 116,
+    "viewport": {
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -242,11 +249,14 @@
   {
     "page": "herb_idle.html",
     "image": "capture-guide/herb_idle/actions.png",
-    "selector": ".hi-actions",
-    "width": 999,
-    "height": 153,
+    "highlights": [
+      "[data-mode=\"gather\"]",
+      "[data-mode=\"oil\"]"
+    ],
+    "width": 710,
+    "height": 170,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -254,11 +264,15 @@
   {
     "page": "herb_idle.html",
     "image": "capture-guide/herb_idle/market.png",
-    "selector": ".hi-market",
-    "width": 585,
-    "height": 1082,
+    "highlights": [
+      "#marketTabSell",
+      "[data-trade-input=\"sell-seed\"]",
+      "[data-sell=\"seed\"]"
+    ],
+    "width": 651,
+    "height": 353,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
@@ -266,23 +280,102 @@
   {
     "page": "herb_idle.html",
     "image": "capture-guide/herb_idle/result.png",
-    "selector": "#worth",
-    "width": 534,
-    "height": 167,
+    "highlights": [
+      ".hi-meso"
+    ],
+    "width": 194,
+    "height": 83,
     "viewport": {
-      "width": 1120,
+      "width": 500,
       "height": 900
     },
     "example": true
   },
   {
-    "page": "herb_idle.html",
-    "image": "capture-guide/herb_idle/facility.png",
-    "selector": "#facility",
-    "width": 534,
-    "height": 233,
+    "page": "soul_play.html",
+    "image": "capture-guide/soul_play/settings.png",
+    "highlights": [
+      "#sim-amp-title",
+      "#sim-rank-title",
+      "#sim-miracle-field",
+      "#sim-option-title"
+    ],
+    "width": 659,
+    "height": 633,
     "viewport": {
-      "width": 1120,
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_play.html",
+    "image": "capture-guide/soul_play/goals.png",
+    "highlights": [
+      ".soul-goal-preset-row",
+      "#goal-total",
+      "#add-option-group"
+    ],
+    "width": 639,
+    "height": 486,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_play.html",
+    "image": "capture-guide/soul_play/actions.png",
+    "highlights": [
+      "#sim-auto"
+    ],
+    "width": 659,
+    "height": 309,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_play.html",
+    "image": "capture-guide/soul_play/result.png",
+    "highlights": [
+      "#sim-totals"
+    ],
+    "width": 659,
+    "height": 165,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_play.html",
+    "image": "capture-guide/soul_play/ether-log.png",
+    "highlights": [
+      ".soul-sim-breakdown"
+    ],
+    "width": 659,
+    "height": 561,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "soul_play.html",
+    "image": "capture-guide/soul_play/retry.png",
+    "highlights": [
+      "#sim-reset"
+    ],
+    "width": 659,
+    "height": 98,
+    "viewport": {
+      "width": 500,
       "height": 900
     },
     "example": true

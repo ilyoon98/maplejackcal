@@ -112,7 +112,7 @@ test('결과 UI가 노작값·복구 방법·파괴방지 안내를 렌더링하
     createElement(){return node();},addEventListener(type,cb){ready=cb;}
   }};
   vm.createContext(ui);
-  for (const file of ['starforce_data.js','starforce_calc.js']) {
+  for (const file of ['json_storage.js','starforce_data.js','starforce_calc.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ui);
   }
   ready();

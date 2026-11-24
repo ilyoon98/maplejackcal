@@ -3,23 +3,47 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const contentDir = path.join(root, 'help-content');
+const captureDir = path.join(root, 'capture-guide');
+const captures = new Map();
+for (const file of fs.readdirSync(captureDir).filter(name => /^manifest-.*\.json$/.test(name))) {
+  for (const item of JSON.parse(fs.readFileSync(path.join(captureDir, file), 'utf8'))) {
+    if (captures.has(item.image)) throw new Error('Duplicate help capture: ' + item.image);
+    captures.set(item.image, item);
+  }
+}
 const data = {};
 for (const file of fs.readdirSync(contentDir).filter(name => name.endsWith('.json')).sort()) {
   const group = JSON.parse(fs.readFileSync(path.join(contentDir, file), 'utf8'));
   for (const [page, entry] of Object.entries(group)) {
     if (data[page]) throw new Error('Duplicate help page: ' + page);
     if (!fs.existsSync(path.join(root, page))) throw new Error('Unknown help page: ' + page);
-    if (!entry.title || !entry.intro || !entry.steps?.length || !entry.result?.text) throw new Error('Incomplete help: ' + page);
-    for (const item of [...entry.steps, entry.result]) {
-      if (!item.text || !item.title) throw new Error('Missing help text: ' + page);
-      if (item.image) {
-        if (!item.image.startsWith('capture-guide/') || item.image.includes('..') || !item.alt) throw new Error('Invalid help image: ' + page);
-        const bytes = fs.readFileSync(path.join(root, item.image));
-        if (bytes.toString('hex', 0, 8) !== '89504e470d0a1a0a') throw new Error('Expected PNG: ' + item.image);
-        item.width = bytes.readUInt32BE(16); item.height = bytes.readUInt32BE(20);
+    const groups = entry.tabs ?? [entry];
+    if (!Array.isArray(groups) || !groups.length || groups.some(group => !Array.isArray(group.steps) || group.steps.length < 2)) {
+      throw new Error('Incomplete help: ' + page);
+    }
+    if (entry.tabs) {
+      const labels = new Set();
+      for (const tab of entry.tabs) {
+        if (!tab.label?.trim() || labels.has(tab.label)) throw new Error('Invalid help tab: ' + page);
+        labels.add(tab.label);
       }
     }
-    if (new Set([...entry.steps, entry.result].map(item => item.image).filter(Boolean)).size < 2) throw new Error('At least two distinct screenshots required: ' + page);
+    if (entry.sectionId && !/^[a-z][\w-]*$/.test(entry.sectionId)) throw new Error('Invalid help section ID: ' + page);
+    const images = new Set();
+    const prefix = 'capture-guide/' + path.basename(page, '.html') + '/';
+    for (const item of groups.flatMap(group => group.steps)) {
+      if (!item.title?.trim() || /[\r\n]/.test(item.title)) throw new Error('Expected one step title line: ' + page);
+      if (!item.text?.trim() || /[\r\n]/.test(item.text)) throw new Error('Expected one caption line: ' + page);
+      if (!item.image?.startsWith(prefix) || !/^[a-z0-9-]+\.png$/.test(item.image.slice(prefix.length)) || !item.alt?.trim()) throw new Error('Invalid help image: ' + page);
+      if (images.has(item.image)) throw new Error('Duplicate step image: ' + item.image);
+      images.add(item.image);
+      const capture = captures.get(item.image);
+      if (capture?.page !== page || !capture.highlights?.length) throw new Error('Missing highlight capture record: ' + item.image);
+      const bytes = fs.readFileSync(path.join(root, item.image));
+      if (bytes.toString('hex', 0, 8) !== '89504e470d0a1a0a') throw new Error('Expected PNG: ' + item.image);
+      item.width = bytes.readUInt32BE(16); item.height = bytes.readUInt32BE(20);
+      if (capture.width !== item.width || capture.height !== item.height) throw new Error('Capture dimensions changed: ' + item.image);
+    }
     for (const link of entry.links || []) {
       if (!/^[a-z_]+\.html(?:#[\w-]+)?$/.test(link.href) || !fs.existsSync(path.join(root, link.href.split('#')[0]))) throw new Error('Invalid help link: ' + link.href);
     }
@@ -29,7 +53,9 @@ for (const file of fs.readdirSync(contentDir).filter(name => name.endsWith('.jso
 for (const file of fs.readdirSync(root).filter(name => name.endsWith('.html'))) {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
   if (!html.includes('src="site_ux.js"')) continue;
-  if (!data[file] && file !== 'shared_boss_rates.html') throw new Error('Missing illustrated help: ' + file);
+  if (!data[file]) throw new Error('Missing illustrated help: ' + file);
+  const trigger = data[file].sectionId;
+  if (trigger && !html.includes('data-ux-help-trigger="' + trigger + '"')) throw new Error('Missing help section link: ' + file);
   const sources = ['site_help_data.js','site_help.js','site_ux.js'].map(name => html.indexOf('src="' + name + '"'));
   if (sources.some(index => index < 0) || sources[0] > sources[1] || sources[1] > sources[2]) throw new Error('Incorrect help script order: ' + file);
 }

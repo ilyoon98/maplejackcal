@@ -1,9 +1,12 @@
 (function(root,factory){
   'use strict';
-  var api=factory(typeof module==='object'&&module.exports?require('./scouter_data.js'):root.ScouterData);
+  var api=factory(typeof module==='object'&&module.exports?require('./scouter_data.js'):root.ScouterData,
+    typeof module==='object'&&module.exports?require('./nexon_api.js'):root.NexonApi,
+    typeof module==='object'&&module.exports?require('./boss_schedule.js'):root.BossSchedule,
+    typeof module==='object'&&module.exports?require('./json_storage.js'):root.JsonStorage);
   if(typeof module==='object'&&module.exports) module.exports=api;
   else {root.PartyBossScheduler=api;api.mount(root);}
-})(typeof window!=='undefined'?window:globalThis,function(scouter){
+})(typeof window!=='undefined'?window:globalThis,function(scouter, NexonApi, BossSchedule, JsonStorage){
   'use strict';
   var STORAGE='partyBossScheduler.v1';
   var SCOPE_STORAGE='partyBossScheduler.scope.v1';
@@ -12,7 +15,6 @@
   var COMPLETE_STORAGE='partyBossScheduler.completed.v1';
   var SORT_STORAGE='partyBossScheduler.sort.v1';
   var DAILY_BOSSES=['Akayrum','PinkBean','Cygnus'];
-  var BASE='https://open.api.nexon.com/maplestory/v1';
   var SHARE_COLORS=['#75adff','#59d8ad','#ffc46b','#c39bfa','#ff849d','#efe879'];
   function text(v,n){return typeof v==='string'?v.trim().slice(0,n||100):'';}
   function normalizeSearch(value){return value.toLocaleLowerCase('ko-KR').replace(/\s+/g,'');}
@@ -38,17 +40,14 @@
   }
   // 넥슨 스케줄러 응답에서 이번 주기에 클리어한 보스를 'Key|Difficulty' 집합으로 만든다.
   function schedulerClears(data,db){
-    var labels={easy:'Easy',normal:'Normal',hard:'Hard',chaos:'Chaos',extreme:'Extreme'},names=new Map(),out=new Set();
+    var names=new Map(),out=new Set();
     Object.keys(db||{}).forEach(function(k){
       if(k==='BossAliases'||!db[k]||!db[k].Name)return;
       [db[k].Name].concat(db.BossAliases&&db.BossAliases[k]||[]).forEach(function(n){names.set(normalizeSearch(String(n)),k);});
     });
-    (data&&Array.isArray(data.boss_contents)?data.boss_contents:[]).forEach(function(item){
-      if(!item)return;
-      var flag=item.clear_flag!=null?item.clear_flag:item.complete_flag;
-      if(!(flag===true||String(flag).toLowerCase()==='true'))return;
-      var key=names.get(normalizeSearch(String(item.content_name||''))),diff=labels[String(item.difficulty||'').toLowerCase()];
-      if(key&&diff)out.add(key+'|'+diff);
+    new BossSchedule(data).clearedBosses.forEach(function(boss){
+      var key=names.get(normalizeSearch(boss.name));
+      if(key)out.add(key+'|'+boss.difficulty);
     });
     return out;
   }
@@ -72,13 +71,14 @@
     });
   }
   function client(fetchImpl,getKey){
-    async function get(path,params,signal){
-      var key=getKey();if(!key)throw new Error('API_KEY_REQUIRED');
-      if(signal&&signal.aborted)throw new DOMException('Aborted','AbortError');
-      var res=await fetchImpl(BASE+path+'?'+new URLSearchParams(params),{headers:{'x-nxopen-api-key':key},signal:signal});
-      var body=await res.json();
-      if(!res.ok){var e=new Error('NEXON_API_ERROR');e.code=body&&body.error&&body.error.name;throw e;}
-      return body;
+    var api = new NexonApi(fetchImpl, getKey);
+    async function get(path, params, signal) {
+      try {
+        return await api.get(path, params, { signal, strictJson: true });
+      } catch (error) {
+        if (error instanceof NexonApi.Error) error.message = 'NEXON_API_ERROR';
+        throw error;
+      }
     }
     return {load:async function(target,signal){
       var id=target.ocid;
@@ -99,14 +99,15 @@
       m.rate=row?row.percent:null;m.rateMode='auto';m.rateUpdatedAt=snapshot.fetchedAt;
     });});
   }
-  function mountBossPicker(win,choices,supported){
+  function mountBossPicker(win,choices,supported,storage){
     var doc=win.document,db=win.MapleBossDB,visual=win.BossIdentity;
     var select=doc.getElementById('party-boss'),opener=doc.getElementById('party-open-boss'),dialog=doc.getElementById('party-boss-dialog');
     var search=doc.getElementById('party-boss-search'),query=doc.getElementById('party-boss-query'),results=doc.getElementById('party-boss-results'),empty=doc.getElementById('party-boss-empty');
     var recentSection=doc.getElementById('party-recent-bosses'),recentList=doc.getElementById('party-recent-list');
     var difficulty=doc.getElementById('party-boss-difficulty'),title=doc.getElementById('party-difficulty-title'),options=doc.getElementById('party-difficulty-options');
     var recent=[],available=[],bosses=new Map();
-    try{var saved=JSON.parse(win.localStorage.getItem(RECENT_STORAGE)||'[]');if(Array.isArray(saved))recent=saved.slice(0,3);}catch(e){}
+    var saved=storage.read(RECENT_STORAGE);
+    if(Array.isArray(saved))recent=saved.slice(0,3);
     function setChoices(existing){
       available=choices.filter(function(c){return supported.has(c.id)||c.id===existing;});bosses.clear();
       select.replaceChildren(new win.Option('보스 선택',''));
@@ -122,7 +123,7 @@
     function choose(id){
       select.value=id;select.dispatchEvent(new win.Event('change'));
       recent=[id].concat(recent.filter(function(previous){return previous!==id;})).slice(0,3);
-      try{win.localStorage.setItem(RECENT_STORAGE,JSON.stringify(recent));}catch(e){}
+      storage.write(RECENT_STORAGE,recent);
       dialog.close();
     }
     function showDifficulties(key){
@@ -161,13 +162,14 @@
   function mount(win){
     var doc=win.document;if(!doc||!doc.getElementById('party-create-form'))return;
     var el=function(id){return doc.getElementById(id);},choices=catalog(win.MapleBossDB),parties=[],selected='',current=null,owned=new Set(),shared={snapshots:[],accounts:[]},profileVersion=0,syncVersion=0,controller=null,draftMembers=[],accounts=win.AccountCatalog;
+    var storage = new JsonStorage(function(){return win.localStorage;});
     var profiles=win.CharacterProfile||(typeof module==='object'?require('./character_profile.js'):null),visual=win.BossIdentity||(typeof module==='object'?require('./boss_identity.js'):null);
     var profileApi=profiles.client(win.fetch.bind(win),function(){return win.NexonKey&&win.NexonKey.get();});
     var ownSyncedKey='',ownSyncPending=null;
     var editing='',editingRevision='',draftId='',portraitAttempts=new Set();
     var scope='local',remoteRows=[],remoteParties=[],remoteAvailable=false,remoteLoading=false,remoteWriting=false,remoteError='',remoteVersion=0;
     var chartCount=0,revealSelected=false,view={value:'all',label:''},filterTypes={boss:'보스',account:'계정',character:'캐릭터'};
-    try{var saved=JSON.parse(win.localStorage.getItem(STORAGE)||'{}');parties=restore(saved,choices);}catch(e){}
+    parties=restore(storage.read(STORAGE),choices);
     try{if(win.localStorage.getItem(SCOPE_STORAGE)==='shared')scope='shared';}catch(e){}
     // 다른 화면(보스 버프 동선 계산기)에서 '?scope=shared&party=ID'로 오면 그 파티를 연다. 저장된 탭 선택은 바꾸지 않는다.
     var wantedParty='';
@@ -177,7 +179,8 @@
     el('party-sort').value=sortMode;
     // 직접 표시한 완료는 파티 ID별로 주기 키를 저장하고, 스케줄러 완료는 내 캐릭터 이름별로 메모리에만 둔다.
     var manualDone={},apiClears=new Map(),clearsFetchedAt=new Map(),clearsKey='',clearsPending=null,mineCache=null;
-    try{var savedDone=JSON.parse(win.localStorage.getItem(COMPLETE_STORAGE)||'{}');if(savedDone&&typeof savedDone==='object')manualDone=savedDone;}catch(e){}
+    var savedDone=storage.read(COMPLETE_STORAGE);
+    if(savedDone&&typeof savedDone==='object')manualDone=savedDone;
     function completion(p){
       if(p.members.some(function(m){var set=apiClears.get(m.character.name);return set&&periodKey(p.bossId,set.at)===periodKey(p.bossId)&&set.has(p.bossId);}))return 'api';
       return manualDone[p.id]===periodKey(p.bossId)?'manual':'';
@@ -186,7 +189,7 @@
       var next={};
       Object.keys(manualDone).forEach(function(id){var party=parties.concat(remoteParties).find(function(item){return item.id===id;});if(party&&manualDone[id]===periodKey(party.bossId))next[id]=manualDone[id];});
       if(done)next[p.id]=periodKey(p.bossId);else delete next[p.id];
-      try{win.localStorage.setItem(COMPLETE_STORAGE,JSON.stringify(next));}catch(e){storageStatus('완료 표시를 브라우저에 저장하지 못했습니다.',true);return false;}
+      if(!storage.write(COMPLETE_STORAGE,next)){storageStatus('완료 표시를 브라우저에 저장하지 못했습니다.',true);return false;}
       manualDone=next;return true;
     }
     async function loadClears(force){
@@ -195,6 +198,7 @@
       if(clearsKey!==key){clearsKey=key;apiClears.clear();clearsFetchedAt.clear();mineCache=null;}
       if(clearsPending)return clearsPending;
       clearsPending=(async function(){
+        var api = new NexonApi(win.fetch.bind(win), function(){return key;});
         if(force||!mineCache||Date.now()-mineCache.at>5*60e3){var rows=await win.NexonCharacters.fetch();if(key!==win.NexonKey.get())return;mineCache={at:Date.now(),rows:rows};}
         var mine=mineCache.rows;
         var names=new Set(parties.concat(remoteParties).flatMap(function(p){return p.members.map(function(m){return m.character.name;});}));
@@ -204,13 +208,12 @@
           if(!names.has(c.name)||!c.ocid)continue;
           var last=clearsFetchedAt.get(c.name)||0;if(!force&&Date.now()-last<5*60e3)continue;
           try{
-            var res=await win.fetch(BASE+'/scheduler/character-state?'+new URLSearchParams({ocid:c.ocid}),{headers:{'x-nxopen-api-key':key},cache:'no-store'});
+            var state=await api.get('/scheduler/character-state',{ocid:c.ocid},{cache:'no-store',strictJson:true});
             if(key!==win.NexonKey.get())return;
-            if(!res.ok){clearsFetchedAt.set(c.name,Date.now());continue;}
-            var set=schedulerClears(await res.json(),win.MapleBossDB),stamp=Date.now();
+            var set=schedulerClears(state,win.MapleBossDB),stamp=Date.now();
             // 주기 키는 보스마다 다르므로 조회 시각을 남겨 두고 completion에서 해당 보스의 현재 주기와 비교한다.
             set.at=stamp;apiClears.set(c.name,set);clearsFetchedAt.set(c.name,stamp);changed=true;
-          }catch(e){clearsFetchedAt.set(c.name,Date.now());}
+          }catch(e){if(key!==win.NexonKey.get())return;clearsFetchedAt.set(c.name,Date.now());}
         }
         if(changed)renderBoard();
       })().catch(function(){}).finally(function(){clearsPending=null;});
@@ -219,14 +222,12 @@
     function node(tag,cls,label){var n=doc.createElement(tag);if(cls)n.className=cls;if(label!=null)n.textContent=label;return n;}
     function status(message,error){el('party-search-status').textContent=message||'';el('party-search-status').classList.toggle('error',!!error);}
     function persist(nextParties=parties){
-      try{
-        win.localStorage.setItem(STORAGE,JSON.stringify({parties:nextParties}));
-        if(scope==='local'&&el('party-storage-status').classList.contains('error'))storageStatus('');
-        return true;
-      }catch(e){
+      if(!storage.write(STORAGE,{parties:nextParties})){
         if(scope==='local')storageStatus('브라우저에 저장하지 못했습니다.',true);
         return false;
       }
+      if(scope==='local'&&el('party-storage-status').classList.contains('error'))storageStatus('');
+      return true;
     }
     function activeParties(){return scope==='shared'?remoteParties:parties;}
     function ownerToken(create){
@@ -727,7 +728,7 @@
     }
     async function syncSaved(){
       var request=++syncVersion;
-      try{var response=await win.fetch('/api/boss-rates',{cache:'no-store'});if(!response.ok)throw new Error();var store=await response.json();if(request!==syncVersion)return;if(store.schemaVersion!==1||!Array.isArray(store.snapshots))throw new Error();shared=store;
+      try{var store=await win.RateCatalog.published(win.fetch.bind(win));if(request!==syncVersion)return;shared=store;
         var key=win.NexonKey&&win.NexonKey.get();if(key&&ownSyncedKey!==key&&!ownSyncPending){ownSyncedKey=key;var abort=new AbortController(),timer=setTimeout(function(){abort.abort();},10000);ownSyncPending=accounts.syncOwn(shared,{fetch:win.fetch.bind(win),newId:function(){return win.crypto.randomUUID();},load:async function(){var rows=await win.NexonCharacters.fetch({signal:abort.signal});if(key!==win.NexonKey.get())throw new DOMException('Aborted','AbortError');return rows;}}).finally(function(){clearTimeout(timer);});}
         if(ownSyncPending){var pending=ownSyncPending;try{var synced=await pending;if(request!==syncVersion)return;shared={...shared,accounts:synced.accounts,accountRevision:synced.accountRevision};}catch(e){}finally{if(ownSyncPending===pending)ownSyncPending=null;}}
         parties.forEach(function(p){p.members.forEach(function(m){var snap=snapshotFor(m.character);m.character=mergeProfile(m.character,publicInfo(m.character.name));if(snap)applySnapshot([p],m.character.ocid,snap,true);});});
@@ -742,7 +743,7 @@
       try{var chars=await win.NexonCharacters.fetch();chars.forEach(function(c){owned.add(c.name);});if(view.value==='mine'){filterStatus('');refreshBoard();}}catch(e){if(view.value==='mine')filterStatus('내 캐릭터를 불러오지 못했습니다. API 키를 확인하세요.',true);}
     }
     var supported=new Set(win.RateCatalog.choices(win.MapleBossDB).map(function(c){return c.id;}));
-    var bossPicker=mountBossPicker(win,choices,supported);
+    var bossPicker=mountBossPicker(win,choices,supported,storage);
     ['local','shared'].forEach(function(value){
       var tab=el('party-scope-'+value);tab.addEventListener('click',function(){switchScope(value);});
       tab.addEventListener('keydown',function(e){

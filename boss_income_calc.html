@@ -480,8 +480,9 @@
 </div>
 
 <script src="nexon_key.js"></script>
-<script src="nexon_characters.js"></script>
-<script src="boss_db.js"></script>
+<script src="json_storage.js"></script>
+<script src="nexon_api.js"></script><script src="nexon_characters.js"></script>
+<script src="boss_db.js"></script><script src="boss_schedule.js"></script>
 <script>
 (function(){
   // 메소 = 원 단위 그대로. 억/만 단위 화면 표기는 toLocaleString으로 처리.
@@ -625,25 +626,17 @@
     '카오스':{key:'chaos', text:'CHAOS', mark:'C', rank:3},
     '익스트림':{key:'extreme', text:'EXTREME', mark:'EX', rank:4}
   };
-  var API_DIFFICULTY = { easy:'이지', normal:'노멀', hard:'하드', chaos:'카오스', extreme:'익스트림' };
   var API_BOSS_NAME = { '블러디퀸':'블러디 퀸' };
-  function trueFlag(value){ return value === true || String(value).toLowerCase() === 'true'; }
   function parseSchedulerBosses(data){
     var bosses = Object.create(null), skipped = [];
-    var list = data && Array.isArray(data.boss_contents) ? data.boss_contents : [];
-    list.forEach(function(item){
-      if (!item || !trueFlag(item.registration_flag)) return;
-      var cycle = String(item.cycle || '').toLowerCase();
-      if (cycle !== 'bossweekly' && cycle !== 'bossmonthly') return;
-      var apiName = String(item.content_name || '').trim();
+    new BossSchedule(data).registeredRecurringBosses.forEach(function(item){
+      var apiName = item.name;
       var name = DB_BOSS_ALIASES[bossAliasKey(apiName)] || API_BOSS_NAME[apiName] || apiName;
       var boss = BOSS_BY_NAME[name];
-      var label = API_DIFFICULTY[String(item.difficulty || '').toLowerCase()];
+      var label = item.difficultyLabel;
       var diffIdx = boss && boss.diffs.findIndex(function(d){ return d.label === label; });
       if (!boss || diffIdx < 0){ skipped.push(apiName + (label ? ' ' + label : '')); return; }
-      // clear_flag가 제공되면 우선 사용하고, 기존 complete_flag 응답도 지원한다.
-      var completed = item.clear_flag != null ? item.clear_flag : item.complete_flag;
-      bosses[name] = { diffIdx:diffIdx, party:1, complete:trueFlag(completed), source:'scheduler' };
+      bosses[name] = { diffIdx:diffIdx, party:1, complete:item.completed, source:'scheduler' };
     });
     return { bosses:bosses, skipped:skipped };
   }
@@ -691,7 +684,7 @@
         // 아주 예전 버전(드롭다운 방식)의 배열 데이터 호환: 같은 보스가 여러 번 있으면 마지막 것만 사용
         raw.bosses.forEach(function(e){
           var boss = e && BOSS_DATA[e.bossIdx];
-          if (boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[boss.name] = { diffIdx: e.diffIdx, party: validParty(e.party, boss.name, e.diffIdx), complete:trueFlag(e.complete), source:e.source === 'scheduler' ? 'scheduler' : '' };
+          if (boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[boss.name] = { diffIdx: e.diffIdx, party: validParty(e.party, boss.name, e.diffIdx), complete:BossSchedule.isTrue(e.complete), source:e.source === 'scheduler' ? 'scheduler' : '' };
         });
       } else {
         Object.keys(raw.bosses).forEach(function(k){
@@ -699,7 +692,7 @@
           // k가 숫자 인덱스였던 이전 버전 데이터는 보스 순서가 바뀌면 더 이상 신뢰할 수
           // 없어 건너뛴다. 이름 키인 경우에만 복원한다.
           var boss = BOSS_BY_NAME[k];
-          if (e && boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[k] = { diffIdx: e.diffIdx, party: validParty(e.party, boss.name, e.diffIdx), complete:trueFlag(e.complete), source:e.source === 'scheduler' ? 'scheduler' : '' };
+          if (e && boss && Number.isInteger(e.diffIdx) && boss.diffs[e.diffIdx]) bosses[k] = { diffIdx: e.diffIdx, party: validParty(e.party, boss.name, e.diffIdx), complete:BossSchedule.isTrue(e.complete), source:e.source === 'scheduler' ? 'scheduler' : '' };
         });
       }
     }
@@ -721,15 +714,13 @@
 
   function loadState(){
     try {
-      var raw = lsGet(LS_KEY);
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
+      var parsed = JsonStorage.local.read(LS_KEY);
       if (!parsed || !Array.isArray(parsed.characters)) return null;
       return parsed.characters.map(normalizeCharacter);
     } catch(e){ return null; }
   }
   function saveState(){
-    var saved = lsSet(LS_KEY, JSON.stringify({ characters: characters }));
+    var saved = JsonStorage.local.write(LS_KEY, { characters: characters });
     document.getElementById('actionNote').textContent = saved ? '' : '자동 저장이 차단되었습니다. 이 화면을 닫으면 변경 내용이 사라질 수 있어요.';
   }
 
@@ -804,7 +795,6 @@
   }
 
   // ---------- Nexon scheduler import ----------
-  var API_BASE = 'https://open.api.nexon.com/maplestory/v1';
   var LS_LAST_SCHEDULER_CHAR = 'boss_scheduler_last_char';
   var schedulerCharacterName = document.getElementById('schedulerCharacterName');
   var schedulerFetchBtn = document.getElementById('schedulerFetchBtn');
@@ -832,22 +822,8 @@
       ? '<span>API 키 등록됨 ✓</span><a href="index.html#apiKey">키 변경</a>'
       : '<span>스케줄러 조회에는 API 키가 필요합니다.</span><a href="index.html#apiKey">API 키 등록</a>';
   }
-  function apiGet(path, params){
-    var query = Object.keys(params).map(function(key){
-      return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
-    }).join('&');
-    return fetch(API_BASE + path + '?' + query, { headers:{ 'x-nxopen-api-key':NexonKey.get() } })
-      .then(function(response){
-        return response.json().catch(function(){ return null; }).then(function(body){
-          if (!response.ok){
-            var apiError = body && body.error ? body.error : {};
-            var error = new Error(apiError.message || ('HTTP ' + response.status));
-            error.code = apiError.name || '';
-            throw error;
-          }
-          return body;
-        });
-      });
+  function apiGet(path, params) {
+    return NexonApi.browser.get(path, params);
   }
   function describeApiError(error, stage){
     if (error && error.code){

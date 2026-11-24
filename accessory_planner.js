@@ -30,6 +30,8 @@
   const preferenceKey = 'accessoryPlanner.preferences.v1';
   const priceKey = 'accessoryPlanner.prices.v3';
   const goalKey = 'accessoryPlanner.goals.v1';
+  const characterKey = 'accessoryPlanner.character.v1';
+  const pricingKey = 'accessoryPlanner.pricing.v1';
   const { koreanAmount } = window.MoneyInput;
   const byId = id => document.getElementById(id);
   const sheet = byId('accessory-slots');
@@ -47,23 +49,23 @@
   const gapMetrics = byId('accessory-gap-metrics');
   const gapNext = byId('accessory-gap-next');
   const gapSuggestions = byId('accessory-gap-suggestions');
+  const characterForm = byId('accessory-character-form');
+  const characterInput = byId('accessory-character-name');
+  const characterLoad = byId('accessory-character-load');
+  const characterClear = byId('accessory-character-clear');
+  const characterStatus = byId('accessory-character-status');
+  const characterResult = byId('accessory-character-result');
+  const keyHelp = byId('accessory-key-help');
+  const presetSelect = byId('accessory-preset');
+  const presetSummary = byId('accessory-preset-summary');
+  const lockAll = byId('accessory-lock-all');
+  const lockSelected = byId('accessory-lock-selected');
+  const preferFirst = byId('accessory-prefer');
+  const equippedPanel = byId('accessory-equipped');
 
   function load(key) {
-    try {
-      const saved = JSON.parse(localStorage.getItem(key));
-      if (Array.isArray(saved)) return saved;
-    } catch {
-      // Storage can be unavailable or contain invalid data.
-    }
-    return [];
-  }
-
-  function save(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-      // The planner still works when storage is unavailable.
-    }
+    const saved = JsonStorage.local.read(key);
+    return Array.isArray(saved) ? saved : [];
   }
 
   const savedLines = load(preferenceKey);
@@ -86,12 +88,20 @@
       return { value: amount ? formatEok(amount) : '', owned: owned || (versionIndex === 2 && amount === 0n) };
     });
   });
+  const [savedName, savedPreset, savedLocks] = load(characterKey);
+  const [, savedPriority] = load(pricingKey);
+  characterInput.value = typeof savedName === 'string' ? savedName : '';
+  preferFirst.checked = savedPriority === true;
+  let character = null;
+  let presetIndex = 0;
+  let locks = [];
 
   sheet.innerHTML = layout.flat().map(slot => {
     if (slot === null) return '<span aria-hidden="true"></span>';
     if (slot === -1) return '<span class="accessory-square" aria-hidden="true"></span>';
     return `
       <button type="button" class="accessory-square accessory-slot" data-slot="${slot}">
+        <img class="accessory-slot-icon" alt="" hidden>
         <span class="accessory-slot-label">${slotLabels[slot]}</span>
         <span class="accessory-slot-short">${shortLabels[slot]}</span>
         <small></small>
@@ -146,6 +156,96 @@
     };
   });
   let selected = 0;
+
+  const equippedItem = slot => character?.presets[presetIndex]?.[slot];
+  const fixedItem = slot => locks[presetIndex]?.[slot] ? equippedItem(slot) : null;
+
+  function formatRates({ drop, meso }) {
+    return `드랍 ${drop}% · 메획 ${meso}%`;
+  }
+
+  function totalRates(items) {
+    return items.reduce((total, item) => ({
+      drop: total.drop + (item?.drop || 0),
+      meso: total.meso + (item?.meso || 0)
+    }), { drop: 0, meso: 0 });
+  }
+
+  function updateLocks() {
+    const equipment = character.presets[presetIndex];
+    const equipped = equipment.filter(Boolean);
+    const fixed = slots.map((_, slot) => fixedItem(slot)).filter(Boolean);
+    lockAll.disabled = equipped.length === 0;
+    byId('accessory-lock-all-field').hidden = equipped.length === 0;
+    lockAll.checked = equipped.length > 0 && equipped.length === fixed.length;
+    lockAll.indeterminate = fixed.length > 0 && fixed.length < equipped.length;
+    const total = document.createElement('strong');
+    total.textContent = `프리셋 ${formatRates(totalRates(equipped))}`;
+    presetSummary.replaceChildren(total, ` · 유지 ${fixed.length}부위 (${formatRates(totalRates(fixed))})`);
+    if (equipped.some(item => item.grid)) presetSummary.textContent += ' · 그리드 펜던트는 장비 아이템 드랍 +20% 별도';
+    JsonStorage.local.write(characterKey, [character.name, presetIndex, locks]);
+    renderSlotButtons();
+    renderEquipped();
+    renderResult();
+  }
+
+  async function loadCharacter() {
+    if (characterLoad.disabled) return;
+    const name = characterInput.value.trim();
+    if (!name) {
+      characterStatus.textContent = '캐릭터 닉네임을 입력하세요.';
+      characterInput.focus();
+      return;
+    }
+    const key = window.NexonKey.get();
+    keyHelp.hidden = Boolean(key);
+    if (!key) {
+      characterStatus.textContent = '장비를 불러오려면 넥슨 API 키가 필요합니다.';
+      return;
+    }
+    characterLoad.disabled = characterClear.disabled = characterInput.readOnly = true;
+    characterStatus.textContent = '캐릭터 장비를 불러오는 중…';
+    try {
+      const next = await window.AccessoryEquipment.load(name, key);
+      const firstPreset = next.presets.findIndex(Boolean);
+      if (firstPreset < 0) {
+        characterStatus.textContent = '조회 가능한 장비 프리셋이 없습니다.';
+        if (character) characterStatus.textContent += ` 현재 적용 중인 장비는 ${character.name} 기준입니다.`;
+        return;
+      }
+      const [previousName, previousPreset, previousLocks] = load(characterKey);
+      const sameCharacter = next.name === previousName;
+      locks = next.presets.map((equipment, index) => slots.map((_, slot) =>
+        Boolean(equipment?.[slot] && sameCharacter && previousLocks?.[index]?.[slot] === true)));
+      presetIndex = sameCharacter && next.presets[previousPreset] ? previousPreset
+        : next.presets[next.active] ? next.active : firstPreset;
+      character = next;
+      presetSelect.replaceChildren(...next.presets.map((equipment, index) => {
+        const option = new Option(`프리셋 ${index + 1}${equipment ? '' : ' (장비 없음)'}`, String(index));
+        option.disabled = !equipment;
+        return option;
+      }));
+      presetSelect.value = String(presetIndex);
+      characterInput.value = next.name;
+      characterStatus.textContent = [next.name, next.world].filter(Boolean).join(' · ') + ' 장비를 불러왔습니다.';
+      characterResult.hidden = byId('accessory-nexon-credit').hidden = false;
+      updateLocks();
+    } catch (error) {
+      const messages = {
+        OPENAPI00002: '이 API 키로 장비를 조회할 수 없습니다. 홈에서 키 설정을 확인하세요.',
+        OPENAPI00004: '캐릭터를 찾지 못했습니다. 닉네임을 확인하세요.',
+        OPENAPI00005: '넥슨 API 키를 확인한 후 다시 시도하세요.',
+        OPENAPI00007: '조회 횟수를 초과했습니다. 잠시 뒤 다시 시도하세요.'
+      };
+      const code = error.code || error.message;
+      keyHelp.hidden = !['OPENAPI00002', 'OPENAPI00005'].includes(code);
+      characterStatus.textContent = messages[code] || '장비를 불러오지 못했습니다. 다시 시도하세요.';
+      if (character) characterStatus.textContent += ` 현재 적용 중인 장비는 ${character.name} 기준입니다.`;
+    } finally {
+      characterLoad.disabled = characterClear.disabled = characterInput.readOnly = false;
+    }
+  }
+
   function preferenceIndex(lines) {
     const drop = lines.filter(line => line === 'drop').length;
     const meso = lines.filter(line => line === 'meso').length;
@@ -160,20 +260,23 @@
 
   function renderSlotButtons() {
     buttons.forEach((button, slot) => {
+      const fixed = fixedItem(slot);
+      const item = equippedItem(slot);
       const index = preferenceIndex(preferences[slot]);
       const combo = combos[index];
       const owned = prices[slot][index - 1]?.owned;
       const ownedCount = prices[slot].filter(entry => entry.owned).length;
       const badge = button.querySelector('.accessory-slot-ownership');
-      const ownership = owned ? '보유 중' : ownedCount ? `보유 조합 ${ownedCount}개 등록` : '';
-      const description = [slots[slot], index ? `선호 ${combo.label}` : '선호 없음', ownership].filter(Boolean).join(' · ');
+      const ownership = fixed ? '유지 중' : owned ? '보유 중' : ownedCount ? `보유 조합 ${ownedCount}개 등록` : '';
+      const description = [slots[slot], item && `${item.name} (${formatRates(item)})`, index && `선호 ${combo.label}`, ownership].filter(Boolean).join(' · ');
       button.setAttribute('aria-label', description);
       button.title = description;
+      renderIcon(button.querySelector('img'), item);
       button.dataset.option = combo.badge;
-      button.dataset.owned = owned ? 'equipped' : ownedCount ? 'registered' : '';
+      button.dataset.owned = fixed || owned ? 'equipped' : ownedCount ? 'registered' : '';
       button.querySelector('small').textContent = combo.badge;
-      badge.textContent = owned ? '보유 중' : `보유 ${ownedCount}`;
-      badge.hidden = !ownedCount;
+      badge.textContent = fixed ? '유지' : owned ? '보유 중' : `보유 ${ownedCount}`;
+      badge.hidden = !fixed && !ownedCount;
     });
   }
 
@@ -231,10 +334,31 @@
     });
   }
 
+  function renderIcon(img, item) {
+    img.hidden = !item?.icon;
+    if (item?.icon) {
+      if (img.getAttribute('src') !== item.icon) img.src = item.icon;
+    } else {
+      img.removeAttribute('src');
+    }
+  }
+
+  function renderEquipped() {
+    const item = equippedItem(selected);
+    equippedPanel.hidden = !character;
+    renderIcon(equippedPanel.querySelector('img'), item);
+    byId('accessory-equipped-name').textContent = item?.name || '장비 없음';
+    byId('accessory-equipped-stats').textContent = item ? formatRates(item) : '';
+    byId('accessory-equipped-grid').hidden = !item?.grid;
+    byId('accessory-lock-selected-label').hidden = !item;
+    lockSelected.checked = Boolean(fixedItem(selected));
+  }
+
   function selectSlot(slot) {
     selected = slot;
     buttons.forEach((button, index) => button.setAttribute('aria-pressed', String(index === slot)));
     byId('accessory-slot-title').textContent = slots[slot];
+    renderEquipped();
     renderLineButtons();
     renderPriceInputs();
     renderPriceErrors();
@@ -242,9 +366,9 @@
 
   function comparePlans(a, b) {
     if (a.missing !== b.missing) return a.missing - b.missing;
-    if (a.preferred !== b.preferred) return b.preferred - a.preferred;
-    if (a.cost === b.cost) return 0;
-    return a.cost < b.cost ? -1 : 1;
+    if (preferFirst.checked && a.preferred !== b.preferred) return b.preferred - a.preferred;
+    if (a.cost !== b.cost) return a.cost < b.cost ? -1 : 1;
+    return b.preferred - a.preferred;
   }
 
   function findPlans(candidates, dropGoal, mesoGoal) {
@@ -276,7 +400,7 @@
   }
 
   function appliedRate(picks, { kind, cap }) {
-    return Math.min(cap, picks.reduce((sum, pick) => sum + pick[kind], 0) * lineValue);
+    return Math.min(cap, picks.reduce((sum, pick) => sum + pick[kind], 0));
   }
 
   function renderShortfall(plans, goalPlan) {
@@ -293,9 +417,12 @@
       return `<div>
         <dt>${label}</dt>
         <dd><strong>${actual}%</strong> / ${goal}%</dd>
-        <dd class="accessory-gap-status" data-shortfall="${deficit > 0}">${deficit ? `${deficit}%p 부족 · ${deficit / lineValue}줄` : '목표 달성'}</dd>
+        <dd class="accessory-gap-status" data-shortfall="${deficit > 0}">${deficit ? `${deficit}%p 부족` : '목표 달성'}</dd>
       </div>`;
     }).join('');
+    const canRegister = Boolean(goalPlan);
+    [gapNext, byId('accessory-gap-register-hint'), gapSuggestions].forEach(element => { element.hidden = !canRegister; });
+    if (!canRegister) return;
     gapNext.textContent = `최소 ${goalPlan.missing}개 추가 등록 예시`;
     gapSuggestions.innerHTML = goalPlan.picks.map((choice, slot) => choice.price === null ? `
       <li><button type="button" class="ux-button" data-suggest-slot="${slot}" data-suggest-option="${choice.option}">
@@ -308,29 +435,38 @@
     goalSummary.textContent = `목표 드랍 ${dropTarget}% · 메획 ${mesoTarget}%`;
     const preferred = preferences.map(preferenceIndex);
     const requested = preferred.filter(Boolean).length;
-    resultTitle.textContent = requested ? '선호 반영 최저가 조합' : '최저가 조합';
-    const candidates = prices.map((slotPrices, slot) => [
-      { ...combos[0], price: 0n },
-      ...pricedCombos.map((combo, option) => {
+    resultTitle.textContent = preferFirst.checked && requested ? '선호 반영 최저가 조합' : '최저가 조합';
+    const candidates = prices.map((slotPrices, slot) => {
+      const fixed = fixedItem(slot);
+      if (fixed) {
+        const preferredCombo = combos[preferred[slot]];
+        return [{
+          ...fixed, label: formatRates(fixed), price: 0n, owned: true, fixed: true,
+          preferred: Boolean(preferred[slot] && fixed.drop === preferredCombo.drop * lineValue && fixed.meso === preferredCombo.meso * lineValue)
+        }];
+      }
+      return [{ ...combos[0], price: 0n }, ...pricedCombos.map((combo, option) => {
         const { value, owned } = slotPrices[option];
-        const price = owned ? 0n : (parsePrice(value) || null);
-        return { ...combo, option, price, owned, preferred: preferred[slot] === option + 1 };
-      })
-    ]);
-    const registered = candidates.reduce((total, choices) => total + choices.filter(choice => choice.price !== null).length - 1, 0);
-    const dropGoal = dropTarget / lineValue;
-    const mesoGoal = mesoTarget / lineValue;
-    const plans = findPlans(candidates, dropGoal, mesoGoal);
-    const goalPlan = plans.find(plan => plan.drop === dropGoal && plan.meso === mesoGoal);
+        const candidate = {
+          ...combo, drop: combo.drop * lineValue, meso: combo.meso * lineValue,
+          option, owned, preferred: preferred[slot] === option + 1
+        };
+        return { ...candidate, price: owned ? 0n : parsePrice(value) || null };
+      })];
+    });
+    const registered = candidates.reduce((total, choices) => total + choices.filter(choice =>
+      choice.price !== null && (choice.fixed || choice.badge)).length, 0);
+    const plans = findPlans(candidates, dropTarget, mesoTarget);
+    const goalPlan = plans.find(plan => plan.drop === dropTarget && plan.meso === mesoTarget);
     const best = goalPlan?.missing === 0 ? goalPlan : undefined;
     resultDetails.hidden = !best;
     preferenceStatus.hidden = !best || requested === 0;
-    resultGap.hidden = Boolean(best || !registered || !goalPlan);
+    resultGap.hidden = Boolean(best || !registered);
 
     if (!best) {
-      resultStatus.textContent = registered
-        ? `목표 달성에 필요한 후보가 부족합니다. (${registered} / ${slots.length * pricedCombos.length}개 등록)`
-        : '가격 또는 보유 장비를 등록하세요.';
+      resultStatus.textContent = !goalPlan
+        ? '현재 고정한 장비로는 목표를 달성할 수 없습니다. 유지할 장비나 목표를 조정하세요.'
+        : registered ? '목표 달성에 필요한 가격 후보가 부족합니다.' : '가격 또는 보유 장비를 등록하세요.';
       if (!resultGap.hidden) renderShortfall(plans, goalPlan);
       return;
     }
@@ -340,34 +476,38 @@
     if (dropApplied !== dropTarget || mesoApplied !== mesoTarget) {
       goalSummary.textContent += ` / 조합 드랍 ${dropApplied}% · 메획 ${mesoApplied}%`;
     }
+    if (best.picks.some(choice => choice.grid)) goalSummary.textContent += ' · 장비 아이템 드랍 +20% 별도';
     if (requested) {
       const unmatched = preferred.flatMap((index, slot) => {
         if (!index || best.picks[slot].preferred) return [];
-        const choice = candidates[slot][index];
-        return `${slots[slot]} ${choice.label}${choice.price === null ? ' (가격 미등록)' : ''}`;
+        return `${slots[slot]} ${combos[index].label}`;
       });
-      preferenceStatus.textContent = `선호 ${best.preferred} / ${requested}부위 반영 · 선호를 가장 많이 충족한 조합 중 최저가${unmatched.length ? ` · 미반영 ${unmatched.join(', ')}` : ''}`;
+      preferenceStatus.textContent = `선호 ${best.preferred} / ${requested}부위 반영${unmatched.length ? ` · 미반영 ${unmatched.join(', ')}` : ''}`;
     }
     const displayRows = best.picks.map((choice, slot) => ({ ...choice, slot, group: choice.owned ? 0 : choice.badge ? 1 : 2 }));
     displayRows.sort((a, b) => a.group - b.group);
-    resultRows.innerHTML = displayRows.map(({ label, badge, price, owned, preferred, slot }) => `
+    resultRows.innerHTML = displayRows.map(({ label, badge, price, owned, fixed, preferred, slot }) => `
       <tr data-status="${owned ? 'owned' : badge ? 'buy' : 'empty'}">
-        <th scope="row"><span class="accessory-result-slot">${slots[slot]}${badge ? `
-          <span class="accessory-result-badge">${owned ? '✓ 보유 중' : '구매'}</span>` : ''}${preferred ? '<span class="accessory-result-preferred">선호</span>' : ''}</span></th>
-        <td>${label}</td>
-        <td>${badge ? koreanAmount(price) : '—'}</td>
+        <th scope="row"><span class="accessory-result-slot">${slots[slot]}${badge || fixed ? `
+          <span class="accessory-result-badge">${fixed ? '✓ 유지' : owned ? '✓ 보유 중' : '구매'}</span>` : ''}${preferred ? '<span class="accessory-result-preferred">선호</span>' : ''}</span></th>
+        <td>${fixed ? '<strong class="accessory-item-name"></strong>' : ''}${label}</td>
+        <td>${badge || fixed ? koreanAmount(price) : '—'}</td>
       </tr>
     `).join('');
+    const namedRows = displayRows.filter(choice => choice.name);
+    resultRows.querySelectorAll('.accessory-item-name').forEach((name, index) => {
+      name.textContent = namedRows[index].name;
+    });
   }
 
   function updatePreferences() {
-    save(preferenceKey, preferences.flat());
+    JsonStorage.local.write(preferenceKey, preferences.flat());
     renderPreferences();
     renderResult();
   }
 
   function updatePrices() {
-    save(priceKey, prices);
+    JsonStorage.local.write(priceKey, prices);
     renderPriceErrors();
     renderResult();
   }
@@ -380,10 +520,43 @@
   }
 
   metrics.forEach(({ target }) => target.addEventListener('input', () => {
-    save(goalKey, metrics.map(metric => Number(metric.target.value)));
+    JsonStorage.local.write(goalKey, metrics.map(metric => Number(metric.target.value)));
     renderGoals();
     renderResult();
   }));
+  characterForm.addEventListener('submit', event => {
+    event.preventDefault();
+    void loadCharacter();
+  });
+  characterClear.addEventListener('click', () => {
+    character = null;
+    locks = [];
+    characterInput.value = characterStatus.textContent = '';
+    keyHelp.hidden = window.NexonKey.has();
+    characterResult.hidden = byId('accessory-nexon-credit').hidden = true;
+    byId('accessory-lock-all-field').hidden = true;
+    JsonStorage.local.write(characterKey, []);
+    renderSlotButtons();
+    renderEquipped();
+    renderResult();
+    characterInput.focus();
+  });
+  presetSelect.addEventListener('change', () => {
+    presetIndex = Number(presetSelect.value);
+    updateLocks();
+  });
+  lockSelected.addEventListener('change', () => {
+    locks[presetIndex][selected] = lockSelected.checked;
+    updateLocks();
+  });
+  lockAll.addEventListener('change', () => {
+    locks[presetIndex] = character.presets[presetIndex].map(item => Boolean(item && lockAll.checked));
+    updateLocks();
+  });
+  preferFirst.addEventListener('change', () => {
+    JsonStorage.local.write(pricingKey, ['manual', preferFirst.checked]);
+    renderResult();
+  });
   buttons.forEach((button, slot) => button.addEventListener('click', () => selectSlot(slot)));
   lineButtons.forEach((choices, index) => {
     choices.forEach(choice => choice.addEventListener('click', () => {
@@ -471,4 +644,6 @@
   renderPreferences();
   selectSlot(0);
   renderResult();
+  keyHelp.hidden = window.NexonKey.has();
+  if (characterInput.value && window.NexonKey.has()) void loadCharacter();
 })();

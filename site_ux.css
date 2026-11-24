@@ -114,6 +114,14 @@ body[data-ux-page] .ux-toast-close { min-width:44px; padding:8px; }
 .ux-details { margin:12px 0; border-top:1px solid var(--ux-line); padding-top:12px; }
 .ux-details > summary { min-height:var(--ui-control-height); cursor:pointer; color:var(--ux-text); font-size:.875rem; font-weight:650; padding:8px 0; }
 .ux-details[open] > summary { margin-bottom:12px; color:var(--ux-accent); }
+required-hunt { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 8px; margin-top:6px; min-width:0; line-height:1.4; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+required-hunt:not(:defined), required-hunt-basis:not(:defined) { display:none; }
+required-hunt[layout="stacked"] { display:grid; gap:4px; margin:0; }
+.required-hunt-label { display:inline-flex; align-items:center; gap:4px; }
+.required-hunt-label img { flex:none; object-fit:contain; }
+.required-hunt-label, .required-hunt-time { font-size:.8125rem; color:var(--ux-muted); font-weight:400; }
+.required-hunt-count { font-size:.9375rem; font-weight:750; }
+required-hunt-basis { display:block; }
 .ux-api > summary { cursor:pointer; font-weight:700; display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:space-between; padding:4px 0; }
 .ux-api > summary span { color:var(--ux-muted); font-size:.8rem; font-weight:400; }
 .ux-home-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:16px 0 12px; }
@@ -255,6 +263,10 @@ body[data-ux-page="cube_play.html"] .sim-stage { min-height:108px; }
 .actual-input-row > span { flex-shrink:0; font-size:.85rem; }
 .actual-verdict { margin:12px 0 0; font-size:1rem; font-weight:800; line-height:1.6; overflow-wrap:anywhere; }
 .actual-verdict:empty { display:none; }
+.actual-metric-change, .actual-metric-percentile { display:block; margin-top:4px; font-size:.8125rem; word-break:keep-all; }
+.actual-metric-change[data-trend="under"] { color:var(--ux-success); }
+.actual-metric-change[data-trend="over"] { color:var(--ux-warning); }
+.actual-metric-percentile { color:var(--ux-accent); }
 .actual-verdict.is-less { color:#7bdda6; }
 .actual-verdict.is-more { color:#ff9d9d; }
 .actual-rank { padding:12px 14px; border:1px solid currentColor; border-radius:10px; }
@@ -342,28 +354,25 @@ body[data-ux-page="trace_calc.html"] .ux-expected-card h2 { color:var(--ux-text)
 }
 
 /* Illustrated walkthroughs share the existing help drawer and UI tokens. */
-.ux-help .ux-guide-intro { margin-top:20px; }
-.ux-help .ux-guide-intro h3 { margin:0 0 8px; color:var(--ux-text); font-size:1.1rem; }
-.ux-help .ux-guide-intro p { margin:8px 0; }
-.ux-help .ux-guide-example-note { font-size:.8125rem; }
-.ux-help .ux-guide-steps { list-style:none; padding:0; margin:0; }
-.ux-help .ux-guide-step + .ux-guide-step { margin-top:28px; }
-.ux-help .ux-guide-step h4 { display:flex; align-items:baseline; gap:10px; margin:0 0 8px; font-size:1rem; color:var(--ux-text); line-height:1.6; }
-.ux-help .ux-guide-step-number { display:inline-grid; place-content:center; flex:none; width:26px; height:26px; border:1px solid var(--ux-accent); border-radius:50%; background:#20344e; color:#b9d4fd; font-size:.875rem; line-height:1; }
-.ux-help .ux-guide-step p { margin:0 0 12px; }
-.ux-help .ux-guide-figure { margin:12px 0 0; }
-.ux-help .ux-guide-figure figcaption { margin-top:8px; color:var(--ux-muted); font-size:.8125rem; line-height:1.6; overflow-wrap:anywhere; }
-.ux-help .ux-guide-image-button { display:block; width:100%; max-width:100%; min-height:44px; padding:0; overflow:hidden; border:1px solid var(--ux-control-line,var(--ux-line)); border-radius:8px; background:var(--ux-surface,#171a21); color:var(--ux-text); cursor:zoom-in; text-align:left; }
+.ux-help .ux-guide-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+.ux-help .ux-guide-tabs > .ux-button { flex:1 0 auto; }
+.ux-help .ux-guide-steps { list-style:none; padding:0; margin:16px 0 0; }
+.ux-help .ux-guide-step + .ux-guide-step { margin-top:24px; }
+.ux-help .ux-guide-step-title { margin:0 0 8px; color:var(--ux-text); font-size:1rem; font-weight:700; line-height:1.5; }
+.ux-help .ux-guide-figure { margin:0; }
+.ux-help .ux-guide-figure figcaption { margin-top:8px; color:var(--ux-text); font-size:.9375rem; line-height:1.5; overflow-wrap:anywhere; }
+.ux-help .ux-guide-image-button { position:relative; display:block; width:fit-content; max-width:100%; min-height:44px; padding:0; overflow:hidden; border:1px solid var(--ux-control-line,var(--ux-line)); border-radius:8px; background:var(--ux-surface,#171a21); color:var(--ux-text); cursor:zoom-in; text-align:left; }
 .ux-help .ux-guide-image-button:hover { border-color:var(--ux-accent); }
 .ux-help .ux-guide-image-button img { display:block; max-width:100%; height:auto; margin-inline:auto; border:0; }
-.ux-help .ux-guide-image-label { display:block; padding:8px 12px; font-size:.8125rem; color:#b9d4fd; background:#20344e; line-height:1.6; }
+.ux-help .ux-guide-image-icon { position:absolute; bottom:4px; right:4px; padding:0 3px; border-radius:4px; background:#0f1115; color:#e8e9ec; font-size:.8125rem; line-height:1.2; }
+.ux-help .ux-guide-image-icon::before { content:"⤢"; }
+.ux-help .ux-guide-image-status { padding:8px 12px; color:var(--ux-muted); }
 .ux-help .ux-guide-image-error { cursor:default; }
 .ux-help .ux-guide-image-error img { min-height:60px; }
 .ux-help .ux-guide-details { margin-top:24px; padding-top:16px; border-top:1px solid var(--ux-line); }
 .ux-help .ux-guide-details > summary { min-height:44px; cursor:pointer; color:var(--ux-text); font-size:.9375rem; font-weight:650; align-content:center; }
 .ux-help .ux-guide-details > ul { margin-top:12px; }
 .ux-help .ux-guide-related a { display:block; min-height:44px; align-content:center; font-size:.875rem; text-decoration:underline; }
-.ux-help .ux-guide-result { margin-top:28px; }
 .ux-help-image { width:min(1120px,calc(100vw - 32px)); height:min(900px,calc(100dvh - 32px)); max-width:none; max-height:none; box-sizing:border-box; margin:auto; padding:0; border:1px solid var(--ux-control-line,var(--ux-line)); border-radius:12px; background:#171a21; color:var(--ux-text); overflow:hidden; }
 .ux-help-image[open] { display:flex; flex-direction:column; }
 .ux-help-image::backdrop { background:rgba(0,0,0,.8); }

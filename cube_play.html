@@ -97,7 +97,8 @@
   .cmp-note { grid-column:1 / -1; margin-top:8px; color:var(--text-dim); font-size:.72rem; line-height:1.6; }
   .stat-tile.cumulative { background:#191a28; border-color:#39304a; }
   .stat-tile.cumulative .value { font-size:1.12rem; }
-  .stat-tile.total { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .stat-tile.total { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:4px 10px; }
+  .stat-tile.total required-hunt { flex-basis:100%; }
   .stat-tile.total .value { margin-top:0; font-size:1.12rem; color:var(--cube-gold); }
   .sim-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   /* 두 줄을 같은 칸에 겹쳐 둬서, 등급업 선택지로 바뀌어도 높이가 변하지 않는다. */
@@ -132,6 +133,9 @@
 <script src="site_help_data.js" defer></script>
 <script src="site_help.js" defer></script>
 <script src="site_ux.js" defer></script>
+<script src="hunting_calc.js" defer></script>
+<script src="actual_record.js" defer></script>
+<script src="required_hunt.js" defer></script>
 </head>
 <body class="cube-page">
 <div class="wrap">
@@ -148,7 +152,9 @@
     </aside>
   </main>
 </div>
+<script src="upgrade_step.js"></script>
 <script src="cube_core.js"></script>
+<script src="potential_plan.js"></script>
 <script src="cube_play.js?v=4"></script>
 </body>
 </html>

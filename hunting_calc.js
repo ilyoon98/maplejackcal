@@ -46,6 +46,7 @@
   root.HuntingCalc = {calculate, upperTail};
   if (typeof document === 'undefined') return;
   const form = document.getElementById('huntingForm');
+  if (!form) return;
   const actual = document.getElementById('actualFragments');
   const number = n => n.toLocaleString('ko-KR', {maximumFractionDigits:0});
   const amount = n => {

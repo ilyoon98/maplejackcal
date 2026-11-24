@@ -2,26 +2,14 @@ const RANKS = ['레어', '에픽', '유니크', '레전드리'];
 const RANK_COLORS = ['#7cd4ff', '#b58cff', '#ffa94d', '#6bd98a'];
 const KIND_LABEL = { normal:'잠재능력', additional:'에디셔널 잠재능력' };
 const AUTO_SPEED = 15; // 빠름 고정
-const CUBE_ICON = {
-  potentialMeso:['잠재.webp'], black:['블랙.webp'], red:['레드.webp'], meisterMax:['명장.webp'], meister:['장인.webp'], suspicious:['수상한.webp'],
-  addReset:['에디잠재.webp'], addWhite:['에디큐브.webp','화이트에디.webp'], addSuspicious:['수상한에디.webp','브론즈.webp']
-};
 function iconImg(files){ return files.map(f=>`<img src="icons/cube/${encodeURIComponent(f)}" alt="" onerror="this.remove()">`).join(''); }
-const CUBES = {
-  potentialMeso:{name:'잠재능력 재설정 (메소)', kind:'normal', ...CUBE_GRADE.potentialMeso, official:'potential'},
-  black:{name:'블랙 큐브', kind:'normal', ...CUBE_GRADE.black},
-  red:{name:'레드 큐브', kind:'normal', ...CUBE_GRADE.red},
-  meisterMax:{name:'명장의 큐브 / 골드', kind:'normal', ...CUBE_GRADE.meisterMax},
-  meister:{name:'장인의 큐브 / 실버', kind:'normal', ...CUBE_GRADE.meister},
-  suspicious:{name:'수상한 큐브', kind:'normal', ...CUBE_GRADE.suspicious},
-  addReset:{name:'에디셔널 잠재 재설정', kind:'additional', ...CUBE_GRADE.addReset, official:'additional'},
-  addWhite:{name:'에디셔널 큐브 / 화이트 에디셔널 큐브', kind:'additional', ...CUBE_GRADE.addWhite},
-  addSuspicious:{name:'수상한 에디셔널 큐브 / 브론즈 에디셔널 큐브', kind:'additional', ...CUBE_GRADE.addSuspicious}
-};
+const CUBES = Object.fromEntries(Object.entries(CUBE_METHODS).map(([key, method]) => [
+  key, { ...method, kind: method.tab === 'potential' ? 'normal' : 'additional' }
+]));
 const DEFAULT_RANK = 2; // 기본 현재 등급: 유니크
-let state = { tab:'normal', cube:'black', from:DEFAULT_RANK, startRank:DEFAULT_RANK, to:3, level:200, pity:0, miracle:false, stageAgg:{}, runStagePct:{}, runMiracleOn:false, runMiracleOff:false, runAttempts:0, runMeso:0, runExpected:0, runLog:[], mesoSpent:0, sessionRuns:0, expectedTotal:0, pendingChoice:null };
+let state = { tab:'normal', cube:'black', from:DEFAULT_RANK, startRank:DEFAULT_RANK, to:3, level:200, pity:0, miracle:false, stageAgg:{}, runStagePct:{}, runStartRank:DEFAULT_RANK, runChanged:false, runMiracleOn:false, runMiracleOff:false, runAttempts:0, runMeso:0, runExpected:0, runLog:[], mesoSpent:0, sessionRuns:0, expectedTotal:0, pendingChoice:null };
 let autoTimer = null;
-function effP(p){ return state.miracle ? Math.min(p*2, .999) : p; }
+function effP(p){ return cubeGradeChance(p, state.miracle); }
 function maxTo(key){ return CUBES[key].p.length; }
 function ensureValidCube(){
   if(maxTo(state.cube) <= state.startRank){
@@ -30,7 +18,13 @@ function ensureValidCube(){
   }
   state.to = maxTo(state.cube);
 }
-function resetSession(){ state.pity=0; state.stageAgg={}; state.runStagePct={}; state.runMiracleOn=false; state.runMiracleOff=false; state.runAttempts=0; state.runMeso=0; state.runExpected=0; state.runLog=[]; state.mesoSpent=0; state.sessionRuns=0; state.expectedTotal=0; state.pendingChoice=null; }
+function resetRun(){
+  Object.assign(state, { runStagePct:{}, runChanged:false, runMiracleOn:false, runMiracleOff:false, runAttempts:0, runMeso:0, runExpected:0 });
+}
+function resetSession(){
+  resetRun();
+  Object.assign(state, { pity:0, stageAgg:{}, runLog:[], mesoSpent:0, sessionRuns:0, expectedTotal:0, pendingChoice:null });
+}
 const $ = id => document.getElementById(id);
 function pct(n){ return `${(n*100).toFixed(4).replace(/0+$/,'').replace(/\.$/,'')}%`; }
 function fmt(n){ return Number.isFinite(n) ? Math.round(n).toLocaleString('ko-KR') : '∞'; }
@@ -41,51 +35,22 @@ function stageNameHtml(i){ return `${rankSpan(i)} → ${rankSpan(i+1)}`; }
 // 비용·확률·천장·기대 횟수는 cube_core.js의 공통 엔진을 사용한다.
 // 이 항목 1회 메소. 메소 재설정이면 등급별 비용표, 큐브면 레벨 공식
 function attemptPrice(stage){
-  const d=CUBES[state.cube];
-  if(d.official) return (PRICE_TABLES[d.official][costBracket(state.level)] || [0,0,0,0])[stage] || 0;
-  return cubeFee(state.level);
+  return cubeMethodPrice(state.cube, state.level, stage);
 }
-// 한 판 총 지출의 분포에서 분위수를 구한다. 단계별 시도 횟수 분포를 비용 축에서 합친다(합성곱).
-// 천장까지 끌려가는 소수의 판이 평균을 끌어올리기 때문에, 중앙값은 기대값보다 늘 낮다.
-const quantileCache = new Map();
-function runCostQuantile(q){
-  const d=CUBES[state.cube];
-  const key=[state.cube,state.startRank,state.to,state.level,state.miracle,q].join('|');
-  if(quantileCache.has(key)) return quantileCache.get(key);
-  const stages=[];
-  for(let i=state.startRank;i<state.to;i++){
-    const idx=Math.min(i,d.p.length-1), p=effP(d.p[idx]);
-    // 천장이 없으면 사실상 끝나는 횟수에서 끊는다
-    const cap=d.cap[idx] || Math.ceil(Math.log(1e-6)/Math.log(1-p));
-    stages.push({ p, cap, price:attemptPrice(i) });
-  }
-  const max=stages.reduce((s,x)=>s+x.cap*x.price,0);
-  if(!max){ quantileCache.set(key,0); return 0; }
-  const N=2000, unit=max/N;
-  let dist=new Float64Array(N+1); dist[0]=1;
-  for(const s of stages){
-    const next=new Float64Array(N+1);
-    for(let k=1;k<=s.cap;k++){
-      const pk = k<s.cap ? Math.pow(1-s.p,k-1)*s.p : Math.pow(1-s.p,s.cap-1);
-      if(pk<1e-12) continue;
-      const shift=Math.round(k*s.price/unit);
-      for(let b=0;b+shift<=N;b++) if(dist[b]) next[b+shift]+=dist[b]*pk;
-    }
-    dist=next;
-  }
-  let acc=0, out=max;
-  for(let b=0;b<=N;b++){ acc+=dist[b]; if(acc>=q){ out=b*unit; break; } }
-  quantileCache.set(key,out);
-  return out;
-}
-function stageExpectedCost(i){
-  const d=CUBES[state.cube];
-  return cubeExpected(effP(d.p[i]), d.cap[i]) * attemptPrice(i);
+let cachedPlan;
+function runPlan(start, end, miracle) {
+  const key = [state.cube, state.level, start, end, miracle].join('|');
+  if (cachedPlan?.key === key) return cachedPlan.plan;
+  const steps = [];
+  for (let rank = start; rank < end; rank++) steps.push(cubeGradeStep(state.cube, state.level, rank, miracle));
+  const plan = PotentialPlan.calculate(steps, [], { budgets: false });
+  cachedPlan = { key, plan };
+  return plan;
 }
 function renderTabs(){
   const row=$('kindTabs'); if(!row) return; row.innerHTML='';
   [['normal','잠재능력'],['additional','에디셔널 잠재능력']].forEach(([key,label])=>{
-    const b=document.createElement('button'); b.type='button'; b.className='rank-chip tab-chip ux-choice'+(state.tab===key?' active':''); b.setAttribute('aria-pressed',String(state.tab===key)); b.innerHTML=`${iconImg(CUBE_ICON[key==='normal'?'black':'addReset'])}<span>${label}</span>`;
+    const b=document.createElement('button'); b.type='button'; b.className='rank-chip tab-chip ux-choice'+(state.tab===key?' active':''); b.setAttribute('aria-pressed',String(state.tab===key)); b.innerHTML=`${iconImg(CUBES[key==='normal'?'black':'addReset'].icons)}<span>${label}</span>`;
     b.onclick=()=>{ if(state.tab===key) return; stopAuto(); state.tab=key; const first=Object.keys(CUBES).find(k=>CUBES[k].kind===key); state.cube=first;
       // 탭을 바꿔도 고른 현재 등급은 그대로 두고, 그 큐브가 감당 못 할 때만 레어로 내린다.
       state.startRank = maxTo(first)>state.startRank ? state.startRank : 0;
@@ -106,12 +71,14 @@ function renderChoices(){
   const box=$('cubeChoices'); box.innerHTML='';
   Object.entries(CUBES).filter(([,d])=>d.kind===state.tab).forEach(([key,d])=>{
     const b=document.createElement('button');
-    b.className='cube-choice'+(key===state.cube?' active':'')+(CUBE_ICON[key].length>1?' pair-icon':'');
+    b.className='cube-choice'+(key===state.cube?' active':'')+(d.icons.length>1?' pair-icon':'');
     b.type='button'; b.setAttribute('aria-pressed',String(key===state.cube));
     const note = d.p.slice(Math.min(state.startRank,d.p.length)).map(p=>pct(effP(p))).join(' / ');
-    b.innerHTML=`<div class="cube-choice-head">${iconImg(CUBE_ICON[key])}<strong>${d.name}</strong></div><small>${note}</small>`;
+    b.innerHTML=`<div class="cube-choice-head">${iconImg(d.icons)}<strong>${d.name}</strong></div><small>${note}</small>`;
     b.onclick=()=>{
-      stopAuto(); state.cube=key;
+      stopAuto();
+      if (state.runAttempts) state.runChanged = true;
+      state.cube=key;
       if(maxTo(key)<=state.startRank){ state.from=0; state.startRank=0; }
       else state.from=state.startRank;
       state.pity=0; state.pendingChoice=null; renderAll();
@@ -128,40 +95,41 @@ function renderLevelRow(){
     ? `메소 재설정 ${stageName(currentStep())} 1회 ${fmt(attemptPrice(currentStep()))} 메소`
     : `큐브 1회 ${fmt(cubeFee(state.level))} 메소`;
 }
-function stagePercentile(i, k, forced){
-  if(forced) return 1;
-  const p=effP(CUBES[state.cube].p[i]);
-  return 1-Math.pow(1-p, k);
-}
-// 재도전한 단계는 최신 결과로 덮어써서, 한 판에 단계당 하나씩만 곱한다.
-function runCombinedPercentile(){
-  return Object.values(state.runStagePct).reduce((acc,v)=>acc*v, 1);
-}
 function runStageCount(){ return Object.keys(state.runStagePct).length; }
+function runCostPercentile(){
+  if (state.runChanged || (state.runMiracleOn && state.runMiracleOff)) return null;
+  const start = state.runStartRank;
+  return runPlan(start, start + runStageCount(), state.runMiracleOn).withinCost(state.runMeso);
+}
 function roll(){
-  const d=CUBES[state.cube], startI=currentStep(), p=effP(d.p[startI]), cap=d.cap[startI]; state.pity++;
+  const startI = currentStep();
+  const step = cubeGradeStep(state.cube, state.level, startI, state.miracle);
+  const odds = new UpgradeStep(step);
+  if (!state.runAttempts) state.runStartRank = startI;
+  const win = odds.guaranteed(state.pity) || Math.random() < odds.nextChance(state.pity);
+  state.pity++;
   state.runAttempts++;
   if(state.miracle) state.runMiracleOn=true; else state.runMiracleOff=true;
-  const price=attemptPrice(startI); state.mesoSpent+=price; state.runMeso+=price;
-  const forced=cap&&state.pity>=cap, win=forced||Math.random()<p;
+  state.mesoSpent += step.cost;
+  state.runMeso += step.cost;
   if(win){
-    const stagePct=stagePercentile(startI, state.pity, forced);
+    const stagePct = odds.withinAttempts(state.pity);
     const prev=state.stageAgg[startI]||{sum:0,count:0};
     state.stageAgg[startI]={ sum:prev.sum+stagePct, count:prev.count+1 };
     state.runStagePct[startI]=stagePct;
     // 기대 지출은 깬 단계마다 그 단계의 기대 비용을 쌓아서, 재도전이 섞여도 실제 지출과 같은 기준으로 비교한다.
-    const expCost = stageExpectedCost(startI);
+    const expCost = odds.expectedAttempts() * step.cost;
     state.expectedTotal += expCost; state.runExpected += expCost;
     const pityUsed=state.pity;
     state.from++; state.pity=0;
     const final = state.from>=state.to;
     if(final){
       // 목표 등급에 도달한 순간 그 자체로 "한 판" 완료. 이후 재도전/다음 판 선택과 무관하게 바로 기록한다.
-      const finalRunPct=runCombinedPercentile(), finalRunStages=runStageCount();
+      const finalRunPct = runCostPercentile(), finalRunStages = runStageCount();
       const miracle = state.runMiracleOn ? (state.runMiracleOff ? 'mixed' : 'on') : 'off';
       state.runLog.push({ n:state.sessionRuns+1, attempts:state.runAttempts, pct:finalRunPct, meso:state.runMeso, expected:state.runExpected, miracle });
       state.sessionRuns++;
-      state.runStagePct={}; state.runMiracleOn=false; state.runMiracleOff=false; state.runAttempts=0; state.runMeso=0; state.runExpected=0;
+      resetRun();
       state.pendingChoice = { prevFrom:startI, final:true, pityUsed, finalRunPct, finalRunStages };
     } else {
       state.pendingChoice = { prevFrom:startI, final:false, pityUsed };
@@ -170,7 +138,13 @@ function roll(){
   }
   renderSim();
 }
-function resolveRetry(){ if(!state.pendingChoice) return; state.from=state.pendingChoice.prevFrom; state.pendingChoice=null; resumeAfterDecision(); }
+function resolveRetry(){
+  if (!state.pendingChoice) return;
+  if (state.runAttempts) state.runChanged = true;
+  state.from = state.pendingChoice.prevFrom;
+  state.pendingChoice = null;
+  resumeAfterDecision();
+}
 function resolveNext(){
   if(!state.pendingChoice) return;
   if(state.pendingChoice.final) state.from=state.startRank;
@@ -224,18 +198,15 @@ function meso(n){
   return n.toLocaleString('ko-KR');
 }
 function mesoHtml(n){ return `<span title="${fmt(n)} 메소">${meso(n)}</span>`; }
-// 기대보다 더 쓰면 손해(빨강), 덜 쓰면 이득(초록).
-function verdictHtml(diff){
-  if(Math.round(diff)===0) return '<b>기대와 같음</b>';
-  return diff>0 ? `<b class="bad">${mesoHtml(diff)} 메소 더 씀</b>` : `<b class="good">${mesoHtml(-diff)} 메소 덜 씀</b>`;
-}
+function verdictHtml(expected, actual){ return ActualRecord.spendingVerdict(expected, actual, mesoHtml); }
 function renderRunLog(){
   const box=$('runLog'); if(!box) return;
   if(!state.runLog.length){ box.innerHTML=''; return; }
   const rows = state.runLog.slice().reverse().map(r=>{
     const mesoPart = r.meso ? `<span class="rl-meso">${mesoHtml(r.meso)} 메소</span>` : '';
     const tag = r.miracle==='on' ? '<span class="rl-tag">미라클</span>' : r.miracle==='mixed' ? '<span class="rl-tag mixed">일부 미라클</span>' : '';
-    return `<div class="run-log-row"><b class="rl-n">${r.n}판</b><span class="rl-att">${r.attempts}회</span><span class="rl-pct">상위 ${pct(r.pct)}${tag}</span>${mesoPart}</div>`;
+    const placement = r.pct === null ? '순위 미산정' : '상위 ' + pct(r.pct);
+    return `<div class="run-log-row"><b class="rl-n">${r.n}판</b><span class="rl-att">${r.attempts}회</span><span class="rl-pct">${placement}${tag}</span>${mesoPart}</div>`;
   }).join('');
   box.innerHTML=`<div class="run-log-head">판별 기록 <small>최신순</small></div>${rows}`;
 }
@@ -243,36 +214,36 @@ function renderPercentiles(){
   const box=$('simPercentiles'); if(!box) return;
   const parts=[];
   const lastRun=state.runLog[state.runLog.length-1];
-  if(lastRun) parts.push('<div hidden class="ux-score-source"><span data-ux-rank>상위 '+pct(lastRun.pct)+'</span><span data-ux-cost>'+verdictHtml(lastRun.meso-lastRun.expected)+'</span></div>');
+  if(lastRun) parts.push('<div hidden class="ux-score-source"><span data-ux-rank>' + (lastRun.pct === null ? '' : '상위 ' + pct(lastRun.pct)) + '</span><span data-ux-cost>'+verdictHtml(lastRun.expected, lastRun.meso)+'</span></div>');
   const pc=state.pendingChoice;
   const showCombo = pc && pc.final ? pc.finalRunStages>1 : runStageCount()>1;
   if(showCombo){
-    const comboPct = pc && pc.final ? pc.finalRunPct : runCombinedPercentile();
-    parts.push(`<div class="stat-tile hero"><div class="label">이번 판 종합</div><div class="value">상위 ${pct(comboPct)}</div></div>`);
+    const comboPct = pc && pc.final ? pc.finalRunPct : runCostPercentile();
+    if (comboPct !== null) parts.push(`<div class="stat-tile hero"><div class="label">이번 판 총 지출</div><div class="value">상위 ${pct(comboPct)}</div></div>`);
   }
   const entries=Object.entries(state.stageAgg).sort((a,b)=>a[0]-b[0]);
   if(entries.length){
     parts.push(`<div class="stage-tiles">${entries.map(([i,s])=>`<div class="stat-tile"><div class="label">${stageName(Number(i))}</div><div class="value">상위 ${pct(s.sum/s.count)}</div><div class="sub">${s.count}회 평균</div></div>`).join('')}</div>`);
   }
-  const d=CUBES[state.cube];
   if(state.mesoSpent>0){
     // 판당 평균은 끝난 판만 쓴다. 진행 중인 판을 섞으면 분자만 커져서 손해처럼 보인다.
     const doneActual = state.mesoSpent - state.runMeso;
     const doneExpected = state.expectedTotal - state.runExpected;
+    const sameAsPerRun = state.sessionRuns===1 && state.runMeso===0 && doneExpected>0;
+    const requiredHunt = `<required-hunt meso="${state.mesoSpent}"></required-hunt>`;
     if(state.sessionRuns>0 && doneExpected>0){
       const runs=state.sessionRuns;
-      const avgActual=doneActual/runs, avgExpected=doneExpected/runs, diff=avgActual-avgExpected;
-      const median=runCostQuantile(.5);
-      parts.push(`<div class="stat-tile compare"><div class="cmp-col"><div class="label">판당 실제 지출</div><div class="value">${mesoHtml(avgActual)}</div></div><div class="cmp-vs">vs</div><div class="cmp-col expected"><div class="label">판당 기대 지출</div><div class="value">${mesoHtml(avgExpected)}</div>${median?`<div class="sub">중앙값 ${mesoHtml(median)}</div>`:''}</div><div class="cmp-verdict"><span>판당 손익 · ${runs}판 평균</span>${verdictHtml(diff)}</div>${median?`<div class="cmp-note">판의 절반은 ${mesoHtml(median)} 안에 끝나요. 천장까지 가는 판이 평균을 끌어올려서, 기대 지출보다 싸게 끝나는 판이 더 흔합니다.</div>`:''}</div>`);
+      const avgActual=doneActual/runs, avgExpected=doneExpected/runs;
+      const median=runPlan(state.startRank, state.to, state.miracle).budgetFor(.5);
+      parts.push(`<div class="stat-tile compare"><div class="cmp-col"><div class="label">판당 실제 지출</div><div class="value">${mesoHtml(avgActual)}</div>${sameAsPerRun ? requiredHunt : ''}</div><div class="cmp-vs">vs</div><div class="cmp-col expected"><div class="label">판당 기대 지출</div><div class="value">${mesoHtml(avgExpected)}</div>${median?`<div class="sub">중앙값 ${mesoHtml(median)}</div>`:''}</div><div class="cmp-verdict"><span>판당 손익 · ${runs}판 평균</span>${verdictHtml(avgExpected, avgActual)}</div>${median?`<div class="cmp-note">현재 설정에서 판의 절반은 ${mesoHtml(median)} 이내에 끝나요.</div>`:''}</div>`);
     }
     // 누적 손익은 진행 중인 판까지 포함한다. 깬 단계마다 기대 비용을 쌓아 비교 기준을 맞춘다.
     // 1판만 끝나고 진행 중인 판이 없으면 판당 타일과 값이 같으므로 접는다.
-    const sameAsPerRun = state.sessionRuns===1 && state.runMeso===0 && doneExpected>0;
     if(state.expectedTotal>0 && !sameAsPerRun){
       const runNote = state.runMeso>0 ? `${state.sessionRuns}판 + 진행 중` : `${state.sessionRuns}판 전체`;
-      parts.push(`<div class="stat-tile compare cumulative"><div class="cmp-col"><div class="label">누적 실제 지출</div><div class="value">${mesoHtml(state.mesoSpent)}</div></div><div class="cmp-vs">vs</div><div class="cmp-col expected"><div class="label">누적 기대 지출</div><div class="value">${mesoHtml(state.expectedTotal)}</div></div><div class="cmp-verdict"><span>누적 손익 · ${runNote}</span>${verdictHtml(state.mesoSpent-state.expectedTotal)}</div></div>`);
+      parts.push(`<div class="stat-tile compare cumulative"><div class="cmp-col"><div class="label">누적 실제 지출</div><div class="value">${mesoHtml(state.mesoSpent)}</div>${requiredHunt}</div><div class="cmp-vs">vs</div><div class="cmp-col expected"><div class="label">누적 기대 지출</div><div class="value">${mesoHtml(state.expectedTotal)}</div></div><div class="cmp-verdict"><span>누적 손익 · ${runNote}</span>${verdictHtml(state.expectedTotal, state.mesoSpent)}</div></div>`);
     } else if(!sameAsPerRun){
-      parts.push(`<div class="stat-tile total"><div class="label">누적 실제 지출</div><div class="value">${mesoHtml(state.mesoSpent)} 메소</div></div>`);
+      parts.push(`<div class="stat-tile total"><div class="label">누적 실제 지출</div><div class="value">${mesoHtml(state.mesoSpent)} 메소</div>${requiredHunt}</div>`);
     }
   }
   box.innerHTML=parts.join('');

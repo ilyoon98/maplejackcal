@@ -2,10 +2,10 @@
 // Add a new page's YYYY-MM-DD release date here: NEW expires after 30 days (KST).
 window.SiteNavigation = {
   categories: [
-      ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','cube_option_calc.html','flame_calc.html','item_craft_calc.html','authentic_symbol_calc.html'], 'calc'],
+      ['장비 강화', ['trace_calc.html','starforce_calc.html','cube_calc.html','soul_calc.html','flame_calc.html','item_craft_calc.html','authentic_symbol_calc.html'], 'calc'],
       ['보스', ['boss_income_calc.html','boss_buff_planner.html','party_boss_scheduler.html','shared_boss_rates.html'], 'calc'],
       ['재화 · 성장', ['trade_margin_calc.html','meso_market_calc.html','hunting_calc.html','accessory_planner.html','wealth_elixir_calc.html','coin_shop_calc.html'], 'calc'],
-      ['강화 시뮬레이터', ['cube_play.html','starforce_play.html'], 'play'],
+      ['강화 시뮬레이터', ['cube_play.html','starforce_play.html','soul_play.html'], 'play'],
       ['뽑기 시뮬레이터', ['pet_gacha.html','boutique_gacha.html','seedring_gacha.html'], 'play'],
       ['미니게임', ['herb_idle.html'], 'play'],
       ['기록', ['access_log.html'], 'calc']
@@ -14,8 +14,8 @@ window.SiteNavigation = {
     'access_log.html': ['접속 기록', '이벤트 기간 접속일 한 줄 그래프'],
     'trace_calc.html': ['주흔 기댓값 계산기', '기대 메소·시도 횟수'],
     'starforce_calc.html': ['스타포스 기댓값 계산기', '목표 성까지 기대 메소·파괴'],
-    'cube_calc.html': ['큐브 등급업 비용 계산기', '큐브별 기대 개수와 비용'],
-    'cube_option_calc.html': ['큐브 옵션 확률 계산기', '목표 잠재옵션 확률·기대 메소'],
+    'cube_calc.html': ['큐브 잠재능력 계산기', '등급 상승부터 목표 옵션까지 기대 메소와 예산'],
+    'soul_calc.html': ['소울 잠재능력 계산기', '증폭부터 목표 옵션까지 기대 메소와 예산'],
     'flame_calc.html': ['추가옵션 계산기', '목표 추옵 확률·불꽃·메소'],
     'item_craft_calc.html': ['아이템 제작 비용 계산기', '노작부터 완성까지 평균 비용'],
     'authentic_symbol_calc.html': ['어센틱 심볼 계산기', '최소 메소 강화 순서'],
@@ -30,13 +30,14 @@ window.SiteNavigation = {
     'wealth_elixir_calc.html': ['재물 비약 제작 계산기', '씨앗·오일·비약 가격 비교'],
     'coin_shop_calc.html': ['이벤트 코인샵 계산기', '주차별 구매 계획'],
     'cube_play.html': ['큐브 시뮬레이터', '가상 큐브와 천장 기록'],
+    'soul_play.html': ['소울 잠재능력 시뮬레이터', '증폭부터 목표 옵션까지 자동 시도'],
     'starforce_play.html': ['스타포스 시뮬레이터', '목표 성까지 가상 강화'],
     'pet_gacha.html': ['펫 시뮬레이터', '원더베리·루나 크리스탈'],
     'boutique_gacha.html': ['부티크 기프트 시뮬레이터', '부티크 기프트 가상 뽑기'],
     'seedring_gacha.html': ['시드링 시뮬레이터', '보스 반지 상자 가상 뽑기'],
     'herb_idle.html': ['달빛 약초 채집소', '약초 채집·가공·판매']
   },
-  releases: { 'access_log.html': '2026-10-20', 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02', 'party_boss_scheduler.html': '2026-11-07', 'shared_boss_rates.html': '2026-11-07', 'accessory_planner.html': '2026-11-07' },
+  releases: { 'access_log.html': '2026-10-20', 'hunting_calc.html': '2026-09-30', 'flame_calc.html': '2026-09-30', 'wealth_elixir_calc.html': '2026-10-02', 'herb_idle.html': '2026-10-02', 'party_boss_scheduler.html': '2026-11-07', 'shared_boss_rates.html': '2026-11-07', 'accessory_planner.html': '2026-11-07', 'soul_calc.html': '2026-11-24', 'soul_play.html': '2026-11-24' },
   newDays: 30,
   // 메뉴와 홈 카드에 쓰는 게임 아이템 아이콘. 새 페이지를 추가하면 여기에도 넣는다.
   icons: {
@@ -51,7 +52,7 @@ window.SiteNavigation = {
     'party_boss_scheduler.html': 'icons/home/탐정수첩.webp',
     'shared_boss_rates.html': 'icons/home/메이프릴카메라.webp',
     'cube_calc.html': 'icons/cube/레드.webp',
-    'cube_option_calc.html': 'icons/cube/블랙.webp',
+    'soul_calc.html': 'icons/home/소울에테르.webp',
     'flame_calc.html': 'icons/coin-shop/영환불.webp',
     'item_craft_calc.html': 'icons/home/황금망치.webp',
     'trade_margin_calc.html': 'icons/home/메소주머니.webp',
@@ -61,6 +62,7 @@ window.SiteNavigation = {
     'wealth_elixir_calc.html': 'icons/craft/소형재물획득의비약.webp',
     'coin_shop_calc.html': 'icons/home/반짝이는메이플코인.webp',
     'cube_play.html': 'icons/cube/명장.webp',
+    'soul_play.html': 'icons/home/소울에테르.webp',
     'starforce_play.html': 'icons/home/스타포스강화권.webp',
     'boutique_gacha.html': 'icons/home/선물상자.webp',
     'pet_gacha.html': 'icons/home/원더베리.webp',

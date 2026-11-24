@@ -2,7 +2,6 @@
 (function () {
   'use strict';
   var A = window.AccessLogCore;
-  var API = 'https://open.api.nexon.com/maplestory/v1';
   // 데모 모드(access_log_demo.js)면 저장 기록을 따로 두고 기다림 없이 호출한다
   var DEMO = window.AccessLogDemo, PREFIX = DEMO ? DEMO.storagePrefix : '';
   var CACHE_KEY = PREFIX + 'accessLogSnapshotsV1';
@@ -25,12 +24,8 @@
   function fullDate(date) { return date.replace(/-/g, '.'); }
 
   // ---------- 저장된 스냅샷 (지난 날짜는 바뀌지 않는다) ----------
-  function readCache() {
-    try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch (e) { return {}; }
-  }
-  function writeCache(cache) {
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
-  }
+  function readCache() { return JsonStorage.local.read(CACHE_KEY) || {}; }
+  function writeCache(cache) { JsonStorage.local.write(CACHE_KEY, cache); }
 
   // ---------- API (요청은 줄을 세워 MIN_GAP_MS 간격으로 하나씩 내보낸다) ----------
   // 최근 날짜 요청을 먼저 보내서, 한도에 걸려도 최근 기록부터 채워진다.
@@ -64,40 +59,34 @@
     await slot(params && params.date || '9999');
     if (signal && signal.aborted) throw new DOMException('aborted', 'AbortError');
     calls++;
-    var response = await fetch(API + path + '?' + new URLSearchParams(params), { headers: { 'x-nxopen-api-key': NexonKey.get() }, signal: signal });
-    var body = await response.json().catch(function () { return null; });
-    if (response.ok) return body;
-    var code = body && body.error && body.error.name;
-    if ((code === 'OPENAPI00007' || response.status === 429) && !retried) { await wait(1500); return api(path, params, signal, true); }
-    var messages = {
-      OPENAPI00002: '이 API 키로 계정 정보를 조회할 수 없습니다.',
-      OPENAPI00005: 'API 키가 유효하지 않습니다. 홈에서 다시 등록하세요.',
-      OPENAPI00007: 'API 호출 한도를 초과했습니다. 개발 단계 키는 하루 1,000회까지입니다. 기간을 줄이거나 내일 다시 조회하세요. 지금까지 받은 기록은 저장되어 다음엔 호출하지 않습니다.',
-      OPENAPI00009: '데이터 준비 중입니다. 잠시 후 다시 조회하세요.',
-      OPENAPI00010: '게임 점검 중입니다.',
-      OPENAPI00011: 'API 점검 중입니다.'
-    };
-    var error = new Error(messages[code] || '조회에 실패했습니다. (HTTP ' + response.status + ')');
-    error.code = code;
-    throw error;
+    try {
+      return await NexonApi.browser.get(path, params, { signal });
+    } catch (error) {
+      if (!(error instanceof NexonApi.Error)) throw error;
+      if (error.rateLimited && !retried) { await wait(1500); return api(path, params, signal, true); }
+      var messages = {
+        OPENAPI00002: '이 API 키로 계정 정보를 조회할 수 없습니다.',
+        OPENAPI00005: 'API 키가 유효하지 않습니다. 홈에서 다시 등록하세요.',
+        OPENAPI00007: 'API 호출 한도를 초과했습니다. 개발 단계 키는 하루 1,000회까지입니다. 기간을 줄이거나 내일 다시 조회하세요. 지금까지 받은 기록은 저장되어 다음엔 호출하지 않습니다.',
+        OPENAPI00009: '데이터 준비 중입니다. 잠시 후 다시 조회하세요.',
+        OPENAPI00010: '게임 점검 중입니다.',
+        OPENAPI00011: 'API 점검 중입니다.'
+      };
+      error.message = messages[error.code] || '조회에 실패했습니다. (HTTP ' + error.status + ')';
+      throw error;
+    }
   }
 
   // ---------- 계정 캐릭터와 선택 (선택은 이 브라우저에 기억한다) ----------
   var ACCOUNT_KEY = PREFIX + 'accessLogAccountV1', SELECT_KEY = PREFIX + 'accessLogSelectedV1';
-  function readJson(key) {
-    try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
-  }
-  function writeJson(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
-  }
-  characters = readJson(ACCOUNT_KEY) || [];
+  characters = JsonStorage.local.read(ACCOUNT_KEY) || [];
   // 선택한 ocid 목록. 저장된 게 없으면 전체 선택.
   function selectedCharacters() {
-    var chosen = readJson(SELECT_KEY);
+    var chosen = JsonStorage.local.read(SELECT_KEY);
     return characters.filter(function (c) { return !Array.isArray(chosen) || chosen.indexOf(c.ocid) >= 0; });
   }
   function setSelected(ocids) {
-    writeJson(SELECT_KEY, ocids);
+    JsonStorage.local.write(SELECT_KEY, ocids);
     renderCharacterList();
     showSaved();
   }
@@ -145,7 +134,7 @@
       characters = (await NexonCharacters.fetch()).map(function (c) {
         return { ocid: c.ocid, name: c.name, level: c.level, world: c.world };
       });
-      writeJson(ACCOUNT_KEY, characters);
+      JsonStorage.local.write(ACCOUNT_KEY, characters);
       $('accessAccount').textContent = characters.length
         ? '고른 캐릭터 중 누구로든 접속한 날을 셉니다. 창고 캐릭터를 빼면 API 호출이 줄어듭니다.'
         : '계정에 캐릭터가 없습니다.';
@@ -198,12 +187,12 @@
   // ---------- 저장된 결과 (캐릭터별 날짜 상태. 한 번 확인한 날은 다시 조회하지 않는다) ----------
   var RESULT_KEY = PREFIX + 'accessLogResultV2';
   function readResult() {
-    var saved = readJson(RESULT_KEY);
+    var saved = JsonStorage.local.read(RESULT_KEY);
     return saved && saved.chars ? saved : { chars: {} };
   }
   function writeResult(saved) {
     saved.savedAt = A.kstDate();
-    writeJson(RESULT_KEY, saved);
+    JsonStorage.local.write(RESULT_KEY, saved);
   }
   function resultsFor(saved, list) {
     return list.map(function (c) { return { name: c.name, states: saved.chars[c.ocid] || {} }; });

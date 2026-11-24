@@ -28,6 +28,35 @@
     node.textContent = content;
     tip.appendChild(node);
   }
+  function portraits(content) {
+    if (!content) return;
+    var entries;
+    try { entries = JSON.parse(content); } catch (e) { return; }
+    if (!Array.isArray(entries) || !entries.length) return;
+    var list = document.createElement('ul');
+    list.className = 'site-tooltip-portraits';
+    list.setAttribute('role', 'list');
+    list.style.setProperty('--portrait-columns', Math.min(3, entries.length));
+    entries.forEach(function (entry) {
+      var item = document.createElement('li');
+      var frame = document.createElement('span');
+      var name = document.createElement('span');
+      frame.className = 'site-tooltip-portrait-frame';
+      name.className = 'site-tooltip-portrait-name';
+      name.textContent = entry.name;
+      if (entry.image) {
+        var img = document.createElement('img');
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.addEventListener('error', function () { img.remove(); });
+        img.src = entry.image;
+        frame.appendChild(img);
+      }
+      item.append(frame, name);
+      list.appendChild(item);
+    });
+    tip.appendChild(list);
+  }
   function show(source) {
     hide();
     if (!source || !source.isConnected || source === dismissed) return;
@@ -35,6 +64,7 @@
     tip.replaceChildren();
     line('strong', 'site-tooltip-name', source.dataset.tooltip);
     line('span', 'site-tooltip-value', source.dataset.tooltipValue);
+    portraits(source.dataset.tooltipPortraits);
     line('span', 'site-tooltip-note', source.dataset.tooltipNote);
     described = source.querySelector('input,button,a,[tabindex]') || source;
     var ids = (described.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);

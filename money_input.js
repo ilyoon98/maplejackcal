@@ -26,7 +26,7 @@
       'starforce_calc.html': {spareInput:[], actualUsage:[]},
       'starforce_play.html': {spareInput:[]},
       'item_craft_calc.html': {basePrice:[], actualUsage:[]},
-      'cube_option_calc.html': {actualUsage:[]},
+      'cube_calc.html': {actualUsage:[]},
       'trace_calc.html': {jujeonPrice:[]},
       'trade_margin_calc.html': {buyPrice:[], sellPrice:[], extraCost:[]},
       'meso_market_calc.html': {amount:[8], baseRate:[0,'메이플포인트'], sellRate:[0,'메이플포인트']}

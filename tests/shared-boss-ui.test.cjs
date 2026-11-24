@@ -16,7 +16,7 @@ async function boot(page,{snapshots=[snapshot()],accounts=[],key='',fetchExtra,s
    return {ok:true,json:async()=>({schemaVersion:1,persistent:true,snapshots:structuredClone(values),accounts:structuredClone(registry),accountRevision:registry.length?'accounts-v1':''})};
   }if(fetchExtra)return fetchExtra(url,options);throw new Error('Unexpected network request: '+url);
  };
- const scripts=['boss_db.js','boss_rewards.js','scouter_data.js','account_catalog.js','rate_catalog.js','nexon_key.js','nexon_characters.js','character_profile.js','boss_identity.js'];
+ const scripts=['json_storage.js','boss_db.js','boss_schedule.js','boss_rewards.js','scouter_data.js','rate_catalog.js','account_catalog.js','nexon_key.js','nexon_api.js','nexon_characters.js','character_profile.js','boss_identity.js'];
  for(const file of scripts)w.eval(fs.readFileSync(path.join(__dirname,'../'+file),'utf8'));
  w.NexonCharacters={...w.NexonCharacters,fetch:async()=>structuredClone(ownRows)};
  w.BossShotReader={readBlob:async()=>shot};w.eval(fs.readFileSync(path.join(__dirname,'../'+page+'.js'),'utf8'));await settle();
@@ -206,11 +206,8 @@ test('최신 계정 정보에 외형이 빠져 있어도 저장된 공식 외형
 test('캡처 토글·붙여넣기는 확실한 카드만 즉시 반영하고 불확실한 기존 배율과 나머지 값은 유지한다',async()=>{
  const p=await boot('shared_boss_rates',{shot:[{name:'스우',diff:'익스트림',value:41.22,sure:true},{name:'윌',diff:'하드',value:999,sure:false}]});try{
   assert.equal(p.doc.querySelector('#shared-mode-capture').getAttribute('aria-pressed'),'true');assert.equal(p.doc.querySelector('#shared-capture').hidden,false);assert(p.doc.querySelector('#shared-fetch-panel').hidden);
-  assert.equal(p.doc.querySelectorAll('.shared-capture-steps li').length,4);
   assert.equal(p.doc.querySelector('#shared-capture-guide').dataset.uxHelpTrigger,'shared-capture-guide-section');
   assert.match(p.doc.querySelector('#shared-capture-guide').textContent,/^\? 캡처 등록 방법$/);
-  assert.equal(p.doc.querySelectorAll('.shared-capture-steps img').length,2);
-  assert.match(p.doc.querySelector('.shared-capture-steps li').textContent,/내 기준보기.*전체 보기.*데스티니\/유챔 확인.*OFF/);
   const e=new p.w.Event('paste',{bubbles:true,cancelable:true});e.clipboardData={items:[{kind:'file',getAsFile:()=>new p.w.Blob(['fake-pixels'],{type:'image/png'})}]};p.doc.querySelector('#shared-drop').dispatchEvent(e);await settle();
   const inputs=[...p.doc.querySelectorAll('#shared-rows input')];assert.equal(inputs[0].value,'41.22');assert.equal(inputs[1].value,'77');assert(p.doc.querySelector('#shared-shot-status').textContent.includes('1개 배율 자동 반영'));assert(p.doc.querySelector('#shared-review').textContent.includes('기존 값 유지'));assert.equal(p.calls.filter(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).length,0);
   p.doc.querySelector('#shared-save').click();await settle();const saved=JSON.parse(p.calls.find(c=>c.options.method==='POST'&&JSON.parse(c.options.body).snapshot).options.body).snapshot;assert.equal(saved.captureMethod,'screenshot');assert.equal(saved.conditions.destinyChampion,false);assert.equal(saved.rates[0].percent,41.22);assert.equal(saved.rates[1].percent,77);

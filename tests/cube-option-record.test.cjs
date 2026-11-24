@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const context = vm.createContext({});
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../upgrade_step.js'), 'utf8'), context);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../cube_core.js'), 'utf8'), context);
 const record = context.cubeOptionRecord;
 

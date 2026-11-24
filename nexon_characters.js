@@ -3,7 +3,6 @@
 (function (root) {
   'use strict';
 
-  var API_URL = 'https://open.api.nexon.com/maplestory/v1/character/list';
   var MIN_LEVEL = 260;
   var WORLD_ICON_FILES = {
     '노바':'노바.webp', '레드':'레드.webp', '루나':'루나.webp', '베라':'베라.webp',
@@ -78,23 +77,12 @@
     return node;
   }
 
-  function apiError(response, body) {
-    var detail = body && body.error ? body.error : {};
-    var error = new Error(detail.message || ('HTTP ' + response.status));
-    error.code = detail.name || '';
-    return error;
-  }
-
-  function fetchCharacters(options) {
-    options = options || {};
-    if (!root.NexonKey || !root.NexonKey.has()) return Promise.reject(new Error('API_KEY_REQUIRED'));
-    return fetch(API_URL, { headers: { 'x-nxopen-api-key': options.key || root.NexonKey.get() }, signal: options.signal })
-      .then(function (response) {
-        return response.json().catch(function () { return null; }).then(function (body) {
-          if (!response.ok) throw apiError(response, body);
-          return normalize(body);
-        });
-      });
+  async function fetchCharacters(options = {}) {
+    if (!root.NexonKey || !root.NexonKey.has()) throw new Error('API_KEY_REQUIRED');
+    const client = options.key
+      ? new root.NexonApi((...args) => root.fetch(...args), () => options.key)
+      : root.NexonApi.browser;
+    return normalize(await client.get('/character/list', undefined, { signal: options.signal }));
   }
 
   function mount(options) {
@@ -284,7 +272,7 @@
   }
 
   root.NexonCharacters = {
-    API_URL: API_URL,
+    get API_URL() { return root.NexonApi.url('/character/list'); },
     MIN_LEVEL: MIN_LEVEL,
     WORLD_ICON_FILES: WORLD_ICON_FILES,
     normalize: normalize,
