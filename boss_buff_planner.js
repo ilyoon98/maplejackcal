@@ -117,18 +117,24 @@
   var MAX_ENUM = 20;         // 조합 전수조사 한계(2^n).
   var BIN_W = 1000000;       // DP 점수: 버프 한 개 = 100만점. 남는 초 단위 비교보다 항상 우선한다.
   var INF = 0x3fffffff;
-  // 파티 보스와 혼자 도는 보스를 한 버프에 섞으면 파티 도중에 혼자 돌러 가야 하므로, 버프 수가 같으면 섞지 않는 쪽을 고른다.
-  // 버프 수와 쌀도핑→풀도핑 전환보다는 뒤, 실제 사용 시간보다는 앞에서 비교한다.
-  var PARTY_MIX_W = 10000;
-  function isPartyItem(item) { return !!(item && item.party); }
-  function partyMixPenalty(sub, partyMask, bits) {
-    var parties = bits[sub & partyMask];
-    return parties && parties < bits[sub] ? PARTY_MIX_W : 0;
+  function partyGroupKey(it) {
+    if (!it.party) return '';
+    var members = it.partyInfo && it.partyInfo.members;
+    return members && members.length
+      ? JSON.stringify(members.map(function (m) { return m.name; }).sort())
+      : it.partyLink || it.party;
   }
-  function partyMaskOf(idxList, items) {
-    var mask = 0;
-    idxList.forEach(function (k, j) { if (isPartyItem(items[k])) mask |= 1 << j; });
-    return mask;
+  function partyMasks(keys) {
+    var all = 0, groups = new Map();
+    keys.forEach(function (key, i) {
+      if (!key) return;
+      all |= 1 << i;
+      groups.set(key, (groups.get(key) || 0) | (1 << i));
+    });
+    return { all: all, byIndex: keys.map(function (key) { return groups.get(key) || 0; }) };
+  }
+  function hasDifferentParties(parties, masks) {
+    return parties !== 0 && (parties & ~masks.byIndex[31 - Math.clz32(parties & -parties)]) !== 0;
   }
 
   var PROFILE_STORE = 'bossBuffPlanner.profiles';
@@ -208,12 +214,13 @@
 
   // ── 최적화 ──────────────────────────────────────────────────
   // 버프 한 번에 담을 수 있는 조합 중 '쓰는 시간이 가장 긴' 순서로 상위 몇 개.
-  function bestCombos(items, cap, topN, full) {
+  function bestCombos(items, cap, topN, full, partyCount) {
     var n = items.length;
     if (!n || n > MAX_ENUM) return [];
     var total = 1 << n;
     var sums = new Int32Array(total);
     var counts = new Int8Array(total);
+    var masks = partyMasks(items.map(partyGroupKey));
     var top = [];
     for (var mask = 1; mask < total; mask++) {
       var low = mask & -mask;
@@ -224,6 +231,9 @@
       sums[mask] = sum; counts[mask] = cnt;
       var cost = costOf(sum, cnt); // 이동 시간까지 포함한 실제 소모 시간
       if (cost > cap) continue;
+      var parties = mask & masks.all;
+      if (hasDifferentParties(parties, masks)) continue;
+      if (parties && parties !== mask && counts[parties] !== partyCount) continue;
       pushTop(top, { mask: mask, sum: cost, count: cnt }, topN);
     }
     return top;
@@ -250,10 +260,29 @@
       if (it.rice) (it.riceSec <= cap ? flex : over).push(i);
       else (it.full <= cap ? fixedFull : over).push(i);
     });
-    if (fixedFull.length + flex.length <= MAX_EXACT_1) {
-      return { bins: packExactMixed(fixedFull.concat(flex), items, cap), over: over, exact: true };
+    var idxList = fixedFull.concat(flex);
+    var groups = new Map();
+    idxList.forEach(function (i) {
+      var key = partyGroupKey(items[i]);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(i);
+    });
+    var canShareLastBuff = !over.some(function (i) { return items[i].party; });
+    if (idxList.length <= MAX_EXACT_1) {
+      var bins = packExactMixed(idxList, items, cap, canShareLastBuff && groups.has('') && groups.size > 1);
+      return { bins: orderRouteBins(bins, items), over: over, exact: true };
     }
+
+    var bins = [];
+    groups.forEach(function (indices) { bins = bins.concat(packDopingGroups(indices, items, cap)); });
+    if (canShareLastBuff && groups.has('') && groups.size > 1) shareLastBuff(bins, items, cap);
+    return { bins: orderRouteBins(bins, items), over: over, exact: false };
+  }
+  function packDopingGroups(indices, items, cap) {
+    if (indices.length <= MAX_EXACT_1) return packExactMixed(indices, items, cap, false);
     // 보스가 많으면 도핑별로 따로 묶은 결과와, 풀도핑 판의 빈 시간에 쌀도핑 보스를 채운 결과 중 버프가 적은 쪽.
+    var fixedFull = indices.filter(function (i) { return !items[i].rice; });
+    var flex = indices.filter(function (i) { return items[i].rice; });
     var fullBins = packGroup(fixedFull, items, cap, true);
     var base = fullBins.concat(packGroup(flex, items, cap, false));
     var filled = fullBins.map(function (bin) { return { idx: bin.idx.slice(), full: true }; });
@@ -268,7 +297,7 @@
       rest.push(i);
     });
     var alt = filled.concat(packGroup(rest, items, cap, false));
-    return { bins: alt.length < base.length ? alt : base, over: over, exact: false };
+    return alt.length < base.length ? alt : base;
   }
   function packGroup(idxList, items, cap, full) {
     return idxList.length <= MAX_EXACT_1 ? packExactSingle(idxList, items, cap, full) : packGreedy(idxList, items, cap, full);
@@ -276,26 +305,32 @@
 
   // 풀도핑 보스와 쌀도핑 보스를 함께 놓고 최소 버프 개수를 계산한다.
   // 점수 = 버프 개수 → 풀도핑으로 돌린 쌀도핑 보스 수 → 실제 사용 시간 순으로 작은 쪽.
-  function packExactMixed(idxList, items, cap) {
+  function packExactMixed(idxList, items, cap, canShareLastBuff) {
     var n = idxList.length;
     if (!n) return [];
     var total = 1 << n;
     var fullSums = subsetSums(idxList, items, true);
     var riceSums = subsetSums(idxList, items, false);
     var bits = popcounts(total);
-    var riceMask = 0, partyMask = partyMaskOf(idxList, items);
+    var riceMask = 0, masks = partyMasks(idxList.map(function (i) { return partyGroupKey(items[i]); }));
     idxList.forEach(function (k, j) { if (items[k].rice) riceMask |= 1 << j; });
     var PROMO_W = 1e7, MIX_BIN_W = 1e12;
     var binScore = new Float64Array(total);
     var isFull = new Uint8Array(total);
+    var mixed = new Uint8Array(total);
     for (var s = 1; s < total; s++) {
+      var parties = s & masks.all;
+      mixed[s] = parties && parties !== s ? 1 : 0;
+      if (hasDifferentParties(parties, masks) || (mixed[s] && !canShareLastBuff)) {
+        binScore[s] = Infinity;
+        continue;
+      }
       var promo = bits[s & riceMask];
       var rc = costOf(riceSums[s], bits[s]);
       var fc = costOf(fullSums[s], bits[s]);
       if (promo === bits[s] && rc <= cap) binScore[s] = rc;          // 전부 쌀도핑 보스면 쌀도핑 판이 우선
       else if (fc <= cap) { binScore[s] = promo * PROMO_W + fc; isFull[s] = 1; }
       else binScore[s] = Infinity;
-      if (binScore[s] !== Infinity) binScore[s] += partyMixPenalty(s, partyMask, bits);
     }
     var dp = new Float64Array(total);
     var pick = new Int32Array(total);
@@ -303,12 +338,28 @@
       dp[mask] = Infinity;
       var lowbit = mask & -mask;
       for (var sub = mask; sub > 0; sub = (sub - 1) & mask) {
-        if (!(sub & lowbit) || binScore[sub] === Infinity) continue;
+        if (!(sub & lowbit) || mixed[sub] || binScore[sub] === Infinity) continue;
         var cand = dp[mask ^ sub] + MIX_BIN_W + binScore[sub];
         if (cand < dp[mask]) { dp[mask] = cand; pick[mask] = sub; }
       }
     }
     var bins = [], cur = total - 1;
+    if (canShareLastBuff) {
+      // 파티와 개인이 함께 들어가는 버프는 전체 동선에서 한 번만 쓸 수 있다.
+      var baseCount = Math.floor(dp[cur] / MIX_BIN_W), best = dp[cur], tail = 0;
+      for (var s = 1; s < total; s++) {
+        if (!mixed[s] || binScore[s] === Infinity) continue;
+        var score = dp[cur ^ s] + MIX_BIN_W + binScore[s];
+        if (Math.floor(score / MIX_BIN_W) < baseCount && score < best) {
+          best = score;
+          tail = s;
+        }
+      }
+      if (tail) {
+        bins.push({ idx: subToIdx(tail, idxList), full: isFull[tail] === 1 });
+        cur ^= tail;
+      }
+    }
     while (cur) {
       var sub = pick[cur];
       bins.push({ idx: subToIdx(sub, idxList), full: isFull[sub] === 1 });
@@ -340,7 +391,6 @@
     var total = 1 << n;
     var sums = subsetSums(idxList, items, full);
     var bits = popcounts(total);
-    var partyMask = partyMaskOf(idxList, items);
     var dp = new Int32Array(total);
     var pick = new Int32Array(total);
     for (var mask = 1; mask < total; mask++) {
@@ -352,7 +402,7 @@
         var c = costOf(sums[sub], bits[sub]);
         if (c > cap) continue;
         // 점수 = 버프 개수 × BIN_W + 실제 사용 시간. 버프 수가 우선, 같으면 시간이 짧은 쪽.
-        var cand = dp[mask ^ sub] + BIN_W + c + partyMixPenalty(sub, partyMask, bits);
+        var cand = dp[mask ^ sub] + BIN_W + c;
         if (cand < dp[mask]) { dp[mask] = cand; pick[mask] = sub; }
       }
     }
@@ -372,8 +422,7 @@
   }
   // 같은 도핑 그룹에서 오래 걸리는 보스부터 채우는 근사 계산.
   function packGreedy(idxList, items, cap, full) {
-    // 파티 보스를 먼저 채워 같은 버프에 모이게 한다.
-    var sorted = idxList.slice().sort(function (a, b) { return (isPartyItem(items[b]) - isPartyItem(items[a])) || (secIn(items[b], full) - secIn(items[a], full)); });
+    var sorted = idxList.slice().sort(function (a, b) { return secIn(items[b], full) - secIn(items[a], full); });
     var bins = [], used = [];
     sorted.forEach(function (i) {
       var sec = secIn(items[i], full);
@@ -388,6 +437,52 @@
     return bins;
   }
 
+  // 근사 계산에서도 마지막 파티 버프 하나만 개인 구간과 이어 쓴다.
+  function shareLastBuff(bins, items, cap) {
+    var best = null;
+    bins.forEach(function (party, p) {
+      if (!items[party.idx[0]].party) return;
+      bins.forEach(function (solo, s) {
+        if (items[solo.idx[0]].party) return;
+        var bin = { idx: party.idx.concat(solo.idx), full: party.full || solo.full };
+        var sec = binCost(bin, items);
+        if (sec > cap) return;
+        var addedPromotions = party.full === solo.full ? 0 : (party.full ? solo : party).idx.length;
+        if (!best || addedPromotions < best.promotions || (addedPromotions === best.promotions && sec < best.sec)) {
+          best = { p: p, s: s, bin: bin, promotions: addedPromotions, sec: sec };
+        }
+      });
+    });
+    if (best) {
+      bins[best.p] = best.bin;
+      bins.splice(best.s, 1);
+    }
+  }
+  function orderRouteBins(bins, items) {
+    var parties = new Map(), solo = [], lastParty = '';
+    bins.forEach(function (bin) {
+      bin.idx.sort(function (a, b) {
+        return Number(!!items[b].party) - Number(!!items[a].party) || (secIn(items[b], bin.full) - secIn(items[a], bin.full));
+      });
+      bin.sec = binCost(bin, items);
+      bin.partyKey = partyGroupKey(items[bin.idx[0]]);
+      bin.mixed = !!bin.partyKey && !items[bin.idx[bin.idx.length - 1]].party;
+      if (!bin.partyKey) { solo.push(bin); return; }
+      if (!parties.has(bin.partyKey)) parties.set(bin.partyKey, []);
+      parties.get(bin.partyKey).push(bin);
+      if (bin.mixed) lastParty = bin.partyKey;
+    });
+    function sortBins(group) {
+      return group.sort(function (a, b) { return (a.mixed - b.mixed) || (b.full - a.full) || (b.sec - a.sec); });
+    }
+    var ordered = [];
+    parties.forEach(function (group, key) {
+      if (key !== lastParty) ordered.push(...sortBins(group));
+    });
+    if (lastParty) ordered.push(...sortBins(parties.get(lastParty)));
+    return ordered.concat(sortBins(solo));
+  }
+
   // ── 렌더 ────────────────────────────────────────────────────
   var listEl = document.getElementById('bossList');
   var comboEl = document.getElementById('comboResult');
@@ -397,10 +492,10 @@
   var excludeCompletedBtn = document.getElementById('excludeCompletedBtn');
   // ── 파티 보스 스케줄러 연동 ─────────────────────────────────
   // 선택한 캐릭터가 들어간 파티(이 브라우저의 로컬 파티와 공유 파티)를 찾아, 그 보스는 파티 환산 합계를 배율로 쓴다.
-  // 파티원 중 한 명이라도 배율이 없으면 합계를 믿을 수 없으므로 혼자 배율을 그대로 쓴다.
+  // 빠진 배율이 있으면 파티원 구성은 유지하고 시간은 본인 배율로 추정한다.
   var PARTY_STORE = 'partyBossScheduler.v1';
   var DIFF_KEY = { '이지': 'Easy', '노멀': 'Normal', '하드': 'Hard', '카오스': 'Chaos', '익스트림': 'Extreme' };
-  var partyRates = Object.create(null), partyRequest = 0;
+  var partyRates = Object.create(null), pendingParties = Object.create(null), partyRequest = 0;
   function bossIdOf(b) {
     var db = window.MapleBossDB;
     if (!db || !DIFF_KEY[b.diff]) return '';
@@ -410,6 +505,7 @@
   // 파티 보스 스케줄러에서 해당 파티를 바로 열 수 있는 주소.
   function partyLink(p) { return p && p.id ? 'party_boss_scheduler.html?scope=' + p.scope + '&party=' + encodeURIComponent(p.id) : ''; }
   function partyFor(b) { return partyRates[bossIdOf(b)] || null; }
+  function registeredPartyFor(b) { return partyFor(b) || pendingParties[bossIdOf(b)] || null; }
   // ── 공용 환산 배율 연동 ─────────────────────────────────────
   // 선택한 캐릭터가 공용 환산 배율에 등록돼 있으면 그 보스·난이도 기록을 배율 기본값으로 쓴다.
   // 우선순위: 파티 환산 합계 → 직접 입력 → 공용 환산 배율 → 이 화면에 저장한 배율.
@@ -469,7 +565,7 @@
     return { job: typeof c.job === 'string' ? c.job.slice(0, 50) : '', level: Number.isInteger(c.level) ? c.level : 0, image: image };
   }
   function collectPartyRates(name, local, shared, store) {
-    var found = Object.create(null), skipped = [], catalog = window.AccountCatalog;
+    var found = Object.create(null), pending = Object.create(null), skipped = [], catalog = window.AccountCatalog;
     var mains = catalog ? catalog.mainNames(store || {}) : new Set();
     function add(p, members, scope) {
       if (!p || !p.bossId || found[p.bossId]) return;
@@ -477,12 +573,19 @@
       var ordered = catalog ? catalog.partyOrder(members, mains) : members.slice().sort(function (x, y) { return (y.rate || 0) - (x.rate || 0); });
       var custom = p.name && p.name !== '새 파티' && p.name !== partyBossLabel(p.bossId);
       var title = custom ? p.name : catalog ? catalog.partyTitle(ordered, mains) : ordered.map(function (m) { return m.name; }).join(', ');
-      if (!members.length || members.some(function (m) { return m.rate === null; })) { skipped.push(title || '이름 없는 파티'); return; }
-      found[p.bossId] = {
-        total: Math.round(members.reduce(function (s, m) { return s + m.rate; }, 0) * 100) / 100, name: title || '', count: members.length,
+      var ready = members.every(function (m) { return m.rate !== null; });
+      var info = {
+        total: ready ? Math.round(members.reduce(function (s, m) { return s + m.rate; }, 0) * 100) / 100 : null,
+        name: title || '', count: members.length,
         id: typeof p.id === 'string' ? p.id : '', scope: scope,
         members: ordered.map(function (m) { return Object.assign({ name: m.name, rate: m.rate, main: mains.has(m.name), me: m.name === name }, m.info); })
       };
+      if (ready) {
+        found[p.bossId] = info;
+        delete pending[p.bossId];
+      } else if (!pending[p.bossId]) {
+        pending[p.bossId] = info;
+      }
     }
     // 공유 파티를 먼저 본다. 로컬 파티는 공유로 복사하기 전 사본일 수 있다.
     shared.forEach(function (p) {
@@ -498,7 +601,8 @@
         return { name: m.character.name, rate: fresh !== null ? fresh : typeof m.rate === 'number' ? m.rate : null, info: partyMemberInfo(store, m.character.name, m.character) };
       }), 'local');
     });
-    return { rates: found, skipped: skipped };
+    Object.values(pending).forEach(function (p) { skipped.push(p.name || '이름 없는 파티'); });
+    return { rates: found, pending: pending, skipped: skipped };
   }
   var partyInfo = { count: 0, skipped: [], sharedFailed: false };
   function partyStatus(info) { partyInfo = info || { count: 0, skipped: [], sharedFailed: false }; rateStatus(); }
@@ -526,7 +630,7 @@
     var manual = visible.filter(function (b) { return rateSource(b) === 'manual'; }).length;
     if (manual) badges.push(rateBadge('직접 입력 ' + manual + '마리', '직접 입력한 배율을 쓰는 보스', '공용 값으로 되돌리려면 이름 옆 공용 버튼이나 목록 관리를 쓰세요.', 'manual'));
     if (partyInfo.count) badges.push(rateBadge('파티 ' + partyInfo.count + '개', '파티 환산 합계 사용', '파티 보스 스케줄러의 환산 합계를 배율로 씁니다. 파티 표시를 누르면 그 파티를 엽니다.', 'party'));
-    if (partyInfo.skipped.length) badges.push(rateBadge('혼자 배율 ' + partyInfo.skipped.length + '개', '배율 미등록 파티원이 있는 파티', partyInfo.skipped.join(', ') + ' 파티는 혼자 배율로 계산합니다.', 'warn'));
+    if (partyInfo.skipped.length) badges.push(rateBadge('혼자 배율 ' + partyInfo.skipped.length + '개', '배율 미등록 파티원이 있는 파티', partyInfo.skipped.join(', ') + ' 파티는 동선을 유지하고 시간은 혼자 배율로 계산합니다.', 'warn'));
     if (partyInfo.sharedFailed) badges.push(rateBadge('공유 파티 확인 못 함', '공유 파티를 불러오지 못했습니다', '이 브라우저의 파티만 확인했습니다.', 'warn'));
     n.innerHTML = badges.join('');
     n.hidden = !badges.length;
@@ -549,8 +653,12 @@
   }
   function loadPartyRates() {
     var name = (activeProfile || charInput.value || '').trim(), request = ++partyRequest;
-    if (sharedRateName !== name) { sharedRates = Object.create(null); sharedRateName = name; sharedRateLoaded = false; sharedRegistered = false; sharedRateAt = ''; }
-    if (!name || typeof fetch !== 'function') { partyRates = Object.create(null); partyStatus(null); renderAll(); return Promise.resolve(); }
+    if (sharedRateName !== name) {
+      sharedRates = Object.create(null); sharedRateName = name; sharedRateLoaded = false; sharedRegistered = false; sharedRateAt = '';
+      partyRates = Object.create(null); pendingParties = Object.create(null);
+      partyStatus(null);
+    }
+    if (!name || typeof fetch !== 'function') { partyRates = Object.create(null); pendingParties = Object.create(null); partyStatus(null); renderAll(); return Promise.resolve(); }
     var local = [];
     var saved = JsonStorage.local.read(PARTY_STORE);
     if (Array.isArray(saved?.parties)) local = saved.parties;
@@ -561,6 +669,7 @@
         var shared = res[0] && Array.isArray(res[0].parties) ? res[0].parties : [];
         var result = collectPartyRates(name, local, shared, res[1]);
         partyRates = result.rates;
+        pendingParties = result.pending;
         // 공용 배율을 못 불러오면 직전에 받은 같은 캐릭터 값을 그대로 둔다.
         if (res[1]) {
           var own = collectSharedRates(name, res[1]);
@@ -573,7 +682,7 @@
   }
   function activeItems() {
     return state.bosses.filter(function (b) { return b.on && !(state.excludeCompleted && b.completed); }).map(function (b) {
-      var mult = effectiveMult(b), party = partyFor(b);
+      var mult = effectiveMult(b), party = registeredPartyFor(b);
       return {
         name: b.name, diff: b.diff, icon: b.icon, mult: mult, extra: b.extra, rice: b.rice === true,
         party: party ? (party.name || '파티') : '', partyInfo: party, partyLink: party ? partyLink(party) : '',
@@ -595,7 +704,7 @@
     viewBtn.setAttribute('aria-pressed', String(state.showAllBosses));
     state.bosses.forEach(function (b, i) {
       if (visible.indexOf(b) < 0) return;
-      var party = partyFor(b), usingParty = !!party, mult = effectiveMult(b);
+      var party = registeredPartyFor(b), usingParty = !!partyFor(b), mult = effectiveMult(b);
       var sec = b.rice ? riceSecOf(mult) : secOf(mult);
       // 파티 표시는 난이도처럼 고정 칸에 두어 보스 이름 길이와 관계없이 같은 자리에 오게 하고, 누르면 그 파티를 연다.
       var partyCell = '<div class="row-party">' + (party ? (party.id
@@ -663,8 +772,8 @@
     var items = activeItems();
     var cap = Math.round(state.buffMin * 60);
     if (!items.length) {
-      comboEl.innerHTML = '<p class="empty">동선에 포함할 보스를 선택하세요. 완료한 보스를 다시 계산하려면 완료 제외를 꺼주세요.</p>';
-      packEl.innerHTML = '';
+      packEl.innerHTML = '<p class="empty">동선에 포함할 보스를 선택하세요. 완료한 보스를 다시 계산하려면 완료 제외를 꺼주세요.</p>';
+      comboEl.innerHTML = '';
       return;
     }
     renderPack(items, cap);
@@ -674,21 +783,15 @@
   // ① 켜둔 보스를 전부 도는 루트
   function renderPack(items, cap) {
     var res = packAll(items, cap);
-    var bins = res.bins.slice();
-    bins.forEach(function (bin) {
-      // 한 버프 안에서는 파티 보스를 먼저 이어서 돌고, 그다음 혼자 도는 보스를 돈다.
-      bin.idx.sort(function (a, b) { return (isPartyItem(items[b]) - isPartyItem(items[a])) || (secIn(items[b], bin.full) - secIn(items[a], bin.full)); });
-      bin.sec = binCost(bin, items);
-      bin.party = bin.idx.some(function (k) { return isPartyItem(items[k]); });
-    });
-    // 파티 보스가 있는 버프를 먼저, 그다음 풀도핑 판, 그 안에서는 빡빡한 판부터.
-    bins.sort(function (a, b) { return (b.party - a.party) || (b.full - a.full) || (b.sec - a.sec); });
+    var bins = res.bins;
+    var overParties = new Set(res.over.map(function (i) { return partyGroupKey(items[i]); }));
 
     var usedSec = bins.reduce(function (a, bin) { return a + bin.sec; }, 0);
     var clearSec = bins.reduce(function (a, bin) { return a + binSec(bin, items); }, 0);
     var waste = bins.length * cap - usedSec;
     var moveCnt = bins.reduce(function (a, bin) { return a + Math.max(0, bin.idx.length - 1); }, 0);
     var fullCnt = bins.filter(function (b) { return b.full; }).length;
+    var hasPendingParty = items.some(function (it) { return it.partyInfo && it.partyInfo.total === null; });
 
     var bossCnt = bins.reduce(function (a, bin) { return a + bin.idx.length; }, 0);
     var promoted = [];
@@ -702,11 +805,17 @@
       '<p class="note">처치 ' + fmt(clearSec) + ' + 이동 ' + moveCnt + '회 ' + fmt(moveCnt * moveSec()) +
       ' = <b>' + fmt(usedSec) + '</b> 사용 · 남는 시간 ' + fmt(waste) + '</p>' +
       (promoted.length ? '<p class="note">버프를 줄이려고 쌀도핑 보스를 풀도핑으로 넣었습니다: ' + promoted.map(esc).join(', ') + '</p>' : '') +
+      (hasPendingParty ? '<p class="note warn">파티원 배율이 빠진 보스의 시간은 본인 배율로 추정했습니다.</p>' : '') +
       (res.exact ? '' : '<p class="note warn">보스가 많아 근사 계산으로 묶었습니다.</p>') +
       '</div>';
 
     html += bins.map(function (bin, i) {
       var left = cap - bin.sec;
+      var firstPartyBuff = bin.partyKey && (i === 0 || bins[i - 1].partyKey !== bin.partyKey);
+      var lastPartyBuff = bin.partyKey && (!bins[i + 1] || bins[i + 1].partyKey !== bin.partyKey);
+      var nextSolo = bin.mixed || (bins[i + 1] && !bins[i + 1].partyKey);
+      var partyEnd = overParties.has(bin.partyKey) ? '이 파티의 시간 초과 보스는 아래에서 확인하세요.'
+        : nextSolo ? '파티 종료 · 개인 보스 시작' : '파티 종료';
       return '<div class="pack-bin' + (bin.full ? '' : ' rice') + '">' +
         '<div class="bin-head"><strong>버프 ' + (i + 1) + '</strong>' +
         ('<span class="tag ' + (bin.full ? 'full">풀도핑' : 'rice">' + riceLabel()) + '</span>') +
@@ -714,13 +823,16 @@
         bar(bin.sec, cap) +
         '<div class="bin-meta"><span class="bin-time">' + fmt(bin.sec) + ' / ' + fmt(cap) + '</span>' +
         '<span class="bin-left' + (left === 0 ? ' zero' : '') + '">' + (left === 0 ? '딱 맞음' : '남음 ' + fmt(left)) + '</span></div>' +
+        (bin.partyKey ? '<p class="note route-party-start">' + (firstPartyBuff ? esc(partyHeading(items[bin.idx[0]])) : '같은 파티 계속') + '</p>' : '') +
         '<ol class="route">' + bin.idx.map(function (k, j) {
           var it = items[k];
+          var endsParty = lastPartyBuff && it.party && !(items[bin.idx[j + 1]] || {}).party;
           return (j ? '<li class="hop"><span>↓ 이동 ' + fmtMin(moveSec()) + '분</span></li>' : '') +
             '<li class="stop"><span class="step-no">' + (j + 1) + '</span>' +
             (it.icon ? '<img src="' + it.icon + '" alt="">' : '') +
             '<span class="nm">' + esc(it.name) + partyTagHtml(it) + (bin.full && it.rice ? ' <span class="tag full">풀도핑 전환</span>' : '') + '</span>' +
-            '<span class="tm">' + fmtMin(secIn(it, bin.full)) + '분</span></li>';
+            '<span class="tm">' + fmtMin(secIn(it, bin.full)) + '분</span></li>' +
+            (endsParty ? '<li class="note route-party-end">' + partyEnd + '</li>' : '');
         }).join('') + '</ol>' +
         '</div>';
     }).join('');
@@ -734,12 +846,14 @@
 
   // ② 버프를 한 번만 쓸 때
   function renderCombos(items, cap) {
-    comboEl.innerHTML = [true, false].map(function (full) {
+    var partyCount = items.filter(function (it) { return it.party; }).length;
+    var rule = partyCount ? '<p class="note">한 버프에 한 파티씩 추천합니다. 모든 파티 보스를 마칠 수 있으면 개인 보스도 이어서 추천합니다.</p>' : '';
+    comboEl.innerHTML = rule + [true, false].map(function (full) {
       var group = items.filter(function (it) { return (!it.rice) === full; });
       if (!group.length) return '';
       var heading = '<p class="note">' + (full ? '풀도핑' : riceLabel()) + ' 보스 조합</p>';
       if (group.length > MAX_ENUM) return heading + '<p class="empty">같은 도핑의 보스는 최대 ' + MAX_ENUM + '마리까지 조합을 계산합니다.</p>';
-      var top = bestCombos(group, cap, 5, full);
+      var top = bestCombos(group, cap, 5, full, partyCount);
       return heading + (top.length
         ? top.map(function (c, rank) { return comboCard(c, group, cap, rank, full); }).join('')
         : '<p class="empty">버프 ' + fmt(cap) + ' 안에 들어가는 조합이 없습니다.</p>');
@@ -755,6 +869,7 @@
   function comboCard(c, items, cap, rank, full) {
     var picked = [];
     for (var i = 0; i < items.length; i++) if (c.mask & (1 << i)) picked.push(items[i]);
+    picked.sort(function (a, b) { return Number(!!b.party) - Number(!!a.party); });
     var left = cap - c.sum;
     return '<div class="combo' + (rank === 0 ? ' best' : '') + '">' +
       '<div class="combo-head">' +
@@ -767,7 +882,11 @@
       '<div class="chips">' + picked.map(function (it) { return chip(it, full); }).join('') + '</div>' +
       '</div>';
   }
-  // 파티 배율로 계산한 보스는 결과에서도 파티로 가는 보스임을 표시한다.
+  function partyHeading(it) {
+    var members = (it.partyInfo.members || []).filter(function (m) { return !m.me; });
+    return members.length ? '함께 가는 파티원 ' + members.map(function (m) { return m.name; }).join(', ') : it.party;
+  }
+  // 파티 배율을 아직 채우지 못했더라도 파티로 가는 보스임을 표시한다.
   function partyTagHtml(it) {
     if (!it.party) return '';
     return it.partyLink
@@ -786,10 +905,12 @@
       var tags = [];
       if (m.me) tags.push('이 캐릭터');
       if (m.main) tags.push('본캐');
-      return { name: m.name, note: [m.job, m.level ? 'Lv.' + m.level : ''].filter(Boolean).join(' · '), value: percentText(m.rate) + '%', image: m.image || '', tags: tags };
+      return { name: m.name, note: [m.job, m.level ? 'Lv.' + m.level : ''].filter(Boolean).join(' · '), value: m.rate === null ? '배율 미등록' : percentText(m.rate) + '%', image: m.image || '', tags: tags };
     });
+    var value = party.total === null ? '동선 시간은 혼자 배율로 추정' : '환산 합계 ' + percentText(party.total) + '%';
+    if (party.total > 0) value += ' · ' + clearTimeText(party.total);
     return ' data-tooltip="' + esc((party.name || '파티') + ' 파티') + '"' +
-      ' data-tooltip-value="' + esc(party.count + '명 · 환산 합계 ' + percentText(party.total) + '% · ' + clearTimeText(party.total)) + '"' +
+      ' data-tooltip-value="' + esc(party.count + '명 · ' + value) + '"' +
       (items.length ? ' data-tooltip-items="' + esc(JSON.stringify(items)) + '"' : '') +
       (linked ? ' data-tooltip-note="누르면 파티 보스 스케줄러에서 이 파티를 엽니다."' : '');
   }

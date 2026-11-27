@@ -91,7 +91,7 @@ function loadPlanner(options = {}) {
       binCost,
       renderAll,
       collectPartyRates,
-      setPartyRates(db, rates) { window.MapleBossDB = db; partyRates = rates; },
+      setPartyRates(db, rates, pending = {}) { window.MapleBossDB = db; partyRates = rates; pendingParties = pending; },
       collectSharedRates,
       setSharedRates(db, own) { window.MapleBossDB = db; sharedRates = own.rates; sharedRateAt = own.at; sharedRateLoaded = true; sharedRegistered = own.registered; sharedRateName = '나'; },
       inputBossMult(index, value) {
@@ -783,7 +783,7 @@ test('버프 수가 같으면 파티 보스와 혼자 도는 보스를 한 버�
   assert.equal(engine.packAll(tight, 1800).bins.length, 1);
 });
 
-test('전체 동선에서 파티 보스는 버프 안에서 먼저 이어서 돌고 파티가 있는 버프를 먼저 보여준다', () => {
+test('전체 동선에서 같은 멤버의 파티 보스를 붙이고 마지막 멤버 구간 뒤에만 개인 보스를 배치한다', () => {
   const engine = loadPlanner();
   const db = require('../boss_db.json');
   engine.setBosses([
@@ -792,11 +792,61 @@ test('전체 동선에서 파티 보스는 버프 안에서 먼저 이어서 돌
     {name:'스우', diff:'하드', mult:100, on:true},
     {name:'데미안', diff:'하드', mult:400, on:true},
   ].map((b, i) => ({id:'b' + i, extra:0, ...b})));
-  // 스우·데미안은 파티. 윌 10분, 루시드 5분, 스우(파티 400%) 5분, 데미안(파티 400%) 5분 → 한 버프에 들어간다.
-  engine.setPartyRates(db, {'Lotus|Hard':{total:400, name:'스우팟', count:2, id:'p1', scope:'local'}, 'Damien|Hard':{total:400, name:'데미팟', count:2, id:'p2', scope:'local'}});
+  const me = {name:'나', rate:100, me:true}, friend = {name:'동료', rate:300};
+  engine.setPartyRates(db, {
+    'Lotus|Hard':{total:400, name:'스우팟', count:2, id:'p1', scope:'local', members:[me, friend]},
+    'Damien|Hard':{total:400, name:'데미팟', count:2, id:'p2', scope:'local', members:[friend, me]},
+  });
   engine.renderAll();
   const {pack} = engine.results();
   const route = [...pack.matchAll(/<li class="stop">.*?<span class="nm">([^<]+)</g)].map(m => m[1].trim());
+  assert.equal([...pack.matchAll(/class="pack-bin"/g)].length, 1);
   assert.deepEqual(route.slice(0, 2).sort(), ['데미안', '스우']);
   assert.deepEqual(route.slice(2), ['윌', '루시드']);
+  assert.equal([...pack.matchAll(/함께 가는 파티원 동료/g)].length, 1);
+  assert.match(pack, /파티 종료 · 개인 보스 시작<\/li>.*?<span class="nm">윌/);
+});
+
+test('같은 멤버는 버프를 새로 써도 연속이며 다른 멤버나 개인 보스가 그 사이에 끼어들지 않는다', () => {
+  const engine = loadPlanner();
+  const item = (full, member, rice = false) => ({
+    full, riceSec:full + 10, rice, party:member ? '같은 이름' : '',
+    partyInfo:member ? {members:[{name:'나'}, {name:member}]} : null,
+  });
+  const items = [item(700), item(1000, '동료1'), item(1000, '동료1', true), item(1300, '동료2'), item(1200)];
+  const route = result => Array.from(result.bins, bin => Array.from(bin.idx));
+  assert.deepEqual(route(engine.packAll(items, 1800)), [[3], [2], [1, 0], [4]]);
+  const over = engine.packAll(items.concat(item(1801, '동료1')), 1800);
+  assert.deepEqual(route(over), [[1], [2], [3], [4], [0]]);
+  assert.deepEqual(Array.from(over.over), [5]);
+
+  const many = items.concat(Array.from({length:11}, () => item(1790)));
+  const approximate = engine.packAll(many, 1800);
+  assert.equal(approximate.exact, false);
+  assert.deepEqual(route(approximate).slice(0, 3), [[3], [2], [1, 0]]);
+  assert.deepEqual(route(approximate).flat().sort((a, b) => a - b), many.map((_, i) => i));
+  assert.ok(approximate.bins.every(bin => engine.binCost(bin, many) <= 1800));
+});
+
+test('버프 한 번 조합에 서로 다른 멤버를 섞지 않고 배율이 빠진 파티도 파티원 구성을 유지한다', () => {
+  const engine = loadPlanner();
+  const db = require('../boss_db.json');
+  engine.setBosses(['윌', '스우', '데미안'].map(name => ({name, diff:'하드', mult:400, on:true, extra:0})));
+  const result = engine.collectPartyRates('나', [], [
+    {id:'lotus', bossId:'Lotus|Hard', name:'친구팟', members:['나', '친구1']},
+    {id:'damien', bossId:'Damien|Hard', name:'친구팟', members:['나', '친구2']},
+  ], {snapshots:[
+    {characterName:'나', preset:'00000', rates:[{bossId:'Lotus|Hard', percent:0}, {bossId:'Damien|Hard', percent:100}]},
+    {characterName:'친구1', preset:'00000', rates:[{bossId:'Lotus|Hard', percent:400}]},
+  ]});
+  assert.equal(result.rates['Lotus|Hard'].total, 400);
+  engine.setPartyRates(db, result.rates, result.pending);
+  engine.renderAll();
+  const {pack, combos} = engine.results();
+  assert.equal(engine.activeItems().find(it => it.name === '데미안').mult, 400);
+  assert.match(pack, /함께 가는 파티원 친구2/);
+  assert.match(pack, /동선 시간은 혼자 배율로 추정/);
+  const cards = [...combos.matchAll(/<div class="chips">(.*?)<\/div>/g)];
+  assert.equal(cards.length, 3);
+  assert.ok(cards.every(card => ['윌','스우','데미안'].filter(name => card[1].includes(name)).length === 1));
 });
