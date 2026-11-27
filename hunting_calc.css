@@ -9,6 +9,22 @@
 .hunt-fields small { display:block; color:var(--text-dim); font-size:.76rem; line-height:1.7; margin-top:6px; }
 .hunt-fields input:focus,summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
 .hunt-wide { grid-column:1/-1; }
+.hunt-input-note { margin:0; }
+.hunt-buffs { min-width:0; margin:20px 0 0; padding:0; border:0; }
+.hunt-buffs legend { margin-bottom:4px; padding:0; font-weight:700; }
+.hunt-buff { display:flex; align-items:center; gap:8px; min-height:44px; padding:4px 0; font-size:.875rem; font-weight:650; cursor:pointer; }
+.hunt-buff input { width:1rem; height:1rem; flex:none; margin:0; }
+.hunt-buff small { color:var(--ux-muted); font-size:.8125rem; font-weight:400; }
+.hunt-settings-note { margin-bottom:0; }
+.hunt-applied-rates { margin:12px 0 0; }
+.hunt-session { border-color:var(--ux-accent); }
+.hunt-session-value { margin:0 0 16px; overflow-wrap:anywhere; }
+.hunt-session-value strong { color:var(--ux-accent); font-size:var(--ux-result-size); font-weight:750; }
+.hunt-target { display:block; font-size:.875rem; font-weight:650; }
+.hunt-target input { display:block; width:min(100%, 22rem); margin:6px 0 0; }
+.hunt-target-error { color:var(--ux-error); }
+.hunt-session-count { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin:12px 0 0; }
+.hunt-session-count output { font-weight:700; overflow-wrap:anywhere; min-width:0; }
 .hunt-luck { border-color:#405b80; }
 .hunt-luck-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
 .hunt-luck label { font-size:.84rem; }

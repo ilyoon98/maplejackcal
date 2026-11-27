@@ -459,6 +459,7 @@
     const plans = findPlans(candidates, dropTarget, mesoTarget);
     const goalPlan = plans.find(plan => plan.drop === dropTarget && plan.meso === mesoTarget);
     const best = goalPlan?.missing === 0 ? goalPlan : undefined;
+    byId('accessory-hunt').setAttribute('meso', best?.cost ?? '');
     resultDetails.hidden = !best;
     preferenceStatus.hidden = !best || requested === 0;
     resultGap.hidden = Boolean(best || !registered);

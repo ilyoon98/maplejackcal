@@ -14,23 +14,34 @@
 <script src="site_help_data.js" defer></script>
 <script src="site_help.js" defer></script>
 <script src="site_ux.js" defer></script>
+<script src="money_input.js" defer></script>
+<script src="hunting_income.js" defer></script>
 <script src="hunting_calc.js" defer></script>
 </head>
 <body><div class="wrap">
   <div data-site-navigation></div>
-<header><h1>아이템 획득량 계산기</h1><p class="sub">30분 사냥으로 모을 조각과 메소를 확인하세요.</p></header>
+<header><h1>아이템 획득량 계산기</h1><p class="sub">30분 사냥으로 얻을 조각과 메소, 목표 메소에 필요한 재획 횟수를 확인하세요.</p></header>
 <main class="hunt-layout">
 <form id="huntingForm" class="hunt-inputs">
-<section class="hunt-panel"><h2>사냥 설정 <span class="hunt-badge">30분 기준</span></h2>
+<section class="hunt-panel" aria-labelledby="hunting-settings"><h2 id="hunting-settings" tabindex="-1">사냥 설정</h2>
 <div class="hunt-fields">
-<label>아이템 드랍률 증가 (아획 %)<input name="drop" type="number" min="0" max="10000" step="0.1" value="200" required></label>
-<label>메소 획득량 증가 (메획 %)<input name="meso" type="number" min="0" max="10000" step="0.1" value="100" required><small>버프 포함 최종 증가율. +100%는 2배.</small></label>
-<label>몬스터 레벨<input name="monster" type="number" min="1" max="300" step="1" value="260" required></label>
-<label>맵 마릿수 (1회 젠)<input name="mobs" type="number" min="0" max="10000" step="1" value="38" required><small>7.5초마다 전부 처치하는 기준</small></label>
+<p class="ux-hint hunt-wide hunt-input-note" id="baseRateHelp">선택한 버프를 사용하기 전의 아획과 메획을 입력하세요.</p>
+<label>기본 아획 (%)<input name="drop" type="number" min="0" max="10000" step="0.1" value="200" aria-describedby="baseRateHelp" required></label>
+<label>기본 메획 (%)<input name="meso" type="number" min="0" max="10000" step="0.1" value="100" aria-describedby="baseRateHelp" required></label>
+<label>몬스터 레벨<input name="monster" type="number" min="1" max="300" step="1" value="290" required></label>
+<label>맵 마릿수 (1회 젠)<input name="mobs" type="number" min="0" max="10000" step="1" value="40" required><small>7.5초마다 전부 처치하는 기준</small></label>
 <label class="hunt-wide">6분 처치 수 <span class="hunt-optional">선택</span><input name="sixMinuteKills" type="number" min="0" max="480000" step="1" placeholder="미입력 시 맵 마릿수로 계산" aria-describedby="measuredHelp"><small id="measuredHelp">입력하면 실측 마릿수 × 5로 계산합니다. 비워두면 1회 젠마다 모두 잡는 것으로 계산합니다.</small></label>
-</div></section>
+<div class="hunt-wide"><label for="fragmentPrice">조각 판매가 (개당 메소)</label><input name="fragmentPrice" id="fragmentPrice" type="number" min="0" max="9007199254740991" step="1" value="6500000" aria-describedby="fragmentPriceHelp" required><small id="fragmentPriceHelp">사냥 메소만 환산하려면 0을 입력하세요.</small></div>
+</div>
+<fieldset class="hunt-buffs"><legend>사냥 버프</legend>
+  <label class="hunt-buff"><input name="wealthElixir" type="checkbox" checked aria-describedby="wealthElixirEffect"><span>재물 획득의 비약 <small id="wealthElixirEffect"></small></span></label>
+  <label class="hunt-buff"><input name="unionWealth" type="checkbox" checked aria-describedby="unionWealthEffect"><span>유니온의 부 <small id="unionWealthEffect"></small></span></label>
+  <label class="hunt-buff"><input name="unionLuck" type="checkbox" checked aria-describedby="unionLuckEffect"><span>유니온의 행운 <small id="unionLuckEffect"></small></span></label>
+</fieldset>
+<p class="ux-hint hunt-settings-note">사냥 설정은 이 브라우저에 저장되며 비용 계산기와 시뮬레이터에도 적용됩니다.</p>
+</section>
 </form>
-<div id="hunt-result"><p id="inputError" class="hunt-panel" role="alert" hidden><span data-result-status>입력값을 확인하세요.</span> 아획·메획은 0 이상, 몬스터 레벨은 1~300, 마릿수는 0 이상의 정수로 입력하세요.</p>
+<div id="hunt-result"><p id="inputError" class="hunt-panel" role="alert" hidden><span data-result-status>입력값을 확인하세요.</span> 아획·메획은 0 이상, 몬스터 레벨은 1~300, 마릿수와 조각 판매가는 0 이상의 정수로 입력하세요.</p>
 <section id="results" aria-label="30분 사냥 결과" aria-live="polite">
 <div class="hunt-summary"><strong>30분 사냥 결과</strong><div class="hunt-kill-summary"><span>처치 수 <b id="kills"></b></span><span id="killBasis"></span></div></div>
 <div class="hunt-overview"><article class="hunt-reward fragment"><h2>솔 에르다 조각</h2><p class="hunt-value"><span id="fragments"></span> <small>개</small></p></article>
@@ -40,18 +51,31 @@
 </section></div>
 <section class="hunt-panel hunt-money"><h2>메획 적용 메소 <span class="hunt-badge">30분</span></h2>
 <div class="hunt-metrics"><article class="hunt-metric"><h3>최소</h3><strong id="low"></strong><span>메소</span></article><article class="hunt-metric expected"><h3>기대값</h3><strong id="meso"></strong><span>메소</span></article><article class="hunt-metric"><h3>최대</h3><strong id="high"></strong><span>메소</span></article></div>
+<p class="ux-hint hunt-applied-rates" id="appliedRates"></p>
+</section>
+<section class="hunt-panel hunt-session" aria-labelledby="sessionTitle">
+  <h2 id="sessionTitle">1재획 기대 수입</h2>
+  <p class="hunt-session-value"><strong id="sessionMeso"></strong> 메소</p>
+  <p class="ux-hint" id="sessionBreakdown"></p>
+  <label class="hunt-target" for="huntingTarget">목표 금액 (메소, 선택)
+    <input id="huntingTarget" type="text" inputmode="numeric" maxlength="48" placeholder="예: 1,000,000,000" aria-describedby="targetError">
+  </label>
+  <p class="ux-hint hunt-target-error" id="targetError" hidden>입력 오류. 0 이상의 정수로 입력하세요.</p>
+  <p class="hunt-session-count">필요 재획 (올림) <output id="targetSessions" for="huntingTarget">—</output></p>
 </section>
 <section class="hunt-panel hunt-money pure"><h2>순수 메소 <span class="hunt-badge">메획 미적용</span></h2>
 <div class="hunt-metrics"><article class="hunt-metric"><h3>최소</h3><strong id="pureLow"></strong><span>메소</span></article><article class="hunt-metric expected"><h3>기대값</h3><strong id="pure"></strong><span>메소</span></article><article class="hunt-metric"><h3>최대</h3><strong id="pureHigh"></strong><span>메소</span></article></div>
 </section>
 <div class="hunt-summary hunt-bag"><span>아획에 따른 메소 주머니 드랍 확률</span><strong id="bagRate"></strong></div>
 </section></div>
-<details class="hunt-panel hunt-wide hunt-method"><summary>계산 기준</summary><ul>
+<details class="hunt-panel hunt-wide hunt-method ux-details"><summary>계산 기준</summary><ul>
 <li>30분 고정. 6분 처치 수 입력 시 × 5, 미입력 시 맵 마릿수 × 240회 젠으로 계산합니다. 0마리를 입력하면 0으로 계산합니다.</li>
 <li>상위 N%는 각 몬스터가 독립적으로 최대 1개의 조각을 드랍한다고 가정한 이항분포에서, 입력한 개수 이상 얻을 확률 P(X ≥ 획득 개수)입니다. 동률을 포함하며 실제 유저 순위가 아닙니다. 사냥으로 얻은 조각만 입력하세요.</li>
 <li>조각 = 처치 수 × 0.000425 × (1 + ln(1 + 아획 ÷ 100)). <a href="https://www.inven.co.kr/board/maple/2304/37701" target="_blank" rel="noopener noreferrer">인벤 헤일맨 게시글</a>의 로그 추정식이며 공식 확률이 아닙니다. 6차 전직 완료 및 조각 드랍 가능 사냥터 기준이며 260 미만 몬스터의 조각은 0으로 계산합니다.</li>
 <li>메소 주머니 드랍 확률 = min(100%, 60% × (1 + 아획 ÷ 100)). 아획 67% 이상은 100%입니다. <a href="https://www.gametoc.co.kr/news/articleView.html?idxno=74654" target="_blank" rel="noopener noreferrer">메소 주머니 확률 참고</a></li>
-<li>순수 메소 = 처치 수 × 메소 주머니 드랍 확률 × 몬스터 레벨 × 6 / 7.5 / 9 (최소 / 기대값 / 최대). 메획 적용 메소는 각각에 (1 + 메획 ÷ 100)을 곱합니다.</li>
+<li>유니온의 행운과 재물 획득의 비약은 기본 아획에 더합니다. 이렇게 구한 아획을 조각과 메소 주머니 드랍 확률에 적용합니다.</li>
+<li>순수 메소 = 처치 수 × 메소 주머니 드랍 확률 × 몬스터 레벨 × 6 / 7.5 / 9 (최소 / 기대값 / 최대). 여기에 기본 메획과 유니온의 부를 더한 배율을 곱한 뒤, 재물 획득의 비약 메소 배율을 마지막에 곱합니다.</li>
+<li>1재획은 30분입니다. 선택한 버프를 사냥 내내 유지한다고 가정합니다. 30분 기대 수입은 사냥 메소에 조각의 예상 판매액을 더한 값입니다. 목표 메소를 이 수입으로 나눈 뒤 횟수를 올림합니다. 거래 수수료와 버프 구매비는 반영하지 않습니다.</li>
 <li>최소·최대는 주머니 금액에 따른 시나리오로, 드랍 확률을 반영한 값입니다. 실제 획득량의 보장 범위가 아닙니다. 일일 메소 상한·레벨 차이 패널티·미회수는 반영하지 않습니다.</li>
 </ul></details>
 </main></div></body></html>

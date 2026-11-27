@@ -332,6 +332,7 @@
 
   function renderVerdict(c) {
     const box = $('verdictBox');
+    $('elixir-hunt').setAttribute('meso', c.perCraft === undefined ? '' : c.totalCost);
     $('verdictCrafts').textContent = c.crafts + '회 · ' + fmt(c.crafts * ELIXIRS_PER_CRAFT) + '개';
     if (c.perCraft === undefined) {
       box.classList.add('hidden');

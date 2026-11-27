@@ -111,6 +111,7 @@
 
   function renderBreakEven(c) {
     const box = $('breakEvenBox');
+    $('trade-hunt').setAttribute('meso', c.evenUnit ? c.cost : '');
     if (!c.evenUnit) {
       box.classList.add('empty');
       $('breakEvenValue').textContent = state.buy ? '수수료율을 확인하세요' : '구매가를 입력하세요';

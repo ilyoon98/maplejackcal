@@ -1182,10 +1182,10 @@ window.SiteHelpData = {
       {
         "title": "사냥 조건 입력하기",
         "image": "capture-guide/hunting_calc/settings.png",
-        "text": "드랍률·메획·몬스터 레벨을 넣으세요.",
-        "alt": "아이템 드랍률, 메소 획득량, 몬스터 레벨 입력칸",
+        "text": "버프 적용 전 수치를 넣으세요.",
+        "alt": "기본 아획, 기본 메획, 몬스터 레벨 입력칸",
         "width": 659,
-        "height": 395
+        "height": 326
       },
       {
         "title": "처치 수 입력하기",
@@ -1193,15 +1193,23 @@ window.SiteHelpData = {
         "text": "맵 마릿수나 6분 처치 수를 넣으세요.",
         "alt": "맵 마릿수와 실측 6분 처치 수 입력칸",
         "width": 659,
-        "height": 396
+        "height": 395
       },
       {
-        "title": "기대 메소 확인하기",
-        "image": "capture-guide/hunting_calc/result.png",
-        "text": "30분 기대 메소를 확인하세요.",
-        "alt": "30분 기준 메획 적용 메소의 가운데 기대값",
+        "title": "버프와 판매가 설정",
+        "image": "capture-guide/hunting_calc/buffs.png",
+        "text": "조각 판매가와 사냥 버프를 설정하세요.",
+        "alt": "개당 조각 판매가 입력칸과 재물비, 유니온의 부와 행운 체크박스",
         "width": 659,
-        "height": 270
+        "height": 491
+      },
+      {
+        "title": "필요 재획 확인하기",
+        "image": "capture-guide/hunting_calc/result.png",
+        "text": "목표 메소를 넣으세요.",
+        "alt": "30분 사냥과 조각 판매 기대 수입 및 10억 메소에 필요한 재획 횟수",
+        "width": 710,
+        "height": 491
       },
       {
         "title": "조각 획득량 확인하기",
@@ -1215,6 +1223,7 @@ window.SiteHelpData = {
     "notes": [
       "조각 확률은 커뮤니티 추정식이며 실제 획득을 보장하지 않습니다. 6차 전직 완료와 조각 드랍 가능 사냥터를 전제로 합니다.",
       "상위 N%는 해당 조건에서 그 개수 이상 얻을 확률이며 전체 유저 순위가 아닙니다.",
+      "재획 횟수는 올림합니다. 조각 판매에 따른 거래 수수료와 버프 구매비는 반영하지 않습니다.",
       "일일 메소 상한, 레벨 차이 패널티, 줍지 못한 메소는 반영하지 않습니다."
     ]
   },

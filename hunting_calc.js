@@ -1,5 +1,7 @@
 (function (root) {
   'use strict';
+  const HuntingIncome = typeof module !== 'undefined' && module.exports
+    ? require('./hunting_income.js') : root.HuntingIncome;
   // Sum binomial weights outward from the mode to avoid underflow at P(X=0)
   // and cancellation when the upper tail is very small.
   function upperTail(n, p, k) {
@@ -25,22 +27,7 @@
     return Math.min(1, Math.max(0, tail / total));
   }
   function calculate(v) {
-    for (const [key,min,max] of [['drop',0,10000],['meso',0,10000],['monster',1,300]]) {
-      if (!Number.isFinite(v[key]) || v[key] < min || v[key] > max) throw new RangeError(key);
-    }
-    if (!Number.isInteger(v.monster)) throw new RangeError('monster');
-    const measured = v.sixMinuteKills !== undefined && v.sixMinuteKills !== null && v.sixMinuteKills !== '';
-    const count = measured ? v.sixMinuteKills : v.mobs;
-    if (!Number.isInteger(count) || count < 0 || count > (measured ? 480000 : 10000)) throw new RangeError('kills');
-    const kills = measured ? count * 5 : count * 240;
-    const bag = Math.min(1, 0.6 * (1 + v.drop / 100));
-    const multiplier = 1 + v.meso / 100;
-    const pureLow = kills * bag * v.monster * 6;
-    const pure = kills * bag * v.monster * 7.5;
-    const pureHigh = kills * bag * v.monster * 9;
-    return {kills, measured, bag, pureLow, pure, pureHigh,
-      low:pureLow*multiplier, meso:pure*multiplier, high:pureHigh*multiplier,
-      fragments:v.monster >= 260 ? kills * 0.000425 * (1 + Math.log1p(v.drop / 100)) : 0};
+    return new HuntingIncome(v).rewards;
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = {calculate, upperTail};
   root.HuntingCalc = {calculate, upperTail};
@@ -48,27 +35,59 @@
   const form = document.getElementById('huntingForm');
   if (!form) return;
   const actual = document.getElementById('actualFragments');
+  const target = document.getElementById('huntingTarget');
+  const targetError = document.getElementById('targetError');
+  const targetSessions = document.getElementById('targetSessions');
+  const statFields = ['drop', 'meso', 'monster', 'mobs', 'fragmentPrice'];
+  const buffNames = Object.keys(HuntingIncome.buffs);
+  const put = (id, value) => { document.getElementById(id).textContent = value; };
   const number = n => n.toLocaleString('ko-KR', {maximumFractionDigits:0});
+  const rate = n => n.toLocaleString('ko-KR', {maximumFractionDigits:2}) + '%';
   const amount = n => {
     const rounded = Math.round(n), eok = Math.floor(rounded / 100000000), man = Math.floor(rounded % 100000000 / 10000), rest = rounded % 10000;
     return [eok ? number(eok)+'억' : '', man ? number(man)+'만' : '', rest || !rounded ? number(rest) : ''].filter(Boolean).join(' ');
   };
-  function update() {
+  let income;
+  function restoreSettings() {
+    const settings = HuntingIncome.loadSettings();
+    for (const key of statFields) form.elements[key].value = settings[key] ?? HuntingIncome.defaults[key];
+    form.elements.sixMinuteKills.value = settings.sixMinuteKills ?? '';
+    for (const name of buffNames) form.elements[name].checked = settings.buffs?.[name] === true;
+    update();
+  }
+  function updateTarget() {
+    const raw = target.value.trim();
+    const valid = raw === '' || /^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(raw);
+    target.setAttribute('aria-invalid', String(!valid));
+    targetError.hidden = valid;
+    const sessions = valid && raw && income ? income.sessionsFor(BigInt(raw.replaceAll(',', ''))) : null;
+    targetSessions.textContent = sessions !== null ? number(sessions) + '회'
+      : valid && raw && income ? '사냥 수입 0메소로 환산할 수 없습니다.' : '—';
+  }
+  function update(persist = false) {
     const measured = form.elements.sixMinuteKills.value !== '';
     form.elements.mobs.disabled = measured;
     const valid = form.checkValidity();
     document.getElementById('inputError').hidden = valid;
     document.getElementById('results').hidden = !valid;
     if (!valid) return;
-    const v = Object.fromEntries(new FormData(form));
-    Object.keys(v).forEach(k => {if (v[k] !== '') v[k] = Number(v[k]);});
-    const r = calculate(v);
-    const put = (id,value) => {document.getElementById(id).textContent = value;};
+    const settings = Object.fromEntries(statFields.map(key => [key, form.elements[key].valueAsNumber]));
+    if (!Number.isInteger(settings.mobs) || settings.mobs < 0 || settings.mobs > 10000) settings.mobs = HuntingIncome.defaults.mobs;
+    settings.sixMinuteKills = measured ? form.elements.sixMinuteKills.valueAsNumber : '';
+    settings.buffs = Object.fromEntries(buffNames.map(name => [name, form.elements[name].checked]));
+    income = new HuntingIncome(settings);
+    if (persist) HuntingIncome.saveSettings(settings);
+    const r = income.rewards;
     put('fragments',r.fragments.toFixed(2));
     for (const key of ['low','meso','high','pureLow','pure','pureHigh']) put(key,amount(r[key]));
     put('kills',number(r.kills)+'마리');
     put('killBasis',r.measured ? '6분 실측 × 5' : '240회 젠 · 전부 처치');
-    put('bagRate',(r.bag*100).toLocaleString('ko-KR',{maximumFractionDigits:2})+'%');
+    put('bagRate',rate(r.bag * 100));
+    put('appliedRates', `적용 아획 +${rate(r.effectiveDrop)}, 최종 메획 +${rate((r.mesoMultiplier - 1) * 100)}`);
+    put('sessionMeso', amount(income.sessionMeso));
+    put('sessionBreakdown', income.fragmentPrice ? `사냥 ${amount(r.meso)} 메소와 조각 판매 ${amount(income.fragmentMeso)} 메소`
+      : `사냥 ${amount(r.meso)} 메소`);
+    updateTarget();
     const rank = document.getElementById('fragmentRank');
     const note = document.getElementById('rankNote');
     if (!actual.checkValidity()) {
@@ -87,8 +106,23 @@
       note.textContent = '같은 조건에서 '+number(k)+'개 이상 얻을 확률 · 추정 모델 기준';
     }
   }
-  form.addEventListener('input',update); form.addEventListener('change',update);
+  form.addEventListener('input', () => update(true));
+  form.addEventListener('change', () => update(true));
   form.addEventListener('submit',e => e.preventDefault());
-  actual.addEventListener('input',update);
-  update();
+  actual.addEventListener('input', () => update());
+  target.addEventListener('input', updateTarget);
+  put('sessionTitle', `1재획(${HuntingIncome.sessionMinutes}분) 기대 수입`);
+  for (const name of buffNames) {
+    const effect = HuntingIncome.buffs[name];
+    const parts = [];
+    if (effect.drop) parts.push(`아획 +${effect.drop}%p`);
+    if (effect.meso) parts.push(`메획 +${effect.meso}%p`);
+    if (effect.finalMeso) parts.push(`최종 메소 ×${1 + effect.finalMeso / 100}`);
+    put(`${name}Effect`, parts.join(', '));
+  }
+  root.addEventListener('storage', event => {
+    if (event.key === HuntingIncome.storageKey || event.key === null) restoreSettings();
+  });
+  root.addEventListener('pageshow', event => { if (event.persisted) restoreSettings(); });
+  restoreSettings();
 })(typeof globalThis !== 'undefined' ? globalThis : this);

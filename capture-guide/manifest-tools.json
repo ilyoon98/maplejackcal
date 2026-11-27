@@ -203,7 +203,7 @@
       "label:has([name=\"monster\"])"
     ],
     "width": 659,
-    "height": 395,
+    "height": 326,
     "viewport": {
       "width": 500,
       "height": 900
@@ -218,7 +218,22 @@
       "label:has([name=\"sixMinuteKills\"])"
     ],
     "width": 659,
-    "height": 396,
+    "height": 395,
+    "viewport": {
+      "width": 500,
+      "height": 900
+    },
+    "example": true
+  },
+  {
+    "page": "hunting_calc.html",
+    "image": "capture-guide/hunting_calc/buffs.png",
+    "highlights": [
+      "#fragmentPrice",
+      ".hunt-buffs"
+    ],
+    "width": 659,
+    "height": 491,
     "viewport": {
       "width": 500,
       "height": 900
@@ -243,10 +258,11 @@
     "page": "hunting_calc.html",
     "image": "capture-guide/hunting_calc/result.png",
     "highlights": [
-      ".hunt-money:not(.pure) .expected"
+      "#huntingTarget",
+      ".hunt-session-count"
     ],
-    "width": 659,
-    "height": 270,
+    "width": 710,
+    "height": 491,
     "viewport": {
       "width": 500,
       "height": 900

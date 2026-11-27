@@ -633,6 +633,7 @@
       const records = optionEnabled ? [ampRecord, rankRecord, optionRecord] : [ampRecord, rankRecord];
       renderCombinedRecord(records, steps, phases, priced, summary);
       text('potential-cost', !summary ? '—' : Number.isFinite(summary.expected) ? expectedMeso(summary.expected) : '기댓값 없음');
+      $('soul-hunt').setAttribute('meso', summary?.expected ?? '');
       text('potential-50', summary ? budgetMeso(summary.budget50) : '—');
       text('potential-90', summary ? budgetMeso(summary.budget90) : '—');
       const target = optionEnabled || (ampEnabled && rankEnabled) ? stageName(stage) + ' ' + rankName(rank)

@@ -103,11 +103,12 @@ const recipes = {
   },
   'hunting_calc.html': {
     async capture(page, shot) {
-      await fill(page, [['[name="drop"]','200'],['[name="meso"]','100'],['[name="monster"]','280'],['[name="mobs"]','38'],['[name="sixMinuteKills"]','1800'],['#actualFragments','10']]);
+      await fill(page, [['[name="drop"]','200'],['[name="meso"]','100'],['[name="monster"]','280'],['[name="mobs"]','38'],['[name="sixMinuteKills"]','1800'],['#actualFragments','10'],['#huntingTarget','1,000,000,000']]);
       await shot('settings', ['label:has([name="drop"])', 'label:has([name="meso"])', 'label:has([name="monster"])']);
       await shot('kills', ['label:has([name="mobs"])', 'label:has([name="sixMinuteKills"])']);
+      await shot('buffs', ['#fragmentPrice', '.hunt-buffs'], { crop: ['label[for="fragmentPrice"]'] });
       await shot('fragments', ['.hunt-reward.fragment']);
-      await shot('result', ['.hunt-money:not(.pure) .expected'], { crop: ['.hunt-money:not(.pure) h2'] });
+      await shot('result', ['#huntingTarget', '.hunt-session-count'], { crop: ['.hunt-session'] });
     }
   },
   'accessory_planner.html': {

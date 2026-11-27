@@ -26,6 +26,7 @@
       'starforce_calc.html': {spareInput:[], actualUsage:[]},
       'starforce_play.html': {spareInput:[]},
       'item_craft_calc.html': {basePrice:[], actualUsage:[]},
+      'hunting_calc.html': {huntingTarget:[], fragmentPrice:[]},
       'cube_calc.html': {actualUsage:[]},
       'trace_calc.html': {jujeonPrice:[]},
       'trade_margin_calc.html': {buyPrice:[], sellPrice:[], extraCost:[]},

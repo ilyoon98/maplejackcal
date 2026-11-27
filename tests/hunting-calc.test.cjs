@@ -1,6 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {calculate} = require('../hunting_calc.js');
+const HuntingIncome = require('../hunting_income.js');
 const base = {drop:200,mobs:38,meso:100,monster:260,sixMinuteKills:''};
 test('30분 기본: 240젠 전부 처치, 로그식, 메소 최소·기대·최대',()=>{
   const r=calculate(base);
@@ -31,6 +32,50 @@ test('메획은 순수 메소·조각에 영향 없고 일일 상한은 적용�
   assert.equal(b.meso,a.meso*3);
   assert.ok(calculate({...base,sixMinuteKills:100000}).pure>150000000);
   assert.equal(calculate({...base,monster:259}).fragments,0);
+});
+test('재물비와 유니온은 드랍에 합연산하고 재물비의 메소 효과는 마지막에 곱한다', () => {
+  const settings = { ...HuntingIncome.defaults, ...base, drop: 0 };
+  const income = new HuntingIncome(settings);
+  assert.equal(income.rewards.effectiveDrop, 70);
+  assert.equal(income.rewards.bag, 1);
+  assert.equal(income.rewards.mesoMultiplier, 3);
+  assert.deepEqual([income.rewards.low, income.rewards.meso, income.rewards.high], [42681600, 53352000, 64022400]);
+  assert.ok(Math.abs(income.rewards.fragments - 9120 * 0.000425 * (1 + Math.log1p(0.7))) < 1e-12);
+
+  const noElixir = calculate({ ...settings, buffs: { ...settings.buffs, wealthElixir: false } });
+  assert.equal(noElixir.effectiveDrop, 50);
+  assert.ok(Math.abs(noElixir.bag - 0.9) < 1e-12);
+  assert.equal(noElixir.mesoMultiplier, 2.5);
+  const noLuck = calculate({ ...settings, buffs: { ...settings.buffs, unionLuck: false } });
+  assert.equal(noLuck.effectiveDrop, 20);
+  assert.equal(noLuck.mesoMultiplier, 3);
+  const noWealth = calculate({ ...settings, buffs: { ...settings.buffs, unionWealth: false } });
+  assert.equal(noWealth.effectiveDrop, 70);
+  assert.equal(noWealth.mesoMultiplier, 2.4);
+});
+test('30분 재획 수입에는 설정한 조각 판매가를 적용한다', () => {
+  const income = new HuntingIncome(HuntingIncome.defaults);
+  assert.equal(HuntingIncome.sessionMinutes, 30);
+  assert.equal(income.rewards.meso, 62640000);
+  assert.equal(income.fragmentMeso, income.rewards.fragments * 6500000);
+  assert.equal(income.sessionMeso, income.rewards.meso + income.fragmentMeso);
+  assert.equal(income.sessionsFor(1000000000), 9n);
+  assert.throws(() => new HuntingIncome({ ...HuntingIncome.defaults, fragmentPrice: -1 }), RangeError);
+});
+test('필요 재획은 30분 단위로 올림하며 장신구의 큰 정수 금액도 보존한다', () => {
+  const income = new HuntingIncome({ ...HuntingIncome.defaults, fragmentPrice: 0 });
+  assert.equal(income.sessionMeso, 62640000);
+  assert.equal(income.sessionsFor(1000000000), 16n);
+  assert.equal(income.sessionsFor(62640000), 1n);
+  assert.equal(income.sessionsFor(62640000.01), 2n);
+  const largeCount = 99999999999999999999n;
+  const largeCost = BigInt(income.sessionMeso) * largeCount;
+  assert.equal(income.sessionsFor(largeCost), largeCount);
+  assert.equal(income.sessionsFor(largeCost + 1n), largeCount + 1n);
+  assert.equal(income.sessionsFor(Infinity), null);
+  const empty = new HuntingIncome({ ...HuntingIncome.defaults, sixMinuteKills: 0 });
+  assert.equal(empty.sessionsFor(0), 0n);
+  assert.equal(empty.sessionsFor(1), null);
 });
 test('음수·소수 마릿수·범위 밖 입력 거부',()=>{
   for(const invalid of [{drop:NaN},{meso:-1},{monster:301},{monster:260.5},{mobs:1.5},{sixMinuteKills:-1},{sixMinuteKills:1.5},{sixMinuteKills:Infinity}]) assert.throws(()=>calculate({...base,...invalid}),RangeError);
