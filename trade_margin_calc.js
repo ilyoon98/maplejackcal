@@ -8,6 +8,8 @@
 (function () {
   const STORE_KEY = 'tradeMarginCalc';
   const DEFAULT_FEE = 5;
+  // 주문의 흔적처럼 한 세트가 수만 개인 재료도 넣을 수 있게 넉넉히 둔다.
+  const MAX_QTY = 99999999;
   // 원가 대비 남기고 싶은 비율. 0은 본전 줄.
   const TARGETS = [0, 0.05, 0.1, 0.2, 0.3, 0.5, 1];
 
@@ -82,9 +84,9 @@
     $('extraCost').value = comma(state.extra);
     $('sellPrice').value = comma(state.sell);
     $('feePct').value = state.fee === DEFAULT_FEE ? '' : String(state.fee);
-    $('buyPriceUnit').textContent = state.buy ? mesoText(state.buy) + (c.qty > 1 ? ' × ' + c.qty + '개 = ' + mesoText(state.buy * c.qty) : '') : '';
+    $('buyPriceUnit').textContent = state.buy ? mesoText(state.buy) + (c.qty > 1 ? ' × ' + fmt(c.qty) + '개 = ' + mesoText(state.buy * c.qty) : '') : '';
     $('extraCostUnit').textContent = mesoText(state.extra);
-    $('sellPriceUnit').textContent = state.sell ? mesoText(state.sell) + (c.qty > 1 ? ' × ' + c.qty + '개 = ' + mesoText(state.sell * c.qty) : '') : '';
+    $('sellPriceUnit').textContent = state.sell ? mesoText(state.sell) + (c.qty > 1 ? ' × ' + fmt(c.qty) + '개 = ' + mesoText(state.sell * c.qty) : '') : '';
 
     renderFeeChips();
     renderSellChips(c);
@@ -121,7 +123,7 @@
     box.classList.remove('empty');
     $('breakEvenValue').textContent = fmt(c.evenUnit) + ' 메소';
     const lossIfSame = state.buy ? Math.round(state.buy * c.qty * c.keep - c.cost) : 0;
-    const parts = [mesoText(c.evenUnit) + (c.qty > 1 ? ' × ' + c.qty + '개' : '')];
+    const parts = [mesoText(c.evenUnit) + (c.qty > 1 ? ' × ' + fmt(c.qty) + '개' : '')];
     parts.push('원가 ' + mesoText(c.cost) + ' · 수수료 ' + mesoText(c.evenUnit * c.qty - c.cost) + ' 감당');
     if (state.buy && lossIfSame < 0) parts.push('산 가격 그대로 팔면 ' + mesoText(-lossIfSame) + ' 손해');
     $('breakEvenSub').textContent = parts.join(' · ');
@@ -143,7 +145,7 @@
     $('verdictRate').textContent = c.rate === null ? '' : rateText(c.rate) + (c.profit ? ' (' + mesoText(Math.abs(c.profit)) + ')' : '');
 
     const lines = [
-      ['판매가' + (c.qty > 1 ? ' × ' + c.qty + '개' : ''), fmt(c.gross), 'dim'],
+      ['판매가' + (c.qty > 1 ? ' × ' + fmt(c.qty) + '개' : ''), fmt(c.gross), 'dim'],
       ['수수료 ' + state.fee + '%', '-' + fmt(c.feeMeso), 'fee'],
       ['실제 들어오는 메소', fmt(c.net), '']
     ];
@@ -198,7 +200,7 @@
   bindMeso('sellPrice', 'sell');
 
   $('qty').addEventListener('input', function () {
-    state.qty = Math.max(1, Math.min(9999, parseMeso(this.value) || 1));
+    state.qty = Math.max(1, Math.min(MAX_QTY, parseMeso(this.value) || 1));
     save();
     render();
   });
